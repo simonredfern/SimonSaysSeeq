@@ -98,6 +98,10 @@ const int FIRST_STEP = 0;
 const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 15;
 
 
+const int MIDI_NOTE_ON = 1;
+const int MIDI_NOTE_OFF = 0;
+const int MIDI_NOTE_UNSET = -1;
+
 ////////////////////////////////////////////////////
 // Actual pot values
 int upper_input_raw;
@@ -440,7 +444,19 @@ float cv_waveform_a_amplitude;
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 
+// For each sequence step / midi note number  / on-or-off 
+// we'll store the ticks time in the sequence that the event should occur
+// Note: Arrays are zero indexed (we access them starting from zero, but here we define the SIZE of each dimension)
+// [step][midi_node][on-or-off]
+int channel_a_midi_note_events[16][128][2]; 
 
+
+
+
+
+//for (byte i = 0; i < 5; i = i + 1) {
+//  Serial.println(myPins[i]);
+//}
 
 
 ////////////////////////////
@@ -489,8 +505,8 @@ unsigned int cv_waveform_b_shape;
 
 struct Timing
 {
-    unsigned int tick_count_in_sequence = 0;
-    unsigned int tick_count_since_start = 0;
+    int tick_count_in_sequence = 0; // was unsigned 
+    int tick_count_since_start = 0; // was unsigned 
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
@@ -567,6 +583,11 @@ void setup() {
   // Use zero based indexing for step_count so that modular operations (counting multiples of 4, 16 etc are easier)
   step_count = FIRST_STEP;
   loop_timing.tick_count_in_sequence = 0;
+  //
+
+  // Show contents / initialise the midi sequence 
+ InitMidiSequence();
+
 
    /////////////////////////////////////////////////////////
    // Say hello, show we are ready to sequence. 
@@ -620,20 +641,26 @@ int note, velocity, channel, d1, d2;
         channel = MIDI.getChannel();
         if (velocity > 0) {
           //Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+          OnMidiNoteInEvent(MIDI_NOTE_ON,note, velocity,channel);
         } else {
           //Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
+          OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         }
+
+        
+        
         break;
       case midi::NoteOff:
         note = MIDI.getData1();
         velocity = MIDI.getData2();
         channel = MIDI.getChannel();
+        OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         //Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;
       case midi::Clock:
         // Midi devices sending clock send one of these 24 times per crotchet (a quarter note). 24PPQ
         midi_clock_detected = HIGH;
-        Serial.println(String("+++++++++++++++++++++++++++++++++ midi_clock_detected SET TO TRUE is: ") + midi_clock_detected) ;
+        //Serial.println(String("+++++++++++++++++++++++++++++++++ midi_clock_detected SET TO TRUE is: ") + midi_clock_detected) ;
         note = MIDI.getData1();
         velocity = MIDI.getData2();
         channel = MIDI.getChannel();
@@ -836,9 +863,9 @@ int OnTick(Timing timing){
   // Get the Pot positions. 
   // We will later assign the values dependant on the push button state
   upper_input_raw = analogRead(upper_pot_pin);
-  Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
+  //Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
   lower_input_raw = analogRead(lower_pot_pin);
-  Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
+  //Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
 
 /////////////////////////////////////////////////////
 // Get values from the pots when they are engaged 
@@ -848,12 +875,12 @@ if (button_1_state == HIGH) {
   
    if ((upper_pot_high_engaged == true) || IsCrossing(upper_pot_high_value_at_button_change, upper_input_raw, 5)) {
        int upper_pot_high_value_raw = upper_input_raw;
-        Serial.println(String("**** upper_pot_high_value_raw is: ") + upper_pot_high_value_raw  );     
+        //Serial.println(String("**** upper_pot_high_value_raw is: ") + upper_pot_high_value_raw  );     
         upper_pot_high_value = GetValue(upper_pot_high_value_raw, upper_pot_high_value_last, jitter_reduction);
         upper_pot_high_value_last = upper_pot_high_value;
         upper_pot_high_engaged = true;
    } else {
-     Serial.println(String("upper_pot_high is: DISENGAGED value is sticking at: ") + upper_pot_high_value  ); 
+     //Serial.println(String("upper_pot_high is: DISENGAGED value is sticking at: ") + upper_pot_high_value  ); 
    }
 
    if ((lower_pot_high_engaged == true) || IsCrossing(lower_pot_high_value_at_button_change, lower_input_raw, 5)){
@@ -882,12 +909,12 @@ else
   
   if ((lower_pot_low_engaged == true) || IsCrossing(lower_pot_low_value_at_button_change, lower_input_raw, 5)) {  
      int lower_pot_low_value_raw = lower_input_raw;
-     Serial.println(String("lower_pot_low_value_raw is: ") + lower_pot_low_value_raw  );
+     //Serial.println(String("lower_pot_low_value_raw is: ") + lower_pot_low_value_raw  );
      lower_pot_low_value = GetValue(lower_pot_low_value_raw, lower_pot_low_value_last, jitter_reduction);
      lower_pot_low_value_last = lower_pot_low_value;
      lower_pot_low_engaged = true;
   } else {
-    Serial.println(String("lower_pot_low is: DISENGAGED value is sticking at: ") + lower_pot_low_value  );
+    //Serial.println(String("lower_pot_low is: DISENGAGED value is sticking at: ") + lower_pot_low_value  );
   }
 
 }
@@ -923,9 +950,9 @@ else
    if (peak_R.available())
     {
         right_peak_level = peak_R.read() * 1.0;
-        Serial.println(String("right_peak_level: ") + right_peak_level );  
+        //Serial.println(String("right_peak_level: ") + right_peak_level );  
     } else {
-      Serial.println(String("right_peak_level not available ")   );
+      //Serial.println(String("right_peak_level not available ")   );
     }
 
 
@@ -989,7 +1016,7 @@ else
 // or (2^sequence_length_in_steps) - 1
 binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
 
-   Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+   //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
 
 
@@ -1005,16 +1032,16 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    }
 
 
-   Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
-   Serial.print("\t");
-   Serial.print(binary_sequence_1, BIN);
-   Serial.println();
+   //Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
+   //Serial.print("\t");
+   //Serial.print(binary_sequence_1, BIN);
+   //Serial.println();
 
    grey_sequence_1 = Binary2Gray(binary_sequence_1);
-   Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
-   Serial.print("\t");
-   Serial.print(grey_sequence_1, BIN);
-   Serial.println();
+   //Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
+   //Serial.print("\t");
+   //Serial.print(grey_sequence_1, BIN);
+   //Serial.println();
 
 
  
@@ -1056,13 +1083,12 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
     
-    //Serial.println(String("Using Grey Code sequence which is: ") + grey_sequence_1  );
+    
 
-
-   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-   Serial.print("\t");
-   Serial.print(hybrid_sequence_1, BIN);
-   Serial.println();
+   //Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+   //Serial.print("\t");
+   //Serial.print(hybrid_sequence_1, BIN);
+   //Serial.println();
 
 
    
@@ -1074,7 +1100,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+   //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
@@ -1103,7 +1129,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
    float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
-   Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+   //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain);
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
@@ -1116,17 +1142,17 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
    cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
-   Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
+   //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
    // LOWER Pot LOW Button
    cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-   Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
+   //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
 
   // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
   if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT){
     reset_cv_lfo_at_FIRST_STEP = true;
-    Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
+    //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
   }
 
 
@@ -1171,7 +1197,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
   // This is independant from the sequence length
   if (timing.tick_count_in_sequence % 6 == 0){
     clockShowHigh();
-    Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     step_count = OnStep();
     called_on_step = 1; // For information
   } else {
@@ -1214,26 +1240,60 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
 
+void InitMidiSequence(){
+
+  Serial.println(String("InitMidiSequence Start ")  );
+
+  // Loop through steps
+  for (int sc = 0; sc <= 15; sc++) {
+    //Serial.println(String("Step ") + sc );
+  
+    // Loop through notes
+    for (int n = 0; n <= 127; n++) {
+      // Initialise and print Note on (1) and Off (2) contents of the array.
+     channel_a_midi_note_events[sc][n][1] = -1;
+     channel_a_midi_note_events[sc][n][0] = -1;
+
+      
+      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[sc][n][1]);
+      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" OFF value is ") + channel_a_midi_note_events[sc][n][0]);
+    } 
+  }
+
+Serial.println(String("InitMidiSequence Done ")  );
+}
+
 
 int OnStep(){
 
-  Serial.println(String("**** step_count is: ") + step_count  );
+  //Serial.println(String("step_count is: ") + step_count  );
 
 
 
+// Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
+  for (int n = 0; n <= 127; n++) {
+    //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    
+           //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
+    
+    if (channel_a_midi_note_events[step_count][n][1] > -1) {
+       // if (channel_a_midi_note_events[step_count][n][1] >= loop_timing.tick_count_in_sequence){
+           Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+       // }
+    } 
+    
+    if (channel_a_midi_note_events[step_count][n][0] > -1) {
+       // if (channel_a_midi_note_events[step_count][n][0] >= loop_timing.tick_count_in_sequence){
+           Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
+       // }
+    }
+} // End midi note loop
 
-
-  //int play_note = bitRead(binary_sequence_1, step_count);
-
-
-  //int play_note = bitRead(grey_sequence_1, step_count);
-
+    
   int play_note = bitRead(hybrid_sequence_1, step_count);
   
-  
-  //Serial.println(String("play_note is: ") + play_note  );
-  //Serial.println(play_note, BIN  );
+
 
           if (step_count == FIRST_STEP) {
             CvPulseOn();
@@ -1416,10 +1476,10 @@ int value;
   // because the value seems to woble, only take the even value for less jitter.
   if (diff >= jitter_reduction){
     value = raw;
-    Serial.println(String("GetValue says use RAW value because diff is ") + diff );
+    //Serial.println(String("GetValue says use RAW value because diff is ") + diff );
   } else {
     value = last;
-    Serial.println(String("GetValue says use LAST value because diff is ") + diff );
+    //Serial.println(String("GetValue says use LAST value because diff is ") + diff );
   }
 return value;
 }
@@ -1455,9 +1515,39 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
 
 
 
-// this is a map where the keys are strings and the values integers
+//mydatatype_t stack[MAXSTACKSIZE];
+//int stackptr = 0;
+//#define push(d) stack[stackptr++] = d
+//#define pop stack[--stackptr]
+//#define topofstack stack[stackptr - 1]
 
 
+void OnMidiNoteInEvent(int on_off, int note, int velocity, int channel){
+
+  Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  if (on_off == MIDI_NOTE_ON){
+    // We want the note on, so set it on.
+    Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count );
+    channel_a_midi_note_events[step_count][note][1] = loop_timing.tick_count_in_sequence; // Only one of these per step.
+  } else {
+       Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+       channel_a_midi_note_events[step_count][note][0] = loop_timing.tick_count_in_sequence;
+
+    
+    // We don't want the note on
+//    if (channel_a_midi_note_events[step_count][note] == MIDI_NOTE_ON){
+//       // If its currently on, set it off.
+//       Serial.println(String("Setting MIDI note OFF: ") + note + String(" when step is ") + step_count );
+//       channel_a_midi_note_events[step_count][note] = MIDI_NOTE_OFF;
+//    } else {
+//      // If its not currently on, just set it to unset so we don't send gazzilions of note off messages
+//      Serial.println(String("Setting MIDI note UNSET: ") + note + String(" when step is ") + step_count );
+//      channel_a_midi_note_events[step_count][note] = MIDI_NOTE_UNSET;
+//    }
+
+  }
+  
+}
 
 
 
@@ -1545,15 +1635,6 @@ newEnd, float inputValue, float curve){
 
 
 // From https://gist.github.com/shirish47/d21b896570a8fccbd9c3
-//uint8_t Binary2Gray(uint8_t data)
-// {
-//   int n_data=(data>>1);
-//   n_data=(data ^ n_data);
-//   
-//  return n_data;
-// }
-
-
 unsigned int Binary2Gray(unsigned int data)
  {
    unsigned int n_data=(data>>1);
