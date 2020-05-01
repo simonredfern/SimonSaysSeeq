@@ -15,6 +15,34 @@ const float simon_says_seq_version = 0.23;
 #include <SerialFlash.h>
 #include <MIDI.h>
          
+class Note
+{
+ public:
+   byte c_note;
+   byte c_velocity;
+   int c_ticks_since_sequence_start;
+   
+   Note( byte note, byte velocity, int ticks_since_sequence_start) ;
+   void doSomething();
+};
+
+
+Note::Note( byte note, byte velocity, int ticks_since_sequence_start) 
+{
+   c_note = note;
+   c_velocity = velocity;
+   c_ticks_since_sequence_start = ticks_since_sequence_start;
+}  
+
+void  Note::doSomething()
+{
+    //do something here;  
+}
+
+
+
+
+
 
 AudioSynthWaveformDc     gate_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;      
@@ -1280,12 +1308,14 @@ int OnStep(){
     if (channel_a_midi_note_events[step_count][n][1] > -1) {
        // if (channel_a_midi_note_events[step_count][n][1] >= loop_timing.tick_count_in_sequence){
            Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+           MIDI.sendNoteOn(n, 127, 1);
        // }
     } 
     
     if (channel_a_midi_note_events[step_count][n][0] > -1) {
        // if (channel_a_midi_note_events[step_count][n][0] >= loop_timing.tick_count_in_sequence){
            Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
+           MIDI.sendNoteOff(n, 0, 1);
        // }
     }
 } // End midi note loop
