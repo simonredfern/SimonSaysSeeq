@@ -9,25 +9,21 @@ const float simon_says_seq_version = 0.23;
 
 
 #include <Audio.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <SD.h>
-#include <SerialFlash.h>
+//#include <Wire.h>
+//#include <SPI.h>
+//#include <SD.h>
+//#include <SerialFlash.h>
 #include <MIDI.h>
 
 
-// Store extra data about the note (velocity, when etc)         
+// Store extra data about the note (velocity, "exactly" when in a step etc)         
 class NoteInfo
 {
  public:
-   byte velocity = 0 ;
-   byte tick_count_in_sequence = 0;
-   byte is_active = 0;
+   uint8_t velocity = 0 ;
+   uint8_t tick_count_in_sequence = 0;
+   uint8_t is_active = 0;
 };
-
-
-
-
 
 
 AudioSynthWaveformDc     gate_dc_waveform;
@@ -58,29 +54,16 @@ AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
 AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
 
-
 AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
-
-
 
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
-//AudioAnalyzeRMS      rms_L;
-//AudioAnalyzeRMS      rms_R;
-
 
 AudioConnection c1(audioInput, 0, peak_L, 0);
 AudioConnection c2(audioInput, 1, peak_R, 0);
 
-
-
-
 AudioControlSGTL5000     audioShield; 
 
-////////////////////////////////
-// Operating...
-//const int AS_GATE_SEQUENCER = 0;
-//const int AS_CV_SEQUENCER = 1;
 
 
 /////////////
@@ -118,8 +101,8 @@ const uint8_t MIDI_NOTE_OFF = 0;
 
 ////////////////////////////////////////////////////
 // Actual pot values
-int upper_input_raw;
-int lower_input_raw;
+unsigned int upper_input_raw; // TODO Make t type.
+unsigned int lower_input_raw;
 
 
 // Create 4 virtual pots out of two pots and a button.
@@ -161,7 +144,7 @@ float right_peak_level;
 ////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
-// The Primary GATE sequence pattern
+// The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
 unsigned int binary_sequence_1;
 unsigned int grey_sequence_1;
 unsigned int hybrid_sequence_1;
@@ -438,7 +421,7 @@ uint8_t sequence_length_in_steps = 8;
 
 // Used to control when/how we change sequence length 
 uint8_t previous_sequence_length_in_ticks;
-uint8_t new_sequence_length_in_ticks; // HERE
+uint8_t new_sequence_length_in_ticks; 
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots 
 uint8_t jitter_reduction = 0; // was 20
@@ -468,30 +451,31 @@ NoteInfo channel_a_midi_note_events[16][128][2];
 
 ////////////////////////////
 // LED Display 
-unsigned int led_1_level = 0; 
+// unsigned int led_1_level = 0; 
 
 
 ////////////////////////////////////////
 // Bit Constants for bit wise operations 
+
+
  
-unsigned int sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
+uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
   
-// unsigned int jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
-unsigned int jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
+uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
 
 
-unsigned int sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;  
+uint8_t sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;  
 
-unsigned int cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
+uint8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
 
 
-unsigned int bits_2_1 = 2 + 1; // CV lfo shape
+uint8_t bits_2_1 = 2 + 1; // CV lfo shape
 // how long the CV pulse will last for in terms of ticks
-unsigned int cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1; 
+uint8_t cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1; 
 
 
  
-unsigned int cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
+uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
 ///////////////////////////////////////////////////////////////////    
 
 
@@ -513,18 +497,18 @@ unsigned int cv_waveform_b_shape;
 struct Timing
 {
     uint8_t tick_count_in_sequence = 0;  
-    uint8_t tick_count_since_start = 0; 
+    int tick_count_since_start = 0; 
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
 Timing loop_timing;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
-unsigned int step_count;
+uint8_t step_count;
 
 // Helper functions that operate on global variables. Yae!  
 
-void SetTickCountInSequence(int value){
+void SetTickCountInSequence(uint8_t value){
   loop_timing.tick_count_in_sequence = value;
 }
 
@@ -539,7 +523,7 @@ void ResetSequenceCounters(){
 }
 
 
-int IncrementStepCount(){
+uint8_t IncrementStepCount(){
   step_count = step_count + 1;
   return step_count;
 }
@@ -563,7 +547,7 @@ void setup() {
   // initialize the digital pin as an output.
   // pinMode(teensy_led_pin, OUTPUT);
 
-  int i;
+  uint8_t i;
   for (i = 0; i < euroshield_led_pin_count; i++) { 
     pinMode(euroshieldLedPins[i], OUTPUT);    
   }
@@ -600,8 +584,8 @@ void setup() {
 
    /////////////////////////////////////////////////////////
    // Say hello, show we are ready to sequence. 
-  int my_delay_time = 50;
-  int my_no_of_times = 10;
+  uint8_t my_delay_time = 50;
+  uint8_t my_no_of_times = 10;
   
   // Say Hello to the Teensy LED 
   Flash(my_delay_time, my_no_of_times, teensy_led_pin);
@@ -1017,7 +1001,7 @@ else
 
    // If we have 8 bits, use the range up to 255
 
- 
+   // TODO Could probably use a smaller type
    unsigned int binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
    unsigned int binary_sequence_upper_limit; 
 
@@ -1108,7 +1092,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
  
 
-  unsigned int sequence_length_in_steps_raw = fscale( 0, 1, 0, 15, right_peak_level, 0);
+  uint8_t sequence_length_in_steps_raw = fscale( 0, 1, 0, 15, right_peak_level, 0);
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
    
@@ -1259,11 +1243,11 @@ void InitMidiSequence(){
   Serial.println(String("InitMidiSequence Start ")  );
 
   // Loop through steps
-  for (int sc = 0; sc <= 15; sc++) {
+  for (uint8_t sc = 0; sc <= 15; sc++) {
     //Serial.println(String("Step ") + sc );
   
     // Loop through notes
-    for (int n = 0; n <= 127; n++) {
+    for (uint8_t n = 0; n <= 127; n++) {
       // Initialise and print Note on (1) and Off (2) contents of the array.
      channel_a_midi_note_events[sc][n][1].is_active = 0;
      channel_a_midi_note_events[sc][n][0].is_active = 0;
@@ -1286,7 +1270,7 @@ int OnStep(){
 
 // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
-  for (int n = 0; n <= 127; n++) {
+  for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
            //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
@@ -1307,7 +1291,7 @@ int OnStep(){
 } // End midi note loop
 
     
-  int play_note = bitRead(hybrid_sequence_1, step_count);
+  uint8_t play_note = bitRead(hybrid_sequence_1, step_count);
   
 
 
@@ -1393,7 +1377,6 @@ void CvStop(){
 }
 
 
-// HERE
 
 //
 //void showStepOne(){
@@ -1432,19 +1415,19 @@ void Led1State(char state){
   
 }
 
-void Led1Level(int level){
+void Led1Level(uint8_t level){
   analogWrite(euroshieldLedPins[0], level);
 }
 
-void Led2Level(int level){
+void Led2Level(uint8_t level){
   analogWrite(euroshieldLedPins[1], level);
 }
 
-void Led3Level(int level){
+void Led3Level(uint8_t level){
   analogWrite(euroshieldLedPins[2], level);
 }
 
-void Led4Level(int level){
+void Led4Level(uint8_t level){
   //Serial.println(String("****** Led4Level level ") + level);
   analogWrite(euroshieldLedPins[3], level);
 }
@@ -1538,7 +1521,7 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
 //#define topofstack stack[stackptr - 1]
 
 
-void OnMidiNoteInEvent(int on_off, int note, int velocity, int channel){
+void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
   //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
   if (on_off == MIDI_NOTE_ON){
@@ -1550,7 +1533,7 @@ void OnMidiNoteInEvent(int on_off, int note, int velocity, int channel){
            MIDI.sendNoteOff(note, 0, 1);
            
            // Disable that note for all steps.
-           int sc = 0;
+           uint8_t sc = 0;
             for (sc = 0; sc < 15; sc++){
               // HERE
               channel_a_midi_note_events[sc][note][1].velocity = 0;
