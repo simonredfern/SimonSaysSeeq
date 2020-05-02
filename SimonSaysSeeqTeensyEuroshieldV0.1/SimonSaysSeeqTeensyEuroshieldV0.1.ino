@@ -16,14 +16,7 @@ const float simon_says_seq_version = 0.23;
 #include <MIDI.h>
 
 
-// Store extra data about the note (velocity, "exactly" when in a step etc)         
-class NoteInfo
-{
- public:
-   uint8_t velocity = 0 ;
-   uint8_t tick_count_in_sequence = 0;
-   uint8_t is_active = 0;
-};
+
 
 
 AudioSynthWaveformDc     gate_dc_waveform;
@@ -90,6 +83,11 @@ const uint8_t BRIGHT_5 = 255;
 
 // Use zero based index for sequencer. i.e. step_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
+const uint8_t MAX_STEP = 15;
+
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 1; // ONE INDEXED
+const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
+
 ///////////////////////
 
 const uint8_t CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 15;
@@ -441,12 +439,28 @@ float cv_waveform_a_amplitude;
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 
-// For each sequence step / midi note number  / on-or-off 
-// we'll store the ticks time in the sequence that the event should occur
-// Note: Arrays are zero indexed (we access them starting from zero, but here we define the SIZE of each dimension)
-// [step][midi_node][on-or-off]
-NoteInfo channel_a_midi_note_events[16][128][2]; 
+////////////////////////////////////
+// Store extra data about the note (velocity, "exactly" when in a step etc)
+// Note name (number) and step information is stored in the array below.         
+class NoteInfo
+{
+ public:
+   uint8_t velocity = 0 ;
+   uint8_t tick_count_in_sequence = 0;
+   uint8_t is_active = 0;
+};
+/////////
 
+////////
+// For each sequence step / midi note number  / on-or-off we store a NoteInfo (which defines a bit more info)
+// Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.)
+// This way we can easily access a step and the notes there.
+// [step][midi_note][on-or-off]
+// [step] will store a digit between 0 and 15 to represent the step of the sequence.
+// [midi_note] will store between 0 and 127
+// [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
+NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+////////
 
 
 ////////////////////////////
@@ -519,10 +533,11 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP;
-  //Serial.println(String("**** ResetSequenceCounters Done *** "));
+  Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
 
+// HERE
 uint8_t IncrementStepCount(){
   step_count = step_count + 1;
   return step_count;
@@ -663,8 +678,10 @@ int note, velocity, channel, d1, d2;
         channel = MIDI.getChannel();
         //Serial.println(String("We got Clock: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
 
+        ///////////////////////////////
+        // Drive the sequencer via MIDI
         OnClockPulse();
-
+        ///////////////////////////////
 
         break;
       case midi::Start:
@@ -694,7 +711,7 @@ int note, velocity, channel, d1, d2;
         int dummy = 1;
         Serial.println(String("Message, type=") + type + ", data = " + d1 + " " + d2);
     }
-  }
+  } // End of MIDI message detected
 
 
 ///////////////////
@@ -711,7 +728,7 @@ int note, velocity, channel, d1, d2;
 
         //Serial.println(String("analogue_gate_state: ") + analogue_gate_state) ;
 
-       
+         // ONLY if no MIDI clock, run the sequencer from the Analogue clock.
         if (midi_clock_detected == LOW) {
 
           //Serial.println(String(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
@@ -755,9 +772,13 @@ if (midi_clock_detected == LOW){
     StopSequencer();
   }
 }
-/////////////////////////////////////////////////////////////////////////////////////
 
-}
+
+} //////////////////////////////////////
+///// END of LOOP //////////////////////
+
+
+
 
 
 // Each time we start the sequencer we want to start from the same conditions.
@@ -798,10 +819,11 @@ void OnClockPulse(){
       
                 previous_sequence_length_in_ticks = new_sequence_length_in_ticks;
                 new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-                // Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-                // Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+                //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+                //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
       
               // Reset every sequence length - or if we change the length so we don't wizz past the end and carry on.
+              // HERE! Should be OR below?
               if ((loop_timing.tick_count_in_sequence >= (new_sequence_length_in_ticks)) && (loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0) ) { 
                 ResetSequenceCounters(); 
               }
@@ -1001,14 +1023,15 @@ else
 
    // If we have 8 bits, use the range up to 255
 
-   // TODO Could probably use a smaller type
-   unsigned int binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+   
+   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+   // TODO Could probably use a smaller type 
    unsigned int binary_sequence_upper_limit; 
 
 
 //binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
 
-// remember sequence_length_in_steps is 1 indexed (from 1 to 16 steps or so) 
+// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^sequence_length_in_steps) - 1
@@ -1090,11 +1113,24 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
    
- 
+  //Serial.println(String("right_peak_level is: ") + right_peak_level  );
 
-  uint8_t sequence_length_in_steps_raw = fscale( 0, 1, 0, 15, right_peak_level, 0);
+  // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
+   
+  uint8_t sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
+  //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+
+  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+    Serial.println(String("**** ERROR with sequence_length_in_steps NOW is: ") + sequence_length_in_steps  );
+  }
+  
+  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    Serial.println(String("**** ERROR with sequence_length_in_steps NOW is: ") + sequence_length_in_steps  );
+  }
    
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
@@ -1243,12 +1279,13 @@ void InitMidiSequence(){
   Serial.println(String("InitMidiSequence Start ")  );
 
   // Loop through steps
-  for (uint8_t sc = 0; sc <= 15; sc++) {
+  for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
     //Serial.println(String("Step ") + sc );
   
     // Loop through notes
     for (uint8_t n = 0; n <= 127; n++) {
       // Initialise and print Note on (1) and Off (2) contents of the array.
+      // WRITE MIDI MIDI_DATA
      channel_a_midi_note_events[sc][n][1].is_active = 0;
      channel_a_midi_note_events[sc][n][0].is_active = 0;
 
@@ -1266,6 +1303,12 @@ int OnStep(){
 
   //Serial.println(String("step_count is: ") + step_count  );
 
+  if (step_count > MAX_STEP) {
+    Serial.println(String("*****************************************************************************************"));  
+    Serial.println(String("************* ERROR! step_count is: ") + step_count + String("*** ERROR *** "));
+    Serial.println(String("*****************************************************************************************"));    
+  }
+
 
 
 // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
@@ -1274,17 +1317,20 @@ int OnStep(){
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
            //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
-    
+
+    // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[step_count][n][1].is_active == 1) {
        // if (channel_a_midi_note_events[step_count][n][1] >= loop_timing.tick_count_in_sequence){
-           //Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+           Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+           // 
            MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count][n][1].velocity, 1);
        // }
     } 
-    
+
+    // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[step_count][n][0].is_active == 1) {
        // if (channel_a_midi_note_events[step_count][n][0] >= loop_timing.tick_count_in_sequence){
-           //Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
+           Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        // }
     }
@@ -1535,7 +1581,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
            // Disable that note for all steps.
            uint8_t sc = 0;
             for (sc = 0; sc < 15; sc++){
-              // HERE
+              // WRITE MIDI MIDI_DATA
               channel_a_midi_note_events[sc][note][1].velocity = 0;
               channel_a_midi_note_events[sc][note][1].is_active = 0;
               channel_a_midi_note_events[sc][note][0].velocity = 0;
@@ -1546,10 +1592,14 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           // We want the note on, so set it on.
           Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          // WRITE MIDI MIDI_DATA
           channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
           channel_a_midi_note_events[step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[step_count][note][1].is_active = 1;
            Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+
+           
+
        
         } 
       
@@ -1557,6 +1607,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
             // Note Off
              Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+             // WRITE MIDI MIDI_DATA
              channel_a_midi_note_events[step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
              channel_a_midi_note_events[step_count][note][0].velocity = velocity;
              channel_a_midi_note_events[step_count][note][0].is_active = 1;
@@ -1671,4 +1722,23 @@ unsigned int Binary2Gray(unsigned int data)
    
   return n_data;
  }
+/////////////////
+
+
+//void changeStage(int* stage_p){
+//    *stage_p = 1;
+//}
+//
+//int main() {
+//    //...
+//    while(stage!=0){
+//        //if snake hits wall
+//        changeStage(&stage);
+//    }
+//}
+
+
+
+
+ 
  
