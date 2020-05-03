@@ -9,10 +9,6 @@ const float simon_says_seq_version = 0.23;
 
 
 #include <Audio.h>
-//#include <Wire.h>
-//#include <SPI.h>
-//#include <SD.h>
-//#include <SerialFlash.h>
 #include <MIDI.h>
 
 
@@ -542,10 +538,12 @@ void ResetSequenceCounters(){
 }
 
 
-// HERE
+
 uint8_t IncrementStepCount(){
-  step_count = step_count + 1;
-  return step_count;
+  step_count = step_count_sanity(step_count + 1);
+
+  Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  return step_count_sanity(step_count);
 }
 
 boolean midi_clock_detected = LOW;
@@ -809,18 +807,18 @@ void StopSequencer(){
 
 // Called on Every MIDI / Analogue clock pulse
 void OnClockPulse(){
-          ////////////////////////////////// 
-        // This drives sequencer activity.
+  ////////////////////////////////// 
+  // This drives sequencer activity.
       
-              OnTick(loop_timing);
-      
-              // Keep track of ticks 
-              //SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
-              //SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+  OnTick(loop_timing);
+
+  // Keep track of ticks 
+  //SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
+  //SetTotalTickCount(loop_timing.tick_count_since_start += 1);
       
 
          //////////////
-  TicksLengthAndReset();
+  UpdateSequenceChronology();
   /////////////// 
 
 
@@ -832,6 +830,7 @@ void OnClockPulse(){
 
 //////// OnTick (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
+// Things that we want to happen every tick..
 int OnTick(Timing timing){
   // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
@@ -1215,10 +1214,15 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
   if (timing.tick_count_in_sequence % 6 == 0){
     clockShowHigh();
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
-    step_count = OnStep();
+    //////////////////////////////////////////
+    OnStep();
     called_on_step = 1; // For information
+    /////////////////////////////////////////
+    step_count = IncrementStepCount();
+    
   } else {
     clockShowLow();
+    // The other ticks which are not "steps".
     OnNotStep();
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
@@ -1282,7 +1286,8 @@ Serial.println(String("InitMidiSequence Done ")  );
 }
 
 
-int OnStep(){
+/////////////////////////////////////////////////////////////
+void OnStep(){
 
   //Serial.println(String("step_count is: ") + step_count  );
 
@@ -1302,16 +1307,16 @@ int OnStep(){
            //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count][n][1].is_active == 1) {
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) {
        // if (channel_a_midi_note_events[step_count][n][1] >= loop_timing.tick_count_in_sequence){
            Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
            // 
-           MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count][n][1].velocity, 1);
+           MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
        // }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count][n][0].is_active == 1) {
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
        // if (channel_a_midi_note_events[step_count][n][0] >= loop_timing.tick_count_in_sequence){
            Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
@@ -1320,7 +1325,7 @@ int OnStep(){
 } // End midi note loop
 
     
-  uint8_t play_note = bitRead(hybrid_sequence_1, step_count);
+  uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
   
 
 
@@ -1349,8 +1354,8 @@ int OnStep(){
     GateLow();
      //Serial.println(String("not play ")   );
    }
+  
 
-  return IncrementStepCount();
     
 }
 
@@ -1483,7 +1488,7 @@ bool Button1HasChanged(bool button_1_state){
 }
 
 
-void TicksLengthAndReset(){
+void UpdateSequenceChronology(){
 
 
     // Keep track of ticks 
@@ -1661,6 +1666,22 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
 
 
+
+
+uint8_t step_count_sanity(uint8_t step_count_){
+  uint8_t step_count_fixed;
+  
+  if (step_count_ > MAX_STEP){
+    Serial.println(String("**** ERROR step_count_ > MAX_STEP i.e. ") + step_count_ );
+    step_count_fixed = MAX_STEP;
+  } else if (step_count_ < FIRST_STEP){
+    Serial.println(String("**** ERROR step_count_ > FIRST_STEP i.e. ") + step_count_ );
+    step_count_fixed = FIRST_STEP;
+  } else {
+    step_count_fixed = step_count_;
+  }
+  return step_count_fixed;
+}
 
 
 
