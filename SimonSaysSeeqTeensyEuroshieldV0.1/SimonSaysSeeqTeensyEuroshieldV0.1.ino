@@ -142,6 +142,9 @@ float right_peak_level;
 ////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
+uint8_t sequence_length_in_steps_raw;
+
+
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
 unsigned int binary_sequence_1;
 unsigned int grey_sequence_1;
@@ -418,7 +421,7 @@ B11111111,
 uint8_t sequence_length_in_steps = 8; 
 
 // Used to control when/how we change sequence length 
-uint8_t previous_sequence_length_in_ticks;
+//uint8_t previous_sequence_length_in_ticks;
 uint8_t new_sequence_length_in_ticks; 
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots 
@@ -533,6 +536,8 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP;
+// TODO Changes to Sequence Length should be done here / or when done this function should be called immediately.
+  
   Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
@@ -801,6 +806,8 @@ void StopSequencer(){
   sequence_is_running = LOW;        
 }
 
+
+// Called on Every MIDI / Analogue clock pulse
 void OnClockPulse(){
           ////////////////////////////////// 
         // This drives sequencer activity.
@@ -808,25 +815,14 @@ void OnClockPulse(){
               OnTick(loop_timing);
       
               // Keep track of ticks 
-              SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
-              SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+              //SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
+              //SetTotalTickCount(loop_timing.tick_count_since_start += 1);
       
-       
-               // We have 24 ticks per beat 
-               // crotchet * 1 = 24 (4 semiquavers)
-               // crotchet * 2 = 48 (8 semiquavers)
-               // crotchet * 4 = 96 (16 semiauqvers)
-      
-                previous_sequence_length_in_ticks = new_sequence_length_in_ticks;
-                new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-                //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-                //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
-      
-              // Reset every sequence length - or if we change the length so we don't wizz past the end and carry on.
-              // HERE! Should be OR below?
-              if ((loop_timing.tick_count_in_sequence >= (new_sequence_length_in_ticks)) && (loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0) ) { 
-                ResetSequenceCounters(); 
-              }
+
+         //////////////
+  TicksLengthAndReset();
+  /////////////// 
+
 
 }
 
@@ -1116,22 +1112,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
   //Serial.println(String("right_peak_level is: ") + right_peak_level  );
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-   
-  uint8_t sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
-  //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
-  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+  sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
 
-  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
-    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
-    Serial.println(String("**** ERROR with sequence_length_in_steps NOW is: ") + sequence_length_in_steps  );
-  }
-  
-  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
-    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
-    Serial.println(String("**** ERROR with sequence_length_in_steps NOW is: ") + sequence_length_in_steps  );
-  }
-   
+
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
@@ -1270,8 +1253,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
   return called_on_step;
  
-  }
-
+  } // End of OnTick
+////////////////////////////////////////////////
 
 
 void InitMidiSequence(){
@@ -1498,8 +1481,57 @@ bool Button1HasChanged(bool button_1_state){
   }
   return button_1_has_changed;
 }
+
+
+void TicksLengthAndReset(){
+
+
+    // Keep track of ticks 
+  SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
+  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+
+    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
+  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
+  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+
+  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+    Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
+  }
+  
+  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
+  }
+
+
+   // We have 24 ticks per beat 
+   // crotchet * 1 = 24 (4 semiquavers)
+   // crotchet * 2 = 48 (8 semiquavers)
+   // crotchet * 4 = 96 (16 semiauqvers)
+
+
+    new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
+    //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+    //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+
+
+
+  // Reset every sequence length - or if we change the length so we don't wizz past the end and carry on.
+  // HERE! Should be OR below?
+  if (
+      loop_timing.tick_count_in_sequence >= new_sequence_length_in_ticks 
+      && 
+      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      loop_timing.tick_count_since_start % 6 == 0 
+      ) { 
+    ResetSequenceCounters(); 
+  }
+
+  
+}
  
- 
+//////////////////////////// 
 
  int CountSetBits (int x)
     {
