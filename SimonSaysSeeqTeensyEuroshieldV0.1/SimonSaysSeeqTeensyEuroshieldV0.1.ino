@@ -840,6 +840,8 @@ void OnTick(){
     OnNotStep();
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
+
+  PlayMidi();
    
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
@@ -1280,6 +1282,37 @@ Serial.println(String("InitMidiSequence Done ")  );
 }
 
 
+
+void PlayMidi(){
+  // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+
+  for (uint8_t n = 0; n <= 127; n++) {
+    //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    
+           //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
+
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active >= 1) {
+           Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+           // The note could be on one of 6 ticks in the sequence
+           if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+             MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
+           }
+    } 
+
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+           Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
+           MIDI.sendNoteOff(n, 0, 1);
+       }
+    }
+} // End midi note loop
+
+}
+
+
+
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
@@ -1293,30 +1326,6 @@ void OnStep(){
 
 
 
-// Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
-
-  for (uint8_t n = 0; n <= 127; n++) {
-    //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
-    
-           //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
-
-    // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) {
-       // if (channel_a_midi_note_events[step_count][n][1] >= loop_timing.tick_count_in_sequence){
-           Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
-           // 
-           MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
-       // }
-    } 
-
-    // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
-       // if (channel_a_midi_note_events[step_count][n][0] >= loop_timing.tick_count_in_sequence){
-           Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
-           MIDI.sendNoteOff(n, 0, 1);
-       // }
-    }
-} // End midi note loop
 
     
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
@@ -1547,7 +1556,7 @@ void AdvanceSequenceChronology(){
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
   loop_timing.tick_count_in_sequence >= 16 * 6
-  ) { // Rest
+  ) { // Reset
     ResetSequenceCounters();
   } else {
     SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
