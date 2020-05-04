@@ -697,7 +697,7 @@ int note, velocity, channel, d1, d2;
 
         ///////////////////////////////
         // Drive the sequencer via MIDI
-        OnClockPulse();
+        OnTick();
         ///////////////////////////////
 
         break;
@@ -761,7 +761,7 @@ int note, velocity, channel, d1, d2;
               
               analogue_gate_state = HIGH;
               //Serial.println(String("Went HIGH "));
-              OnClockPulse();
+              OnTick();
               last_clock_pulse = millis();
               
             } 
@@ -819,59 +819,40 @@ void StopSequencer(){
 }
 
 
-// Called on Every MIDI / Analogue clock pulse
-void OnClockPulse(){
-  ////////////////////////////////// 
-  // This drives sequencer activity.
 
+void OnTick(){
+// Called on Every MIDI or Analogue clock pulse
+// Drives sequencer settings and activity.
 
+  // Read inputs and update settings.  
+  SequenceSettings();
 
-
-  
-      
-  OnTick(loop_timing);
-
-
-   if (loop_timing.tick_count_in_sequence % 6 == 0){
+  // Decide if we have a "step"
+  if (loop_timing.tick_count_in_sequence % 6 == 0){
     clockShowHigh();
     //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
     OnStep();
-    /////////////////////////////////////////
-    //step_count = IncrementStepCount();
-    
+    /////////////////////////////////////////   
   } else {
     clockShowLow();
     // The other ticks which are not "steps".
     OnNotStep();
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
-
-
-
-
-
-
-  // Keep track of ticks 
-  //SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
-  //SetTotalTickCount(loop_timing.tick_count_since_start += 1);
-      
-
-  //////////////
+   
+  // Adavnce and Reset ticks and steps
   AdvanceSequenceChronology();
-  /////////////// 
-
-
 }
 
 
 
 
 
-//////// OnTick (Everytime we get a midi clock pulse) ////////////////////////////
+//////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
 // Things that we want to happen every tick..
-int OnTick(Timing timing){
+int SequenceSettings(){
   // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
@@ -1243,13 +1224,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude);
     cv_waveform_a_object.offset(0);
 
-// chronology stuff was here
- 
-  // Mark the start of the sequence
-//  if (timing.tick_count_in_sequence % new_sequence_length_in_ticks == 0){
-//    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
-//    showStepOne();
-//  } // assume clockShowLow will turn it off. 
+
+
 
     // MONITOR GATE    
     if (gate_monitor.available())
@@ -1275,7 +1251,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
   return called_on_step;
  
-  } // End of OnTick
+  } // End of SequenceSettings
 ////////////////////////////////////////////////
 
 
