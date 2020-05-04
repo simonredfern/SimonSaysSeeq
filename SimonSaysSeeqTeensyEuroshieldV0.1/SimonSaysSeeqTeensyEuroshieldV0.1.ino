@@ -841,7 +841,7 @@ void OnTick(){
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
    
-  // Adavnce and Reset ticks and steps
+  // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
 }
 
@@ -1520,6 +1520,13 @@ void AdvanceSequenceChronology(){
   // 
   // We want to "advance" our sequencer every (24/2)/2 = 6 pulses aka ticks. (every semi-quaver / "sixteenth" even if we have 8 of them in a sequence)
 
+   // (
+   // We have 24 ticks per beat 
+   // crotchet * 1 = 24 (4 semiquavers)
+   // crotchet * 2 = 48 (8 semiquavers)
+   // crotchet * 4 = 96 (16 semiauqvers)
+   // )
+
   // Advance the tick_count as long as we're not at the end of the sequence
   // tick_count_in_sequence is zero indexed
   // new_sequence_length_in_ticks is one indexed
@@ -1546,50 +1553,14 @@ void AdvanceSequenceChronology(){
     SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
   }
 
-  
-//  if (
-//      loop_timing.tick_count_in_sequence >= new_sequence_length_in_ticks 
-//      && 
-//      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
-//      // If somehow we overshot (because pot was being turned whilst sequence running), only 
-//      loop_timing.tick_count_since_start % 6 == 0 
-//      ) { 
-//    ResetSequenceCounters(); 
-//  }
-
-
+  // Update Step Count (this could also be a function but probably makes sense to store it)
   // An integer operation - we just want the quotient.
   step_count = loop_timing.tick_count_in_sequence / 6;
 
-  // Sanity check on arithmetic
-  
-uint8_t ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+  // Just to show the tick progress  
+  uint8_t ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
-//if (loop_timing.tick_count_in_sequence != tick_count_in_sequence_check){
-//  Serial.println(String("tick_count_in_sequence_check and loop_timing.tick_count_in_sequence differ.  tick_count_in_sequence_check  is ") + tick_count_in_sequence_check  + String(" loop_timing.tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence   ); 
-//}
-
- Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
-
-
-   // We have 24 ticks per beat 
-   // crotchet * 1 = 24 (4 semiquavers)
-   // crotchet * 2 = 48 (8 semiquavers)
-   // crotchet * 4 = 96 (16 semiauqvers)
-
-
-
-
-
-
- //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence  );    
- 
-
-
-
-
-
-
+ //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
 
   
 }
