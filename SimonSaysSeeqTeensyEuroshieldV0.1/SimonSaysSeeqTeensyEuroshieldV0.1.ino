@@ -546,6 +546,20 @@ uint8_t IncrementStepCount(){
   return step_count_sanity(step_count);
 }
 
+//uint8_t GetStepCountFromTicks(){
+//  step_count = step_count_sanity(step_count + 1);
+//
+//  Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+//  return step_count_sanity(step_count);
+//
+//
+// uint8_t step_count_x = tick_count / 6;
+//    ticks_after_step = tick_count % 6;
+//
+//
+//}
+
+
 boolean midi_clock_detected = LOW;
 
 void setup() {
@@ -809,16 +823,42 @@ void StopSequencer(){
 void OnClockPulse(){
   ////////////////////////////////// 
   // This drives sequencer activity.
+
+
+
+
+  
       
   OnTick(loop_timing);
+
+
+   if (loop_timing.tick_count_in_sequence % 6 == 0){
+    clockShowHigh();
+    //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStep();
+    /////////////////////////////////////////
+    //step_count = IncrementStepCount();
+    
+  } else {
+    clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStep();
+    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+
+
+
+
 
   // Keep track of ticks 
   //SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
   //SetTotalTickCount(loop_timing.tick_count_since_start += 1);
       
 
-         //////////////
-  UpdateSequenceChronology();
+  //////////////
+  AdvanceSequenceChronology();
   /////////////// 
 
 
@@ -835,7 +875,7 @@ int OnTick(Timing timing){
   // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
- int called_on_step = 0;
+ int called_on_step = 0; // don't need
 
 
   ////////////////////////////////////////////////////////////////
@@ -1203,29 +1243,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude);
     cv_waveform_a_object.offset(0);
 
-
- //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence  );    
- 
-
-  // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
-  // 
-  // We want to "advance" our sequencer every (24/2)/2 = 6 pulses / ticks. (every semi-quaver / "sixteenth" even if we have 8 of them in a sequence)
-  // This is independant from the sequence length
-  if (timing.tick_count_in_sequence % 6 == 0){
-    clockShowHigh();
-    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
-    //////////////////////////////////////////
-    OnStep();
-    called_on_step = 1; // For information
-    /////////////////////////////////////////
-    step_count = IncrementStepCount();
-    
-  } else {
-    clockShowLow();
-    // The other ticks which are not "steps".
-    OnNotStep();
-    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
-  }
+// chronology stuff was here
  
   // Mark the start of the sequence
 //  if (timing.tick_count_in_sequence % new_sequence_length_in_ticks == 0){
@@ -1289,7 +1307,7 @@ Serial.println(String("InitMidiSequence Done ")  );
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
-  //Serial.println(String("step_count is: ") + step_count  );
+  Serial.println(String("OnStep ") + step_count  );
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));  
@@ -1488,12 +1506,15 @@ bool Button1HasChanged(bool button_1_state){
 }
 
 
-void UpdateSequenceChronology(){
+void AdvanceSequenceChronology(){
 
 
-    // Keep track of ticks 
-  SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1);
-  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+
+  
+  // This function advances or resets the sequence powered by the clock.
+
+  // But first check / set the desired sequence length
+
 
     //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
@@ -1509,6 +1530,71 @@ void UpdateSequenceChronology(){
     Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
   }
 
+  new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+
+  // Always advance the ticks SINCE START
+  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+
+
+
+
+  // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
+  // 
+  // We want to "advance" our sequencer every (24/2)/2 = 6 pulses aka ticks. (every semi-quaver / "sixteenth" even if we have 8 of them in a sequence)
+
+  // Advance the tick_count as long as we're not at the end of the sequence
+  // tick_count_in_sequence is zero indexed
+  // new_sequence_length_in_ticks is one indexed
+  // 
+
+  // If we're at the end of the sequence
+  if (
+    (loop_timing.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
+
+  // or we past the end and we're at new beat  
+  ||
+  (loop_timing.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
+      && 
+      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      // If somehow we overshot (because pot was being turned whilst sequence running), only 
+      loop_timing.tick_count_since_start % 6 == 0 
+  )
+  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
+  || 
+  loop_timing.tick_count_in_sequence >= 16 * 6
+  ) { // Rest
+    ResetSequenceCounters();
+  } else {
+    SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
+  }
+
+  
+//  if (
+//      loop_timing.tick_count_in_sequence >= new_sequence_length_in_ticks 
+//      && 
+//      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+//      // If somehow we overshot (because pot was being turned whilst sequence running), only 
+//      loop_timing.tick_count_since_start % 6 == 0 
+//      ) { 
+//    ResetSequenceCounters(); 
+//  }
+
+
+  // An integer operation - we just want the quotient.
+  step_count = loop_timing.tick_count_in_sequence / 6;
+
+  // Sanity check on arithmetic
+  
+uint8_t ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+
+//if (loop_timing.tick_count_in_sequence != tick_count_in_sequence_check){
+//  Serial.println(String("tick_count_in_sequence_check and loop_timing.tick_count_in_sequence differ.  tick_count_in_sequence_check  is ") + tick_count_in_sequence_check  + String(" loop_timing.tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence   ); 
+//}
+
+ Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+
 
    // We have 24 ticks per beat 
    // crotchet * 1 = 24 (4 semiquavers)
@@ -1516,22 +1602,18 @@ void UpdateSequenceChronology(){
    // crotchet * 4 = 96 (16 semiauqvers)
 
 
-    new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-    //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-    //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
 
 
 
-  // Reset every sequence length - or if we change the length so we don't wizz past the end and carry on.
-  // HERE! Should be OR below?
-  if (
-      loop_timing.tick_count_in_sequence >= new_sequence_length_in_ticks 
-      && 
-      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
-      loop_timing.tick_count_since_start % 6 == 0 
-      ) { 
-    ResetSequenceCounters(); 
-  }
+
+ //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence  );    
+ 
+
+
+
+
+
+
 
   
 }
