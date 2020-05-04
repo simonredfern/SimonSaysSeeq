@@ -420,6 +420,9 @@ uint8_t sequence_length_in_steps = 8;
 //uint8_t previous_sequence_length_in_ticks;
 uint8_t new_sequence_length_in_ticks; 
 
+// Just counts 0 to 5 within each step
+uint8_t ticks_after_step;
+
 // Jitter Reduction: Used to flatten out glitches from the analog pots 
 uint8_t jitter_reduction = 0; // was 20
 
@@ -546,18 +549,6 @@ uint8_t IncrementStepCount(){
   return step_count_sanity(step_count);
 }
 
-//uint8_t GetStepCountFromTicks(){
-//  step_count = step_count_sanity(step_count + 1);
-//
-//  Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
-//  return step_count_sanity(step_count);
-//
-//
-// uint8_t step_count_x = tick_count / 6;
-//    ticks_after_step = tick_count % 6;
-//
-//
-//}
 
 
 boolean midi_clock_detected = LOW;
@@ -841,6 +832,7 @@ void OnTick(){
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
+  // Play any suitable midi in the sequence 
   PlayMidi();
    
   // Advance and Reset ticks and steps
@@ -1289,13 +1281,11 @@ void PlayMidi(){
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
-           //Serial.println(String(" is greater than ") + loop_timing.tick_count_in_sequence );
-
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active >= 1) {
-           Serial.println(String("At step ") + step_count + String(" Send midi_note ON for ") + n );
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active >= 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+             Serial.println(String("At step ") + step_count + String(":") + ticks_after_step + String(" Send midi_note ON for ") + n );
              MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
@@ -1303,7 +1293,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
-           Serial.println(String("At step ") + step_count + String(" Send midi_note OFF for ") + n );
+           Serial.println(String("At step ") + step_count + String(":") + ticks_after_step +  String(" Send midi_note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
     }
@@ -1567,7 +1557,7 @@ void AdvanceSequenceChronology(){
   step_count = loop_timing.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
-  uint8_t ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+  ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
  //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
 
