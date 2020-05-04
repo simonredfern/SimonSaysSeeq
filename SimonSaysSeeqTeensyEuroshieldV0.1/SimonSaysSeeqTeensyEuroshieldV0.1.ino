@@ -1282,7 +1282,7 @@ void PlayMidi(){
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active >= 1) { 
+    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
              Serial.println(String("At step ") + step_count + String(":") + ticks_after_step + String(" Send midi_note ON for ") + n );
@@ -1632,26 +1632,35 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
 //#define topofstack stack[stackptr - 1]
 
 
-void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
-  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
-  if (on_off == MIDI_NOTE_ON){
-
-        if (velocity < 7 ){
-            // Disable the note
-            Serial.println(String("*** Disable note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
-           // Send Note OFF
-           MIDI.sendNoteOff(note, 0, 1);
-           
-           // Disable that note for all steps.
+void DisableNotes(uint8_t note){
+             // Disable that note for all steps.
            uint8_t sc = 0;
-            for (sc = 0; sc < 15; sc++){
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
               channel_a_midi_note_events[sc][note][1].velocity = 0;
               channel_a_midi_note_events[sc][note][1].is_active = 0;
               channel_a_midi_note_events[sc][note][0].velocity = 0;
               channel_a_midi_note_events[sc][note][0].is_active = 0;         
             }
+}
+
+
+void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+
+  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  if (on_off == MIDI_NOTE_ON){
+
+        // Subtle bug here. 
+        // Disable works for Note On but because we have a note off after this note on, we store the note off.
+        // Note OFF has velocity 0 at least on Yamaha Reface CP  - so cant use velocity of note off. 
+        if (velocity < 7 ){
+            // Disable the note on all steps
+            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
+           // Send Note OFF
+           MIDI.sendNoteOff(note, 0, 1);
+           
+           DisableNotes(note);
           
     
         } else {
@@ -1663,13 +1672,24 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           channel_a_midi_note_events[step_count][note][1].is_active = 1;
            Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
 
-           
-
-       
         } 
       
           
         } else {
+
+
+//        if (velocity < 7 ){
+//            // Disable the note on all steps
+//            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because OFF velocity is ") + velocity );
+//         
+//           DisableNotes(note);
+//          
+//    
+//        } else {
+          
+    
+
+          
             // Note Off
              Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
              // WRITE MIDI MIDI_DATA
@@ -1677,6 +1697,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              channel_a_midi_note_events[step_count][note][0].velocity = velocity;
              channel_a_midi_note_events[step_count][note][0].is_active = 1;
              Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+
+               //  }
   }
   } 
 
