@@ -684,21 +684,41 @@ int note, velocity, channel, d1, d2;
         note = MIDI.getData1();
         velocity = MIDI.getData2();
         channel = MIDI.getChannel();
-        OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
+
+       // Before we do something with this note OFF, check we're not expecting a note OFF from the disable mechanism.
+       // If so, ignore the Note OFF, else proceed. 
+       if (channel_a_ghost_events[note].is_active == 1){
+            Serial.println(String("I was expecting a ghost Note OFF for ") + note + String(" Thus I will ignore this Note OFF ") );
+            // Reset the ghost event
+            channel_a_ghost_events[note].is_active = 0;
+       } else {
+          OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
+       }  
+         
+//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
+//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
+//                      channel_a_ghost_events[n].is_active=0;
+//                   }  
+               
+
+
+        
+        
         //Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
 
 
 
             // Loop through ghost off notes and set the corresponding note events to inactive
-            for (uint8_t n = 0; n <= 127; n++) {
-              if (channel_a_ghost_events[n].is_active == 1){
-                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
-                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
-                      channel_a_ghost_events[n].is_active=0;
-                   }  
-              }
-            }
+//            for (uint8_t n = 0; n <= 127; n++) {
+//              if (channel_a_ghost_events[n].is_active == 1){
+//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
+//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
+//                      channel_a_ghost_events[n].is_active=0;
+//                   }  
+//              }
+//            }
 
 
 
@@ -745,7 +765,7 @@ int note, velocity, channel, d1, d2;
         int d1 = MIDI.getData1();
         int d2 = MIDI.getData2();
         int dummy = 1;
-        Serial.println(String("Message, type=") + type + ", data = " + d1 + " " + d2);
+        Serial.println(String("**************************** Message, type=") + type + ", data = " + d1 + " " + d2);
     }
   } // End of MIDI message detected
 
@@ -1694,30 +1714,21 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
   if (on_off == MIDI_NOTE_ON){
 
-   
-        // Note OFF has velocity 0 at least on Yamaha Reface CP  - so cant use velocity of note off. 
+        // A mechanism to clear notes from memory by playing them quietly.
         if (velocity < 7 ){
-            // Disable the note on all steps
-            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
            // Send Note OFF
            MIDI.sendNoteOff(note, 0, 1);
            
+           // Disable the note on all steps
+           Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
            DisableNotes(note);
 
-           // Store ghost_off note:
-                // Subtle bug here. 
-          // Disable works for Note On but because we have a note off *after* this note on (we have to release the key after all), 
-          // we end up storing an orphoned note off.
-          // Solution is probably store the note we will create e.g.  possible_orphoned_off = note  and then disable that in a later cycle.
-          // HERE
-
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
+          // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
+          // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
+          // these Note OFF events. 
+          // One way is to store them here for processing after the note OFF actually happens. 
           channel_a_ghost_events[note].is_active=1;
-
-
-          
-
-
-          
     
         } else {
           // We want the note on, so set it on.
