@@ -465,6 +465,16 @@ NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2];
 ////////
 
 
+class GhostNote
+{
+ public:
+   uint8_t tick_count_in_sequence = 0;
+   uint8_t is_active = 0;
+};
+
+GhostNote channel_a_ghost_events[128];
+
+
 ////////////////////////////
 // LED Display 
 // unsigned int led_1_level = 0; 
@@ -676,6 +686,24 @@ int note, velocity, channel, d1, d2;
         channel = MIDI.getChannel();
         OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         //Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+
+
+
+            // Loop through ghost off notes and set the corresponding note events to inactive
+            for (uint8_t n = 0; n <= 127; n++) {
+              if (channel_a_ghost_events[n].is_active == 1){
+                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
+                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
+                      channel_a_ghost_events[n].is_active=0;
+                   }  
+              }
+            }
+
+
+
+
+        
         break;
       case midi::Clock:
         // Midi devices sending clock send one of these 24 times per crotchet (a quarter note). 24PPQ
@@ -720,6 +748,12 @@ int note, velocity, channel, d1, d2;
         Serial.println(String("Message, type=") + type + ", data = " + d1 + " " + d2);
     }
   } // End of MIDI message detected
+
+
+
+
+
+
 
 
 ///////////////////
@@ -1168,7 +1202,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    ////////////////////////////////////// 
    // CV stuff
-   // LOWER Pot HIGH Button //CHECK HERE
+   // LOWER Pot HIGH Button
    cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
@@ -1270,6 +1304,13 @@ void InitMidiSequence(){
     } 
   }
 
+
+  for (uint8_t n = 0; n <= 127; n++) {
+     channel_a_ghost_events[n].is_active = 0;
+     Serial.println(String("Init Step with ghost ") + String(" Note ") + n +  String(" is_active false ") );
+  } 
+  
+
 Serial.println(String("InitMidiSequence Done ")  );
 }
 
@@ -1278,6 +1319,8 @@ Serial.println(String("InitMidiSequence Done ")  );
 void PlayMidi(){
   // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
+
+
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
@@ -1285,7 +1328,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
-             Serial.println(String("At step ") + step_count + String(":") + ticks_after_step + String(" Send midi_note ON for ") + n );
+             Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
              MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
@@ -1293,7 +1336,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
-           Serial.println(String("At step ") + step_count + String(":") + ticks_after_step +  String(" Send midi_note OFF for ") + n );
+           Serial.println(String("Step:Ticks") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
     }
@@ -1651,10 +1694,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
   if (on_off == MIDI_NOTE_ON){
 
-        // Subtle bug here. 
-        // Disable works for Note On but because we have a note off *after* this note on (we have to release the key after all), 
-        // we end up storing an orphoned note off.
-        // Solution is probably store the note we will create e.g.  possible_orphoned_off = note  and then disable that in a later cycle.
+   
         // Note OFF has velocity 0 at least on Yamaha Reface CP  - so cant use velocity of note off. 
         if (velocity < 7 ){
             // Disable the note on all steps
@@ -1663,6 +1703,20 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
            MIDI.sendNoteOff(note, 0, 1);
            
            DisableNotes(note);
+
+           // Store ghost_off note:
+                // Subtle bug here. 
+          // Disable works for Note On but because we have a note off *after* this note on (we have to release the key after all), 
+          // we end up storing an orphoned note off.
+          // Solution is probably store the note we will create e.g.  possible_orphoned_off = note  and then disable that in a later cycle.
+          // HERE
+
+          channel_a_ghost_events[note].is_active=1;
+
+
+          
+
+
           
     
         } else {
