@@ -1652,7 +1652,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   if (on_off == MIDI_NOTE_ON){
 
         // Subtle bug here. 
-        // Disable works for Note On but because we have a note off after this note on, we store the note off.
+        // Disable works for Note On but because we have a note off *after* this note on (we have to release the key after all), 
+        // we end up storing an orphoned note off.
+        // Solution is probably store the note we will create e.g.  possible_orphoned_off = note  and then disable that in a later cycle.
         // Note OFF has velocity 0 at least on Yamaha Reface CP  - so cant use velocity of note off. 
         if (velocity < 7 ){
             // Disable the note on all steps
