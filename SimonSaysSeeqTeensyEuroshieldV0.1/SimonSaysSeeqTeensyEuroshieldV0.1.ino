@@ -547,7 +547,7 @@ void ResetSequenceCounters(){
   step_count = FIRST_STEP;
 // TODO Changes to Sequence Length should be done here / or when done this function should be called immediately.
   
-  Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
 
@@ -661,7 +661,7 @@ void loop() {
 
 
   
-int note, velocity, channel, d1, d2;
+int note, velocity, channel; //, d1, d2;
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
     byte type = MIDI.getType();
     switch (type) {
@@ -676,9 +676,7 @@ int note, velocity, channel, d1, d2;
           //Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
           OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         }
-
-        
-        
+  
         break;
       case midi::NoteOff:
         note = MIDI.getData1();
@@ -729,9 +727,9 @@ int note, velocity, channel, d1, d2;
         // Midi devices sending clock send one of these 24 times per crotchet (a quarter note). 24PPQ
         midi_clock_detected = HIGH;
         //Serial.println(String("+++++++++++++++++++++++++++++++++ midi_clock_detected SET TO TRUE is: ") + midi_clock_detected) ;
-        note = MIDI.getData1();
-        velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
+//        note = MIDI.getData1();
+//        velocity = MIDI.getData2();
+//        channel = MIDI.getChannel();
         //Serial.println(String("We got Clock: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
 
         ///////////////////////////////
@@ -741,31 +739,44 @@ int note, velocity, channel, d1, d2;
 
         break;
       case midi::Start:
-        note = MIDI.getData1();
-        velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
+//        note = MIDI.getData1();
+//        velocity = MIDI.getData2();
+//        channel = MIDI.getChannel();
         StartSequencer();
         break;
       case midi::Stop:
-        note = MIDI.getData1();
-        velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
+//        note = MIDI.getData1();
+//        velocity = MIDI.getData2();
+//        channel = MIDI.getChannel();
         StopSequencer();
 
         //Serial.println(String("We got Stop: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;
       case midi::Continue:
-        note = MIDI.getData1();
-        velocity = MIDI.getData2();
-        channel = MIDI.getChannel();
+//        note = MIDI.getData1();
+//        velocity = MIDI.getData2();
+//        channel = MIDI.getChannel();
         //Serial.println(String("We got Continue: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;     
       default:
         Serial.println(String("Message, type=") + type);
         int d1 = MIDI.getData1();
         int d2 = MIDI.getData2();
-        int dummy = 1;
         Serial.println(String("**************************** Message, type=") + type + ", data = " + d1 + " " + d2);
+
+        // If sustain pedal pressed, clear the sequence  
+        if (type == 176 && d1 == 64 && d2 == 127){
+          Serial.println(String("Sustain pedal pressed. Let's clear our sequence..") + type);
+          InitMidiSequence();
+        }
+
+
+
+
+
+
+
+        
     }
   } // End of MIDI message detected
 
@@ -1348,7 +1359,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
-             Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
              MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
@@ -1356,7 +1367,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
-           Serial.println(String("Step:Ticks") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+           // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
     }
@@ -1369,7 +1380,7 @@ void PlayMidi(){
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
-  Serial.println(String("OnStep ") + step_count  );
+  //Serial.println(String("OnStep ") + step_count  );
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));  
