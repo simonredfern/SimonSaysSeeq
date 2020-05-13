@@ -592,6 +592,12 @@ void setup() {
   // Begin Midi
   MIDI.begin(MIDI_CHANNEL_OMNI);
 
+
+
+  MIDI.turnThruOn(midi::Thru::Full);
+  // Off, Full, SameChannel, DifferentChannel
+
+
   cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
   
 
@@ -676,6 +682,8 @@ int note, velocity, channel; //, d1, d2;
           //Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
           OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         }
+        // Pass the message through
+        //MIDI.sendNoteOn(note, velocity, channel);
   
         break;
       case midi::NoteOff:
@@ -691,7 +699,10 @@ int note, velocity, channel; //, d1, d2;
             channel_a_ghost_events[note].is_active = 0;
        } else {
           OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
-       }  
+       }
+
+        // Pass the message on
+        //MIDI.sendNoteOff(note, 0, channel); 
          
 //                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
 //                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
@@ -736,6 +747,8 @@ int note, velocity, channel; //, d1, d2;
         // Drive the sequencer via MIDI
         OnTick();
         ///////////////////////////////
+
+        //MIDI.---sendClock();
 
         break;
       case midi::Start:
