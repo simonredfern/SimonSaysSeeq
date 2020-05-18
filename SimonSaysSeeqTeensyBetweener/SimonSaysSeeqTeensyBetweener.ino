@@ -1,4 +1,4 @@
-//#include <Betweener.h>
+
 
 // the setup() method runs once, when the sketch starts
 
@@ -13,9 +13,11 @@ const float simon_says_seq_version = 0.23;
 
 #include <Audio.h>
 #include <MIDI.h>
+#include <Betweener.h>
 
 
 
+Betweener b;
 
 
 AudioSynthWaveformDc     gate_dc_waveform;
@@ -71,6 +73,15 @@ const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 }; // {
 const uint8_t upper_pot_pin = 20;
 // This the the pin for the upper pot on the Euroshield
 const uint8_t lower_pot_pin = 21;
+
+const uint8_t betweener_led_pin = 8;
+
+const uint8_t device = 1; // 0 Euroshield, 1 Betweener
+
+
+
+///////////////
+
 
 
 const uint8_t BRIGHT_0 = 0;
@@ -433,7 +444,7 @@ uint8_t jitter_reduction = 0; // was 20
 unsigned int cv_waveform_a_frequency_raw;
 float cv_waveform_a_frequency;
 
-  boolean reset_cv_lfo_at_FIRST_STEP = false;
+boolean reset_cv_lfo_at_FIRST_STEP = false;
 
 // Amplitude of the LFO
 unsigned int cv_waveform_a_amplitude_raw;
@@ -568,8 +579,37 @@ uint8_t IncrementStepCount(){
 
 boolean midi_clock_detected = LOW;
 
+uint8_t Device(){
+  // Return 1 for Betweener, 0 for Euroshield.
+  return 1; 
+}
+
+boolean IsBetweener(){
+  if (Device()==1){
+    return true;
+  } else {
+    return false;
+  }
+}
+
+boolean IsEuroshield(){
+  if (Device()==0){
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+
 void setup() {
 
+  
+
+  if (IsBetweener()) {
+    Serial.println(String("Expecting Beweener. Creating a b object."));
+    b.begin();  //start the Betweener
+  }
 
 
   // Audio connections require memory to work.  For more
@@ -586,11 +626,15 @@ void setup() {
   // pinMode(teensy_led_pin, OUTPUT);
 
   uint8_t i;
-  for (i = 0; i < euroshield_led_pin_count; i++) { 
-    pinMode(euroshieldLedPins[i], OUTPUT);    
+  if (IsEuroshield()) {
+    for (i = 0; i < euroshield_led_pin_count; i++) { 
+      pinMode(euroshieldLedPins[i], OUTPUT);    
+    }
+  
+    pinMode(euroshield_button_pin, INPUT);
+  } else {
+    pinMode(betweener_led_pin, OUTPUT);
   }
-
-  pinMode(euroshield_button_pin, INPUT);
   ///////////////////////////////////////
 
 
@@ -633,24 +677,39 @@ void setup() {
   
   // Say Hello to the Teensy LED 
   Flash(my_delay_time, my_no_of_times, teensy_led_pin);
+
+ if (IsEuroshield()) {
+    // Say hello to the Euroshield LEDs 
+    for (i = 0; i < euroshield_led_pin_count; i++) { 
+       Flash(my_delay_time, my_no_of_times, euroshieldLedPins[i]);
+    }
+ }
+
+
+   if (IsBetweener()) {
+      // Say hello to Betweener. There is only one LED on the Betweener, so make it more obvious
+      Flash(my_delay_time * 2, my_no_of_times * 2, betweener_led_pin);
+   }
   
-  // Say hello to the Euroshield LEDs 
-  for (i = 0; i < euroshield_led_pin_count; i++) { 
-     Flash(my_delay_time, my_no_of_times, euroshieldLedPins[i]);
-  }
   ////////////////////////////////////////  
 
   ///////////////////////////////////////
   // Debugging hello
   Serial.begin(57600);
-  Serial.println(String("Simon Says Seeq! Version: ") + simon_says_seq_version);
+  Serial.println(String("Simon Says Grey Code Seeq! Betweener Version: ") + simon_says_seq_version);
   Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
 // https://en.cppreference.com/w/cpp/types/integer
   Serial.println(String("Max value in INT8_MAX (int8_t): ") + INT8_MAX ) ; // int8_t max value is 127 
    Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
-    
 
+   if (IsBetweener()) {
+      Serial.println(String("IsBetweener")) ;
+   }
+
+    if (IsEuroshield()) {
+      Serial.println(String("IsEuroshield")) ;
+    }
 }
 
 
@@ -708,45 +767,12 @@ int note, velocity, channel; //, d1, d2;
 
         // Pass the message on
         //MIDI.sendNoteOff(note, 0, channel); 
-         
-//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
-//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
-//                      channel_a_ghost_events[n].is_active=0;
-//                   }  
-               
-
-
-        
-        
-        //Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
-
-
-
-            // Loop through ghost off notes and set the corresponding note events to inactive
-//            for (uint8_t n = 0; n <= 127; n++) {
-//              if (channel_a_ghost_events[n].is_active == 1){
-//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
-//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
-//                      channel_a_ghost_events[n].is_active=0;
-//                   }  
-//              }
-//            }
-
-
-
-
-        
+                 
         break;
       case midi::Clock:
         // Midi devices sending clock send one of these 24 times per crotchet (a quarter note). 24PPQ
         midi_clock_detected = HIGH;
         //Serial.println(String("+++++++++++++++++++++++++++++++++ midi_clock_detected SET TO TRUE is: ") + midi_clock_detected) ;
-//        note = MIDI.getData1();
-//        velocity = MIDI.getData2();
-//        channel = MIDI.getChannel();
-        //Serial.println(String("We got Clock: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
 
         ///////////////////////////////
         // Drive the sequencer via MIDI
@@ -793,6 +819,10 @@ int note, velocity, channel; //, d1, d2;
 // Analog Clock (and left input checking) //////
 
 
+
+// Euroshield
+if (IsEuroshield()){
+
     ///////////////////////////////////////////
    // Look for Analogue Clock (24 PPQ)
    // Note: We use this input for other things too.
@@ -818,9 +848,7 @@ int note, velocity, channel; //, d1, d2;
               
               analogue_gate_state = HIGH;
               //Serial.println(String("Went HIGH "));
-              
-              
-              
+               
               OnTick();
               last_clock_pulse = millis();
               
@@ -837,6 +865,23 @@ int note, velocity, channel; //, d1, d2;
     } else {
       //Serial.println(String("gate_monitor not available ")   );
     }
+
+
+} 
+
+if (IsBetweener()){
+    b.readTriggers();
+
+    if (b.trig1.risingEdge()) {
+          if (sequence_is_running == LOW){
+                StartSequencer();
+          }
+          OnTick();
+          last_clock_pulse = millis();
+    }
+    
+ } // End device check
+    
 
  
 /////////////////////////////////////////////////////////////////////////////////
@@ -886,6 +931,9 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
+   Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);    
+  
+
   // Read inputs and update settings.  
   SequenceSettings();
 
@@ -903,7 +951,7 @@ void OnTick(){
     //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
-  // Play any suitable midi in the sequence 
+  // Play any suitable midi in the midi sequence 
   PlayMidi();
    
   // Advance and Reset ticks and steps
