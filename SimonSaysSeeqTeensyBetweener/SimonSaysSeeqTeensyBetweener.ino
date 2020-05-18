@@ -965,11 +965,15 @@ void OnTick(){
 //////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
 // Things that we want to happen every tick..
-int SequenceSettings(){
+void SequenceSettings(){
   // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
- int called_on_step = 0; // don't need
+
+
+
+if (IsEuroshield()){
+  
 
 
   ////////////////////////////////////////////////////////////////
@@ -1072,33 +1076,6 @@ else
 }
 
 
-
-  // Get values from analogue ins  
-
-//if (peak_L.available() && peak_R.available() ) {
-//   left_peak_level = peak_L.read() * 255.0;
-//   Serial.println(String("left_peak_level: ") + left_peak_level ); 
-//
-//   right_peak_level = peak_R.read() * 255.0;
-//   Serial.println(String("right_peak_level: ") + right_peak_level ); 
-//  
-//} else {
-//  Serial.println(String("peak_L or peak_R  not available ")   );
-//}
-
-
-//
-//   if (peak_L.available())
-//    {
-//        left_peak_level = peak_L.read() * 255.0;
-//        Serial.println(String("left_peak_level: ") + left_peak_level );  
-//    } else {
-//      Serial.println(String("left_peak_level not available ")   );
-//    }
-//
-//
-//
-//  
    if (peak_R.available())
     {
         right_peak_level = peak_R.read() * 1.0;
@@ -1107,39 +1084,24 @@ else
       //Serial.println(String("right_peak_level not available ")   );
     }
 
+}
 
 
-  // Look for Analogue Sequence start or stop  
-//   if (peak_R.available())
-//    {
-//        float right_peak_level = peak_R.read() * 1.0;
-//
-//        Serial.println(String("right_peak_level: ") + right_peak_level + String(" sequence_is_running: ") + sequence_is_running);
-//
-//
-//        // Going Up ? - Start
-//        if ((right_peak_level > 0.5) && (sequence_is_running == LOW)){
-//          sequence_is_running = HIGH;
-//          StartSequencer();
-//        } 
-//
-//        // Going Down ? - Stop
-//        if ((right_peak_level < 0.5) && (sequence_is_running == HIGH)){
-//          sequence_is_running = LOW;
-//          StopSequencer();
-//        } 
-//    
-//    } else {
-//      //Serial.println(String("gate_monitor not available ")   );
-//    }
-   ///////////////////////////////////////////////////////////////
+if (IsBetweener()){
+  // Pot1
+  // Pot2
+  // Pot3
+  // Pot4
+
+  // Cv1
+  // Cv2
+  // Cv3
+  // Cv4
+}
 
 
 
 
-//////////////////////////////////////////////
-
-//amp_1_object.gain(1.0);
 
 
 
@@ -1367,7 +1329,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     }
 
 
-  return called_on_step;
+ // return called_on_step;
  
   } // End of SequenceSettings
 ////////////////////////////////////////////////
