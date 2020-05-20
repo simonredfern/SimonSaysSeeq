@@ -117,33 +117,33 @@ unsigned int lower_input_raw;
 // To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 bool upper_pot_high_engaged = true;
-unsigned int upper_pot_high_value_raw;
-unsigned int upper_pot_high_value;
-unsigned int upper_pot_high_value_last;
-unsigned int upper_pot_high_value_at_button_change;
+unsigned int input_1_value_raw;
+unsigned int input_1_value;
+unsigned int input_1_value_last;
+unsigned int input_1_value_at_button_change;
 
 bool lower_pot_high_engaged = true;
-unsigned int lower_pot_high_value_raw;
-unsigned int lower_pot_high_value;
-unsigned int lower_pot_high_value_last;
-unsigned int lower_pot_high_value_at_button_change;
+unsigned int input_2_value_raw;
+unsigned int input_2_value;
+unsigned int input_2_value_last;
+unsigned int input_2_value_at_button_change;
 
 bool upper_pot_low_engaged = true;
-unsigned int upper_pot_low_value_raw;
-unsigned int upper_pot_low_value;
-unsigned int upper_pot_low_value_last;
-unsigned int upper_pot_low_value_at_button_change;
+unsigned int input_3_value_raw;
+unsigned int input_3_value;
+unsigned int input_3_value_last;
+unsigned int input_3_value_at_button_change;
 
 bool lower_pot_low_engaged = true;
-unsigned int lower_pot_low_value_raw;
-unsigned int lower_pot_low_value;
-unsigned int lower_pot_low_value_last;
-unsigned int lower_pot_low_value_at_button_change;
+unsigned int input_4_value_raw;
+unsigned int input_4_value;
+unsigned int input_4_value_last;
+unsigned int input_4_value_at_button_change;
 
 
 
-float left_peak_level;
-float right_peak_level;
+float input_5_value;
+float input_6_value;
 
 
 ////////////////////////////////////////////////////
@@ -827,8 +827,8 @@ if (IsEuroshield()){
    // Look for Analogue Clock (24 PPQ)
    // Note: We use this input for other things too.
    if (peak_L.available()){
-        left_peak_level = peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
-        // Serial.println(String("**** left_peak_level: ") + left_peak_level) ;
+        input_5_value = peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
+        // Serial.println(String("**** input_5_value: ") + input_5_value) ;
 
         //Serial.println(String("analogue_gate_state: ") + analogue_gate_state) ;
 
@@ -840,7 +840,7 @@ if (IsEuroshield()){
           // Only look for this clock if we don't have midi.
 
             // Rising clock edge? // state-change-1
-            if ((left_peak_level > 0.5) && (analogue_gate_state == LOW)){
+            if ((input_5_value > 0.5) && (analogue_gate_state == LOW)){
     
               if (sequence_is_running == LOW){
                 StartSequencer();
@@ -855,7 +855,7 @@ if (IsEuroshield()){
             } 
     
             // Falling clock edge?
-            if ((left_peak_level < 0.5) && (analogue_gate_state == HIGH)){
+            if ((input_5_value < 0.5) && (analogue_gate_state == HIGH)){
               analogue_gate_state = LOW;
               //Serial.println(String("Went LOW "));
             } 
@@ -936,7 +936,7 @@ void OnTick(){
   
 
   // Read inputs and update settings.  
-  SequenceSettings();
+  ReadInputsAndUpdateSettings();
 
   // Decide if we have a "step"
   if (loop_timing.tick_count_in_sequence % 6 == 0){
@@ -963,19 +963,14 @@ void OnTick(){
 
 
 
-//////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
-// This is called from the main loop() function on every Midi Clock message.
+// This is called from the main loop() function on every Midi / Ananlogue Clock message.
 // Things that we want to happen every tick..
-void SequenceSettings(){
+void ReadInputsAndUpdateSettings(){
   // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
 
-
-
 if (IsEuroshield()){
-  
-
 
   ////////////////////////////////////////////////////////////////
   // Read button state
@@ -1002,8 +997,8 @@ if (IsEuroshield()){
       lower_pot_high_engaged = false;
 
       //Serial.println(String("store values for state_HIGH  "));
-      upper_pot_high_value_at_button_change = upper_pot_high_value;
-      lower_pot_high_value_at_button_change = lower_pot_high_value;
+      input_1_value_at_button_change = input_1_value;
+      input_2_value_at_button_change = input_2_value;
     
     } else {
       // Disable the low pots
@@ -1011,8 +1006,8 @@ if (IsEuroshield()){
       lower_pot_low_engaged = false;
 
       //Serial.println(String("store values for state_LOW "));
-      upper_pot_low_value_at_button_change = upper_pot_low_value;
-      lower_pot_low_value_at_button_change = lower_pot_low_value;
+      input_3_value_at_button_change = input_3_value;
+      input_4_value_at_button_change = input_4_value;
     }
   }
 
@@ -1030,48 +1025,48 @@ if (IsEuroshield()){
 if (button_1_state == HIGH) {
   // only assign it if engaged i.e. we don't want to jump values if the pot is moved inbetween button press
   
-   if ((upper_pot_high_engaged == true) || IsCrossing(upper_pot_high_value_at_button_change, upper_input_raw, 5)) {
-       int upper_pot_high_value_raw = upper_input_raw;
-        //Serial.println(String("**** upper_pot_high_value_raw is: ") + upper_pot_high_value_raw  );     
-        upper_pot_high_value = GetValue(upper_pot_high_value_raw, upper_pot_high_value_last, jitter_reduction);
-        upper_pot_high_value_last = upper_pot_high_value;
+   if ((upper_pot_high_engaged == true) || IsCrossing(input_1_value_at_button_change, upper_input_raw, 5)) {
+       int input_1_value_raw = upper_input_raw;
+        //Serial.println(String("**** input_1_value_raw is: ") + input_1_value_raw  );     
+        input_1_value = GetValue(input_1_value_raw, input_1_value_last, jitter_reduction);
+        input_1_value_last = input_1_value;
         upper_pot_high_engaged = true;
    } else {
-     //Serial.println(String("upper_pot_high is: DISENGAGED value is sticking at: ") + upper_pot_high_value  ); 
+     //Serial.println(String("upper_pot_high is: DISENGAGED value is sticking at: ") + input_1_value  ); 
    }
 
-   if ((lower_pot_high_engaged == true) || IsCrossing(lower_pot_high_value_at_button_change, lower_input_raw, 5)){
-        int lower_pot_high_value_raw = lower_input_raw;
-        //Serial.println(String("lower_pot_high_value_raw is: ") + lower_pot_high_value_raw  );
-        lower_pot_high_value = GetValue(lower_pot_high_value_raw, lower_pot_high_value_last, jitter_reduction);
-        lower_pot_high_value_last = lower_pot_high_value;
+   if ((lower_pot_high_engaged == true) || IsCrossing(input_2_value_at_button_change, lower_input_raw, 5)){
+        int input_2_value_raw = lower_input_raw;
+        //Serial.println(String("input_2_value_raw is: ") + input_2_value_raw  );
+        input_2_value = GetValue(input_2_value_raw, input_2_value_last, jitter_reduction);
+        input_2_value_last = input_2_value;
         lower_pot_high_engaged = true;
    } else {
-    //Serial.println(String("lower_pot_high is: DISENGAGED value is sticking at: ") + lower_pot_high_value  ); 
+    //Serial.println(String("lower_pot_high is: DISENGAGED value is sticking at: ") + input_2_value  ); 
    }
   
 } 
 else 
 // LOW state
 {
-  if ((upper_pot_low_engaged == true) || IsCrossing(upper_pot_low_value_at_button_change, upper_input_raw, 5)) {
-     int upper_pot_low_value_raw = upper_input_raw;
-     //Serial.println(String("upper_pot_low_value_raw is: ") + upper_pot_low_value_raw  );
-     upper_pot_low_value = GetValue(upper_pot_low_value_raw, upper_pot_low_value_last, jitter_reduction);
-     upper_pot_low_value_last = upper_pot_low_value;
+  if ((upper_pot_low_engaged == true) || IsCrossing(input_3_value_at_button_change, upper_input_raw, 5)) {
+     int input_3_value_raw = upper_input_raw;
+     //Serial.println(String("input_3_value_raw is: ") + input_3_value_raw  );
+     input_3_value = GetValue(input_3_value_raw, input_3_value_last, jitter_reduction);
+     input_3_value_last = input_3_value;
      upper_pot_low_engaged = true;
   } else {
-    //Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + upper_pot_low_value  ); 
+    //Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + input_3_value  ); 
   }
   
-  if ((lower_pot_low_engaged == true) || IsCrossing(lower_pot_low_value_at_button_change, lower_input_raw, 5)) {  
-     int lower_pot_low_value_raw = lower_input_raw;
-     //Serial.println(String("lower_pot_low_value_raw is: ") + lower_pot_low_value_raw  );
-     lower_pot_low_value = GetValue(lower_pot_low_value_raw, lower_pot_low_value_last, jitter_reduction);
-     lower_pot_low_value_last = lower_pot_low_value;
+  if ((lower_pot_low_engaged == true) || IsCrossing(input_4_value_at_button_change, lower_input_raw, 5)) {  
+     int input_4_value_raw = lower_input_raw;
+     //Serial.println(String("input_4_value_raw is: ") + input_4_value_raw  );
+     input_4_value = GetValue(input_4_value_raw, input_4_value_last, jitter_reduction);
+     input_4_value_last = input_4_value;
      lower_pot_low_engaged = true;
   } else {
-    //Serial.println(String("lower_pot_low is: DISENGAGED value is sticking at: ") + lower_pot_low_value  );
+    //Serial.println(String("lower_pot_low is: DISENGAGED value is sticking at: ") + input_4_value  );
   }
 
 }
@@ -1079,10 +1074,10 @@ else
 
    if (peak_R.available())
     {
-        right_peak_level = peak_R.read() * 1.0;
-        //Serial.println(String("right_peak_level: ") + right_peak_level );  
+        input_6_value = peak_R.read() * 1.0;
+        //Serial.println(String("input_6_value: ") + input_6_value );  
     } else {
-      //Serial.println(String("right_peak_level not available ")   );
+      //Serial.println(String("input_6_value not available ")   );
     }
 
 }
@@ -1096,18 +1091,29 @@ if (IsBetweener()){
 
   
   // Pot1
-  upper_pot_high_value = b.readKnob(1); // Sequence
+  input_1_value = b.readKnob(1); // Sequence
+  Serial.println(String("input_1_value is: ") + input_1_value  );
+  
   // Pot2
-  lower_pot_high_value = b.readKnob(2);
+  input_2_value = b.readKnob(2);
+  Serial.println(String("input_2_value is: ") + input_2_value  );
+  
   // Pot3
-  left_peak_level = b.readKnob(3); // this is smoothed
+  input_5_value = b.readKnob(3); // this is smoothed
+  Serial.println(String("input_5_value is: ") + input_5_value  );
+  
   // Pot4
-  right_peak_level = b.readKnob(4);
+  input_6_value = b.readKnob(4);
+  Serial.println(String("input_6_value is: ") + input_6_value  );
 
   // Cv1  
-  upper_pot_low_value = b.readCV(1);
+  input_3_value = b.readCV(1);
+  Serial.println(String("input_3_value is: ") + input_3_value  );
+  
   // Cv2  
-  lower_pot_low_value = b.readCV(2);
+  input_4_value = b.readCV(2);
+  Serial.println(String("input_4_value is: ") + input_4_value  );
+  
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4); 
 }
@@ -1126,7 +1132,7 @@ if (IsBetweener()){
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence_1 = binary_sequence_1;
 
- //  binary_sequence_1 = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
+ //  binary_sequence_1 = (input_1_value & sequence_bits_8_through_1) + 1;
 
    // If we have 8 bits, use the range up to 255
 
@@ -1151,7 +1157,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
+  binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, input_1_value, 0);
 
    
 
@@ -1221,14 +1227,14 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
    
-  //Serial.println(String("right_peak_level is: ") + right_peak_level  );
+  //Serial.println(String("input_6_value is: ") + input_6_value  );
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-  sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
+  sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, input_6_value, 0);
 
 
    
-   //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
+   //((input_3_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   // Highlight the first step 
@@ -1247,18 +1253,18 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    
    // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-   //jitter_reduction = (upper_pot_low_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
+   //jitter_reduction = (input_3_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
    //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
 
    
-   //jitter_reduction = fscale( 0, 255, 0, 4, left_peak_level, 0);
+   //jitter_reduction = fscale( 0, 255, 0, 4, input_5_value, 0);
    //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
    //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
 
 
 
  
-   float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
+   float amp_1_gain = fscale( 0, 1, 0, 1, input_5_value, 0);
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
@@ -1268,14 +1274,14 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    ////////////////////////////////////// 
    // CV stuff
    // LOWER Pot HIGH Button
-   cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   cv_waveform_a_frequency_raw =  (input_2_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
    cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
    //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
-   // LOWER Pot LOW Button (Multiplex on lower_pot_low_value)
-   cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
+   // LOWER Pot LOW Button (Multiplex on input_4_value)
+   cv_waveform_b_frequency_raw = ((input_4_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
 
@@ -1295,8 +1301,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_waveform_b_amplitude_delta_raw, -1.5);
    //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-   // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
-   cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+   // Lower Pot LOW Button (Multiplex on input_4_value)
+   cv_waveform_a_amplitude_raw = (input_4_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
    //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
    cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
    //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
@@ -1306,7 +1312,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    // TODO Add offset?
    // Lower Pot LOW Button
-   //   cv_offset_raw = (lower_pot_low_value & bits_2_1);
+   //   cv_offset_raw = (input_4_value & bits_2_1);
    //   Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
    //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
    //   Serial.println(String("cv_offset is: ") + cv_offset  );
@@ -1344,7 +1350,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
  // return called_on_step;
  
-  } // End of SequenceSettings
+  } // End of ReadInputsAndUpdateSettings
 ////////////////////////////////////////////////
 
 
