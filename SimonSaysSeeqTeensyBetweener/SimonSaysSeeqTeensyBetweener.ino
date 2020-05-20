@@ -870,7 +870,8 @@ if (IsEuroshield()){
 } 
 
 if (IsBetweener()){
-    b.readTriggers();
+    //b.readTriggers();
+    b.readAllInputs();
 
     if (b.trig1.risingEdge()) {
           if (sequence_is_running == LOW){
@@ -1088,15 +1089,27 @@ else
 
 
 if (IsBetweener()){
-  // Pot1
-  // Pot2
-  // Pot3
-  // Pot4
 
-  // Cv1
-  // Cv2
-  // Cv3
-  // Cv4
+// physical -> logical -> actual 
+// pot -> value -> result
+
+
+  
+  // Pot1
+  upper_pot_high_value = b.readKnob(1); // Sequence
+  // Pot2
+  lower_pot_high_value = b.readKnob(2);
+  // Pot3
+  left_peak_level = b.readKnob(3); // this is smoothed
+  // Pot4
+  right_peak_level = b.readKnob(4);
+
+  // Cv1  
+  upper_pot_low_value = b.readCV(1);
+  // Cv2  
+  lower_pot_low_value = b.readCV(2);
+  // Cv3  b.readCV(3);
+  // Cv4  b.readCV(4); 
 }
 
 
