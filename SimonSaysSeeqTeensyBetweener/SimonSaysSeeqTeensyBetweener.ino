@@ -39,7 +39,7 @@ AudioAnalyzeRMS          gate_monitor;
 
 //////////////////////////
 // GATE Output and Monitor
-AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
+// Euroshield AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
 AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
 
 //////////////
@@ -48,7 +48,7 @@ AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
 AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
 // CV Output (via multiply) and Monitor
-AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
+//AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
 AudioConnection          patchCord2(amp_1_object, cv_monitor_rms); // CV -> monitor (for LED)
 
 AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
@@ -56,8 +56,8 @@ AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lo
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
 
-AudioConnection c1(audioInput, 0, peak_L, 0);
-AudioConnection c2(audioInput, 1, peak_R, 0);
+// Euroshield AudioConnection c1(audioInput, 0, peak_L, 0);
+// Euroshield AudioConnection c2(audioInput, 1, peak_R, 0);
 
 AudioControlSGTL5000     audioShield; 
 
@@ -704,11 +704,11 @@ void setup() {
 
 if (IsEuroshield()){
   
-  audioShield.enable();
-  audioShield.inputSelect(AUDIO_INPUT_LINEIN);
-  audioShield.volume(0.82);
-  audioShield.adcHighPassFilterDisable();
-  audioShield.lineInLevel(5,5);
+//  audioShield.enable();
+//  audioShield.inputSelect(AUDIO_INPUT_LINEIN);
+//  audioShield.volume(0.82);
+//  audioShield.adcHighPassFilterDisable();
+//  audioShield.lineInLevel(5,5);
 }
 
   // Initialise timing
@@ -784,6 +784,8 @@ if (test_rms_object.available()){
           b.writeCVOut(4, test_rms_betweener_scaled);
         }
 
+} else {
+  //Serial.println(String("test_rms_object is not available!!"));
 }
   
 
@@ -954,7 +956,7 @@ if (IsEuroshield()){
 // Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 if (midi_clock_detected == LOW){
   if ((millis() - last_clock_pulse > 500) && (sequence_is_running == HIGH)) {
-    Serial.println("No analogue clock detected for 500ms. Stopping sequencer.");
+    Serial.println("No analogue clock detected for 500 ms. Stopping sequencer.");
 
     // state-change-2
     
