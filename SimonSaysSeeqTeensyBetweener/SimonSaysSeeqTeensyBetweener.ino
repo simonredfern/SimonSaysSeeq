@@ -12,7 +12,7 @@ const float simon_says_seq_version = 0.23;
 
 
 #include <Audio.h>
-#include <MIDI.h>
+#include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
 #include <Betweener.h>
 
 
@@ -463,7 +463,17 @@ float cv_waveform_a_amplitude;
 
 //////////////////////
 // Midi clock and start / stop related
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+// We use the following library  https://github.com/FortySevenEffects/arduino_midi_library/wiki/Using-custom-Settings
+
+//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI); // This was Euroshield
+
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI); // Check this
+
+//MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial8, MIDI);
+
+
+// https://github.com/jkrame1/Betweener/blob/master/examples/Hardware%20Tests/A_Menu_Driven_Hardware_Test/A_Menu_Driven_Hardware_Test.ino
+
 
 
 ////////////////////////////////////
@@ -681,11 +691,11 @@ void setup() {
 
 
   // Begin Midi
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+MIDI.begin(MIDI_CHANNEL_OMNI);
 
 
 
-  MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
+MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
  
 
 
@@ -810,7 +820,7 @@ if (IsEuroshield()){
   
 
 
-  
+   
 int note, velocity, channel; //, d1, d2;
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
     byte type = MIDI.getType();
@@ -1376,7 +1386,7 @@ void PlayMidi(){
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
              // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
-             MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
+              MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
 
@@ -1384,7 +1394,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
            // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-           MIDI.sendNoteOff(n, 0, 1);
+            MIDI.sendNoteOff(n, 0, 1);
        }
     }
 } // End midi note loop
@@ -1858,7 +1868,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         // A mechanism to clear notes from memory by playing them quietly.
         if (velocity < 7 ){
            // Send Note OFF
-           MIDI.sendNoteOff(note, 0, 1);
+            MIDI.sendNoteOff(note, 0, 1);
            
            // Disable the note on all steps
            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
