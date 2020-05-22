@@ -17,8 +17,7 @@ const float simon_says_seq_version = 0.23;
 
 
 
-Betweener b;
-
+Betweener b; // Must begin it below!
 
 AudioSynthWaveformDc     gate_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;      
@@ -107,6 +106,12 @@ const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
+
+
+unsigned int min_pot_value;
+unsigned int max_pot_value;
+
+
 ////////////////////////////////////////////////////
 // Actual pot values
 unsigned int upper_input_raw; // TODO Make t type.
@@ -145,6 +150,8 @@ unsigned int input_4_value_at_button_change;
 float input_5_value;
 float input_6_value;
 
+float input_7_value;
+float input_8_value;
 
 ////////////////////////////////////////////////////
 
@@ -571,7 +578,7 @@ void ResetSequenceCounters(){
 uint8_t IncrementStepCount(){
   step_count = step_count_sanity(step_count + 1);
 
-  Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  //Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
   return step_count_sanity(step_count);
 }
 
@@ -604,21 +611,52 @@ boolean IsEuroshield(){
 
 void setup() {
 
-  
+  // Debugging hello
+  //Serial.begin(57600);
+  Serial.begin(115200);
+  Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
 
-  if (IsBetweener()) {
-    Serial.println(String("Expecting Beweener. Creating a b object."));
-    b.begin();  //start the Betweener
+
+  int resolution = 10;
+
+
+   if (IsBetweener()) {
+      Serial.println(String("I'm expecting to be plugged into a Betweener. Starting b...")) ;
+
+      //////////
+      b.begin();
+      /////////
+   }
+
+    if (IsEuroshield()) {
+      Serial.println(String("I'm expecting to be plugged into a Euroshield.")) ;
+    }
+
+
+ if (IsBetweener()) {
+        resolution = 10; // Need to use 10 for Betweener
+ }
+
+  if (IsEuroshield()) {
+    resolution = 8; // Correct? 
   }
 
+
+  analogReadResolution(resolution);
+
+  min_pot_value = 0;
+  max_pot_value = pow(2, resolution) - 1;
+
+  Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
+
+  Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
   AudioMemory(15);
 
-  // Can set to 10 (default?) or 12 bits. Higher resolutions will result in aproximation.
-  // Resolution 
-  analogReadResolution(10);
+
+  
 
   ///////////////////////////////////////////
   // Pin configuration
@@ -643,22 +681,23 @@ void setup() {
 
 
 
-  MIDI.turnThruOn(midi::Thru::Full);
-  // Off, Full, SameChannel, DifferentChannel
+  MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
+ 
 
 
   cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
-  
-
-
 
   // Enable the audio shield, select input, and enable output
   // This is to read peak.
+
+if (IsEuroshield()){
+  
   audioShield.enable();
   audioShield.inputSelect(AUDIO_INPUT_LINEIN);
   audioShield.volume(0.82);
   audioShield.adcHighPassFilterDisable();
   audioShield.lineInLevel(5,5);
+}
 
   // Initialise timing
   // Use zero based indexing for step_count so that modular operations (counting multiples of 4, 16 etc are easier)
@@ -694,22 +733,13 @@ void setup() {
   ////////////////////////////////////////  
 
   ///////////////////////////////////////
-  // Debugging hello
-  Serial.begin(57600);
-  Serial.println(String("Simon Says Grey Code Seeq! Betweener Version: ") + simon_says_seq_version);
-  Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
+
 
 // https://en.cppreference.com/w/cpp/types/integer
   Serial.println(String("Max value in INT8_MAX (int8_t): ") + INT8_MAX ) ; // int8_t max value is 127 
    Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
 
-   if (IsBetweener()) {
-      Serial.println(String("IsBetweener")) ;
-   }
 
-    if (IsEuroshield()) {
-      Serial.println(String("IsEuroshield")) ;
-    }
 }
 
 
@@ -728,6 +758,24 @@ boolean sequence_is_running = LOW;
 
 
 void loop() {
+
+if (IsBetweener()){
+    //b.readTriggers();
+    b.readAllInputs();
+
+    if (b.trig1.risingEdge()) {
+          if (sequence_is_running == LOW){
+                StartSequencer();
+          }
+          OnTick();
+          last_clock_pulse = millis();
+    }
+    
+ } // End device check
+    
+
+if (IsEuroshield()){
+  
 
 
   
@@ -808,7 +856,7 @@ int note, velocity, channel; //, d1, d2;
   } // End of MIDI message detected
 
 
-
+}
 
 
 
@@ -869,20 +917,6 @@ if (IsEuroshield()){
 
 } 
 
-if (IsBetweener()){
-    //b.readTriggers();
-    b.readAllInputs();
-
-    if (b.trig1.risingEdge()) {
-          if (sequence_is_running == LOW){
-                StartSequencer();
-          }
-          OnTick();
-          last_clock_pulse = millis();
-    }
-    
- } // End device check
-    
 
  
 /////////////////////////////////////////////////////////////////////////////////
@@ -890,7 +924,7 @@ if (IsBetweener()){
 // Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 if (midi_clock_detected == LOW){
   if ((millis() - last_clock_pulse > 500) && (sequence_is_running == HIGH)) {
-    Serial.println("No analogue clock for a moment. Stopping sequencer.");
+    Serial.println("No analogue clock detected for 500ms. Stopping sequencer.");
 
     // state-change-2
     
@@ -915,13 +949,13 @@ void InitSequencer(){
 }
 
 void StartSequencer(){
-  Serial.println(String("Start Sequencer "));
+  Serial.println(String("Starting Sequencer... "));
   InitSequencer();
   sequence_is_running = HIGH;
 }
 
 void StopSequencer(){
-  Serial.println(String("Stop Sequencer "));      
+  Serial.println(String("Stopping Sequencer... Hint: I'm now waiting for a midi / cv clock to do something.... "));      
   InitSequencer();
   sequence_is_running = LOW;        
 }
@@ -932,7 +966,7 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
-   Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);    
+   // Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);    
   
 
   // Read inputs and update settings.  
@@ -954,6 +988,10 @@ void OnTick(){
 
   // Play any suitable midi in the midi sequence 
   PlayMidi();
+
+  SetSequenceLength();
+
+  SetSequencePattern();
    
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
@@ -1088,31 +1126,32 @@ if (IsBetweener()){
 // physical -> logical -> actual 
 // pot -> value -> result
 
-
+    //b.readTriggers();
+    b.readAllInputs();
   
   // Pot1
-  input_1_value = b.readKnob(1); // Sequence
+  input_1_value = b.readKnob(1); // Sequence  
   Serial.println(String("input_1_value is: ") + input_1_value  );
   
   // Pot2
-  input_2_value = b.readKnob(2);
+  input_2_value = b.readKnob(2); // Length
   Serial.println(String("input_2_value is: ") + input_2_value  );
   
   // Pot3
-  input_5_value = b.readKnob(3); // this is smoothed
-  Serial.println(String("input_5_value is: ") + input_5_value  );
-  
+  input_3_value = b.readKnob(3); // this is smoothed
+  //Serial.println(String("input_3_value is: ") + input_3_value  );
+   
   // Pot4
-  input_6_value = b.readKnob(4);
-  Serial.println(String("input_6_value is: ") + input_6_value  );
+  input_4_value = b.readKnob(4);
+  //Serial.println(String("input_4_value is: ") + input_4_value  );
 
   // Cv1  
-  input_3_value = b.readCV(1);
-  Serial.println(String("input_3_value is: ") + input_3_value  );
+  input_5_value = b.readCV(1);
+  //Serial.println(String("input_5_value is: ") + input_5_value  );
   
   // Cv2  
-  input_4_value = b.readCV(2);
-  Serial.println(String("input_4_value is: ") + input_4_value  );
+  input_6_value = b.readCV(2);
+  //Serial.println(String("input_6_value is: ") + input_6_value  );
   
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4); 
@@ -1127,115 +1166,12 @@ if (IsBetweener()){
 //////////////////////////////////////////
 // Assign values to change the sequencer.
 ///////////////////////////////////
-  // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
-   // UPPER Pot HIGH Button //////////
-   // 8 bit sequence - 8 Least Significant Bits
-   last_binary_sequence_1 = binary_sequence_1;
-
- //  binary_sequence_1 = (input_1_value & sequence_bits_8_through_1) + 1;
-
-   // If we have 8 bits, use the range up to 255
-
-   
-   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
-   // TODO Could probably use a smaller type 
-   unsigned int binary_sequence_upper_limit; 
-
-
-//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
-
-// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
-// For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
-// i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
-
-   //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
-    
 
 
 
-  // Generally the lowest value from the pot we get is 2 or 3 
-  // setting-1
-  binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, input_1_value, 0);
 
    
 
-
-   if (binary_sequence_1 != last_binary_sequence_1){
-    //Serial.println(String("binary_sequence_1 has changed **"));
-   }
-
-
-   //Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
-   //Serial.print("\t");
-   //Serial.print(binary_sequence_1, BIN);
-   //Serial.println();
-
-   grey_sequence_1 = Binary2Gray(binary_sequence_1);
-   //Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
-   //Serial.print("\t");
-   //Serial.print(grey_sequence_1, BIN);
-   //Serial.println();
-
-
- 
-  // Choose which sequence we will actually use.
-  // If the pot is left or right, use the hard coded sequence, else use grey code sequence 
-//  if (binary_sequence_1 < 20 || binary_sequence_1 > 230 ) {
-//      hybrid_sequence_1 = hard_coded_seqs[binary_sequence_1];
-//      Serial.println(String("Using hard_coded_seq at position: ") + binary_sequence_1  );
-//   } else  {
-//    hybrid_sequence_1 = grey_sequence_1;
-//    Serial.println(String("Using Grey Code sequence which is: ") + grey_sequence_1  );
-//  }
-
-
-//
-//   if (sequence_length_in_steps > 8){
-//      hybrid_sequence_1 = grey_sequence_1 + (binary_sequence_1 << 8);
-//      Serial.println(String("Using Binary (MSB) + Grey Code ")  );    
-//   } else {
-//      hybrid_sequence_1 = grey_sequence_1;
-//      Serial.println(String("Using Grey Code sequence")   );
-//   }
-
-
-
-
-
-    hybrid_sequence_1 = grey_sequence_1;
-
-    bitClear(hybrid_sequence_1, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-    hybrid_sequence_1 = ~ hybrid_sequence_1; // Invert
-
-   
-    // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence_1 == 1){
-      hybrid_sequence_1 = 1;
-    }
-
-
-    
-    
-
-   //Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-   //Serial.print("\t");
-   //Serial.print(hybrid_sequence_1, BIN);
-   //Serial.println();
-
-
-   
-  //Serial.println(String("input_6_value is: ") + input_6_value  );
-
-  // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-  sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, input_6_value, 0);
-
-
-   
-   //((input_3_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
@@ -1378,7 +1314,7 @@ void InitMidiSequence(){
 
   for (uint8_t n = 0; n <= 127; n++) {
      channel_a_ghost_events[n].is_active = 0;
-     Serial.println(String("Init Step with ghost ") + String(" Note ") + n +  String(" is_active false ") );
+     //Serial.println(String("Init Step with ghost ") + String(" Note ") + n +  String(" is_active false ") );
   } 
   
 
@@ -1420,25 +1356,19 @@ void PlayMidi(){
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
-  //Serial.println(String("OnStep ") + step_count  );
+  Serial.println(String("OnStep ") + step_count  );
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));  
     Serial.println(String("************* ERROR! step_count is: ") + step_count + String("*** ERROR *** "));
     Serial.println(String("*****************************************************************************************"));    
   }
-
-
-
-
-    
-  uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
   
+  uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
-
-          if (step_count == FIRST_STEP) {
-            CvPulseOn();
-          }
+    if (step_count == FIRST_STEP) {
+      CvPulseOn();
+    }
 
 
    if (play_note){
@@ -1474,13 +1404,26 @@ void OnNotStep(){
 
 void GateHigh(){
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
-  gate_dc_waveform.amplitude(0.99, 10);
+  if (IsEuroshield()){
+      gate_dc_waveform.amplitude(0.99, 10);
+  }
+
+  if (IsBetweener()){
+    b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
+  }
 
 }
 
 void GateLow(){
   //Serial.println(String("Gate LOW") );
-  gate_dc_waveform.amplitude(0);
+  if (IsEuroshield()){
+    gate_dc_waveform.amplitude(0);
+  }
+
+  if (IsBetweener()){
+    b.writeCVOut(1, 0);
+  }
+  
 }
 
 
@@ -1595,17 +1538,113 @@ bool Button1HasChanged(bool button_1_state){
 }
 
 
-void AdvanceSequenceChronology(){
+void SetSequencePattern(){
+    // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
+   // UPPER Pot HIGH Button //////////
+   // 8 bit sequence - 8 Least Significant Bits
+   last_binary_sequence_1 = binary_sequence_1;
+
+ //  binary_sequence_1 = (input_1_value & sequence_bits_8_through_1) + 1;
+
+   // If we have 8 bits, use the range up to 255
+
+   
+   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+
+   unsigned int binary_sequence_upper_limit; 
 
 
+
+
+// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
+// i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
+// or (2^sequence_length_in_steps) - 1
+binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+
+   Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+    
+  binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, input_1_value, 0);
 
   
-  // This function advances or resets the sequence powered by the clock.
+   if (binary_sequence_1 != last_binary_sequence_1){
+    //Serial.println(String("binary_sequence_1 has changed **"));
+   }
 
-  // But first check / set the desired sequence length
+
+   Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
+   Serial.print("\t");
+   Serial.print(binary_sequence_1, BIN);
+   Serial.println();
+
+   grey_sequence_1 = Binary2Gray(binary_sequence_1);
+   //Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
+   //Serial.print("\t");
+   //Serial.print(grey_sequence_1, BIN);
+   //Serial.println();
 
 
-    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
+ 
+  // Choose which sequence we will actually use.
+  // If the pot is left or right, use the hard coded sequence, else use grey code sequence 
+//  if (binary_sequence_1 < 20 || binary_sequence_1 > 230 ) {
+//      hybrid_sequence_1 = hard_coded_seqs[binary_sequence_1];
+//      Serial.println(String("Using hard_coded_seq at position: ") + binary_sequence_1  );
+//   } else  {
+//    hybrid_sequence_1 = grey_sequence_1;
+//    Serial.println(String("Using Grey Code sequence which is: ") + grey_sequence_1  );
+//  }
+
+
+//
+//   if (sequence_length_in_steps > 8){
+//      hybrid_sequence_1 = grey_sequence_1 + (binary_sequence_1 << 8);
+//      Serial.println(String("Using Binary (MSB) + Grey Code ")  );    
+//   } else {
+//      hybrid_sequence_1 = grey_sequence_1;
+//      Serial.println(String("Using Grey Code sequence")   );
+//   }
+
+
+
+
+
+    hybrid_sequence_1 = grey_sequence_1;
+
+    bitClear(hybrid_sequence_1, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+
+    hybrid_sequence_1 = ~ hybrid_sequence_1; // Invert
+
+   
+    // So pot fully counter clockwise is 1 on the first beat 
+    if (binary_sequence_1 == 1){
+      hybrid_sequence_1 = 1;
+    }
+
+
+    
+    
+
+   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+   Serial.print("\t");
+   Serial.print(hybrid_sequence_1, BIN);
+   Serial.println();
+
+
+}
+
+
+void SetSequenceLength(){
+
+  Serial.println(String("min_pot_value is: ") + min_pot_value  );
+ Serial.println(String("max_pot_value is: ") + max_pot_value  );
+  Serial.println(String("input_2_value is: ") + input_2_value  );
+
+
+  // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
+  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, 0, 15, input_2_value, 0);
+
+  Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
@@ -1620,8 +1659,19 @@ void AdvanceSequenceChronology(){
   }
 
   new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+  Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  ); 
+}
+
+
+void AdvanceSequenceChronology(){
+
+
+
+  
+  // This function advances or resets the sequence powered by the clock.
+
+ 
 
   // Always advance the ticks SINCE START
   SetTotalTickCount(loop_timing.tick_count_since_start += 1);
