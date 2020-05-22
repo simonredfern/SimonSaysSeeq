@@ -19,6 +19,10 @@ const float simon_says_seq_version = 0.23;
 
 Betweener b; // Must begin it below!
 
+AudioSynthWaveform       test_waveform_object;
+AudioAnalyzeRMS          test_rms_object;
+AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);  
+
 AudioSynthWaveformDc     gate_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;      
 AudioSynthWaveformDc     cv_waveform_b_object; 
@@ -30,7 +34,7 @@ AudioAmplifier amp_1_object;
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
 
-AudioAnalyzeRMS          cv_monitor;           
+AudioAnalyzeRMS          cv_monitor_rms;           
 AudioAnalyzeRMS          gate_monitor; 
 
 //////////////////////////
@@ -45,7 +49,7 @@ AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
 // CV Output (via multiply) and Monitor
 AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
-AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
+AudioConnection          patchCord2(amp_1_object, cv_monitor_rms); // CV -> monitor (for LED)
 
 AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
 
@@ -687,6 +691,14 @@ void setup() {
 
   cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
 
+  ////////////////////////////
+  // TEST OBJECT /////////////
+  test_waveform_object.begin(WAVEFORM_SAWTOOTH);
+  test_waveform_object.frequency(1); // setting-a-freq
+  test_waveform_object.amplitude(1); // TEMP cv_waveform_a_amplitude); // setting-a-amp
+  test_waveform_object.offset(0);
+  ///////////////////////////////
+   
   // Enable the audio shield, select input, and enable output
   // This is to read peak.
 
@@ -759,6 +771,22 @@ boolean sequence_is_running = LOW;
 
 void loop() {
 
+
+if (test_rms_object.available()){
+        float test_rms = test_rms_object.read();
+
+        // Also use this to drive the betweener ouput
+        if (IsBetweener()){
+          int test_rms_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0); 
+          Serial.println(String("test_rms_betweener_scaled is: ") + test_rms_betweener_scaled  );
+          b.writeCVOut(2, test_rms_betweener_scaled);
+          b.writeCVOut(3, test_rms_betweener_scaled);
+          b.writeCVOut(4, test_rms_betweener_scaled);
+        }
+
+}
+  
+
 if (IsBetweener()){
     //b.readTriggers();
     b.readAllInputs();
@@ -772,6 +800,8 @@ if (IsBetweener()){
     }
     
  } // End device check
+
+
     
 
 if (IsEuroshield()){
@@ -1131,11 +1161,11 @@ if (IsBetweener()){
   
   // Pot1
   input_1_value = b.readKnob(1); // Sequence  
-  Serial.println(String("input_1_value is: ") + input_1_value  );
+  //Serial.println(String("input_1_value is: ") + input_1_value  );
   
   // Pot2
   input_2_value = b.readKnob(2); // Length
-  Serial.println(String("input_2_value is: ") + input_2_value  );
+  //Serial.println(String("input_2_value is: ") + input_2_value  );
   
   // Pot3
   input_3_value = b.readKnob(3); // this is smoothed
@@ -1256,7 +1286,7 @@ if (IsBetweener()){
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
-    cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
+    cv_waveform_a_object.amplitude(1); // TEMP cv_waveform_a_amplitude); // setting-a-amp
     cv_waveform_a_object.offset(0);
 
 
@@ -1269,18 +1299,26 @@ if (IsBetweener()){
         //Serial.println(String("gate_monitor gate_peak ") + gate_peak  );
         Led1Level(fscale( 0.0, 1.0, 0, 255, gate_peak, 0));
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      Serial.println(String("gate_monitor not available ")   );
     }
     
     // MONITOR CV
     /// This is connected to cv_waveform and reads the level. We use that to drive the led.
-    if (cv_monitor.available())
+    if (cv_monitor_rms.available())
     {
-        float cv_peak = cv_monitor.read();
+        float cv_peak = cv_monitor_rms.read();
+
+        // Also use this to drive the betweener ouput
+        if (IsBetweener()){
+          float cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
+          Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
+          //b.writeCVOut(2, cv_peak_betweener_scaled);
+        }
+        
         //Serial.println(String("gate_monitor cv_peak ") + cv_peak  );
         Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      Serial.println(String("cv_monitor_rms not available ")   );
     }
 
 
@@ -1356,7 +1394,7 @@ void PlayMidi(){
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
-  Serial.println(String("OnStep ") + step_count  );
+  Serial.println(String("OnStep step_count is: ") + step_count + String(" Note: FIRST_STEP is: ") + FIRST_STEP  );
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));  
@@ -1428,7 +1466,7 @@ void GateLow(){
 
 
 void CvPulseOn(){
-  //Serial.println(String("CV Pulse On") );
+  Serial.println(String("CV Pulse On") );
    
       cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
   
@@ -1449,7 +1487,7 @@ void ChangeCvWaveformBAmplitude(){
     }
 
   cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
-  //Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
+  Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
  
 }
 
@@ -1562,7 +1600,7 @@ void SetSequencePattern(){
 // or (2^sequence_length_in_steps) - 1
 binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
 
-   Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+   //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
   binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, input_1_value, 0);
 
@@ -1572,10 +1610,10 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    }
 
 
-   Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
-   Serial.print("\t");
-   Serial.print(binary_sequence_1, BIN);
-   Serial.println();
+//   Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
+//   Serial.print("\t");
+//   Serial.print(binary_sequence_1, BIN);
+//   Serial.println();
 
    grey_sequence_1 = Binary2Gray(binary_sequence_1);
    //Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
@@ -1625,10 +1663,10 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     
     
 
-   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-   Serial.print("\t");
-   Serial.print(hybrid_sequence_1, BIN);
-   Serial.println();
+//   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+//   Serial.print("\t");
+//   Serial.print(hybrid_sequence_1, BIN);
+//   Serial.println();
 
 
 }
@@ -1636,15 +1674,15 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 void SetSequenceLength(){
 
-  Serial.println(String("min_pot_value is: ") + min_pot_value  );
- Serial.println(String("max_pot_value is: ") + max_pot_value  );
-  Serial.println(String("input_2_value is: ") + input_2_value  );
+//  Serial.println(String("min_pot_value is: ") + min_pot_value  );
+// Serial.println(String("max_pot_value is: ") + max_pot_value  );
+//  Serial.println(String("input_2_value is: ") + input_2_value  );
 
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
   sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, 0, 15, input_2_value, 0);
 
-  Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
+  //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
@@ -1659,8 +1697,8 @@ void SetSequenceLength(){
   }
 
   new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-  Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  ); 
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  ); 
 }
 
 
