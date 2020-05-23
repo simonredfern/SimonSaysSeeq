@@ -461,6 +461,11 @@ boolean reset_cv_lfo_at_FIRST_STEP = false;
 unsigned int cv_waveform_a_amplitude_raw;
 float cv_waveform_a_amplitude;
 
+
+float cv_offset_raw;
+float cv_offset;
+
+
 //////////////////////
 // Midi clock and start / stop related
 // We use the following library  https://github.com/FortySevenEffects/arduino_midi_library/wiki/Using-custom-Settings
@@ -781,22 +786,24 @@ boolean sequence_is_running = LOW;
 
 void loop() {
 
+// The way we "connect" the Audio Objects to the output of the Betweener is to read an rms object and use that value
+// to writeCVOut.
 
-if (test_rms_object.available()){
-        float test_rms = test_rms_object.read();
-
-        // Also use this to drive the betweener ouput
-        if (IsBetweener()){
-          int test_rms_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0); 
-          Serial.println(String("test_rms_betweener_scaled is: ") + test_rms_betweener_scaled  );
-          b.writeCVOut(2, test_rms_betweener_scaled);
-          b.writeCVOut(3, test_rms_betweener_scaled);
-          b.writeCVOut(4, test_rms_betweener_scaled);
-        }
-
-} else {
-  //Serial.println(String("test_rms_object is not available!!"));
-}
+//if (test_rms_object.available()){
+//        float test_rms = test_rms_object.read();
+//
+//        // Also use this to drive the betweener ouput
+//        if (IsBetweener()){
+//          int test_rms_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0); 
+//          Serial.println(String("test_rms_betweener_scaled is: ") + test_rms_betweener_scaled  );
+//          b.writeCVOut(2, test_rms_betweener_scaled);
+//          b.writeCVOut(3, test_rms_betweener_scaled);
+//          b.writeCVOut(4, test_rms_betweener_scaled);
+//        }
+//
+//} else {
+//  //Serial.println(String("test_rms_object is not available!!"));
+//}
   
 
 if (IsBetweener()){
@@ -1189,11 +1196,11 @@ if (IsBetweener()){
 
   // Cv1  
   input_5_value = b.readCV(1);
-  //Serial.println(String("input_5_value is: ") + input_5_value  );
+  Serial.println(String("input_5_value is: ") + input_5_value  );
   
   // Cv2  
   input_6_value = b.readCV(2);
-  //Serial.println(String("input_6_value is: ") + input_6_value  );
+  Serial.println(String("input_6_value is: ") + input_6_value  );
   
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4); 
@@ -1242,8 +1249,8 @@ if (IsBetweener()){
 
 
  
-   float amp_1_gain = fscale( 0, 1, 0, 1, input_5_value, 0);
-   //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+   float amp_1_gain = fscale( min_pot_value, max_pot_value, 0, 1, input_5_value, 0);
+   Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
@@ -1252,13 +1259,15 @@ if (IsBetweener()){
    ////////////////////////////////////// 
    // CV stuff
    // LOWER Pot HIGH Button
-   cv_waveform_a_frequency_raw =  (input_2_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   // ****** "Freq" ******
+   cv_waveform_a_frequency_raw =  (input_3_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
    cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
    //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
    // LOWER Pot LOW Button (Multiplex on input_4_value)
+   // ****** "Shape" ********
    cv_waveform_b_frequency_raw = ((input_4_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
@@ -1266,7 +1275,7 @@ if (IsBetweener()){
   // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
   if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT){
     reset_cv_lfo_at_FIRST_STEP = true;
-    //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
+    Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
   }
 
 
@@ -1280,7 +1289,11 @@ if (IsBetweener()){
    //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
    // Lower Pot LOW Button (Multiplex on input_4_value)
-   cv_waveform_a_amplitude_raw = (input_4_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+   // ****** "Amp"******
+   // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+
+   // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+   cv_waveform_a_amplitude_raw = (input_5_value); 
    //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
    cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
    //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
@@ -1290,16 +1303,18 @@ if (IsBetweener()){
 
    // TODO Add offset?
    // Lower Pot LOW Button
-   //   cv_offset_raw = (input_4_value & bits_2_1);
-   //   Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
-   //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
-   //   Serial.println(String("cv_offset is: ") + cv_offset  );
+      // Euroshield cv_offset_raw = (input_6_value & bits_2_1);
+      // *** Offset ****
+      cv_offset_raw = (input_6_value);
+      Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
+      cv_offset = fscale( min_pot_value, max_pot_value, -1, 1, cv_offset_raw, -1.5);
+      Serial.println(String("cv_offset is: ") + cv_offset  );
 
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
-    cv_waveform_a_object.amplitude(1); // TEMP cv_waveform_a_amplitude); // setting-a-amp
-    cv_waveform_a_object.offset(0);
+    cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
+    cv_waveform_a_object.offset(cv_offset);
 
 
 
@@ -1322,9 +1337,9 @@ if (IsBetweener()){
 
         // Also use this to drive the betweener ouput
         if (IsBetweener()){
-          float cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
-          Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
-          //b.writeCVOut(2, cv_peak_betweener_scaled);
+          int cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
+          //Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
+          b.writeCVOut(2, cv_peak_betweener_scaled);
         }
         
         //Serial.println(String("gate_monitor cv_peak ") + cv_peak  );
