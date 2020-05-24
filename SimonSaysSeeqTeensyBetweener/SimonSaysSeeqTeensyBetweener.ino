@@ -24,11 +24,28 @@ AudioAnalyzeRMS          test_rms_object;
 AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);  
 
 AudioSynthWaveformDc     gate_dc_waveform;
+
 AudioSynthWaveform       cv_waveform_a_object;      
 AudioSynthWaveformDc     cv_waveform_b_object; 
 AudioEffectMultiply      multiply1;      
 
 AudioAmplifier amp_1_object;
+AudioMixer4 mixer_1_object;
+
+
+AudioSynthWaveformDc cv_offset_dc_object;
+
+
+//
+//  waveform a ----
+//                 |-----Multiply--- 
+//  waveform b ----                 |---Mixer---|---Amp---|---RMS Monitor---| 
+//                     dc-offset----       
+//
+//
+
+
+
  
 
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
@@ -48,10 +65,15 @@ AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
 AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
 // CV Output (via multiply) and Monitor
-//AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
+//Euroshield AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
 AudioConnection          patchCord2(amp_1_object, cv_monitor_rms); // CV -> monitor (for LED)
 
-AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
+// AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
+
+AudioConnection          patchCord11(multiply1, 0, mixer_1_object, 0); 
+AudioConnection          patchCord12(cv_offset_dc_object, 0, mixer_1_object, 1); 
+
+AudioConnection          patchCord13(mixer_1_object, 0, amp_1_object, 0);
 
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
@@ -633,14 +655,14 @@ void setup() {
   // Debugging hello
   //Serial.begin(57600);
   Serial.begin(115200);
-  Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
+  //Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
 
 
   int resolution = 10;
 
 
    if (IsBetweener()) {
-      Serial.println(String("I'm expecting to be plugged into a Betweener. Starting b...")) ;
+      //Serial.println(String("I'm expecting to be plugged into a Betweener. Starting b...")) ;
 
       //////////
       b.begin();
@@ -666,9 +688,9 @@ void setup() {
   min_pot_value = 0;
   max_pot_value = pow(2, resolution) - 1;
 
-  Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
+  //Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
 
-  Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
+  //Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
@@ -713,6 +735,11 @@ MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
   test_waveform_object.amplitude(1); // TEMP cv_waveform_a_amplitude); // setting-a-amp
   test_waveform_object.offset(0);
   ///////////////////////////////
+
+
+  mixer_1_object.gain(0,1);
+  mixer_1_object.gain(1,1);
+
    
   // Enable the audio shield, select input, and enable output
   // This is to read peak.
@@ -763,8 +790,8 @@ if (IsEuroshield()){
 
 
 // https://en.cppreference.com/w/cpp/types/integer
-  Serial.println(String("Max value in INT8_MAX (int8_t): ") + INT8_MAX ) ; // int8_t max value is 127 
-   Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
+  //Serial.println(String("Max value in INT8_MAX (int8_t): ") + INT8_MAX ) ; // int8_t max value is 127 
+   //Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
 
 
 }
@@ -1196,11 +1223,11 @@ if (IsBetweener()){
 
   // Cv1  
   input_5_value = b.readCV(1);
-  Serial.println(String("input_5_value is: ") + input_5_value  );
+  //Serial.println(String("input_5_value is: ") + input_5_value  );
   
   // Cv2  
   input_6_value = b.readCV(2);
-  Serial.println(String("input_6_value is: ") + input_6_value  );
+  //Serial.println(String("input_6_value is: ") + input_6_value  );
   
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4); 
@@ -1250,7 +1277,7 @@ if (IsBetweener()){
 
  
    float amp_1_gain = fscale( min_pot_value, max_pot_value, 0, 1, input_5_value, 0);
-   Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+   //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
@@ -1306,15 +1333,19 @@ if (IsBetweener()){
       // Euroshield cv_offset_raw = (input_6_value & bits_2_1);
       // *** Offset ****
       cv_offset_raw = (input_6_value);
-      Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
+      //Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
       cv_offset = fscale( min_pot_value, max_pot_value, -1, 1, cv_offset_raw, -1.5);
-      Serial.println(String("cv_offset is: ") + cv_offset  );
+      //Serial.println(String("cv_offset is: ") + cv_offset  );
 
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
-    cv_waveform_a_object.offset(cv_offset);
+
+
+    cv_offset_dc_object.amplitude(cv_offset, 100); // take 100 ms to adjust
+    
+    //cv_waveform_a_object.offset(cv_offset);
 
 
 
@@ -1338,7 +1369,7 @@ if (IsBetweener()){
         // Also use this to drive the betweener ouput
         if (IsBetweener()){
           int cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
-          //Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
+          Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
           b.writeCVOut(2, cv_peak_betweener_scaled);
         }
         
@@ -1421,7 +1452,7 @@ void PlayMidi(){
 /////////////////////////////////////////////////////////////
 void OnStep(){
 
-  Serial.println(String("OnStep step_count is: ") + step_count + String(" Note: FIRST_STEP is: ") + FIRST_STEP  );
+  //Serial.println(String("OnStep step_count is: ") + step_count + String(" Note: FIRST_STEP is: ") + FIRST_STEP  );
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));  
@@ -1493,7 +1524,7 @@ void GateLow(){
 
 
 void CvPulseOn(){
-  Serial.println(String("CV Pulse On") );
+  //Serial.println(String("CV Pulse On") );
    
       cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
   
@@ -1514,7 +1545,7 @@ void ChangeCvWaveformBAmplitude(){
     }
 
   cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
-  Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
+  //Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
  
 }
 
