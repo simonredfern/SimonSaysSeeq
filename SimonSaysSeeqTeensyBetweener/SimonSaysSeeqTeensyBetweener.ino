@@ -15,8 +15,6 @@ const float simon_says_seq_version = 0.23;
 #include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
 #include <Betweener.h>
 
-
-
 Betweener b; // Must begin it below!
 
 AudioSynthWaveform       test_waveform_object;
@@ -25,33 +23,32 @@ AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
 AudioSynthWaveformDc     gate_dc_waveform;
 
-AudioSynthWaveform       cv_waveform_a_object;      
-AudioSynthWaveformDc     cv_waveform_b_object; 
-AudioEffectMultiply      multiply1;      
 
-AudioAmplifier amp_1_object;
-AudioMixer4 mixer_1_object;
-
-
-AudioSynthWaveformDc cv_offset_dc_object;
-
-
-//
-//  waveform a ----
-//                 |-----Multiply--- 
-//  waveform b ----                 |---Mixer---|---Amp---|---RMS Monitor---| 
+//  (offset -1 to + 1)
+//  waveform a ----  (no params)                 (gain = 0 to 32767.0)
+//                 |-----Multiply---             
+//  waveform b ----                 |---Mixer---|---Amp(0-1?)---|---RMS Monitor(0.0-1.0)---|(Scale)|---(0-4095)WriteCV 
 //                     dc-offset----       
 //
 //
 
+AudioSynthWaveform       cv_waveform_a_object;      
+AudioSynthWaveformDc     cv_waveform_b_object; 
+AudioEffectMultiply      multiply1;      
+AudioSynthWaveformDc cv_dc_offset_object;
 
+AudioMixer4 mixer_1_object;
 
- 
+AudioAmplifier amp_1_object;
+
+AudioAnalyzeRMS          cv_monitor_rms; 
+
+////////////////////////////////////////////
 
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
 
-AudioAnalyzeRMS          cv_monitor_rms;           
+          
 AudioAnalyzeRMS          gate_monitor; 
 
 //////////////////////////
@@ -71,7 +68,7 @@ AudioConnection          patchCord2(amp_1_object, cv_monitor_rms); // CV -> moni
 // AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
 
 AudioConnection          patchCord11(multiply1, 0, mixer_1_object, 0); 
-AudioConnection          patchCord12(cv_offset_dc_object, 0, mixer_1_object, 1); 
+AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1); 
 
 AudioConnection          patchCord13(mixer_1_object, 0, amp_1_object, 0);
 
@@ -1273,11 +1270,9 @@ if (IsBetweener()){
    //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
    //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
 
-
-
  
-   float amp_1_gain = fscale( min_pot_value, max_pot_value, 0, 1, input_5_value, 0);
-   //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+   float amp_1_gain = fscale( min_pot_value, max_pot_value, 0.0, 1.0, input_5_value, 0);
+   Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
@@ -1328,8 +1323,7 @@ if (IsBetweener()){
 
    // Put this and above on the inputs.
 
-   // TODO Add offset?
-   // Lower Pot LOW Button
+  
       // Euroshield cv_offset_raw = (input_6_value & bits_2_1);
       // *** Offset ****
       cv_offset_raw = (input_6_value);
@@ -1343,7 +1337,7 @@ if (IsBetweener()){
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
 
 
-    cv_offset_dc_object.amplitude(cv_offset, 100); // take 100 ms to adjust
+    cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
     
     //cv_waveform_a_object.offset(cv_offset);
 
