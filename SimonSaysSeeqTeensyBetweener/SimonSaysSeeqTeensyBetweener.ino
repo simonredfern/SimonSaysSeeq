@@ -25,29 +25,44 @@ AudioSynthWaveformDc     gate_dc_waveform;
 
 
 //  (offset -1 to + 1)
-//  waveform a ----  (no params)                 (gain = 0 to 32767.0)
-//                 |-----Multiply---             
-//  waveform b ----                 |---Mixer---|---Amp(0-1?)---|---RMS Monitor(0.0-1.0)---|(Scale)|---(0-4095)WriteCV 
-//                     dc-offset----       
+//  waveform a ---  (no params)                 (gain = 0 to 32767.0)
+//                |---Multiply---|---Amp(0-1?)---             
+//  waveform b ---                               |---Summing Mixer---|---RMS Monitor(0.0-1.0)---|(Scale)|---(0-4095)WriteCV 
+//                                    dc-offset---       
 //
 //
 
 AudioSynthWaveform       cv_waveform_a_object;      
 AudioSynthWaveformDc     cv_waveform_b_object; 
 AudioEffectMultiply      multiply1;      
-AudioSynthWaveformDc cv_dc_offset_object;
-
-AudioMixer4 mixer_1_object;
-
-AudioAmplifier amp_1_object;
-
+AudioAmplifier           amp_1_object;
+AudioSynthWaveformDc     cv_dc_offset_object;
+AudioMixer4              mixer_1_object;
 AudioAnalyzeRMS          cv_monitor_rms; 
+
+
+//////////////
+// Modulate CV
+// Waveform a and b are multiplied together
+AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
+AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
+
+// Amplify the result
+AudioConnection          patchCord13(multiply1, 0, amp_1_object, 0);
+
+// Add a DC offset.
+AudioConnection          patchCord11(amp_1_object, 0, mixer_1_object, 0); 
+AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1); 
+
+// CV Output is via cv_monitor_rms which we read in code.
+AudioConnection          patchCord2(mixer_1_object, cv_monitor_rms); // CV -> monitor (for LED)
+
+
 
 ////////////////////////////////////////////
 
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
-
           
 AudioAnalyzeRMS          gate_monitor; 
 
@@ -56,21 +71,7 @@ AudioAnalyzeRMS          gate_monitor;
 // Euroshield AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
 AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
 
-//////////////
-// Modulate CV
-AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
-AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
-// CV Output (via multiply) and Monitor
-//Euroshield AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
-AudioConnection          patchCord2(amp_1_object, cv_monitor_rms); // CV -> monitor (for LED)
-
-// AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
-
-AudioConnection          patchCord11(multiply1, 0, mixer_1_object, 0); 
-AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1); 
-
-AudioConnection          patchCord13(mixer_1_object, 0, amp_1_object, 0);
 
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
@@ -80,7 +81,8 @@ AudioAnalyzePeak     peak_R;
 
 AudioControlSGTL5000     audioShield; 
 
-
+//Euroshield AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
+//Euroshield AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
 
 /////////////
 // Setup pins
