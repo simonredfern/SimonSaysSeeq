@@ -23,11 +23,12 @@ AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
 AudioSynthWaveformDc     gate_dc_waveform;
 
-
+/////////////////////////////////////
+// How we generate CV
 //  (offset -1 to + 1)
 //  waveform a ---  (no params)                 (gain = 0 to 32767.0)
 //                |---Multiply---|---Amp(0-1?)---             
-//  waveform b ---                               |---Summing Mixer---|---RMS Monitor(0.0-1.0)---|(Scale)|---(0-4095)WriteCV 
+//  waveform b ---                               |---Summing Mixer---|---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output 
 //                                    dc-offset---       
 //
 //
@@ -64,12 +65,12 @@ AudioConnection          patchCord2(mixer_1_object, cv_monitor_rms); // CV -> mo
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
           
-AudioAnalyzeRMS          gate_monitor; 
+AudioAnalyzeRMS          gate_monitor_rms; 
 
 //////////////////////////
 // GATE Output and Monitor
 // Euroshield AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
-AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
+AudioConnection          patchCord9(gate_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
 
 
 
@@ -725,8 +726,10 @@ MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
  
 
 
-  cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
+  //cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
 
+  cv_waveform_a_object.begin(WAVEFORM_SINE);
+  
   ////////////////////////////
   // TEST OBJECT /////////////
   test_waveform_object.begin(WAVEFORM_SAWTOOTH);
@@ -736,7 +739,7 @@ MIDI.turnThruOn(midi::Thru::Full); //  Off, Full, SameChannel, DifferentChannel
   ///////////////////////////////
 
 
-  mixer_1_object.gain(0,1);
+
   mixer_1_object.gain(1,1);
 
    
@@ -986,7 +989,7 @@ if (IsEuroshield()){
         } // 
         
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      //Serial.println(String("gate_monitor_rms not available ")   );
     }
 
 
@@ -1274,7 +1277,7 @@ if (IsBetweener()){
 
  
    float amp_1_gain = fscale( min_pot_value, max_pot_value, 0.0, 1.0, input_5_value, 0);
-   Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+   // Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
@@ -1284,10 +1287,19 @@ if (IsBetweener()){
    // CV stuff
    // LOWER Pot HIGH Button
    // ****** "Freq" ******
-   cv_waveform_a_frequency_raw =  (input_3_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   //cv_waveform_a_frequency_raw =  (input_3_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
-   cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
+   
+   
+   
+   //Eurorack cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
+   
+   //Serial.println(String("input_3_value is: ") + input_3_value  );
+   
+   cv_waveform_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 40, input_3_value, -1.5);
+   
+   
    //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
    // LOWER Pot LOW Button (Multiplex on input_4_value)
@@ -1317,9 +1329,9 @@ if (IsBetweener()){
    // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
 
    // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
-   cv_waveform_a_amplitude_raw = (input_5_value); 
+   // not setting amp of this now cv_waveform_a_amplitude_raw = (input_5_value); 
    //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
-   cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
+   // not setting amp of this now cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
    //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
 
 
@@ -1336,9 +1348,10 @@ if (IsBetweener()){
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
-    cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
+    cv_waveform_a_object.amplitude(1);
+    //cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
 
-
+    // Offset
     cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
     
     //cv_waveform_a_object.offset(cv_offset);
@@ -1347,13 +1360,13 @@ if (IsBetweener()){
 
 
     // MONITOR GATE    
-    if (gate_monitor.available())
+    if (gate_monitor_rms.available())
     {
-        float gate_peak = gate_monitor.read();
-        //Serial.println(String("gate_monitor gate_peak ") + gate_peak  );
+        float gate_peak = gate_monitor_rms.read();
+        Serial.println(String("gate_monitor_rms gate_peak ") + gate_peak  );
         Led1Level(fscale( 0.0, 1.0, 0, 255, gate_peak, 0));
     } else {
-      Serial.println(String("gate_monitor not available ")   );
+      Serial.println(String("gate_monitor_rms not available ")   );
     }
     
     // MONITOR CV
@@ -1365,11 +1378,15 @@ if (IsBetweener()){
         // Also use this to drive the betweener ouput
         if (IsBetweener()){
           int cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
-          Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
+          //Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
+
+          Serial.println(cv_peak_betweener_scaled  );
+
+          
           b.writeCVOut(2, cv_peak_betweener_scaled);
         }
         
-        //Serial.println(String("gate_monitor cv_peak ") + cv_peak  );
+        //Serial.println(String("gate_monitor_rms cv_peak ") + cv_peak  );
         Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
     } else {
       Serial.println(String("cv_monitor_rms not available ")   );
@@ -1501,8 +1518,13 @@ void GateHigh(){
   }
 
   if (IsBetweener()){
+
+gate_dc_waveform.amplitude(0.99, 10);
+    
     b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
   }
+
+  
 
 }
 
@@ -1513,6 +1535,9 @@ void GateLow(){
   }
 
   if (IsBetweener()){
+
+   gate_dc_waveform.amplitude(0);
+    
     b.writeCVOut(1, 0);
   }
   
@@ -1576,23 +1601,38 @@ void clockShowLow(){
 
 
 
-void Led1State(char state){
-  if (state == 'L'){
-    analogWrite(euroshieldLedPins[0], 0);
-  }
-
-  if (state == 'M'){
-    analogWrite(euroshieldLedPins[0], 20);
-  }
-
-  if (state == 'H'){
-    analogWrite(euroshieldLedPins[0], 200);
-  }
-  
-}
+//void Led1State(char state){
+//  if (state == 'L'){
+//    analogWrite(euroshieldLedPins[0], 0);
+//  }
+//
+//  if (state == 'M'){
+//    analogWrite(euroshieldLedPins[0], 20);
+//  }
+//
+//  if (state == 'H'){
+//    analogWrite(euroshieldLedPins[0], 200);
+//  }
+//  
+//}
 
 void Led1Level(uint8_t level){
-  analogWrite(euroshieldLedPins[0], level);
+  if (IsBetweener()){
+    analogWrite(betweener_led_pin, level); 
+
+    if (level > 150){
+      digitalWrite(betweener_led_pin, HIGH);
+    } else {
+      digitalWrite(betweener_led_pin, LOW);
+    }
+
+    
+    
+  }
+  if (IsEuroshield()){
+  analogWrite(euroshieldLedPins[0], level);  
+  }
+  
 }
 
 void Led2Level(uint8_t level){
