@@ -1,9 +1,12 @@
+//#include <Betweener.h>
+
 // the setup() method runs once, when the sketch starts
 
 // We use : https://github.com/PaulStoffregen/Audio
 // See https://www.pjrc.com/teensy/gui/index.html
 
 
+// Sketchbook location is: /Users/simonredfern/Documents/Arduino
 
 const float simon_says_seq_version = 0.23; 
 
@@ -465,6 +468,8 @@ NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2];
 ////////
 
 
+
+// "Ghost notes" are created to cancel out a note-off in channel_a_midi_note_events that is created when during the note off of low velocity notes.
 class GhostNote
 {
  public:
@@ -752,23 +757,14 @@ int note, velocity, channel; //, d1, d2;
 
         break;
       case midi::Start:
-//        note = MIDI.getData1();
-//        velocity = MIDI.getData2();
-//        channel = MIDI.getChannel();
         StartSequencer();
         break;
       case midi::Stop:
-//        note = MIDI.getData1();
-//        velocity = MIDI.getData2();
-//        channel = MIDI.getChannel();
         StopSequencer();
 
         //Serial.println(String("We got Stop: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;
       case midi::Continue:
-//        note = MIDI.getData1();
-//        velocity = MIDI.getData2();
-//        channel = MIDI.getChannel();
         //Serial.println(String("We got Continue: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
         break;     
       default:
@@ -781,15 +777,7 @@ int note, velocity, channel; //, d1, d2;
         if (type == 176 && d1 == 64 && d2 == 127){
           Serial.println(String("Sustain pedal pressed. Let's clear our sequence..") + type);
           InitMidiSequence();
-        }
-
-
-
-
-
-
-
-        
+        }        
     }
   } // End of MIDI message detected
 
@@ -821,7 +809,7 @@ int note, velocity, channel; //, d1, d2;
           
           // Only look for this clock if we don't have midi.
 
-            // Rising clock edge?
+            // Rising clock edge? // state-change-1
             if ((left_peak_level > 0.5) && (analogue_gate_state == LOW)){
     
               if (sequence_is_running == LOW){
@@ -830,6 +818,9 @@ int note, velocity, channel; //, d1, d2;
               
               analogue_gate_state = HIGH;
               //Serial.println(String("Went HIGH "));
+              
+              
+              
               OnTick();
               last_clock_pulse = millis();
               
@@ -854,6 +845,8 @@ int note, velocity, channel; //, d1, d2;
 if (midi_clock_detected == LOW){
   if ((millis() - last_clock_pulse > 500) && (sequence_is_running == HIGH)) {
     Serial.println("No analogue clock for a moment. Stopping sequencer.");
+
+    // state-change-2
     
     StopSequencer();
   }
@@ -935,6 +928,9 @@ int SequenceSettings(){
   // Read button state
   int button_1_state = digitalRead(euroshield_button_pin); // Pressed = LOW, Normal = HIGH
   //Serial.println(String("button_1_state is: ") + button_1_state);
+
+
+  // state-change-3
   
   int button_1_has_changed = Button1HasChanged(button_1_state);
   //Serial.println(String("button_1_has_changed is: ") + button_1_has_changed);
@@ -1131,6 +1127,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
   // Generally the lowest value from the pot we get is 2 or 3 
+  // setting-1
   binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
 
    
@@ -1237,10 +1234,11 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
 
+ 
    float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
-   amp_1_object.gain(amp_1_gain);
+   amp_1_object.gain(amp_1_gain); // setting-
    Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
@@ -1253,7 +1251,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
    //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
-   // LOWER Pot LOW Button
+   // LOWER Pot LOW Button (Multiplex on lower_pot_low_value)
    cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
@@ -1270,11 +1268,11 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    int cv_waveform_b_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
    //Serial.println(String("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
    
-
+   // setting-b-amp-delta
    cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_waveform_b_amplitude_delta_raw, -1.5);
    //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-   // Lower Pot LOW Button
+   // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
    cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
    //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
    cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
@@ -1292,8 +1290,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
  
     // Used for CV
-    cv_waveform_a_object.frequency(cv_waveform_a_frequency);
-    cv_waveform_a_object.amplitude(cv_waveform_a_amplitude);
+    cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
+    cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
     cv_waveform_a_object.offset(0);
 
 
@@ -1478,7 +1476,7 @@ void ChangeCvWaveformBAmplitude(){
     cv_waveform_b_amplitude = 0;
     }
 
-  cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10);
+  cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
   //Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
  
 }
