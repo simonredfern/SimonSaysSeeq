@@ -416,7 +416,7 @@ B11111111,
 
 
 
-// Sequence Length
+// Sequence Length (and default)
 uint8_t sequence_length_in_steps = 8; 
 
 // Used to control when/how we change sequence length 
@@ -426,7 +426,7 @@ uint8_t new_sequence_length_in_ticks;
 // Just counts 0 to 5 within each step
 uint8_t ticks_after_step;
 
-// Jitter Reduction: Used to flatten out glitches from the analog pots 
+// Jitter Reduction: Used to flatten out glitches from the analog pots. Actually we like the glitches 
 uint8_t jitter_reduction = 0; // was 20
 
 // LFO
@@ -495,7 +495,7 @@ uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
 uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
 
 
-uint8_t sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;  
+//uint8_t sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;  
 
 uint8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
 
@@ -1003,12 +1003,12 @@ else
 {
   if ((upper_pot_low_engaged == true) || IsCrossing(upper_pot_low_value_at_button_change, upper_input_raw, 5)) {
      int upper_pot_low_value_raw = upper_input_raw;
-     //Serial.println(String("upper_pot_low_value_raw is: ") + upper_pot_low_value_raw  );
+     Serial.println(String("upper_pot_low_value_raw is: ") + upper_pot_low_value_raw  );
      upper_pot_low_value = GetValue(upper_pot_low_value_raw, upper_pot_low_value_last, jitter_reduction);
      upper_pot_low_value_last = upper_pot_low_value;
      upper_pot_low_engaged = true;
   } else {
-    //Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + upper_pot_low_value  ); 
+    Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + upper_pot_low_value  ); 
   }
   
   if ((lower_pot_low_engaged == true) || IsCrossing(lower_pot_low_value_at_button_change, lower_input_raw, 5)) {  
@@ -1098,8 +1098,7 @@ else
 //////////////////////////////////////////
 // Assign values to change the sequencer.
 ///////////////////////////////////
-  // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
-   // UPPER Pot HIGH Button //////////
+
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence_1 = binary_sequence_1;
 
@@ -1125,7 +1124,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     
 
 
-
+  // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
+   // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
   binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
@@ -1191,37 +1191,59 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     
     
 
-   //Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-   //Serial.print("\t");
-   //Serial.print(hybrid_sequence_1, BIN);
-   //Serial.println();
+   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+   Serial.print("\t");
+   Serial.print(hybrid_sequence_1, BIN);
+   Serial.println();
 
 
    
   //Serial.println(String("right_peak_level is: ") + right_peak_level  );
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-  sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
+  //sequence_length_in_steps_raw = fscale( 0.2, 0.9, 0, 15, right_peak_level, 0);
 
 
+// Sequence length raw
+// ***UPPER pot LOW value***
+ sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   ;
+ Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+   
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
-    Led2Level(BRIGHT_5);
-  } else {
-    // and even sequences (but less bright)
-    if (sequence_length_in_steps % 2 == 0){
-      Led2Level(BRIGHT_2);
+
+    // If the sequence length is 8 (very predictable), make it shine!
+    if (sequence_length_in_steps == 8){
+      Led2Level(BRIGHT_5);
+      //Led4Digital(true);
     } else {
+      Led2Level(BRIGHT_2);
+      //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
+      //Led4Digital(false);
+    }
+  
+  } else {
       // Else off.
       Led2Level(BRIGHT_0);
-      //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
-    }
+
   }
-   
+
+// continuous indication of length
+    if (sequence_length_in_steps == 16){
+      Led3Level(BRIGHT_2);     
+    } else if (sequence_length_in_steps == 8){
+      Led3Level(BRIGHT_5);
+    } else if (sequence_length_in_steps == 4){
+      Led3Level(BRIGHT_4);
+    } else {
+      Led3Level(BRIGHT_0);
+    }
+
+
+  // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, sequence_length_in_steps, -1.5));   
    
    // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
    //jitter_reduction = (upper_pot_low_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
@@ -1239,22 +1261,23 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
    amp_1_object.gain(amp_1_gain); // setting-
-   Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
+   //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
    ////////////////////////////////////// 
    // CV stuff
-   // LOWER Pot HIGH Button
+   // ***LOWER Pot HIGH Button***
    cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
    cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
    //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
+   ////////////////////////
 
-   // LOWER Pot LOW Button (Multiplex on lower_pot_low_value)
+   // ***LOWER Pot LOW Button*** (Multiplex on lower_pot_low_value)
    cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
-
+   ///////////////////////
 
   // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
   if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT){
@@ -1394,9 +1417,9 @@ void OnStep(){
   //Serial.println(String("OnStep ") + step_count  );
 
   if (step_count > MAX_STEP) {
-    Serial.println(String("*****************************************************************************************"));  
-    Serial.println(String("************* ERROR! step_count is: ") + step_count + String("*** ERROR *** "));
-    Serial.println(String("*****************************************************************************************"));    
+    Serial.println(String("----------------------------------------------------------------------------"));  
+    Serial.println(String("------------------ ERROR! step_count is: ") + step_count + String("--- ERROR --- "));
+    Serial.println(String("----------------------------------------------------------------------------"));    
   }
 
 
@@ -1581,8 +1604,9 @@ void AdvanceSequenceChronology(){
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    Serial.println(String("**** ERROR with sequence_length_in_steps it WAS: ") + sequence_length_in_steps  + String(" but setting it to: ") + MIN_SEQUENCE_LENGTH_IN_STEPS );
     sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
-    Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
+    
   }
   
   if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
