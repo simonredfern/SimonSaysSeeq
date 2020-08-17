@@ -1,20 +1,26 @@
-//#include <Betweener.h>
+// This file is licenced under the MIT license (https://opensource.org/licenses/MIT) except for the code at the end of the file.
+//Copyright 2020 Simon Redfern
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// the setup() method runs once, when the sketch starts
 
-// We use : https://github.com/PaulStoffregen/Audio
-// See https://www.pjrc.com/teensy/gui/index.html
+/////////////////////////////////
+// Simon Says Gray Code Seeq.
+// This is a gate sequencer and associated envelope generator and a midi looper.
+// We use: https://github.com/PaulStoffregen/Audio See https://www.pjrc.com/teensy/gui/index.html
+// This file is programmed to use a: https://1010music.com/euroshield-user-guide (unfortuanatly discontinued) 
+// Please see the README for more info. 
 
-
-// Sketchbook location is: /Users/simonredfern/Documents/Arduino
 
 const float simon_says_seq_version = 0.23; 
 
 
 #include <Audio.h>
 #include <MIDI.h>
-
-
 
 
 
@@ -145,276 +151,10 @@ uint8_t sequence_length_in_steps_raw;
 
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
-unsigned int binary_sequence_1;
-unsigned int grey_sequence_1;
-unsigned int hybrid_sequence_1;
-unsigned int last_binary_sequence_1; // So we can detect changes
-
-
-unsigned int hard_coded_seqs[] = {
-B00000000,
-B00000001, // same as 11111111 if we loop
-B00010001,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110, // Used up to about here.
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11111111,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11111111,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11111111,
-B11111111,
-B00010001,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11111111,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11111111,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B00000101,
-B00000111,
-B10000111,
-B11000111,
-B11010111,
-B11010101,
-B11010110,
-B10010110,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11111110,
-B11110111,
-B01111111,
-B11011111,
-B11111111,
-B11111110,
-B11111111,
-B11111011,
-B10111111,
-B11111111,
-B11111101,
-B11010011,
-B01010101,
-B01100101,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11110110,
-B11011111,
-B01001101,
-B01011101,
-B01011110,
-B11011110,
-B11011010,
-B00001001,
-B00100001,
-B01000001,
-B01010001,
-B01010111,
-B11010101,
-B10110101,
-B10010101,
-B11011101,
-B10011101,
-B10101101,
-B10000111,
-B10111111,
-B11111111,
-B11111111,
-};
-
-
-
-
-
+unsigned int binary_sequence;
+unsigned int gray_code_sequence;
+unsigned int the_sequence;
+unsigned int last_binary_sequence; // So we can detect changes
 
 // Sequence Length (and default)
 uint8_t sequence_length_in_steps = 8; 
@@ -426,7 +166,8 @@ uint8_t new_sequence_length_in_ticks;
 // Just counts 0 to 5 within each step
 uint8_t ticks_after_step;
 
-// Jitter Reduction: Used to flatten out glitches from the analog pots. Actually we like the glitches 
+// Jitter Reduction: Used to flatten out glitches from the analog pots. 
+// Actually we like the glitches - it makes the sequencer more interesting
 uint8_t jitter_reduction = 0; // was 20
 
 // LFO
@@ -479,12 +220,6 @@ class GhostNote
 
 GhostNote channel_a_ghost_events[128];
 
-
-////////////////////////////
-// LED Display 
-// unsigned int led_1_level = 0; 
-
-
 ////////////////////////////////////////
 // Bit Constants for bit wise operations 
 
@@ -492,10 +227,8 @@ GhostNote channel_a_ghost_events[128];
  
 uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
   
-uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
+// uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
 
-
-//uint8_t sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;  
 
 uint8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
 
@@ -504,8 +237,6 @@ uint8_t bits_2_1 = 2 + 1; // CV lfo shape
 // how long the CV pulse will last for in terms of ticks
 uint8_t cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1; 
 
-
- 
 uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
 ///////////////////////////////////////////////////////////////////    
 
@@ -549,9 +280,7 @@ void SetTotalTickCount(int value){
 
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
-  step_count = FIRST_STEP;
-// TODO Changes to Sequence Length should be done here / or when done this function should be called immediately.
-  
+  step_count = FIRST_STEP; 
   //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
@@ -582,8 +311,6 @@ void setup() {
 
   ///////////////////////////////////////////
   // Pin configuration
-  // initialize the digital pin as an output.
-  // pinMode(teensy_led_pin, OUTPUT);
 
   uint8_t i;
   for (i = 0; i < euroshield_led_pin_count; i++) { 
@@ -599,15 +326,11 @@ void setup() {
 
 
 
-  MIDI.turnThruOn(midi::Thru::Full);
-  // Off, Full, SameChannel, DifferentChannel
+  MIDI.turnThruOn(midi::Thru::Full); // Possible values: Off, Full, SameChannel, DifferentChannel
 
 
   cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
   
-
-
-
   // Enable the audio shield, select input, and enable output
   // This is to read peak.
   audioShield.enable();
@@ -627,7 +350,7 @@ void setup() {
 
 
    /////////////////////////////////////////////////////////
-   // Say hello, show we are ready to sequence. 
+   // Say hello by flashing the LEDs, show we are ready to sequence. 
   uint8_t my_delay_time = 50;
   uint8_t my_no_of_times = 10;
   
@@ -643,20 +366,18 @@ void setup() {
   ///////////////////////////////////////
   // Debugging hello
   Serial.begin(57600);
-  Serial.println(String("Simon Says Seeq! Version: ") + simon_says_seq_version);
+  Serial.println(String("Simon Says Gray Code Seeq! Version: ") + simon_says_seq_version);
   Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
-// https://en.cppreference.com/w/cpp/types/integer
+  // https://en.cppreference.com/w/cpp/types/integer
   Serial.println(String("Max value in INT8_MAX (int8_t): ") + INT8_MAX ) ; // int8_t max value is 127 
-   Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
-    
-
+  Serial.println(String("Max value in UINT8_MAX (uint8_t): ") + UINT8_MAX ) ; // uint8_t max value is 255
+   
 }
 
 
 
-/////////////// LOOP ////////////////////////////
-// the loop() method runs over and over again, as long as the board has power
+
 
 
 unsigned long last_clock_pulse=0;
@@ -666,13 +387,11 @@ boolean analogue_gate_state = LOW;
 boolean sequence_is_running = LOW;
 
 
-
-
+/////////////// LOOP ////////////////////////////
+// this runs over and over again, as long as the board has power
 void loop() {
 
-
-  
-int note, velocity, channel; //, d1, d2;
+int note, velocity, channel; 
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
     byte type = MIDI.getType();
     switch (type) {
@@ -687,9 +406,6 @@ int note, velocity, channel; //, d1, d2;
           //Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
           OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         }
-        // Pass the message through
-        //MIDI.sendNoteOn(note, velocity, channel);
-  
         break;
       case midi::NoteOff:
         note = MIDI.getData1();
@@ -705,38 +421,6 @@ int note, velocity, channel; //, d1, d2;
        } else {
           OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
        }
-
-        // Pass the message on
-        //MIDI.sendNoteOff(note, 0, channel); 
-         
-//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
-//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
-//                      channel_a_ghost_events[n].is_active=0;
-//                   }  
-               
-
-
-        
-        
-        //Serial.println(String("Note Off: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
-
-
-
-            // Loop through ghost off notes and set the corresponding note events to inactive
-//            for (uint8_t n = 0; n <= 127; n++) {
-//              if (channel_a_ghost_events[n].is_active == 1){
-//                   for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-//                      Serial.println(String("Found a Ghost note OFF for ") + n + String(" Thus will make inactive at (all) steps: ") + step_count_sanity(sc) + String("") ); 
-//                      channel_a_midi_note_events[step_count_sanity(sc)][n][0].is_active=0;
-//                      channel_a_ghost_events[n].is_active=0;
-//                   }  
-//              }
-//            }
-
-
-
-
         
         break;
       case midi::Clock:
@@ -753,7 +437,7 @@ int note, velocity, channel; //, d1, d2;
         OnTick();
         ///////////////////////////////
 
-        //MIDI.---sendClock();
+
 
         break;
       case midi::Start:
@@ -781,14 +465,6 @@ int note, velocity, channel; //, d1, d2;
     }
   } // End of MIDI message detected
 
-
-
-
-
-
-
-
-///////////////////
 
 // Analog Clock (and left input checking) //////
 
@@ -916,12 +592,12 @@ void OnTick(){
 
 //////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
-// Things that we want to happen every tick..
+// It contains things that we want to check / happen every tick..
 int SequenceSettings(){
-  // Note we set tick_count_in_sequence to 0 following at the stop and start midi messages.
+  // Note we set tick_count_in_sequence to 0 following stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
- int called_on_step = 0; // don't need
+ int called_on_step = 0; // not currently used
 
 
   ////////////////////////////////////////////////////////////////
@@ -1100,9 +776,9 @@ else
 ///////////////////////////////////
 
    // 8 bit sequence - 8 Least Significant Bits
-   last_binary_sequence_1 = binary_sequence_1;
+   last_binary_sequence = binary_sequence;
 
- //  binary_sequence_1 = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
+ //  binary_sequence = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
 
    // If we have 8 bits, use the range up to 255
 
@@ -1128,72 +804,48 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_1 = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
+  binary_sequence = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
 
    
 
 
-   if (binary_sequence_1 != last_binary_sequence_1){
-    //Serial.println(String("binary_sequence_1 has changed **"));
+   if (binary_sequence != last_binary_sequence){
+    //Serial.println(String("binary_sequence has changed **"));
    }
 
 
-   //Serial.println(String("binary_sequence_1 is: ") + binary_sequence_1  );
+   //Serial.println(String("binary_sequence is: ") + binary_sequence  );
    //Serial.print("\t");
-   //Serial.print(binary_sequence_1, BIN);
+   //Serial.print(binary_sequence, BIN);
    //Serial.println();
 
-   grey_sequence_1 = Binary2Gray(binary_sequence_1);
-   //Serial.println(String("grey_sequence_1 is: ") + grey_sequence_1  );
+   gray_code_sequence = Binary2Gray(binary_sequence);
+   //Serial.println(String("gray_code_sequence is: ") + gray_code_sequence  );
    //Serial.print("\t");
-   //Serial.print(grey_sequence_1, BIN);
+   //Serial.print(gray_code_sequence, BIN);
    //Serial.println();
 
 
- 
-  // Choose which sequence we will actually use.
-  // If the pot is left or right, use the hard coded sequence, else use grey code sequence 
-//  if (binary_sequence_1 < 20 || binary_sequence_1 > 230 ) {
-//      hybrid_sequence_1 = hard_coded_seqs[binary_sequence_1];
-//      Serial.println(String("Using hard_coded_seq at position: ") + binary_sequence_1  );
-//   } else  {
-//    hybrid_sequence_1 = grey_sequence_1;
-//    Serial.println(String("Using Grey Code sequence which is: ") + grey_sequence_1  );
-//  }
 
+    the_sequence = gray_code_sequence;
 
-//
-//   if (sequence_length_in_steps > 8){
-//      hybrid_sequence_1 = grey_sequence_1 + (binary_sequence_1 << 8);
-//      Serial.println(String("Using Binary (MSB) + Grey Code ")  );    
-//   } else {
-//      hybrid_sequence_1 = grey_sequence_1;
-//      Serial.println(String("Using Grey Code sequence")   );
-//   }
+    bitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
-
-
-
-
-    hybrid_sequence_1 = grey_sequence_1;
-
-    bitClear(hybrid_sequence_1, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-    hybrid_sequence_1 = ~ hybrid_sequence_1; // Invert
+    the_sequence = ~ the_sequence; // Invert
 
    
     // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence_1 == 1){
-      hybrid_sequence_1 = 1;
+    if (binary_sequence == 1){
+      the_sequence = 1;
     }
 
 
     
     
 
-   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+   Serial.println(String("the_sequence is: ") + the_sequence  );
    Serial.print("\t");
-   Serial.print(hybrid_sequence_1, BIN);
+   Serial.print(the_sequence, BIN);
    Serial.println();
 
 
@@ -1426,7 +1078,7 @@ void OnStep(){
 
 
     
-  uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
+  uint8_t play_note = bitRead(the_sequence, step_count_sanity(step_count));
   
 
 
@@ -1513,12 +1165,7 @@ void CvStop(){
 
 
 
-//
-//void showStepOne(){
-//  //Serial.println(String("Clock Show HIGH ") );
-//  analogWrite(teensy_led_pin, BRIGHT_5);   // set the LED on
-//  //digitalWrite(teensy_led_pin, HIGH);   // set the LED on
-//}
+
 
 
 void clockShowHigh(){
@@ -1733,15 +1380,6 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
 }
 
 
-
-//mydatatype_t stack[MAXSTACKSIZE];
-//int stackptr = 0;
-//#define push(d) stack[stackptr++] = d
-//#define pop stack[--stackptr]
-//#define topofstack stack[stackptr - 1]
-
-
-
 void DisableNotes(uint8_t note){
              // Disable that note for all steps.
            uint8_t sc = 0;
@@ -1789,19 +1427,6 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
       
           
         } else {
-
-
-//        if (velocity < 7 ){
-//            // Disable the note on all steps
-//            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because OFF velocity is ") + velocity );
-//         
-//           DisableNotes(note);
-//          
-//    
-//        } else {
-          
-    
-
           
             // Note Off
              Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
@@ -1811,25 +1436,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              channel_a_midi_note_events[step_count][note][0].is_active = 1;
              Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
 
-               //  }
+          
   }
   } 
-
-    
-    // We don't want the note on
-//    if (channel_a_midi_note_events[step_count][note] == MIDI_NOTE_ON){
-//       // If its currently on, set it off.
-//       Serial.println(String("Setting MIDI note OFF: ") + note + String(" when step is ") + step_count );
-//       channel_a_midi_note_events[step_count][note] = MIDI_NOTE_OFF;
-//    } else {
-//      // If its not currently on, just set it to unset so we don't send gazzilions of note off messages
-//      Serial.println(String("Setting MIDI note UNSET: ") + note + String(" when step is ") + step_count );
-//      channel_a_midi_note_events[step_count][note] = MIDI_NOTE_UNSET;
-//    }
-
-
-
-
 
 uint8_t step_count_sanity(uint8_t step_count_){
   uint8_t step_count_fixed;
@@ -1847,6 +1456,9 @@ uint8_t step_count_sanity(uint8_t step_count_){
 }
 
 
+
+
+// Here follows some used and abused code:
 
 
 /////////////////////////////////////////////
@@ -1928,8 +1540,10 @@ newEnd, float inputValue, float curve){
 
   return rangedValue;
 }
+///////////////////////////////////////////////////////////////
 
 
+///////////////////////////////////////////////////////////////
 // From https://gist.github.com/shirish47/d21b896570a8fccbd9c3
 unsigned int Binary2Gray(unsigned int data)
  {
@@ -1938,20 +1552,10 @@ unsigned int Binary2Gray(unsigned int data)
    
   return n_data;
  }
-/////////////////
+///////////////////////////////////////////////////////////////
 
 
-//void changeStage(int* stage_p){
-//    *stage_p = 1;
-//}
-//
-//int main() {
-//    //...
-//    while(stage!=0){
-//        //if snake hits wall
-//        changeStage(&stage);
-//    }
-//}
+
 
 
 
