@@ -30,7 +30,7 @@ It's slightly modified so that:
 
 Fully clockwise is all ones (dense). Fully counter clockwise is sparse (one step is on).
 
-### Upper Pot whilst Button is pressed 
+### Upper Pot whilst button is pressed 
 
 Change the sequence length.
 
@@ -47,7 +47,7 @@ Frequency of Waveform A
 
 Frequency of Waveform B *multiplexed* with Amplitude of Waveform A
 
-Waveform A is multiplied by Waveform B to prouce CV Out.
+Waveform A is multiplied by Waveform B to produce CV Out.
 
 ### Midi Looper 
 
