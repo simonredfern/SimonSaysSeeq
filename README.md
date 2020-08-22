@@ -7,7 +7,7 @@ This software (in various forms) will hopefully run on various Teensy based hard
 Platform                  Status
 
 
-* 1010Music Euroshield.     - Works
+* 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music?)
 
 * Betweener                 - Works but currently the tool chain is broken so I can't compile
 
