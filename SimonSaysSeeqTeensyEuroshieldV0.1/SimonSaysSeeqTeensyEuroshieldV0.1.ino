@@ -1,4 +1,5 @@
 // This file is licenced under the MIT license (https://opensource.org/licenses/MIT) except for the code at the end of the file.
+
 //Copyright 2020 Simon Redfern
 //
 //Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -95,7 +96,7 @@ const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
 
-const uint8_t CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 15;
+const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
 
 
 const uint8_t MIDI_NOTE_ON = 1;
@@ -687,9 +688,9 @@ else
     Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + upper_pot_low_value  ); 
   }
   
-  if ((lower_pot_low_engaged == true) || IsCrossing(lower_pot_low_value_at_button_change, lower_input_raw, 5)) {  
+  if ((lower_pot_low_engaged == true) || IsCrossing(lower_pot_low_value_at_button_change, lower_input_raw, 25)) {  
      int lower_pot_low_value_raw = lower_input_raw;
-     //Serial.println(String("lower_pot_low_value_raw is: ") + lower_pot_low_value_raw  );
+     Serial.println(String("lower_pot_low_value_raw is: ") + lower_pot_low_value_raw  );
      lower_pot_low_value = GetValue(lower_pot_low_value_raw, lower_pot_low_value_last, jitter_reduction);
      lower_pot_low_value_last = lower_pot_low_value;
      lower_pot_low_engaged = true;
@@ -843,10 +844,10 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     
     
 
-   Serial.println(String("the_sequence is: ") + the_sequence  );
-   Serial.print("\t");
-   Serial.print(the_sequence, BIN);
-   Serial.println();
+//   Serial.println(String("the_sequence is: ") + the_sequence  );
+//   Serial.print("\t");
+//   Serial.print(the_sequence, BIN);
+//   Serial.println();
 
 
    
@@ -859,7 +860,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 // Sequence length raw
 // ***UPPER pot LOW value***
  sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   ;
- Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+ // Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    
@@ -919,20 +920,24 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    ////////////////////////////////////// 
    // CV stuff
    // ***LOWER Pot HIGH Button***
-   cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   // cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   
+   cv_waveform_a_frequency_raw =  lower_pot_high_value; 
+   
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
-   cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
-   //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
+   cv_waveform_a_frequency = fscale( 3, 1023, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
+   // Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
    ////////////////////////
 
    // ***LOWER Pot LOW Button*** (Multiplex on lower_pot_low_value)
-   cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-   //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
+   // cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
+   cv_waveform_b_frequency_raw = lower_pot_low_value;
+   Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
 
   // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
-  if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT){
+  if (cv_waveform_b_frequency_raw > CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - 20){
     reset_cv_lfo_at_FIRST_STEP = true;
     //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
   }
@@ -940,19 +945,28 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    // We want a value that goes from high to low as we turn the pot to the right.
    // So reverse the number range by subtracting from the maximum value.
-   int cv_waveform_b_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
+   //int cv_waveform_b_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
+   
+  // int cv_waveform_b_amplitude_delta_raw =  cv_waveform_b_frequency_raw;
+   
    //Serial.println(String("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
    
    // setting-b-amp-delta
-   cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_waveform_b_amplitude_delta_raw, -1.5);
-   //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
+   //cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -10, 10, cv_waveform_b_frequency_raw, 1.5) / 100;
+   
+   cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -0.4, 0.4, cv_waveform_b_frequency_raw);
+   
+
+   
+   Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
    // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
-   cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+   //cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
    //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
-   cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
+   //cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
    //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
 
+   cv_waveform_a_amplitude = 0.99;
 
    // Put this and above on the inputs.
 
@@ -1064,7 +1078,10 @@ void PlayMidi(){
 
 
 /////////////////////////////////////////////////////////////
+// These are the possible beats of the sequence
 void OnStep(){
+
+  
 
   //Serial.println(String("OnStep ") + step_count  );
 
@@ -1074,48 +1091,34 @@ void OnStep(){
     Serial.println(String("----------------------------------------------------------------------------"));    
   }
 
-
-
-
-    
+  ChangeCvWaveformBAmplitude();
+  
   uint8_t play_note = bitRead(the_sequence, step_count_sanity(step_count));
   
-
-
-          if (step_count == FIRST_STEP) {
-            CvPulseOn();
-          }
-
+    if (step_count == FIRST_STEP) {
+      SyncAndResetCv();
+    }
 
    if (play_note){
      //Serial.println(String("****************** play ")   );
-        GateHigh();
-
-       // CvPulseOn();
-
-        // We might want to only start the CV pulse on the first step
-//        if (reset_cv_lfo_at_FIRST_STEP == true){
-//          if (step_count == FIRST_STEP) {
-//            CvPulseOn();
-//          }
-//        } else {
-//          CvPulseOn();
-//        }
-        
-       
+    GateHigh(); 
    } else {
     GateLow();
      //Serial.println(String("not play ")   );
    }
-  
 
-    
+   
+      
 }
 
+
+
+// These are ticks which are not steps - so in between possible beats.
 void OnNotStep(){
   //Serial.println(String("NOT step_countIn is: ") + step_countIn  ); 
-  GateLow();
   ChangeCvWaveformBAmplitude(); 
+  GateLow();
+  
 }
 
 void GateHigh(){
@@ -1130,31 +1133,76 @@ void GateLow(){
 }
 
 
-void CvPulseOn(){
+// Kind of syncs the CV 
+void SyncAndResetCv(){
   //Serial.println(String("CV Pulse On") );
    
-      cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
+  cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
   
     // Used to modulate CV. This signal is multiplied by cv_waveform 
 
   // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
-  if (cv_waveform_b_amplitude == 0) {
-    cv_waveform_b_amplitude = 0.99;
-    cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10);
+  
+  if (RampIsPositive()){
+    if (cv_waveform_b_amplitude == 1) {
+      cv_waveform_b_amplitude = 0;
+      Serial.println(String("SyncAndResetCv : 0") );
+      
+      SetWaveformBObjectAmplitude ();
+    }
+
+  } else {
+    if (cv_waveform_b_amplitude == 0) {
+      cv_waveform_b_amplitude = 1;
+
+       Serial.println(String("SyncAndResetCv : 1") );
+      
+      SetWaveformBObjectAmplitude ();
+    }
   }
 
+
+}
+
+
+bool RampIsPositive(){
+  if (cv_waveform_b_amplitude_delta > 0)
+  {
+    return true;
+  } 
+  else 
+  {
+    return false;
+  }
+  
 }
 
 void ChangeCvWaveformBAmplitude(){
-  cv_waveform_b_amplitude -= cv_waveform_b_amplitude_delta;
-  if (cv_waveform_b_amplitude <= 0) {
+  
+  // change by an amount (might go up or down)
+  cv_waveform_b_amplitude += cv_waveform_b_amplitude_delta;
+
+  SetWaveformBObjectAmplitude ();
+ 
+}
+
+void SetWaveformBObjectAmplitude (){
+  
+   // reset if its out of bounds
+  if (cv_waveform_b_amplitude < 0 ) {
     cv_waveform_b_amplitude = 0;
     }
 
+  if (cv_waveform_b_amplitude > 1 ) {
+    cv_waveform_b_amplitude = 1;
+    }
+
+
+  // set it.
   cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
-  //Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
- 
+  Serial.println(String("cv_waveform_b_object.amplitude was set to: ") + cv_waveform_b_amplitude);
 }
+
 
 
 void CvStop(){
@@ -1555,8 +1603,23 @@ unsigned int Binary2Gray(unsigned int data)
 ///////////////////////////////////////////////////////////////
 
 
+// linear conversion https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
+float linearScale( float OldMin, float OldMax, float NewMin, float NewMax, float OldValue){
 
+float OldRange = (OldMax - OldMin);
+
+Serial.println(String("**** OldRange ") + OldRange );
+
+float NewRange = (NewMax - NewMin);  
+Serial.println(String("**** NewRange ") + NewRange );
+
+float NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin;
+
+Serial.println(String("**** NewValue ") + NewValue );
+
+return NewValue;
+}
 
 
 
