@@ -1519,7 +1519,7 @@ float fscale( float originalMin, float originalMax, float newBegin, float
 newEnd, float inputValue, float curve){
 
   float OriginalRange = 0;
-  float NewRange = 0;
+  float new_range = 0;
   float zeroRefCurVal = 0;
   float normalizedCurVal = 0;
   float rangedValue = 0;
@@ -1552,11 +1552,11 @@ newEnd, float inputValue, float curve){
   OriginalRange = originalMax - originalMin;
 
   if (newEnd > newBegin){
-    NewRange = newEnd - newBegin;
+    new_range = newEnd - newBegin;
   }
   else
   {
-    NewRange = newBegin - newEnd;
+    new_range = newBegin - newEnd;
     invFlag = 1;
   }
 
@@ -1566,7 +1566,7 @@ newEnd, float inputValue, float curve){
   /*
   Serial.print(OriginalRange, DEC);  
    Serial.print("   ");  
-   Serial.print(NewRange, DEC);  
+   Serial.print(new_range, DEC);  
    Serial.print("   ");  
    Serial.println(zeroRefCurVal, DEC);  
    Serial.println();  
@@ -1578,12 +1578,12 @@ newEnd, float inputValue, float curve){
   }
 
   if (invFlag == 0){
-    rangedValue =  (pow(normalizedCurVal, curve) * NewRange) + newBegin;
+    rangedValue =  (pow(normalizedCurVal, curve) * new_range) + newBegin;
 
   }
   else     // invert the ranges
   {  
-    rangedValue =  newBegin - (pow(normalizedCurVal, curve) * NewRange);
+    rangedValue =  newBegin - (pow(normalizedCurVal, curve) * new_range);
   }
 
   return rangedValue;
@@ -1605,20 +1605,20 @@ unsigned int Binary2Gray(unsigned int data)
 
 // linear conversion https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
-float linearScale( float OldMin, float OldMax, float NewMin, float NewMax, float OldValue){
+float linearScale( float original_range_min, float original_range_max, float new_range_min, float new_range_max, float original_value){
 
-float OldRange = (OldMax - OldMin);
+float original_range = (original_range_max - original_range_min);
 
-Serial.println(String("**** OldRange ") + OldRange );
+Serial.println(String("linearScale original_range ") + original_range );
 
-float NewRange = (NewMax - NewMin);  
-Serial.println(String("**** NewRange ") + NewRange );
+float new_range = (new_range_max - new_range_min);  
+Serial.println(String("linearScale new_range ") + new_range );
 
-float NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin;
+float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
 
-Serial.println(String("**** NewValue ") + NewValue );
+Serial.println(String("linearScale new_value ") + new_value );
 
-return NewValue;
+return new_value;
 }
 
 
