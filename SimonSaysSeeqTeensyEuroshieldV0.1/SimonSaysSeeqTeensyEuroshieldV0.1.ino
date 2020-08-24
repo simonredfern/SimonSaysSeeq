@@ -954,7 +954,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // setting-b-amp-delta
    //cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -10, 10, cv_waveform_b_frequency_raw, 1.5) / 100;
    
-   cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -0.4, 0.4, cv_waveform_b_frequency_raw);
+   cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.0, 0.3, cv_waveform_b_frequency_raw);
    
 
    
@@ -1091,14 +1091,16 @@ void OnStep(){
     Serial.println(String("----------------------------------------------------------------------------"));    
   }
 
-  ChangeCvWaveformBAmplitude();
+  
+
+    if (step_count == FIRST_STEP) {
+      SyncAndResetCv();
+    } else {
+      ChangeCvWaveformBAmplitude();
+    }
   
   uint8_t play_note = bitRead(the_sequence, step_count_sanity(step_count));
   
-    if (step_count == FIRST_STEP) {
-      SyncAndResetCv();
-    }
-
    if (play_note){
      //Serial.println(String("****************** play ")   );
     GateHigh(); 
@@ -1609,14 +1611,14 @@ float linearScale( float original_range_min, float original_range_max, float new
 
 float original_range = (original_range_max - original_range_min);
 
-Serial.println(String("linearScale original_range ") + original_range );
+//Serial.println(String("linearScale original_range ") + original_range );
 
 float new_range = (new_range_max - new_range_min);  
-Serial.println(String("linearScale new_range ") + new_range );
+//Serial.println(String("linearScale new_range ") + new_range );
 
 float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
 
-Serial.println(String("linearScale new_value ") + new_value );
+//Serial.println(String("linearScale new_value ") + new_value );
 
 return new_value;
 }
