@@ -24,11 +24,13 @@ const float simon_says_seq_version = 0.23;
 #include <MIDI.h>
 
 
+AudioSynthWaveformDc     external_modulator_object;
 
 AudioSynthWaveformDc     gate_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;      
 AudioSynthWaveformDc     cv_waveform_b_object; 
 AudioEffectMultiply      multiply1;      
+AudioEffectMultiply      multiply2;
 
 AudioAmplifier amp_1_object;
  
@@ -49,11 +51,22 @@ AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> 
 AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
 AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
+
+// And modulate the result.
+AudioConnection          patchCord12(multiply1, 0, multiply2, 1);
+AudioConnection          patchCord13(external_modulator_object, 0, multiply2, 0);
+
+
+
+
 // CV Output (via multiply) and Monitor
 AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
 AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
 
-AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
+//AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
+
+AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // CV -> Lower Audio Out
+
 
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
@@ -140,6 +153,8 @@ unsigned int lower_pot_low_value_at_button_change;
 
 float left_peak_level;
 float right_peak_level;
+
+float external_modulator_object_level;
 
 
 ////////////////////////////////////////////////////
@@ -735,6 +750,11 @@ else
     } else {
       //Serial.println(String("right_peak_level not available ")   );
     }
+
+     external_modulator_object_level = right_peak_level;
+
+    external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
+
 
 
 
