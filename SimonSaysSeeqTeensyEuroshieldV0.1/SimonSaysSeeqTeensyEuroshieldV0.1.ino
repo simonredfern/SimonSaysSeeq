@@ -246,7 +246,7 @@ uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
 // uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1; 
 
 
-uint8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
+//int8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
 
 
 uint8_t bits_2_1 = 2 + 1; // CV lfo shape
@@ -946,7 +946,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
-   cv_waveform_a_frequency = fscale( 3, 1023, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
+   cv_waveform_a_frequency = fscale( 3, 1023, 0.001, 10, cv_waveform_a_frequency_raw, -1.5);
    // Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
    ////////////////////////
 
