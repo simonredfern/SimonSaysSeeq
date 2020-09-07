@@ -697,26 +697,22 @@ void setup() {
   int resolution = 10;
 
 
-   if (IsBetweener()) {
+
       //Serial.println(String("I'm expecting to be plugged into a Betweener. Starting b...")) ;
 
       //////////
       b.begin();
       /////////
-   }
-
-    if (IsEuroshield()) {
-      Serial.println(String("I'm expecting to be plugged into a Euroshield.")) ;
-    }
 
 
- if (IsBetweener()) {
+
+
+
+
         resolution = 10; // Need to use 10 for Betweener
- }
 
-  if (IsEuroshield()) {
-    resolution = 8; // Correct? 
-  }
+
+
 
 
   analogReadResolution(resolution);
@@ -741,15 +737,9 @@ void setup() {
   // pinMode(teensy_led_pin, OUTPUT);
 
   uint8_t i;
-  if (IsEuroshield()) {
-    for (i = 0; i < euroshield_led_pin_count; i++) { 
-      pinMode(euroshieldLedPins[i], OUTPUT);    
-    }
-  
-    pinMode(euroshield_button_pin, INPUT);
-  } else {
+
     pinMode(betweener_led_pin, OUTPUT);
-  }
+
   ///////////////////////////////////////
 
 
@@ -817,14 +807,9 @@ if (IsEuroshield()){
  }
 
 
-   if (IsBetweener()) {
+
       // Say hello to Betweener. There is only one LED on the Betweener, so make it more obvious
       Flash(my_delay_time * 2, my_no_of_times * 2, betweener_led_pin);
-   }
-  
-  ////////////////////////////////////////  
-
-  ///////////////////////////////////////
 
 
 // https://en.cppreference.com/w/cpp/types/integer
@@ -871,7 +856,7 @@ void loop() {
 //}
   
 
-if (IsBetweener()){
+
     //b.readTriggers();
     b.readAllInputs();
 
@@ -883,24 +868,6 @@ if (IsBetweener()){
           last_clock_pulse = millis();
     }
     
- } // End device check
-
-
-    
-
-if (IsEuroshield()){
-  
-
-
-   
-int note, velocity, channel; //, d1, d2;
-
-
-
-}
-
-
-
 
 
 ///////////////////
@@ -909,54 +876,6 @@ int note, velocity, channel; //, d1, d2;
 
 
 
-// Euroshield
-if (IsEuroshield()){
-
-    ///////////////////////////////////////////
-   // Look for Analogue Clock (24 PPQ)
-   // Note: We use this input for other things too.
-   if (peak_L.available()){
-        input_5_value = peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
-        // Serial.println(String("**** input_5_value: ") + input_5_value) ;
-
-        //Serial.println(String("analogue_gate_state: ") + analogue_gate_state) ;
-
-         // ONLY if no MIDI clock, run the sequencer from the Analogue clock.
-        if (midi_clock_detected == LOW) {
-
-          //Serial.println(String(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
-          
-          // Only look for this clock if we don't have midi.
-
-            // Rising clock edge? // state-change-1
-            if ((input_5_value > 0.5) && (analogue_gate_state == LOW)){
-    
-              if (sequence_is_running == LOW){
-                StartSequencer();
-              }
-              
-              analogue_gate_state = HIGH;
-              //Serial.println(String("Went HIGH "));
-               
-              OnTick();
-              last_clock_pulse = millis();
-              
-            } 
-    
-            // Falling clock edge?
-            if ((input_5_value < 0.5) && (analogue_gate_state == HIGH)){
-              analogue_gate_state = LOW;
-              //Serial.println(String("Went LOW "));
-            } 
-
-        } // 
-        
-    } else {
-      //Serial.println(String("gate_monitor_rms not available ")   );
-    }
-
-
-} 
 
 
  
@@ -1048,120 +967,6 @@ void ReadInputsAndUpdateSettings(){
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
 
-if (IsEuroshield()){
-
-  ////////////////////////////////////////////////////////////////
-  // Read button state
-  int button_1_state = digitalRead(euroshield_button_pin); // Pressed = LOW, Normal = HIGH
-  //Serial.println(String("button_1_state is: ") + button_1_state);
-
-
-  // state-change-3
-  
-  int button_1_has_changed = Button1HasChanged(button_1_state);
-  //Serial.println(String("button_1_has_changed is: ") + button_1_has_changed);
-
-  /////////////////////////////////////////////////
-  // Handle engaging the pots so they change values
-  // if Button state changed (pressed or released) store the last state of pots.
-  // The pots might have different values for pushed/released states, 
-  // so we disengage the pots untill the current value gets close to the previous value for that button state.
-  // i.e. Don't use the high (normal) state of the pots until we cross the value again when we are in the HIGH state.
-  if (button_1_has_changed) {
-    if (button_1_state == LOW){
-      
-      // Disable the high pots
-      upper_pot_high_engaged = false;
-      lower_pot_high_engaged = false;
-
-      //Serial.println(String("store values for state_HIGH  "));
-      input_1_value_at_button_change = input_1_value;
-      input_2_value_at_button_change = input_2_value;
-    
-    } else {
-      // Disable the low pots
-      upper_pot_low_engaged = false;
-      lower_pot_low_engaged = false;
-
-      //Serial.println(String("store values for state_LOW "));
-      input_3_value_at_button_change = input_3_value;
-      input_4_value_at_button_change = input_4_value;
-    }
-  }
-
-  ////////////////////////////////////////////
-  // Get the Pot positions. 
-  // We will later assign the values dependant on the push button state
-  upper_input_raw = analogRead(upper_pot_pin);
-  //Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
-  lower_input_raw = analogRead(lower_pot_pin);
-  //Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
-
-/////////////////////////////////////////////////////
-// Get values from the pots when they are engaged 
-// The unpressed state of the button is HIGH
-if (button_1_state == HIGH) {
-  // only assign it if engaged i.e. we don't want to jump values if the pot is moved inbetween button press
-  
-   if ((upper_pot_high_engaged == true) || IsCrossing(input_1_value_at_button_change, upper_input_raw, 5)) {
-       int input_1_value_raw = upper_input_raw;
-        //Serial.println(String("**** input_1_value_raw is: ") + input_1_value_raw  );     
-        input_1_value = GetValue(input_1_value_raw, input_1_value_last, jitter_reduction);
-        input_1_value_last = input_1_value;
-        upper_pot_high_engaged = true;
-   } else {
-     //Serial.println(String("upper_pot_high is: DISENGAGED value is sticking at: ") + input_1_value  ); 
-   }
-
-   if ((lower_pot_high_engaged == true) || IsCrossing(input_2_value_at_button_change, lower_input_raw, 5)){
-        int input_2_value_raw = lower_input_raw;
-        //Serial.println(String("input_2_value_raw is: ") + input_2_value_raw  );
-        input_2_value = GetValue(input_2_value_raw, input_2_value_last, jitter_reduction);
-        input_2_value_last = input_2_value;
-        lower_pot_high_engaged = true;
-   } else {
-    //Serial.println(String("lower_pot_high is: DISENGAGED value is sticking at: ") + input_2_value  ); 
-   }
-  
-} 
-else 
-// LOW state
-{
-  if ((upper_pot_low_engaged == true) || IsCrossing(input_3_value_at_button_change, upper_input_raw, 5)) {
-     int input_3_value_raw = upper_input_raw;
-     //Serial.println(String("input_3_value_raw is: ") + input_3_value_raw  );
-     input_3_value = GetValue(input_3_value_raw, input_3_value_last, jitter_reduction);
-     input_3_value_last = input_3_value;
-     upper_pot_low_engaged = true;
-  } else {
-    //Serial.println(String("upper_pot_low is: DISENGAGED value is sticking at: ") + input_3_value  ); 
-  }
-  
-  if ((lower_pot_low_engaged == true) || IsCrossing(input_4_value_at_button_change, lower_input_raw, 5)) {  
-     int input_4_value_raw = lower_input_raw;
-     //Serial.println(String("input_4_value_raw is: ") + input_4_value_raw  );
-     input_4_value = GetValue(input_4_value_raw, input_4_value_last, jitter_reduction);
-     input_4_value_last = input_4_value;
-     lower_pot_low_engaged = true;
-  } else {
-    //Serial.println(String("lower_pot_low is: DISENGAGED value is sticking at: ") + input_4_value  );
-  }
-
-}
-
-
-   if (peak_R.available())
-    {
-        input_6_value = peak_R.read() * 1.0;
-        //Serial.println(String("input_6_value: ") + input_6_value );  
-    } else {
-      //Serial.println(String("input_6_value not available ")   );
-    }
-
-}
-
-
-if (IsBetweener()){
 
 // physical -> logical -> actual 
 // pot -> value -> result
@@ -1195,7 +1000,7 @@ if (IsBetweener()){
   
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4); 
-}
+
 
 
 
@@ -1338,7 +1143,7 @@ if (IsBetweener()){
         float cv_peak = cv_monitor_rms.read();
 
         // Also use this to drive the betweener ouput
-        if (IsBetweener()){
+        
           int cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0); 
           //Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
 
@@ -1346,7 +1151,7 @@ if (IsBetweener()){
 
           
           b.writeCVOut(2, cv_peak_betweener_scaled);
-        }
+       
         
         //Serial.println(String("gate_monitor_rms cv_peak ") + cv_peak  );
         Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
@@ -1452,12 +1257,12 @@ void GateHigh(){
       gate_dc_waveform.amplitude(0.99, 10);
   }
 
-  if (IsBetweener()){
+
 
 gate_dc_waveform.amplitude(0.99, 10);
     
     b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
-  }
+
 
   
 
@@ -1465,16 +1270,11 @@ gate_dc_waveform.amplitude(0.99, 10);
 
 void GateLow(){
   //Serial.println(String("Gate LOW") );
-  if (IsEuroshield()){
-    gate_dc_waveform.amplitude(0);
-  }
-
-  if (IsBetweener()){
 
    gate_dc_waveform.amplitude(0);
     
     b.writeCVOut(1, 0);
-  }
+  
   
 }
 
@@ -1552,7 +1352,7 @@ void clockShowLow(){
 //}
 
 void Led1Level(uint8_t level){
-  if (IsBetweener()){
+
     analogWrite(betweener_led_pin, level); 
 
     if (level > 150){
@@ -1561,12 +1361,8 @@ void Led1Level(uint8_t level){
       digitalWrite(betweener_led_pin, LOW);
     }
 
-    
-    
-  }
-  if (IsEuroshield()){
-  analogWrite(euroshieldLedPins[0], level);  
-  }
+ 
+ 
   
 }
 
