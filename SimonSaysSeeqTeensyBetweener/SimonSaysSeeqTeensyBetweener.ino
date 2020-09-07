@@ -1,12 +1,17 @@
 
 
-//****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch. To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
-//
+//****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch. 
+// To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
+// Also Turn off DODINMIDI in Betweener.h (see below)
 
-// the setup() method runs once, when the sketch starts
+
 
 // We use : https://github.com/PaulStoffregen/Audio
 // See https://www.pjrc.com/teensy/gui/index.html
+
+// Betweener library https://github.com/jkrame1/Betweener/wiki/03_Library-Reference
+
+// Libraries seem to be in /Users/simonredfern/Documents/Arduino/libraries/ 
 
 
 // Sketchbook location is: /Users/simonredfern/Documents/Arduino
@@ -15,7 +20,35 @@ const float simon_says_seq_version = 0.23;
 
 
 #include <Audio.h>
-//#include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
+#include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
+
+
+// Note: We want to use https://github.com/FortySevenEffects/arduino_midi_library
+// However even with (a recent verion of) this library we get compile errors, so we comment out the offending MIDI over DIN in Betweener.cpp
+// NOTE In case of compile errors with Betweener and the MIDI library used, 
+
+
+// Turn off DODINMIDI in Betweener.h thus:
+// # DODINMIDI
+
+
+// or modify Betweener.cpp thus:
+
+//#ifdef DODINMIDI
+//    Serial2.setRX(DINMIDIIN);
+//    Serial2.setTX(DINMIDIOUT);
+//    // Compile Error DINMIDI.begin(MIDI_CHANNEL_OMNI);  //monitor all input channels
+//#endif
+
+
+//#ifdef DODINMIDI
+//void Betweener::readDINMIDI(void){
+//        // Compile bug DINMIDI.read();
+//}
+//#endif
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
 #include <Betweener.h>
 
 Betweener b; // Must begin it below!
