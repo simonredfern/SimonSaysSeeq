@@ -1,4 +1,13 @@
-
+// How to Compile: 
+// 1) Install Arduino version 1.8.13
+// 2) Then apply the Teensyduino, Version 1.53 dmg to the Arduino installation.
+// 3) Then put Audio 1.03 from 2015 // https://github.com/PaulStoffregen/Audio/releases/tag/v1.03 into Documents/libraries.
+// These are in Documents/libraries
+//Audio-1.03    MIDIUSB     readme.txt
+//Betweener   MIDI_Library
+//Bounce2     ResponsiveAnalogRead
+// 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
+// 5) Set Tools USB type to MIDI
 
 //****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch. 
 // To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
@@ -19,7 +28,7 @@
 const float simon_says_seq_version = 0.23; 
 
 
-#include <Audio.h>
+
 #include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
 
 
@@ -50,6 +59,8 @@ const float simon_says_seq_version = 0.23;
 /////////////////////////////////////////////////////////////////////////////////////////
 
 #include <Betweener.h>
+
+#include <Audio.h>
 
 Betweener b; // Must begin it below!
 
