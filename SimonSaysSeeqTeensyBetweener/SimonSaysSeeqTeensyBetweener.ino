@@ -70,7 +70,7 @@ Betweener b; // Must begin it below!
 AudioSynthWaveform       test_waveform_object;
 AudioAnalyzeRMS          test_rms_object;
 
-AudioAnalyzeRMS          cv_rms_object;
+
 
 AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
@@ -81,33 +81,40 @@ AudioSynthWaveformDc     gate_2_dc_waveform;
 
 /////////////////////////////////////
 // How we generate CV
-//  (offset -1 to + 1)
-//  waveform a ---  (no params)                 (gain = 0 to 32767.0)
-//                |---Multiply---||---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output
-//                                    
+
+//  carrier a ---  (no params)                 (gain = 0 to 32767.0)
+//                |---Multiply (amplitude modulation)---||---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output
+//  modulator a (dc ramp) ---                                   
 //
 //
 
-AudioSynthWaveform       cv_waveform_a_object;
-AudioSynthWaveformDc     cv_waveform_b_object;
-AudioEffectMultiply      multiply1;
+AudioSynthWaveform       carrier_a_object;
+AudioSynthWaveformDc     modulator_a_object;
+AudioEffectMultiply      multiply_a;
+AudioAnalyzeRMS          result_a_rms_object;
 
-//AudioMixer4              mixer_1_object;
 
-
+AudioSynthWaveform       carrier_b_object;
+AudioSynthWaveformDc     modulator_b_object;
+AudioEffectMultiply      multiply_b;
+AudioAnalyzeRMS          result_b_rms_object;
 
 
 //////////////
 // Modulate CV
 // Waveform a and b are multiplied together
-AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
-AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
+AudioConnection          patchCord6a(carrier_a_object, 0, multiply_a, 1);
+AudioConnection          patchCord7a(modulator_a_object, 0, multiply_a, 0);
+
+AudioConnection          patchCord6b(carrier_b_object, 0, multiply_b, 1);
+AudioConnection          patchCord7b(modulator_b_object, 0, multiply_b, 0);
 
 
-// CV Output is via cv_rms_object which we read in code.
-AudioConnection          patchCord2(multiply1, cv_rms_object); // CV -> monitor to drive output indirectly
 
+// CV Output is via result_a_rms_object which we read in code.
+AudioConnection          patchCord2a(multiply_a, result_a_rms_object); // CV -> monitor to drive output indirectly
 
+AudioConnection          patchCord2b(multiply_b, result_b_rms_object);
 
 ////////////////////////////////////////////
 
@@ -120,12 +127,6 @@ AudioAnalyzeRMS          gate_monitor_rms;
 // GATE Output and Monitor
 
 AudioConnection          patchCord9(gate_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
-
-
-
-AudioAnalyzePeak     peak_L;
-AudioAnalyzePeak     peak_R;
-
 
 
 AudioControlSGTL5000     audioShield;
@@ -403,8 +404,8 @@ uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
 // Values set via the Pots (and later maybe audio inputs).
 unsigned int cv_waveform_b_frequency_raw = 0;
 float cv_waveform_b_frequency = 0;
-float cv_waveform_b_amplitude;
-float cv_waveform_b_amplitude_delta;
+float cv_modulator_amplitude;
+float cv_modulator_amplitude_delta;
 unsigned int cv_waveform_b_shape;
 
 
@@ -516,12 +517,12 @@ void setup() {
 
 
 
-  //cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
+  //carrier_a_object.begin(WAVEFORM_SAWTOOTH);
 
-  cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
-  cv_waveform_a_object.frequency(1);
-  cv_waveform_a_object.amplitude(1);
-  cv_waveform_a_object.offset(0);
+  carrier_a_object.begin(WAVEFORM_SAWTOOTH);
+  carrier_a_object.frequency(1);
+  carrier_a_object.amplitude(1);
+  carrier_a_object.offset(0);
 
   ////////////////////////////
   // TEST OBJECT /////////////
@@ -610,20 +611,20 @@ void loop() {
 
   // DRIVE CV
   /// This is connected to cv_waveform and reads the level. We use that to drive CV out.
-  if (cv_rms_object.available())
+  if (result_a_rms_object.available())
   {
-    float cv_rms = cv_rms_object.read();
-    Serial.println(String("cv_rms is: ") + cv_rms  );
+    float result_a_rms_value = result_a_rms_object.read();
+    Serial.println(String("result_a_rms_value is: ") + result_a_rms_value  );
 
     // Also use this to drive the betweener ouput
 
-    int cv_rms_scaled = fscale( 0.0, 1.0, 0, 4095, cv_rms, 0);
-    Serial.println(String("cv_rms_scaled is: ") + cv_rms_scaled  );
+    int cv_out_a_driver = fscale( 0.0, 1.0, 0, 4095, result_a_rms_value, 0);
+    Serial.println(String("cv_out_a_driver is: ") + cv_out_a_driver  );
 
-    b.writeCVOut(3, cv_rms_scaled);
-    //Led4Level(fscale( 0.0, 1.0, 0, 255, cv_rms, 0));
+    b.writeCVOut(3, cv_out_a_driver);
+    //Led4Level(fscale( 0.0, 1.0, 0, 255, result_a_rms_value, 0));
   } else {
-    //Serial.println(String("cv_rms_object not available ")   );
+    //Serial.println(String("result_a_rms_object not available ")   );
   }
 
 
@@ -842,12 +843,12 @@ void ReadInputsAndUpdateSettings() {
 
   // We want a value that goes from high to low as we turn the pot to the right.
   // So reverse the number range by subtracting from the maximum value.
-  int cv_waveform_b_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
-  //Serial.println(String("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
+  int cv_modulator_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
+  //Serial.println(String("cv_modulator_amplitude_delta_raw is: ") + cv_modulator_amplitude_delta_raw  );
 
   // setting-b-amp-delta
-  cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_waveform_b_amplitude_delta_raw, -1.5);
-  Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
+  cv_modulator_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_modulator_amplitude_delta_raw, -1.5);
+  Serial.println(String("cv_modulator_amplitude_delta is: ") + cv_modulator_amplitude_delta  );
 
   // Lower Pot LOW Button (Multiplex on pot4_input_value)
   // ****** "Amp"******
@@ -875,9 +876,9 @@ void ReadInputsAndUpdateSettings() {
 
 
   // Used for CV
-  cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
-  cv_waveform_a_object.amplitude(1);
-  //cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
+  carrier_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
+  carrier_a_object.amplitude(1);
+  //carrier_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
 
   // Offset
   //cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
@@ -1065,34 +1066,34 @@ void Gate2Low() {
 void CvPulseOn() {
   //Serial.println(String("CV Pulse On") );
 
-  cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
+  carrier_a_object.phase(90); // Sine wave has maximum at 90 degrees
 
   // Used to modulate CV. This signal is multiplied by cv_waveform
 
   // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
-  if (cv_waveform_b_amplitude == 0) {
-    cv_waveform_b_amplitude = 0.99;
-    cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10);
+  if (cv_modulator_amplitude == 0) {
+    cv_modulator_amplitude = 0.99;
+    modulator_a_object.amplitude(cv_modulator_amplitude, 10);
   }
 
 }
 
 void ChangeCvWaveformBAmplitude() {
-  cv_waveform_b_amplitude -= cv_waveform_b_amplitude_delta;
-  if (cv_waveform_b_amplitude <= 0) {
-    cv_waveform_b_amplitude = 0;
+  cv_modulator_amplitude -= cv_modulator_amplitude_delta;
+  if (cv_modulator_amplitude <= 0) {
+    cv_modulator_amplitude = 0;
   }
 
-  cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
-  //Serial.println(String("cv_waveform_b_amplitude is: ") + cv_waveform_b_amplitude);
+  modulator_a_object.amplitude(cv_modulator_amplitude, 10); // setting-b-amplitude
+  //Serial.println(String("cv_modulator_amplitude is: ") + cv_modulator_amplitude);
 
 }
 
 
 void CvStop() {
   Serial.println(String("I said CvStop") );
-  cv_waveform_b_amplitude = 0;
-  cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10);
+  cv_modulator_amplitude = 0;
+  modulator_a_object.amplitude(cv_modulator_amplitude, 10);
 }
 
 
@@ -1101,13 +1102,11 @@ void CvStop() {
 
 void clockShowHigh() {
   //Serial.println(String("Clock Show HIGH ") );
-  //analogWrite(teensy_led_pin, BRIGHT_4);   // set the LED on
   digitalWrite(teensy_led_pin, HIGH);   // set the LED on
 }
 
 void clockShowLow() {
   //Serial.println(String("Clock Show LOW") );
-  //analogWrite(teensy_led_pin, BRIGHT_0);
   digitalWrite(teensy_led_pin, LOW);   // set the LED off
 }
 
