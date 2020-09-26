@@ -165,7 +165,7 @@ const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
 
-const uint8_t CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 15;
+const int CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT = 1023;
 
 
 const uint8_t MIDI_NOTE_ON = 1;
@@ -179,34 +179,16 @@ unsigned int max_pot_value;
 
 
 ////////////////////////////////////////////////////
-// Actual pot values
-unsigned int upper_input_raw; // TODO Make t type.
-unsigned int lower_input_raw;
 
 
-
-unsigned int pot1_input_value_raw;
 unsigned int pot1_input_value;
-unsigned int pot1_input_value_last;
-unsigned int pot1_input_value_at_button_change;
 
-
-unsigned int pot2_input_value_raw;
 unsigned int pot2_input_value;
-unsigned int pot2_input_value_last;
-unsigned int pot2_input_value_at_button_change;
 
-
-unsigned int pot3_input_value_raw;
 unsigned int pot3_input_value;
-unsigned int pot3_input_value_last;
-unsigned int pot3_input_value_at_button_change;
 
-
-unsigned int pot4_input_value_raw;
 unsigned int pot4_input_value;
-unsigned int pot4_input_value_last;
-unsigned int pot4_input_value_at_button_change;
+
 
 
 
@@ -302,17 +284,20 @@ uint8_t ticks_after_step;
 uint8_t jitter_reduction = 0; // was 20
 
 // LFO
-unsigned int cv_waveform_a_frequency_raw;
-float cv_waveform_a_frequency;
+unsigned int cv_carrier_a_frequency_raw;
+
+
+float cv_carrier_a_frequency;
+float cv_carrier_b_frequency;
 
 boolean reset_cv_lfo_at_FIRST_STEP = false;
 
 // Amplitude of the LFO
-unsigned int cv_waveform_a_amplitude_raw;
+
 float cv_waveform_a_amplitude;
 
 
-float cv_offset_raw;
+
 float cv_offset;
 
 
@@ -379,34 +364,21 @@ GhostNote channel_a_ghost_events[128];
 
 uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
 
-uint8_t jitter_reduction_bits_5_4_3_2_1 = 16 + 8 + 4 + 2 + 1;
-
-
-uint8_t sequence_length_in_steps_bits_8_7_6 = 128 + 64 + 32;
-
-uint8_t cv_waveform_a_frequency_raw_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1; // CV frequency
-
-
-uint8_t bits_2_1 = 2 + 1; // CV lfo shape
-// how long the CV pulse will last for in terms of ticks
-uint8_t cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1;
-
-
-
-uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
-///////////////////////////////////////////////////////////////////
-
 
 
 
 
 ///////////////////////////
 // Values set via the Pots (and later maybe audio inputs).
-unsigned int cv_waveform_b_frequency_raw = 0;
+unsigned int cv_modulator_a_frequency_raw = 0;
 float cv_waveform_b_frequency = 0;
-float cv_modulator_amplitude;
-float cv_modulator_amplitude_delta;
-unsigned int cv_waveform_b_shape;
+
+float cv_modulator_a_amplitude;
+float cv_modulator_a_amplitude_delta;
+
+float cv_modulator_b_amplitude;
+float cv_modulator_b_amplitude_delta;
+
 
 
 // Timing
@@ -480,14 +452,14 @@ void setup() {
   /////////
 
 
-  resolution = 10; // Need to use 10 for Betweener
+  resolution = 10; // Need to use 10 bits for Betweener
 
   analogReadResolution(resolution);
 
   min_pot_value = 0;
   max_pot_value = pow(2, resolution) - 1;
 
-  //Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
+  Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
 
   //Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
@@ -517,12 +489,18 @@ void setup() {
 
 
 
-  //carrier_a_object.begin(WAVEFORM_SAWTOOTH);
 
   carrier_a_object.begin(WAVEFORM_SAWTOOTH);
   carrier_a_object.frequency(1);
   carrier_a_object.amplitude(1);
   carrier_a_object.offset(0);
+
+
+  carrier_b_object.begin(WAVEFORM_SINE);
+  carrier_b_object.frequency(1);
+  carrier_b_object.amplitude(1);
+  carrier_b_object.offset(0);
+
 
   ////////////////////////////
   // TEST OBJECT /////////////
@@ -595,9 +573,6 @@ void loop() {
   // to writeCVOut.
 
 
-
-
-
   //b.readTriggers();
   b.readAllInputs();
 
@@ -628,24 +603,49 @@ void loop() {
   }
 
 
-if (false){
-  if (test_rms_object.available()){
-          float test_rms = test_rms_object.read();
-  
-          // Also use this to drive the betweener ouput
+  if (result_b_rms_object.available())
+  {
+    float result_b_rms_value = result_b_rms_object.read();
+    Serial.println(String("result_b_rms_value is: ") + result_b_rms_value  );
 
-            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
-            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
-            //b.writeCVOut(1, test_rms_scaled);
-            //b.writeCVOut(2, test_rms_scaled);
-            //b.writeCVOut(3, test_rms_scaled);
-            b.writeCVOut(4, test_rms_scaled);
+    // Also use this to drive the betweener ouput
 
-  
+    int cv_out_b_driver = fscale( 0.0, 1.0, 0, 4095, result_b_rms_value, 0);
+    Serial.println(String("cv_out_b_driver is: ") + cv_out_b_driver  );
+
+
+    // channel is 1-4 , value is 0 - 4095
+    
+    b.writeCVOut(4, cv_out_b_driver); 
+    //Led4Level(fscale( 0.0, 1.0, 0, 255, result_b_rms_value, 0));
   } else {
-    //Serial.println(String("test_rms_object is not available!!"));
+    //Serial.println(String("result_b_rms_object not available ")   );
   }
-}
+
+
+
+
+
+
+
+//if (false){
+//  if (test_rms_object.available()){
+//          float test_rms = test_rms_object.read();
+//  
+//          // Also use this to drive the betweener ouput
+//
+//            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
+//            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
+//            //b.writeCVOut(1, test_rms_scaled);
+//            //b.writeCVOut(2, test_rms_scaled);
+//            //b.writeCVOut(3, test_rms_scaled);
+//            b.writeCVOut(4, test_rms_scaled);
+//
+//  
+//  } else {
+//    //Serial.println(String("test_rms_object is not available!!"));
+//  }
+//}
 
 
 
@@ -678,8 +678,8 @@ if (false){
 
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer() {
-  Gate1Low();
-  Gate2Low();
+  GateALow();
+  GateBLow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
@@ -781,41 +781,9 @@ void ReadInputsAndUpdateSettings() {
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4);
 
-
-
-
-
-
-
-
   //////////////////////////////////////////
   // Assign values to change the sequencer.
   ///////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-  // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-  //jitter_reduction = (pot3_input_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
-  //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
-
-
-  //jitter_reduction = fscale( 0, 255, 0, 4, cv1_input_value, 0);
-  //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
-  //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
-
-
-  float amp_1_gain = fscale( min_pot_value, max_pot_value, 0.0, 1.0, cv1_input_value, 0);
-  Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
-
- // amp_1_object.gain(amp_1_gain); // setting-
-  //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
   //////////////////////////////////////
@@ -823,68 +791,42 @@ void ReadInputsAndUpdateSettings() {
   // ****** "Freq" ******
   //Serial.println(String("pot3_input_value is: ") + pot3_input_value  );
 
-  cv_waveform_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 40, pot3_input_value, -1.5);
+  cv_carrier_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 20, pot3_input_value, -1.5);
 
+  cv_carrier_b_frequency = cv_carrier_a_frequency / 2;
 
-  Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
+  Serial.println(String("cv_carrier_a_frequency is: ") + cv_carrier_a_frequency  );
 
-  // LOWER Pot LOW Button (Multiplex on pot4_input_value)
   // ****** "Shape" ********
-  cv_waveform_b_frequency_raw = ((pot4_input_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-  Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
-
-  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
-  //if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT) {
-  //  reset_cv_lfo_at_FIRST_STEP = true;
-  //  Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
-  //}
+  cv_modulator_a_frequency_raw = pot4_input_value;
+  Serial.println(String("cv_modulator_a_frequency_raw is: ") + cv_modulator_a_frequency_raw  );
 
 
   // We want a value that goes from high to low as we turn the pot to the right.
   // So reverse the number range by subtracting from the maximum value.
-  int cv_modulator_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
-  //Serial.println(String("cv_modulator_amplitude_delta_raw is: ") + cv_modulator_amplitude_delta_raw  );
-
-  // setting-b-amp-delta
-  cv_modulator_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_modulator_amplitude_delta_raw, -1.5);
-  Serial.println(String("cv_modulator_amplitude_delta is: ") + cv_modulator_amplitude_delta  );
-
-  // Lower Pot LOW Button (Multiplex on pot4_input_value)
-  // ****** "Amp"******
-  // Euroshield cv_waveform_a_amplitude_raw = (cv1_input_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
-
-  // Euroshield cv_waveform_a_amplitude_raw = (cv1_input_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
-  // not setting amp of this now cv_waveform_a_amplitude_raw = (cv1_input_value);
-  //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );
-  // not setting amp of this now cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
-  //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
-
-
-  // Put this and above on the inputs.
-
-  // *** Offset ****
-  //cv_offset_raw = (cv2_input_value);
-  //Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
-  //cv_offset = fscale( min_pot_value, max_pot_value, -1, 1, cv_offset_raw, -1.5);
   
+  Serial.println(String("CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT is: ") + CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT  );
   
-  cv_offset_raw = 0;
-  //Serial.println(String("cv_offset is: ") + cv_offset  );
+  int cv_modulator_a_amplitude_delta_raw = CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT - cv_modulator_a_frequency_raw;
+  Serial.println(String("cv_modulator_a_amplitude_delta_raw is: ") + cv_modulator_a_amplitude_delta_raw  );
 
-   
+ 
+  cv_modulator_a_amplitude_delta = fscale( 0, CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_modulator_a_amplitude_delta_raw, -1.5);
+  Serial.println(String("cv_modulator_a_amplitude_delta is: ") + cv_modulator_a_amplitude_delta  );
+
+  // B decays slower
+  cv_modulator_b_amplitude_delta = cv_modulator_a_amplitude_delta / 2;
+  Serial.println(String("cv_modulator_b_amplitude_delta is: ") + cv_modulator_b_amplitude_delta  );
 
 
-  // Used for CV
-  carrier_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
+  // CV A
+  carrier_a_object.frequency(cv_carrier_a_frequency); 
   carrier_a_object.amplitude(1);
-  //carrier_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
 
-  // Offset
-  //cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
-
-
-
+  // CV B
+  carrier_b_object.frequency(cv_carrier_b_frequency); 
+  carrier_b_object.amplitude(1);
 
 
   // MONITOR GATE
@@ -956,31 +898,31 @@ void OnStep() {
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
   if (step_count == FIRST_STEP) {
-    CvPulseOn();
+    OnFirstStep();
   }
 
   // Go low
-  Gate1Low();
+  GateALow();
   
   
   if (play_note) {
     //Serial.println(String("****************** play ")   );
-    Gate1High();
+    GateAHigh();
 
-    // CvPulseOn();
+    // OnFirstStep();
 
     // We might want to only start the CV pulse on the first step
     //        if (reset_cv_lfo_at_FIRST_STEP == true){
     //          if (step_count == FIRST_STEP) {
-    //            CvPulseOn();
+    //            OnFirstStep();
     //          }
     //        } else {
-    //          CvPulseOn();
+    //          OnFirstStep();
     //        }
 
 
   } else {
-    //Gate1Low();
+    //GateALow();
     //Serial.println(String("not play ")   );
   }
 
@@ -991,13 +933,13 @@ void OnStep() {
   uint8_t play_bd = bitRead(bd_sequence_2, step_count_sanity(step_count));
 
 // Go Low
-Gate2Low();
+GateBLow();
 
 if (play_bd) {
     //Serial.println(String("****************** play BD ")   );
-    Gate2High();
+    GateBHigh();
   } else {
-    //Gate2Low();
+    //GateBLow();
     //Serial.println(String("*********** not play BD ")   );
   }
 
@@ -1008,12 +950,13 @@ void OnNotStep() {
   //Serial.println(String("NOT step_countIn is: ") + step_countIn  );
 
   // We must set the gates low between steps so they are read to go high OnStep
-  Gate1Low();
-  Gate2Low();
-  ChangeCvWaveformBAmplitude();
+  GateALow();
+  GateBLow();
+  ChangeCvModulatorAAmplitude();
+  ChangeCvModulatorBAmplitude();
 }
 
-void Gate1High() {
+void GateAHigh() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // This is to drive the LED (other things too?) 
@@ -1022,9 +965,25 @@ void Gate1High() {
   // The output
   b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
 
+
+  ////////////////
+
+
+
 }
 
-void Gate1Low() {
+void ResetCVB(){
+  
+  carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
+
+  cv_modulator_b_amplitude = 0.99;
+
+  Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
+  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
+}
+
+
+void GateALow() {
   //Serial.println(String("Gate LOW") );
 
   // For LED 
@@ -1037,7 +996,7 @@ void Gate1Low() {
 }
 
 
-void Gate2High() {
+void GateBHigh() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
@@ -1046,9 +1005,12 @@ void Gate2High() {
   // For output
   b.writeCVOut(2, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
 
+
+    // ResetCVB();
+
 }
 
-void Gate2Low() {
+void GateBLow() {
   //Serial.println(String("Gate LOW") );
 
   // For what?
@@ -1063,37 +1025,63 @@ void Gate2Low() {
 
 
 
-void CvPulseOn() {
+void ResetCVA(){
+    carrier_a_object.phase(90); // Sine wave has maximum at 90 degrees
+
+  // Used to modulate CV. 
+  // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
+  if (cv_modulator_a_amplitude == 0) {
+    cv_modulator_a_amplitude = 0.99;
+    modulator_a_object.amplitude(cv_modulator_a_amplitude, 10);
+  }
+
+}
+
+
+
+void OnFirstStep() {
   //Serial.println(String("CV Pulse On") );
 
-  carrier_a_object.phase(90); // Sine wave has maximum at 90 degrees
-
-  // Used to modulate CV. This signal is multiplied by cv_waveform
-
-  // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
-  if (cv_modulator_amplitude == 0) {
-    cv_modulator_amplitude = 0.99;
-    modulator_a_object.amplitude(cv_modulator_amplitude, 10);
-  }
+  ResetCVA();
+  ResetCVB();
 
 }
 
-void ChangeCvWaveformBAmplitude() {
-  cv_modulator_amplitude -= cv_modulator_amplitude_delta;
-  if (cv_modulator_amplitude <= 0) {
-    cv_modulator_amplitude = 0;
+void ChangeCvModulatorAAmplitude() {
+  cv_modulator_a_amplitude -= cv_modulator_a_amplitude_delta;
+  if (cv_modulator_a_amplitude <= 0) {
+    cv_modulator_a_amplitude = 0;
   }
 
-  modulator_a_object.amplitude(cv_modulator_amplitude, 10); // setting-b-amplitude
-  //Serial.println(String("cv_modulator_amplitude is: ") + cv_modulator_amplitude);
+  modulator_a_object.amplitude(cv_modulator_a_amplitude, 10); // setting-b-amplitude
+  //Serial.println(String("cv_modulator_a_amplitude is: ") + cv_modulator_a_amplitude);
 
 }
+
+void ChangeCvModulatorBAmplitude() {
+  cv_modulator_b_amplitude -= cv_modulator_b_amplitude_delta;
+  if (cv_modulator_b_amplitude <= 0) {
+    cv_modulator_b_amplitude = 0;
+  }
+
+  Serial.println(String("cv_modulator_b_amplitude is: ") + cv_modulator_b_amplitude);
+  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10); // setting-b-amplitude
+  
+
+}
+
+
+
 
 
 void CvStop() {
   Serial.println(String("I said CvStop") );
-  cv_modulator_amplitude = 0;
-  modulator_a_object.amplitude(cv_modulator_amplitude, 10);
+  cv_modulator_a_amplitude = 0;
+  modulator_a_object.amplitude(cv_modulator_a_amplitude, 10);
+
+  cv_modulator_b_amplitude = 0;
+  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
+  
 }
 
 
@@ -1156,7 +1144,7 @@ void SetSequencePattern() {
   // 8 bit sequence - 8 Least Significant Bits
   last_binary_sequence_1 = binary_sequence_1;
 
-  //  binary_sequence_1 = (pot1_input_value & sequence_bits_8_through_1) + 1;
+
 
   // If we have 8 bits, use the range up to 255
 
