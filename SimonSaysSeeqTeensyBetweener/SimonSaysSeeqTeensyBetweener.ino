@@ -69,6 +69,9 @@ Betweener b; // Must begin it below!
 
 AudioSynthWaveform       test_waveform_object;
 AudioAnalyzeRMS          test_rms_object;
+
+AudioAnalyzeRMS          cv_rms_object;
+
 AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
 AudioSynthWaveformDc     gate_dc_waveform;
@@ -89,10 +92,11 @@ AudioSynthWaveformDc     gate_2_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;
 AudioSynthWaveformDc     cv_waveform_b_object;
 AudioEffectMultiply      multiply1;
-AudioAmplifier           amp_1_object;
-AudioSynthWaveformDc     cv_dc_offset_object;
+//AudioAmplifier           amp_1_object;
+//AudioSynthWaveformDc     cv_dc_offset_object;
 AudioMixer4              mixer_1_object;
-AudioAnalyzeRMS          cv_monitor_rms;
+
+
 
 
 //////////////
@@ -102,14 +106,14 @@ AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
 AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
 // Amplify the result
-AudioConnection          patchCord13(multiply1, 0, amp_1_object, 0);
+//AudioConnection          patchCord13(multiply1, 0, amp_1_object, 0);
 
-// Add a DC offset.
-AudioConnection          patchCord11(amp_1_object, 0, mixer_1_object, 0);
-AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1);
+// Add a (changing) DC offset.
+//AudioConnection          patchCord11(amp_1_object, 0, mixer_1_object, 0);
+//AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1);
 
-// CV Output is via cv_monitor_rms which we read in code.
-AudioConnection          patchCord2(mixer_1_object, cv_monitor_rms); // CV -> monitor (for LED)
+// CV Output is via cv_rms_object which we read in code.
+AudioConnection          patchCord2(multiply1, cv_rms_object); // CV -> monitor to drive output indirectly
 
 
 
@@ -150,12 +154,6 @@ const uint8_t lower_pot_pin = 21;
 
 const uint8_t betweener_led_pin = 8;
 
-const uint8_t device = 1; // 0 Euroshield, 1 Betweener
-
-
-
-///////////////
-
 
 
 const uint8_t BRIGHT_0 = 0;
@@ -194,36 +192,35 @@ unsigned int lower_input_raw;
 
 
 
-unsigned int input_1_value_raw;
-unsigned int input_1_value;
-unsigned int input_1_value_last;
-unsigned int input_1_value_at_button_change;
+unsigned int pot1_input_value_raw;
+unsigned int pot1_input_value;
+unsigned int pot1_input_value_last;
+unsigned int pot1_input_value_at_button_change;
 
 
-unsigned int input_2_value_raw;
-unsigned int input_2_value;
-unsigned int input_2_value_last;
-unsigned int input_2_value_at_button_change;
+unsigned int pot2_input_value_raw;
+unsigned int pot2_input_value;
+unsigned int pot2_input_value_last;
+unsigned int pot2_input_value_at_button_change;
 
 
-unsigned int input_3_value_raw;
-unsigned int input_3_value;
-unsigned int input_3_value_last;
-unsigned int input_3_value_at_button_change;
+unsigned int pot3_input_value_raw;
+unsigned int pot3_input_value;
+unsigned int pot3_input_value_last;
+unsigned int pot3_input_value_at_button_change;
 
 
-unsigned int input_4_value_raw;
-unsigned int input_4_value;
-unsigned int input_4_value_last;
-unsigned int input_4_value_at_button_change;
+unsigned int pot4_input_value_raw;
+unsigned int pot4_input_value;
+unsigned int pot4_input_value_last;
+unsigned int pot4_input_value_at_button_change;
 
 
 
-float input_5_value;
-float input_6_value;
-
-float input_7_value;
-float input_8_value;
+float cv1_input_value;
+float cv2_input_value;
+float cv3_input_value;
+float cv4_input_value;
 
 ////////////////////////////////////////////////////
 
@@ -465,10 +462,7 @@ uint8_t IncrementStepCount() {
 
 boolean midi_clock_detected = LOW;
 
-uint8_t Device() {
-  // Return 1 for Betweener, 0 for Euroshield.
-  return 1;
-}
+
 
 
 
@@ -493,15 +487,7 @@ void setup() {
   /////////
 
 
-
-
-
-
   resolution = 10; // Need to use 10 for Betweener
-
-
-
-
 
   analogReadResolution(resolution);
 
@@ -515,8 +501,6 @@ void setup() {
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
   AudioMemory(15);
-
-
 
 
   ///////////////////////////////////////////
@@ -542,7 +526,10 @@ void setup() {
 
   //cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
 
-  cv_waveform_a_object.begin(WAVEFORM_SINE);
+  cv_waveform_a_object.begin(WAVEFORM_SAWTOOTH);
+  cv_waveform_a_object.frequency(1);
+  cv_waveform_a_object.amplitude(1);
+  cv_waveform_a_object.offset(0);
 
   ////////////////////////////
   // TEST OBJECT /////////////
@@ -615,21 +602,7 @@ void loop() {
   // The way we "connect" the Audio Objects to the output of the Betweener is to read an rms object and use that value
   // to writeCVOut.
 
-  //if (test_rms_object.available()){
-  //        float test_rms = test_rms_object.read();
-  //
-  //        // Also use this to drive the betweener ouput
-  //        if (IsBetweener()){
-  //          int test_rms_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
-  //          Serial.println(String("test_rms_betweener_scaled is: ") + test_rms_betweener_scaled  );
-  //          b.writeCVOut(2, test_rms_betweener_scaled);
-  //          b.writeCVOut(3, test_rms_betweener_scaled);
-  //          b.writeCVOut(4, test_rms_betweener_scaled);
-  //        }
-  //
-  //} else {
-  //  //Serial.println(String("test_rms_object is not available!!"));
-  //}
+
 
 
 
@@ -644,16 +617,51 @@ void loop() {
     last_clock_pulse = millis();
   }
 
+  // DRIVE CV
+  /// This is connected to cv_waveform and reads the level. We use that to drive CV out.
+  if (cv_rms_object.available())
+  {
+    float cv_rms = cv_rms_object.read();
+    Serial.println(String("cv_rms is: ") + cv_rms  );
+
+    // Also use this to drive the betweener ouput
+
+    int cv_rms_scaled = fscale( 0.0, 1.0, 0, 4095, cv_rms, 0);
+    Serial.println(String("cv_rms_scaled is: ") + cv_rms_scaled  );
+
+    b.writeCVOut(3, cv_rms_scaled);
+    //Led4Level(fscale( 0.0, 1.0, 0, 255, cv_rms, 0));
+  } else {
+    Serial.println(String("cv_rms_object not available ")   );
+  }
+
+
+if (true){
+  if (test_rms_object.available()){
+          float test_rms = test_rms_object.read();
+  
+          // Also use this to drive the betweener ouput
+
+            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
+            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
+            //b.writeCVOut(1, test_rms_scaled);
+            //b.writeCVOut(2, test_rms_scaled);
+            //b.writeCVOut(3, test_rms_scaled);
+            b.writeCVOut(4, test_rms_scaled);
+
+  
+  } else {
+    //Serial.println(String("test_rms_object is not available!!"));
+  }
+}
+
+
+
 
 
   ///////////////////
 
   // Analog Clock (and left input checking) //////
-
-
-
-
-
 
   /////////////////////////////////////////////////////////////////////////////////
   // When relying on the analogue clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
@@ -679,6 +687,7 @@ void loop() {
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer() {
   Gate1Low();
+  Gate2Low();
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
@@ -709,6 +718,7 @@ void OnTick() {
   ReadInputsAndUpdateSettings();
 
   // Decide if we have a "step"
+  // Could do some interesting things (swing?) if change the mod 6 below?
   if (loop_timing.tick_count_in_sequence % 6 == 0) {
     clockShowHigh();
     //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );
@@ -753,28 +763,28 @@ void ReadInputsAndUpdateSettings() {
   // Note: we're using RAW inputs 
 
   // Pot1
-  input_1_value = b.readKnobRaw(1); // Sequence
-  //Serial.println(String("input_1_value is: ") + input_1_value  );
+  pot1_input_value = b.readKnobRaw(1); // Sequence
+  //Serial.println(String("pot1_input_value is: ") + pot1_input_value  );
 
   // Pot2
-  input_2_value = b.readKnobRaw(2); // Length
-  //Serial.println(String("input_2_value is: ") + input_2_value  );
+  pot2_input_value = b.readKnobRaw(2); // Length
+  //Serial.println(String("pot2_input_value is: ") + pot2_input_value  );
 
   // Pot3
-  input_3_value = b.readKnobRaw(3);
-  //Serial.println(String("input_3_value is: ") + input_3_value  );
+  pot3_input_value = b.readKnobRaw(3);
+  //Serial.println(String("pot3_input_value is: ") + pot3_input_value  );
 
   // Pot4
-  input_4_value = b.readKnobRaw(4);
-  //Serial.println(String("input_4_value is: ") + input_4_value  );
+  pot4_input_value = b.readKnobRaw(4);
+  //Serial.println(String("pot4_input_value is: ") + pot4_input_value  );
 
   // Cv1
-  input_5_value = b.readCV(1);
-  //Serial.println(String("input_5_value is: ") + input_5_value  );
+  cv1_input_value = b.readCV(1);
+  //Serial.println(String("cv1_input_value is: ") + cv1_input_value  );
 
   // Cv2
-  input_6_value = b.readCV(2);
-  //Serial.println(String("input_6_value is: ") + input_6_value  );
+  cv2_input_value = b.readCV(2);
+  //Serial.println(String("cv2_input_value is: ") + cv2_input_value  );
 
   // Cv3  b.readCV(3);
   // Cv4  b.readCV(4);
@@ -800,19 +810,19 @@ void ReadInputsAndUpdateSettings() {
 
 
   // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-  //jitter_reduction = (input_3_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
+  //jitter_reduction = (pot3_input_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
   //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
 
 
-  //jitter_reduction = fscale( 0, 255, 0, 4, input_5_value, 0);
+  //jitter_reduction = fscale( 0, 255, 0, 4, cv1_input_value, 0);
   //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
   //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
 
 
-  float amp_1_gain = fscale( min_pot_value, max_pot_value, 0.0, 1.0, input_5_value, 0);
-  // Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+  float amp_1_gain = fscale( min_pot_value, max_pot_value, 0.0, 1.0, cv1_input_value, 0);
+  Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
-  amp_1_object.gain(amp_1_gain); // setting-
+ // amp_1_object.gain(amp_1_gain); // setting-
   //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
@@ -820,7 +830,7 @@ void ReadInputsAndUpdateSettings() {
   // CV stuff
   // LOWER Pot HIGH Button
   // ****** "Freq" ******
-  //cv_waveform_a_frequency_raw =  (input_3_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ;
+  //cv_waveform_a_frequency_raw =  (pot3_input_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ;
   //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
   // LFO up to 20Hz
 
@@ -828,24 +838,24 @@ void ReadInputsAndUpdateSettings() {
 
   //Eurorack cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
 
-  //Serial.println(String("input_3_value is: ") + input_3_value  );
+  //Serial.println(String("pot3_input_value is: ") + pot3_input_value  );
 
-  cv_waveform_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 40, input_3_value, -1.5);
+  cv_waveform_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 40, pot3_input_value, -1.5);
 
 
   //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
-  // LOWER Pot LOW Button (Multiplex on input_4_value)
+  // LOWER Pot LOW Button (Multiplex on pot4_input_value)
   // ****** "Shape" ********
-  cv_waveform_b_frequency_raw = ((input_4_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-  //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
+  cv_waveform_b_frequency_raw = ((pot4_input_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
+  Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
 
 
   // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
-  if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT) {
-    reset_cv_lfo_at_FIRST_STEP = true;
-    Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
-  }
+  //if (cv_waveform_b_frequency_raw == CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT) {
+  //  reset_cv_lfo_at_FIRST_STEP = true;
+  //  Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
+  //}
 
 
   // We want a value that goes from high to low as we turn the pot to the right.
@@ -855,14 +865,14 @@ void ReadInputsAndUpdateSettings() {
 
   // setting-b-amp-delta
   cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_waveform_b_amplitude_delta_raw, -1.5);
-  //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
+  Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-  // Lower Pot LOW Button (Multiplex on input_4_value)
+  // Lower Pot LOW Button (Multiplex on pot4_input_value)
   // ****** "Amp"******
-  // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
+  // Euroshield cv_waveform_a_amplitude_raw = (cv1_input_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
 
-  // Euroshield cv_waveform_a_amplitude_raw = (input_5_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
-  // not setting amp of this now cv_waveform_a_amplitude_raw = (input_5_value);
+  // Euroshield cv_waveform_a_amplitude_raw = (cv1_input_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ;
+  // not setting amp of this now cv_waveform_a_amplitude_raw = (cv1_input_value);
   //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );
   // not setting amp of this now cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
   //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
@@ -870,13 +880,16 @@ void ReadInputsAndUpdateSettings() {
 
   // Put this and above on the inputs.
 
-
-  // Euroshield cv_offset_raw = (input_6_value & bits_2_1);
   // *** Offset ****
-  cv_offset_raw = (input_6_value);
+  //cv_offset_raw = (cv2_input_value);
   //Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
-  cv_offset = fscale( min_pot_value, max_pot_value, -1, 1, cv_offset_raw, -1.5);
+  //cv_offset = fscale( min_pot_value, max_pot_value, -1, 1, cv_offset_raw, -1.5);
+  
+  
+  cv_offset_raw = 0;
   //Serial.println(String("cv_offset is: ") + cv_offset  );
+
+   
 
 
   // Used for CV
@@ -885,9 +898,8 @@ void ReadInputsAndUpdateSettings() {
   //cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
 
   // Offset
-  cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
+  //cv_dc_offset_object.amplitude(cv_offset, 100); // take 100 ms to adjust
 
-  //cv_waveform_a_object.offset(cv_offset);
 
 
 
@@ -902,28 +914,7 @@ void ReadInputsAndUpdateSettings() {
     //Serial.println(String("gate_monitor_rms not available ")   );
   }
 
-  // MONITOR CV
-  /// This is connected to cv_waveform and reads the level. We use that to drive the led.
-  if (cv_monitor_rms.available())
-  {
-    float cv_peak = cv_monitor_rms.read();
 
-    // Also use this to drive the betweener ouput
-
-    int cv_peak_betweener_scaled = fscale( 0.0, 1.0, 0, 4095, cv_peak, 0);
-    //Serial.println(String("cv_peak_betweener_scaled is: ") + cv_peak_betweener_scaled  );
-
-    //Serial.println(cv_peak_betweener_scaled  );
-
-
-    b.writeCVOut(2, cv_peak_betweener_scaled);
-
-
-    //Serial.println(String("gate_monitor_rms cv_peak ") + cv_peak  );
-    //Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
-  } else {
-    Serial.println(String("cv_monitor_rms not available ")   );
-  }
 
 
   // return called_on_step;
@@ -1017,13 +1008,13 @@ void OnStep() {
   uint8_t play_bd = bitRead(bd_sequence_2, step_count_sanity(step_count));
 
 // Go Low
-Gate3Low();
+Gate2Low();
 
 if (play_bd) {
     //Serial.println(String("****************** play BD ")   );
-    Gate3High();
+    Gate2High();
   } else {
-    //Gate3Low();
+    //Gate2Low();
     //Serial.println(String("*********** not play BD ")   );
   }
 
@@ -1035,7 +1026,7 @@ void OnNotStep() {
 
   // We must set the gates low between steps so they are read to go high OnStep
   Gate1Low();
-  Gate3Low();
+  Gate2Low();
   ChangeCvWaveformBAmplitude();
 }
 
@@ -1063,25 +1054,25 @@ void Gate1Low() {
 }
 
 
-void Gate3High() {
+void Gate2High() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
   gate_2_dc_waveform.amplitude(0.99, 10);
 
   // For output
-  b.writeCVOut(3, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
+  b.writeCVOut(2, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
 
 }
 
-void Gate3Low() {
+void Gate2Low() {
   //Serial.println(String("Gate LOW") );
 
   // For what?
   gate_2_dc_waveform.amplitude(0);
 
   // For output 
-  b.writeCVOut(3, 0);
+  b.writeCVOut(2, 0);
 
 
 }
@@ -1184,7 +1175,7 @@ void SetSequencePattern() {
   // 8 bit sequence - 8 Least Significant Bits
   last_binary_sequence_1 = binary_sequence_1;
 
-  //  binary_sequence_1 = (input_1_value & sequence_bits_8_through_1) + 1;
+  //  binary_sequence_1 = (pot1_input_value & sequence_bits_8_through_1) + 1;
 
   // If we have 8 bits, use the range up to 255
 
@@ -1204,7 +1195,7 @@ void SetSequencePattern() {
 
   //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
 
-  binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, input_1_value, 0);
+  binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, pot1_input_value, 0);
 
 
   if (binary_sequence_1 != last_binary_sequence_1) {
@@ -1245,25 +1236,22 @@ void SetSequencePattern() {
   // Now set the second or bass drum sequence
 
 
-  // HERE
-
-
-  // find how many elements we have in the bd sequence
-
+  // find how many elements (possible 16 step musical sequences) we have in the bd sequence
   int bd_seqs_max_i = sizeof(bd_seqs)/sizeof(long) - 1;
 
-  int bd_seqs_i = fscale( min_pot_value, max_pot_value, 0, bd_seqs_max_i, input_1_value, 0);
+  // Choose the active bass drum sequence
+  int bd_seqs_i = fscale( min_pot_value, max_pot_value, 0, bd_seqs_max_i, pot1_input_value, 0);
 
-  Serial.println(String("bd_seqs_i is: ") + bd_seqs_i  );
+  //Serial.println(String("bd_seqs_i is: ") + bd_seqs_i  );
 
 
    bd_sequence_2 = bd_seqs[bd_seqs_i];
 
 
-  Serial.println(String("bd_sequence_2 is: ") + bd_sequence_2  );
-  Serial.print("\t");
-  Serial.print(bd_sequence_2, BIN);
-  Serial.println();
+  //Serial.println(String("bd_sequence_2 is: ") + bd_sequence_2  );
+  //Serial.print("\t");
+  //Serial.print(bd_sequence_2, BIN);
+  //Serial.println();
 
 
 }
@@ -1273,11 +1261,11 @@ void SetSequenceLength() {
 
   //  Serial.println(String("min_pot_value is: ") + min_pot_value  );
   // Serial.println(String("max_pot_value is: ") + max_pot_value  );
-  //  Serial.println(String("input_2_value is: ") + input_2_value  );
+  //  Serial.println(String("pot2_input_value is: ") + pot2_input_value  );
 
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, 0, 15, input_2_value, 0);
+  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, 0, 15, pot2_input_value, 0);
 
   //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
