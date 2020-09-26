@@ -83,18 +83,16 @@ AudioSynthWaveformDc     gate_2_dc_waveform;
 // How we generate CV
 //  (offset -1 to + 1)
 //  waveform a ---  (no params)                 (gain = 0 to 32767.0)
-//                |---Multiply---|---Amp(0-1?)---
-//  waveform b ---                               |---Summing Mixer---|---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output
-//                                    dc-offset---
+//                |---Multiply---||---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output
+//                                    
 //
 //
 
 AudioSynthWaveform       cv_waveform_a_object;
 AudioSynthWaveformDc     cv_waveform_b_object;
 AudioEffectMultiply      multiply1;
-//AudioAmplifier           amp_1_object;
-//AudioSynthWaveformDc     cv_dc_offset_object;
-AudioMixer4              mixer_1_object;
+
+//AudioMixer4              mixer_1_object;
 
 
 
@@ -105,12 +103,6 @@ AudioMixer4              mixer_1_object;
 AudioConnection          patchCord6(cv_waveform_a_object, 0, multiply1, 1);
 AudioConnection          patchCord7(cv_waveform_b_object, 0, multiply1, 0);
 
-// Amplify the result
-//AudioConnection          patchCord13(multiply1, 0, amp_1_object, 0);
-
-// Add a (changing) DC offset.
-//AudioConnection          patchCord11(amp_1_object, 0, mixer_1_object, 0);
-//AudioConnection          patchCord12(cv_dc_offset_object, 0, mixer_1_object, 1);
 
 // CV Output is via cv_rms_object which we read in code.
 AudioConnection          patchCord2(multiply1, cv_rms_object); // CV -> monitor to drive output indirectly
@@ -144,7 +136,7 @@ AudioControlSGTL5000     audioShield;
 // Setup pins
 const uint8_t teensy_led_pin = 13;
 const uint8_t audio1OutPin = 22;
-const uint8_t euroshield_button_pin = 2;
+
 
 
 // This the the pin for the upper pot on the Euroshield
@@ -541,7 +533,6 @@ void setup() {
 
 
 
-  mixer_1_object.gain(1, 1);
 
 
   // Enable the audio shield, select input, and enable output
@@ -632,11 +623,11 @@ void loop() {
     b.writeCVOut(3, cv_rms_scaled);
     //Led4Level(fscale( 0.0, 1.0, 0, 255, cv_rms, 0));
   } else {
-    Serial.println(String("cv_rms_object not available ")   );
+    //Serial.println(String("cv_rms_object not available ")   );
   }
 
 
-if (true){
+if (false){
   if (test_rms_object.available()){
           float test_rms = test_rms_object.read();
   
@@ -828,22 +819,13 @@ void ReadInputsAndUpdateSettings() {
 
   //////////////////////////////////////
   // CV stuff
-  // LOWER Pot HIGH Button
   // ****** "Freq" ******
-  //cv_waveform_a_frequency_raw =  (pot3_input_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ;
-  //Serial.println(String("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
-  // LFO up to 20Hz
-
-
-
-  //Eurorack cv_waveform_a_frequency = fscale( 0, 255, 0.01, 20, cv_waveform_a_frequency_raw, -1.5);
-
   //Serial.println(String("pot3_input_value is: ") + pot3_input_value  );
 
   cv_waveform_a_frequency = fscale( min_pot_value, max_pot_value, 0.01, 40, pot3_input_value, -1.5);
 
 
-  //Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
+  Serial.println(String("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
 
   // LOWER Pot LOW Button (Multiplex on pot4_input_value)
   // ****** "Shape" ********
