@@ -13,6 +13,9 @@
 // 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
 // 5) Set Tools USB type to MIDI
 
+
+// Note: It can take 2-3 mins for the device to come back up after uploading!!
+
 //****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch.
 // To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
 // Also Turn off DODINMIDI in Betweener.h (see below)
@@ -411,7 +414,7 @@ void ResetSequenceCounters() {
   step_count = FIRST_STEP;
   // TODO Changes to Sequence Length should be done here / or when done this function should be called immediately.
 
-  //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
 
@@ -427,7 +430,7 @@ uint8_t IncrementStepCount() {
 
 boolean midi_clock_detected = LOW;
 
-
+boolean do_reset_sequence_counters = false;
 
 
 
@@ -565,6 +568,8 @@ boolean analogue_gate_state = LOW;
 boolean sequence_is_running = LOW;
 
 
+boolean mute_gate_a = false;
+boolean mute_gate_b = false;
 
 
 void loop() {
@@ -573,7 +578,7 @@ void loop() {
   // to writeCVOut.
 
 
-  //b.readTriggers();
+  
   b.readAllInputs();
 
   if (b.trig1.risingEdge()) {
@@ -584,17 +589,28 @@ void loop() {
     last_clock_pulse = millis();
   }
 
+//  b.readTriggers();
+//  if (b.triggerRose(2)){
+//    Serial.println(String("Incoming Reset on trig2 ")   );
+//    do_reset_sequence_counters = true;
+//  } else {
+//    //Serial.println(String("NO Incoming Reset on trig2 ")   );
+//  }
+
+
+
+
   // DRIVE CV
   /// This is connected to cv_waveform and reads the level. We use that to drive CV out.
   if (result_a_rms_object.available())
   {
     float result_a_rms_value = result_a_rms_object.read();
-    Serial.println(String("result_a_rms_value is: ") + result_a_rms_value  );
+    //Serial.println(String("result_a_rms_value is: ") + result_a_rms_value  );
 
     // Also use this to drive the betweener ouput
 
     int cv_out_a_driver = fscale( 0.0, 1.0, 0, 4095, result_a_rms_value, 0);
-    Serial.println(String("cv_out_a_driver is: ") + cv_out_a_driver  );
+    //Serial.println(String("cv_out_a_driver is: ") + cv_out_a_driver  );
 
     b.writeCVOut(3, cv_out_a_driver);
     //Led4Level(fscale( 0.0, 1.0, 0, 255, result_a_rms_value, 0));
@@ -606,12 +622,12 @@ void loop() {
   if (result_b_rms_object.available())
   {
     float result_b_rms_value = result_b_rms_object.read();
-    Serial.println(String("result_b_rms_value is: ") + result_b_rms_value  );
+    //Serial.println(String("result_b_rms_value is: ") + result_b_rms_value  );
 
     // Also use this to drive the betweener ouput
 
     int cv_out_b_driver = fscale( 0.0, 1.0, 0, 4095, result_b_rms_value, 0);
-    Serial.println(String("cv_out_b_driver is: ") + cv_out_b_driver  );
+    //Serial.println(String("cv_out_b_driver is: ") + cv_out_b_driver  );
 
 
     // channel is 1-4 , value is 0 - 4095
@@ -778,8 +794,39 @@ void ReadInputsAndUpdateSettings() {
   cv2_input_value = b.readCV(2);
   //Serial.println(String("cv2_input_value is: ") + cv2_input_value  );
 
-  // Cv3  b.readCV(3);
-  // Cv4  b.readCV(4);
+
+
+
+
+
+
+//  if (b.triggerHigh(2)){
+//    ResetSequenceCounters();
+//  } else {
+//  }
+
+
+  if (b.triggerHigh(3)){
+    mute_gate_a = true;
+  } else {
+    mute_gate_a = false;
+  }
+
+  //Serial.println(String("Mute GateA is: ") + mute_gate_a   );
+
+  if (b.triggerHigh(4)){
+    mute_gate_b = true;
+  } else {
+    mute_gate_b = false;
+  }
+
+  //Serial.println(String("Mute GateB is: ") + mute_gate_b   );
+
+
+
+
+
+  
 
   //////////////////////////////////////////
   // Assign values to change the sequencer.
@@ -795,29 +842,29 @@ void ReadInputsAndUpdateSettings() {
 
   cv_carrier_b_frequency = cv_carrier_a_frequency / 2;
 
-  Serial.println(String("cv_carrier_a_frequency is: ") + cv_carrier_a_frequency  );
+  //Serial.println(String("cv_carrier_a_frequency is: ") + cv_carrier_a_frequency  );
 
   // ****** "Shape" ********
 
   cv_modulator_a_frequency_raw = pot4_input_value;
-  Serial.println(String("cv_modulator_a_frequency_raw is: ") + cv_modulator_a_frequency_raw  );
+  //Serial.println(String("cv_modulator_a_frequency_raw is: ") + cv_modulator_a_frequency_raw  );
 
 
   // We want a value that goes from high to low as we turn the pot to the right.
   // So reverse the number range by subtracting from the maximum value.
   
-  Serial.println(String("CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT is: ") + CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT  );
+  //Serial.println(String("CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT is: ") + CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT  );
   
   int cv_modulator_a_amplitude_delta_raw = CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT - cv_modulator_a_frequency_raw;
-  Serial.println(String("cv_modulator_a_amplitude_delta_raw is: ") + cv_modulator_a_amplitude_delta_raw  );
+  //Serial.println(String("cv_modulator_a_amplitude_delta_raw is: ") + cv_modulator_a_amplitude_delta_raw  );
 
  
   cv_modulator_a_amplitude_delta = fscale( 0, CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_modulator_a_amplitude_delta_raw, -1.5);
-  Serial.println(String("cv_modulator_a_amplitude_delta is: ") + cv_modulator_a_amplitude_delta  );
+  //Serial.println(String("cv_modulator_a_amplitude_delta is: ") + cv_modulator_a_amplitude_delta  );
 
   // B decays slower
   cv_modulator_b_amplitude_delta = cv_modulator_a_amplitude_delta / 2;
-  Serial.println(String("cv_modulator_b_amplitude_delta is: ") + cv_modulator_b_amplitude_delta  );
+  //Serial.println(String("cv_modulator_b_amplitude_delta is: ") + cv_modulator_b_amplitude_delta  );
 
 
   // CV A
@@ -887,13 +934,24 @@ void InitMidiSequence() {
 /////////////////////////////////////////////////////////////
 void OnStep() {
 
-  //Serial.println(String("OnStep step_count is: ") + step_count + String(" Note: FIRST_STEP is: ") + FIRST_STEP  );
+  Serial.println(String("OnStep step_count is: ") + FIRST_STEP + "/" + step_count);
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));
     Serial.println(String("************* ERROR! step_count is: ") + step_count + String("*** ERROR *** "));
     Serial.println(String("*****************************************************************************************"));
   }
+
+//
+//  if (step_count != FIRST_STEP){
+//    if (do_reset_sequence_counters == true){
+//      do_reset_sequence_counters = false;
+//      
+//      ResetSequenceCounters();
+//      Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
+//      
+//    }
+//  }
 
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
@@ -907,7 +965,12 @@ void OnStep() {
   
   if (play_note) {
     //Serial.println(String("****************** play ")   );
-    GateAHigh();
+
+    if (not mute_gate_a){
+      GateAHigh();
+    } else {
+      //Serial.println(String("mute_gate_a is Muted"));
+    }
 
     // OnFirstStep();
 
@@ -937,7 +1000,16 @@ GateBLow();
 
 if (play_bd) {
     //Serial.println(String("****************** play BD ")   );
-    GateBHigh();
+
+    if (not mute_gate_b){
+      GateBHigh();
+    } else {
+      //Serial.println(String("mute_gate_b is Muted"));
+    }
+
+
+    
+    
   } else {
     //GateBLow();
     //Serial.println(String("*********** not play BD ")   );
@@ -978,7 +1050,7 @@ void ResetCVB(){
 
   cv_modulator_b_amplitude = 0.99;
 
-  Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
+  //Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
   modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
 }
 
@@ -1004,9 +1076,6 @@ void GateBHigh() {
 
   // For output
   b.writeCVOut(2, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
-
-
-    // ResetCVB();
 
 }
 
@@ -1064,10 +1133,9 @@ void ChangeCvModulatorBAmplitude() {
     cv_modulator_b_amplitude = 0;
   }
 
-  Serial.println(String("cv_modulator_b_amplitude is: ") + cv_modulator_b_amplitude);
+  //Serial.println(String("cv_modulator_b_amplitude is: ") + cv_modulator_b_amplitude);
   modulator_b_object.amplitude(cv_modulator_b_amplitude, 10); // setting-b-amplitude
-  
-
+ 
 }
 
 
@@ -1075,7 +1143,7 @@ void ChangeCvModulatorBAmplitude() {
 
 
 void CvStop() {
-  Serial.println(String("I said CvStop") );
+  Serial.println(String("CvStop") );
   cv_modulator_a_amplitude = 0;
   modulator_a_object.amplitude(cv_modulator_a_amplitude, 10);
 
@@ -1251,7 +1319,7 @@ void SetSequenceLength() {
   }
 
   new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
   //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );
 }
 
