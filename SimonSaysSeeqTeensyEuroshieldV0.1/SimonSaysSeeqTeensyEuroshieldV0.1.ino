@@ -183,7 +183,14 @@ uint8_t ticks_after_step;
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots. 
 // Actually we like the glitches - it makes the sequencer more interesting
-uint8_t jitter_reduction = 0; // was 20
+
+
+uint8_t NO_JITTER_REDUCTION = 0;
+
+uint8_t jitter_reduction = NO_JITTER_REDUCTION;
+
+
+uint8_t FUZZINESS_AMOUNT = 100;
 
 // LFO
 unsigned int cv_waveform_a_frequency_raw;
@@ -632,32 +639,41 @@ int SequenceSettings(){
   Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
 
 
-  if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, 50)) {
+  if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, FUZZINESS_AMOUNT)) {
     upper_pot_high_value = GetValue(upper_input_raw, upper_pot_high_value, jitter_reduction);
+    Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
     
+  } else {
+    Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
   }
   
-  if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, 50)) {   
+  if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, FUZZINESS_AMOUNT)) {   
     upper_pot_low_value = GetValue(upper_input_raw, upper_pot_low_value, jitter_reduction);
-    
+    Serial.println(String("**** NEW value for upper_pot_low_value is: ") + upper_pot_low_value  );
+  } else {
+    Serial.println(String("NO new value for upper_pot_low_value . Sticking at: ") + upper_pot_low_value  );
   }
   
-  if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, 50)) {    
+  if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, FUZZINESS_AMOUNT)) {    
     lower_pot_high_value = GetValue(lower_input_raw, lower_pot_high_value, jitter_reduction);
-     
+    Serial.println(String("**** NEW value for lower_pot_high_value is: ") + lower_pot_high_value  );  
+  } else {
+    Serial.println(String("NO new value for lower_pot_high_value . Sticking at: ") + lower_pot_high_value  );
   }
   
   
-  if ((button_1_state == LOW) & IsCrossing(lower_pot_low_value, lower_input_raw, 50)) {   
+  if ((button_1_state == LOW) & IsCrossing(lower_pot_low_value, lower_input_raw, FUZZINESS_AMOUNT)) {   
     lower_pot_low_value = GetValue(lower_input_raw, lower_pot_low_value, jitter_reduction);
-    
+    Serial.println(String("**** NEW value for lower_pot_low_value is: ") + lower_pot_low_value  );
+  } else {
+    Serial.println(String("NO new value for lower_pot_low_value . Sticking at: ") + lower_pot_low_value  );
   }
 
 
-Serial.println(String("**** upper_pot_high_value is now: ") + upper_pot_high_value  ); 
-Serial.println(String("**** upper_pot_low_value is now: ") + upper_pot_low_value  ); 
-Serial.println(String("**** lower_pot_high_value is now: ") + lower_pot_high_value  );
-Serial.println(String("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
+//Serial.println(String("**** upper_pot_high_value is now: ") + upper_pot_high_value  ); 
+//Serial.println(String("**** upper_pot_low_value is now: ") + upper_pot_low_value  ); 
+//Serial.println(String("**** lower_pot_high_value is now: ") + lower_pot_high_value  );
+//Serial.println(String("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
 
 
 
@@ -1310,7 +1326,7 @@ return value;
 }
 
 bool IsCrossing(int value_1, int value_2, int fuzzyness){
-  // because the value seems to woble, only take the even value for less jitter.
+  // Return true if the two values are close
   if (abs(value_1 - value_2) <= fuzzyness){
     return true;
   } else {
