@@ -4,7 +4,14 @@
 #include <cmath>
 
 
+#include <chrono>
 
+// ...
+
+using namespace std::chrono;
+milliseconds ms = duration_cast< milliseconds >(
+    system_clock::now().time_since_epoch()
+);
 
 /////////////
 // Setup pins
@@ -79,7 +86,7 @@ unsigned int lower_pot_low_value_at_button_change;
 
 
 
-float left_peak_level;
+float analogue_clock_level;
 float right_peak_level;
 
 float external_modulator_object_level;
@@ -258,7 +265,11 @@ uint8_t IncrementStepCount(){
 bool midi_clock_detected = LOW;
 
 
+milliseconds last_clock_pulse=milliseconds();
 
+bool analogue_gate_state = LOW;
+
+bool sequence_is_running = LOW;
 
 
 
@@ -289,6 +300,19 @@ bool gIsNoteOn = 0;
 int gVelocity = 0;
 float gSamplingPeriod = 0;
 int gSampleCount = 44100; // how often to send out a control change
+
+
+float gPhase;
+float gInverseSampleRate;
+int gAudioFramesPerAnalogFrame = 0;
+
+// Set the analog channels to read from
+//int gSensorInputFrequency = 0;
+const int CLOCK_INPUT_ANALOGUE_IN_PIN = 0;
+
+
+
+
 
 /*
  * This callback is called every time a new input Midi message is available
@@ -324,6 +348,28 @@ bool setup(BelaContext *context, void *userData)
 	midi.enableParser(false);
 	midi.setParserCallback(midiMessageCallback, (void*) gMidiPort0);
 	gSamplingPeriod = 1 / context->audioSampleRate;
+	
+	
+	
+	
+		// Check if analog channels are enabled
+	if(context->analogFrames == 0 || context->analogFrames > context->audioFrames) {
+		rt_printf("Error: this example needs analog enabled, with 4 or 8 channels\n");
+		return false;
+	}
+
+	// Useful calculations
+	if(context->analogFrames)
+		gAudioFramesPerAnalogFrame = context->audioFrames / context->analogFrames;
+	gInverseSampleRate = 1.0 / context->audioSampleRate;
+	gPhase = 0.0;
+
+
+	
+	
+	
+	
+	
 	return true;
 }
 
@@ -391,6 +437,119 @@ void render(BelaContext *context, void *userData)
 	}
 	
 	
+	/// SimonSaysSeeq first bits_2_1
+	
+	
+// Analog Clock (and left input checking) //////
+
+
+    ///////////////////////////////////////////
+   // Look for Analogue Clock (24 PPQ)
+   // Note: We use this input for other things too.
+   //if (peak_L.available()){
+   
+   
+   	for(unsigned int n = 0; n < context->audioFrames; n++) {
+		if(gAudioFramesPerAnalogFrame && !(n % gAudioFramesPerAnalogFrame)) {
+			// read analog inputs and update frequency and amplitude
+			// Depending on the sampling rate of the analog inputs, this will
+			// happen every audio frame (if it is 44100)
+			// or every two audio frames (if it is 22050)
+			//frequency = map(analogRead(context, n/gAudioFramesPerAnalogFrame, gSensorInputFrequency), 0, 1, 100, 1000);
+			//amplitude = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			
+			
+			// This function returns the value of an analog input, at the time indicated by frame. 
+			// The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
+			 analogue_clock_level = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			 
+			 
+			 //rt_printf("analogue_clock_level is: %f \n", analogue_clock_level);
+			
+		}
+
+		// float out = amplitude * sinf(gPhase);
+
+		// for(unsigned int channel = 0; channel < context->audioOutChannels; channel++) {
+		// 	audioWrite(context, n, channel, out);
+		// }
+
+		// Update and wrap phase of sine tone
+		// gPhase += 2.0f * (float)M_PI * frequency * gInverseSampleRate;
+		// if(gPhase > M_PI)
+		// 	gPhase -= 2.0f * (float)M_PI;
+			
+			
+			
+			
+		        // 1.0; // peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
+        // Serial.println(String("**** analogue_clock_level: ") + analogue_clock_level) ;
+
+        //Serial.println(String("analogue_gate_state: ") + analogue_gate_state) ;
+
+         // ONLY if no MIDI clock, run the sequencer from the Analogue clock.
+        if (midi_clock_detected == LOW) {
+
+          //Serial.println(String(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
+          
+          // Only look for this clock if we don't have midi.
+
+            // Rising clock edge? // state-change-1
+            if ((analogue_clock_level > 0.5) && (analogue_gate_state == LOW)){
+    
+              if (sequence_is_running == LOW){
+              	// TODO
+              	 rt_printf("would StartSequencer because: %f \n", analogue_clock_level);
+              	
+                //StartSequencer();
+              }
+              
+              analogue_gate_state = HIGH;
+              
+              rt_printf("Set analogue_gate_state HIGH because: %f \n", analogue_clock_level);
+              
+              //Serial.println(String("Went HIGH "));
+              
+              
+              // TODO
+              //OnTick();
+              last_clock_pulse = milliseconds();
+              
+            } 
+    
+            // Falling clock edge?
+            if ((analogue_clock_level < 0.5) && (analogue_gate_state == HIGH)){
+              analogue_gate_state = LOW;
+              
+              rt_printf("I set analogue_gate_state LOW because: %f \n", analogue_clock_level);
+              
+              
+              //Serial.println(String("Went LOW "));
+            } 
+
+        } // 	
+			
+			
+			
+			
+			
+	}
+   
+   
+   
+   
+   
+   
+   
+
+        
+
+	
+	
+	
+	
+	
+	////
 
 
 	
