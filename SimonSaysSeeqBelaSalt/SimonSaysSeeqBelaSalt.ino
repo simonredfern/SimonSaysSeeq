@@ -59,7 +59,7 @@ AuxiliaryTask gFrequencyUpdateTask;
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in setup()
-int gNumOscillators = 500;
+int gNumOscillators = 2; // was 500
 int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
 OscillatorBank osc;
@@ -319,10 +319,46 @@ uint8_t IncrementStepCount(){
 
 
 
+float gInterval = 0.5;
+float gSecondsElapsed = 0;
+int gCount = 0;
+
+
+// void pass_string_2(const std::string&){
+// 	 if(gCount % 100000 == 0) {
+// 			rt_printf("%s",s); 
+	
+// 			rt_printf("Debug Print gCount %d \n",gCount);
+// 	 }	
+// }
+
+
+
+void pass_string(char s[])	 
+{  
+	 if(gCount % 100000 == 0) {
+			rt_printf("%s",s); 
+	 }
+} 
+
+
+
+void debugPrint(char a, char b, char c, int x, int y, int z ){
+	
+    if(gCount % 100000 == 0) {
+    	//rt_printf("OK \n");
+    	
+    //	rt_printf("Debug Print %s%s%s : %s %s %s",a,b,c,x,y,z);
+		rt_printf("Debug Print gCount %d \n",gCount);	
+	}
+	
+
+
+} 
 
 
 void GateHigh(){
-  rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
   // TODO
   //gate_dc_waveform.amplitude(0.99, 10);
@@ -330,7 +366,7 @@ void GateHigh(){
 }
 
 void GateLow(){
-  rt_printf("Gate LOW");
+  //rt_printf("Gate LOW");
   
   // TODO
   //gate_dc_waveform.amplitude(0);
@@ -749,13 +785,19 @@ void InitSequencer(){
 }
 
 void StartSequencer(){
-  rt_printf("Start Sequencer ");
+  //rt_printf("Start Sequencer ");
+  
+  debugPrint('A', 'B', 'C', 1,2,3);
+  
+  char a[200] = "simon \n";
+  pass_string(a);
+  
   InitSequencer();
   sequence_is_running = HIGH;
 }
 
 void StopSequencer(){
-  rt_printf("Stop Sequencer ");      
+  //rt_printf("Stop Sequencer ");      
   InitSequencer();
   sequence_is_running = LOW;        
 }
@@ -766,9 +808,9 @@ float analogRead(int pin){
 }
 
 
-void DebugPrint(char m[]){
-  rt_printf("%s", m);
-} 
+// void DebugPrint(char m[]){
+//   rt_printf("%s", m);
+// } 
 
 
 int GetValue(int raw, int last, int jitter_reduction){
@@ -1340,6 +1382,9 @@ rt_printf("InitMidiSequence Done");
 bool setup(BelaContext *context, void *userData)
 {
 	
+	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
+	
+	
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(false);
@@ -1347,7 +1392,7 @@ bool setup(BelaContext *context, void *userData)
 	gSamplingPeriod = 1 / context->audioSampleRate;
 	
 	
-	
+	rt_printf("Before checking analog frames.. \n");
 	
 		// Check if analog channels are enabled
 	if(context->analogFrames == 0 || context->analogFrames > context->audioFrames) {
@@ -1371,6 +1416,9 @@ bool setup(BelaContext *context, void *userData)
                 return false;
         }
         srandom(time(NULL));
+        
+        rt_printf("Creating an oscilator in Setup. \n");
+        
         osc.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
         // Fill in the wavetable with one period of your waveform
         float* wavetable = osc.getWavetable();
@@ -1429,6 +1477,12 @@ void render(BelaContext *context, void *userData)
 	float phaseIncrement;
 
 	
+	debugPrint('H', 'L', 'O', 1,2,3);
+	
+	char a[200] = "simon";
+    pass_string(a);
+	
+	
 	//rt_printf("Hello \n");
 	// one way of getting the midi data is to parse them yourself
 //	(you should set midi.enableParser(false) above):
@@ -1442,29 +1496,31 @@ void render(BelaContext *context, void *userData)
 	////////////
 	
 	// BELA OSC LGPL
-	float arr[context->audioFrames];
-        // Render audio frames
-        osc.process(context->audioFrames, arr);
-        for(unsigned int n = 0; n < context->audioFrames; ++n){
-                audioWrite(context, n, 0, arr[n]);
-                audioWrite(context, n, 1, arr[n]);
-        }
-        if(context->analogFrames != 0 && (gSampleCount += context->audioFrames) >= 128) {
-                gSampleCount = 0;
-                gNewMinFrequency = map(context->analogIn[0], 0, 1.0, 1000.0f, 8000.0f);
-                gNewMaxFrequency = map(context->analogIn[1], 0, 1.0, 1000.0f, 8000.0f);
-                // Make sure max >= min
-                if(gNewMaxFrequency < gNewMinFrequency) {
-                        float temp = gNewMaxFrequency;
-                        gNewMaxFrequency = gNewMinFrequency;
-                        gNewMinFrequency = temp;
-                }
-                // Request that the lower-priority task run at next opportunity
-                Bela_scheduleAuxiliaryTask(gFrequencyUpdateTask);
-        }
+	// float arr[context->audioFrames];
+ //       // Render audio frames
+ //       osc.process(context->audioFrames, arr);
+ //       for(unsigned int n = 0; n < context->audioFrames; ++n){
+ //               audioWrite(context, n, 0, arr[n]);
+ //               audioWrite(context, n, 1, arr[n]);
+ //       }
+ //       if(context->analogFrames != 0 && (gSampleCount += context->audioFrames) >= 128) {
+ //               gSampleCount = 0;
+ //               gNewMinFrequency = map(context->analogIn[0], 0, 1.0, 1000.0f, 8000.0f);
+ //               gNewMaxFrequency = map(context->analogIn[1], 0, 1.0, 1000.0f, 8000.0f);
+ //               // Make sure max >= min
+ //               if(gNewMaxFrequency < gNewMinFrequency) {
+ //                       float temp = gNewMaxFrequency;
+ //                       gNewMaxFrequency = gNewMinFrequency;
+ //                       gNewMinFrequency = temp;
+ //               }
+ //               // Request that the lower-priority task run at next opportunity
+ //               Bela_scheduleAuxiliaryTask(gFrequencyUpdateTask);
+ //       }
 	
 	
 	/////////// END BELA OSC
+	
+	// Some kind of MIDI detection
 	
 	while ((message = midi.getInput()) >= 0){
 		rt_printf("%d\n", message);
@@ -1505,6 +1561,8 @@ void render(BelaContext *context, void *userData)
 		}
 	}
 	
+	////////////////
+	
 	
 	/// SimonSaysSeeq first bits_2_1
 	
@@ -1519,6 +1577,10 @@ void render(BelaContext *context, void *userData)
    
    
    	for(unsigned int n = 0; n < context->audioFrames; n++) {
+   		
+   		// Increment a counter on every frame
+        gCount++;
+   		
 		if(gAudioFramesPerAnalogFrame && !(n % gAudioFramesPerAnalogFrame)) {
 			// read analog inputs and update frequency and amplitude
 			// Depending on the sampling rate of the analog inputs, this will
@@ -1527,10 +1589,12 @@ void render(BelaContext *context, void *userData)
 			//frequency = map(analogRead(context, n/gAudioFramesPerAnalogFrame, gSensorInputFrequency), 0, 1, 100, 1000);
 			//amplitude = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
 			
+
+			
 			
 			// This function returns the value of an analog input, at the time indicated by frame. 
 			// The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			 analogue_clock_level = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			 analogue_clock_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
 			 
 			 
 			 //rt_printf("analogue_clock_level is: %f \n", analogue_clock_level);
@@ -1568,14 +1632,14 @@ void render(BelaContext *context, void *userData)
     
               if (sequence_is_running == LOW){
               	// TODO
-              	 rt_printf("would StartSequencer because: %f \n", analogue_clock_level);
+              	 //rt_printf("would StartSequencer because: %f \n", analogue_clock_level);
               	
-                //StartSequencer();
+                StartSequencer();
               }
               
               analogue_gate_state = HIGH;
               
-              rt_printf("Set analogue_gate_state HIGH because: %f \n", analogue_clock_level);
+              //rt_printf("Set analogue_gate_state HIGH because: %f \n", analogue_clock_level);
               
               //rt_printf("Went HIGH "));
               
@@ -1590,7 +1654,7 @@ void render(BelaContext *context, void *userData)
             if ((analogue_clock_level < 0.5) && (analogue_gate_state == HIGH)){
               analogue_gate_state = LOW;
               
-              rt_printf("I set analogue_gate_state LOW because: %f \n", analogue_clock_level);
+              //rt_printf("I set analogue_gate_state LOW because: %f \n", analogue_clock_level);
               
               
               //rt_printf("Went LOW "));
