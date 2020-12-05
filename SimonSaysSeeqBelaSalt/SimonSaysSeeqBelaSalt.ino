@@ -195,7 +195,7 @@ unsigned int cv_waveform_a_amplitude_raw;
 float cv_waveform_a_amplitude;
 
 
-
+bool analogue_gate_state = LOW;
 
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
@@ -364,8 +364,19 @@ void printStatus(){
 		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
       rt_printf("printStatus says lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
+      rt_printf("printStatus says lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
 
 
+      rt_printf("printStatus says analogue_gate_state is: %d \n", analogue_gate_state);
+
+rt_printf("printStatus says loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+
+
+
+
+
+
+      rt_printf("================ \n");
 
 
 	}
@@ -495,7 +506,7 @@ bool midi_clock_detected = LOW;
 
 milliseconds last_clock_pulse=milliseconds();
 
-bool analogue_gate_state = LOW;
+
 
 bool sequence_is_running = LOW;
 
