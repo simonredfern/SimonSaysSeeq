@@ -197,6 +197,9 @@ float cv_waveform_a_amplitude;
 
 bool analogue_gate_state = LOW;
 
+bool midi_clock_detected = LOW;
+bool sequence_is_running = LOW;
+
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
 // Note name (number) and step information is stored in the array below.         
@@ -360,21 +363,46 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 void printStatus(){
 	
     if(gCount % 100000 == 0) {
+      rt_printf("================ \n");
 		  rt_printf("printStatus says gCount is: %d \n",gCount);
 
-		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
-      rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
-      rt_printf("printStatus says lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
-      rt_printf("printStatus says lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
+		  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
+      rt_printf("sequence_length_input is: %d \n", sequence_length_input);
+      rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
+      rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
 
-      rt_printf("printStatus says analogue_gate_state is: %d \n", analogue_gate_state);
+      rt_printf("analogue_gate_state is: %d \n", analogue_gate_state);
       
-      rt_printf("printStatus says loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-      rt_printf("printStatus says loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+      rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
+      rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
-      rt_printf("printStatus says binary_sequence_result is: %d \n", binary_sequence_result);
+      rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
+
+
+      rt_printf("the_sequence is: %d \n", the_sequence);
+
+      rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+
+
+      rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
+
+      rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+
+
 
       rt_printf("================ \n");
+
+
+
+
+
+//Serial.print("\t");
+   //Serial.print(the_sequence, BIN);
+   //Serial.println();
+
+
+
+      
 	}
 	
 
@@ -452,7 +480,7 @@ void OnStep(){
 
   
 
-  //rt_printf("OnStep ") + step_count  );
+  rt_printf("OnStep: %d", step_count);
 
   if (step_count > MAX_STEP) {
     rt_printf("----------------------------------------------------------------------------");  
@@ -497,14 +525,13 @@ void OnNotStep(){
 
 
 
-bool midi_clock_detected = LOW;
 
 
 milliseconds last_clock_pulse=milliseconds();
 
 
 
-bool sequence_is_running = LOW;
+
 
 
 
@@ -566,7 +593,27 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 		gPhaseIncrement = 2.f * (float)M_PI * gFreq * gSamplingPeriod;
 		gIsNoteOn = gVelocity > 0;
 		rt_printf("v0:%f, ph: %6.5f, gVelocity: %d\n", gFreq, gPhaseIncrement, gVelocity);
-	}
+	} else {
+
+
+// Midi clock  (decimal 248, hex 0xF8)
+
+
+		int byte0 = message.getDataByte(0);
+		int byte1 = message.getDataByte(1);
+    int type = message.getType();
+
+		rt_printf("type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+
+    // OnTick();
+
+
+  }
+
+
+
+
+  
 }
 
 
@@ -898,14 +945,12 @@ void PlayMidi(){
 
 
 void AdvanceSequenceChronology(){
-
-
-
   
   // This function advances or resets the sequence powered by the clock.
 
   // But first check / set the desired sequence length
 
+  rt_printf("Hello from AdvanceSequenceChronology ");
 
     //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
@@ -1030,27 +1075,27 @@ int SequenceSettings(){
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
   //}
   
-  if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
+  //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
     sequence_length_input = GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
     rt_printf("**** NEW value for sequence_length_input is: %s ", sequence_length_input  );
-  } else {
-    rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
-  }
+  //} else {
+  //  rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
+  //}
   
-  if ((button_1_state == HIGH) & IsCrossing(lfo_a_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
+  //if ((button_1_state == HIGH) & IsCrossing(lfo_a_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
     lfo_a_frequency_input = GetValue(lower_input_raw, lfo_a_frequency_input, jitter_reduction);
     rt_printf("**** NEW value for lfo_a_frequency_input is: %s ", lfo_a_frequency_input  );  
-  } else {
-    rt_printf("NO new value for lfo_a_frequency_input . Sticking at: %s", lfo_a_frequency_input  );
-  }
+  //} else {
+   // rt_printf("NO new value for lfo_a_frequency_input . Sticking at: %s", lfo_a_frequency_input  );
+  //}
   
   
-  if ((button_1_state == LOW) & IsCrossing(lfo_b_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {   
+  //if ((button_1_state == LOW) & IsCrossing(lfo_b_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {   
     lfo_b_frequency_input = GetValue(lower_input_raw, lfo_b_frequency_input, jitter_reduction);
     rt_printf("**** NEW value for lfo_b_frequency_input is: %s", lfo_b_frequency_input  );
-  } else {
-    rt_printf("NO new value for lfo_b_frequency_input . Sticking at: %s", lfo_b_frequency_input  );
-  }
+  //} else {
+   // rt_printf("NO new value for lfo_b_frequency_input . Sticking at: %s", lfo_b_frequency_input  );
+ // }
 
 
 //rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
@@ -1329,6 +1374,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
+
+  rt_printf("Hello from OnTick ");
 
   // Read inputs and update settings.  
   SequenceSettings();
@@ -1632,10 +1679,7 @@ void render(BelaContext *context, void *userData)
 		// 	audioWrite(context, n, channel, out);
 		// }
 
-		// Update and wrap phase of sine tone
-		// gPhase += 2.0f * (float)M_PI * frequency * gInverseSampleRate;
-		// if(gPhase > M_PI)
-		// 	gPhase -= 2.0f * (float)M_PI;
+
 			
 			
 			
