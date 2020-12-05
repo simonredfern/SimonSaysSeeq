@@ -124,10 +124,10 @@ unsigned int binary_sequence_input_last;
 unsigned int binary_sequence_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
-unsigned int lfo_frequency_input_raw;
-unsigned int lfo_frequency_input = 20;
-unsigned int lfo_frequency_input_last;
-unsigned int lfo_frequency_input_at_button_change;
+unsigned int lfo_a_frequency_input_raw;
+unsigned int lfo_a_frequency_input = 20;
+unsigned int lfo_a_frequency_input_last;
+unsigned int lfo_a_frequency_input_at_button_change;
 
 //bool upper_pot_low_engaged = true;
 unsigned int sequence_length_input_raw;
@@ -136,10 +136,10 @@ unsigned int sequence_length_input_last;
 unsigned int sequence_length_input_at_button_change;
 
 //bool lower_pot_low_engaged = true;
-unsigned int lower_pot_low_value_raw;
-unsigned int lower_pot_low_value = 20;
-unsigned int lower_pot_low_value_last;
-unsigned int lower_pot_low_value_at_button_change;
+unsigned int lfo_b_frequency_input_raw;
+unsigned int lfo_b_frequency_input = 20;
+unsigned int lfo_b_frequency_input_last;
+unsigned int lfo_b_frequency_input_at_button_change;
 
 
 
@@ -363,7 +363,7 @@ void printStatus(){
 		  rt_printf("printStatus says gCount is: %d \n",gCount);
 		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
-      rt_printf("printStatus says lfo_frequency_input is: %d \n", lfo_frequency_input);
+      rt_printf("printStatus says lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
 
 
 
@@ -1030,26 +1030,26 @@ int SequenceSettings(){
     rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
   }
   
-  if ((button_1_state == HIGH) & IsCrossing(lfo_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
-    lfo_frequency_input = GetValue(lower_input_raw, lfo_frequency_input, jitter_reduction);
-    rt_printf("**** NEW value for lfo_frequency_input is: %s ", lfo_frequency_input  );  
+  if ((button_1_state == HIGH) & IsCrossing(lfo_a_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
+    lfo_a_frequency_input = GetValue(lower_input_raw, lfo_a_frequency_input, jitter_reduction);
+    rt_printf("**** NEW value for lfo_a_frequency_input is: %s ", lfo_a_frequency_input  );  
   } else {
-    rt_printf("NO new value for lfo_frequency_input . Sticking at: %s", lfo_frequency_input  );
+    rt_printf("NO new value for lfo_a_frequency_input . Sticking at: %s", lfo_a_frequency_input  );
   }
   
   
-  if ((button_1_state == LOW) & IsCrossing(lower_pot_low_value, lower_input_raw, FUZZINESS_AMOUNT)) {   
-    lower_pot_low_value = GetValue(lower_input_raw, lower_pot_low_value, jitter_reduction);
-    rt_printf("**** NEW value for lower_pot_low_value is: %s", lower_pot_low_value  );
+  if ((button_1_state == LOW) & IsCrossing(lfo_b_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {   
+    lfo_b_frequency_input = GetValue(lower_input_raw, lfo_b_frequency_input, jitter_reduction);
+    rt_printf("**** NEW value for lfo_b_frequency_input is: %s", lfo_b_frequency_input  );
   } else {
-    rt_printf("NO new value for lower_pot_low_value . Sticking at: %s", lower_pot_low_value  );
+    rt_printf("NO new value for lfo_b_frequency_input . Sticking at: %s", lfo_b_frequency_input  );
   }
 
 
 //rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
 //rt_printf("**** sequence_length_input is now: ") + sequence_length_input  ); 
-//rt_printf("**** lfo_frequency_input is now: ") + lfo_frequency_input  );
-//rt_printf("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
+//rt_printf("**** lfo_a_frequency_input is now: ") + lfo_a_frequency_input  );
+//rt_printf("**** lfo_b_frequency_input is now: ") + lfo_b_frequency_input  ); 
 
 
 
@@ -1216,9 +1216,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    ////////////////////////////////////// 
    // CV stuff
    // ***LOWER Pot HIGH Button***
-   // cv_waveform_a_frequency_raw =  (lfo_frequency_input & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   // cv_waveform_a_frequency_raw =  (lfo_a_frequency_input & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    
-   cv_waveform_a_frequency_raw =  lfo_frequency_input; 
+   cv_waveform_a_frequency_raw =  lfo_a_frequency_input; 
    
    //rt_printf("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
@@ -1226,9 +1226,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // rt_printf("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
    ////////////////////////
 
-   // ***LOWER Pot LOW Button*** (Multiplex on lower_pot_low_value)
-   // cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-   cv_waveform_b_frequency_raw = lower_pot_low_value;
+   // ***LOWER Pot LOW Button*** (Multiplex on lfo_b_frequency_input)
+   // cv_waveform_b_frequency_raw = ((lfo_b_frequency_input & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
+   cv_waveform_b_frequency_raw = lfo_b_frequency_input;
    //rt_printf("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
 
@@ -1256,8 +1256,8 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    //rt_printf("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-   // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
-   //cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
+   // Lower Pot LOW Button (Multiplex on lfo_b_frequency_input)
+   //cv_waveform_a_amplitude_raw = (lfo_b_frequency_input & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
    //rt_printf("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
    //cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
    //rt_printf("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
@@ -1268,7 +1268,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    // TODO Add offset?
    // Lower Pot LOW Button
-   //   cv_offset_raw = (lower_pot_low_value & bits_2_1);
+   //   cv_offset_raw = (lfo_b_frequency_input & bits_2_1);
    //   rt_printf("cv_offset_raw is: ") + cv_offset_raw  );
    //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
    //   rt_printf("cv_offset is: ") + cv_offset  );
