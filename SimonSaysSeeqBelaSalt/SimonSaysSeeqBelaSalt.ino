@@ -118,10 +118,10 @@ unsigned int lower_input_raw;
 // To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 //bool upper_pot_high_engaged = true;
-unsigned int upper_pot_high_value_raw;
-unsigned int upper_pot_high_value = 20;
-unsigned int upper_pot_high_value_last;
-unsigned int upper_pot_high_value_at_button_change;
+unsigned int binary_sequence_input_raw;
+unsigned int binary_sequence_input = 20;
+unsigned int binary_sequence_input_last;
+unsigned int binary_sequence_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
 unsigned int lower_pot_high_value_raw;
@@ -355,6 +355,20 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 
 
 } 
+
+
+void printStatus(){
+	
+    if(gCount % 100000 == 0) {
+		rt_printf("printStatus gCount %d \n",gCount);
+		rt_printf("printStatus binary_sequence_input is: %d \n", binary_sequence_input);
+	}
+	
+
+
+} 
+
+
 
 
 void GateHigh(){
@@ -787,10 +801,10 @@ void InitSequencer(){
 void StartSequencer(){
   //rt_printf("Start Sequencer ");
   
-  debugPrint('A', 'B', 'C', 1,2,3);
+  //debugPrint('A', 'B', 'C', 1,2,3);
   
-  char a[200] = "simon \n";
-  pass_string(a);
+  //char a[200] = "simon \n";
+  //pass_string(a);
   
   InitSequencer();
   sequence_is_running = HIGH;
@@ -995,13 +1009,13 @@ int SequenceSettings(){
   rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
 
 
-  if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, FUZZINESS_AMOUNT)) {
-    upper_pot_high_value = GetValue(upper_input_raw, upper_pot_high_value, jitter_reduction);
-    rt_printf("**** NEW value for upper_pot_high_value is: %s ", upper_pot_high_value  );
+//  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
+    binary_sequence_input = GetValue(upper_input_raw, binary_sequence_input, jitter_reduction);
+    rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
     
-  } else {
-    rt_printf("NO new value for upper_pot_high_value . Sticking at: %s", upper_pot_high_value  );
-  }
+  //} else {
+  //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
+  //}
   
   if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, FUZZINESS_AMOUNT)) {   
     upper_pot_low_value = GetValue(upper_input_raw, upper_pot_low_value, jitter_reduction);
@@ -1026,7 +1040,7 @@ int SequenceSettings(){
   }
 
 
-//rt_printf("**** upper_pot_high_value is now: ") + upper_pot_high_value  ); 
+//rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
 //rt_printf("**** upper_pot_low_value is now: ") + upper_pot_low_value  ); 
 //rt_printf("**** lower_pot_high_value is now: ") + lower_pot_high_value  );
 //rt_printf("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
@@ -1057,7 +1071,7 @@ int SequenceSettings(){
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence = binary_sequence;
 
- //  binary_sequence = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
+ //  binary_sequence = (binary_sequence_input & sequence_bits_8_through_1) + 1;
 
    // If we have 8 bits, use the range up to 255
 
@@ -1083,7 +1097,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, upper_pot_high_value, 0);
+  binary_sequence = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
 
    
 
@@ -1477,13 +1491,11 @@ void render(BelaContext *context, void *userData)
 	float phaseIncrement;
 
 	
-	debugPrint('H', 'L', 'O', 1,2,3);
+
+    // Print the global variables periodically for debugging purposes.
+    printStatus();
 	
-	char a[200] = "simon";
-    pass_string(a);
-	
-	
-	//rt_printf("Hello \n");
+
 	// one way of getting the midi data is to parse them yourself
 //	(you should set midi.enableParser(false) above):
 
