@@ -159,10 +159,10 @@ uint8_t sequence_length_in_steps_raw;
 
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
-unsigned int binary_sequence;
+unsigned int binary_sequence_result;
 unsigned int gray_code_sequence;
 unsigned int the_sequence;
-unsigned int last_binary_sequence; // So we can detect changes
+unsigned int last_binary_sequence_result; // So we can detect changes
 
 // Sequence Length (and default)
 uint8_t sequence_length_in_steps = 8; 
@@ -361,24 +361,20 @@ void printStatus(){
 	
     if(gCount % 100000 == 0) {
 		  rt_printf("printStatus says gCount is: %d \n",gCount);
+
 		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
       rt_printf("printStatus says lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
       rt_printf("printStatus says lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
 
-
       rt_printf("printStatus says analogue_gate_state is: %d \n", analogue_gate_state);
+      
+      rt_printf("printStatus says loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
+      rt_printf("printStatus says loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
-rt_printf("printStatus says loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
-
-
-
-
-
+      rt_printf("printStatus says binary_sequence_result is: %d \n", binary_sequence_result);
 
       rt_printf("================ \n");
-
-
 	}
 	
 
@@ -1086,7 +1082,7 @@ int SequenceSettings(){
 ///////////////////////////////////
 
    // 8 bit sequence - 8 Least Significant Bits
-   last_binary_sequence = binary_sequence;
+   last_binary_sequence_result = binary_sequence_result;
 
  //  binary_sequence = (binary_sequence_input & sequence_bits_8_through_1) + 1;
 
@@ -1114,22 +1110,22 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
+  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
 
    
 
 
-   if (binary_sequence != last_binary_sequence){
+   if (binary_sequence_result != last_binary_sequence_result){
     //rt_printf("binary_sequence has changed **"));
    }
 
 
-   //rt_printf("binary_sequence is: ") + binary_sequence  );
+   //rt_printf("binary_sequence_result is: ") + binary_sequence_result  );
    //Serial.print("\t");
-   //Serial.print(binary_sequence, BIN);
+   //Serial.print(binary_sequence_result, BIN);
    //Serial.println();
 
-   gray_code_sequence = Binary2Gray(binary_sequence);
+   gray_code_sequence = Binary2Gray(binary_sequence_result);
    //rt_printf("gray_code_sequence is: ") + gray_code_sequence  );
    //Serial.print("\t");
    //Serial.print(gray_code_sequence, BIN);
@@ -1145,7 +1141,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    
     // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence == 1){
+    if (binary_sequence_result == 1){
       the_sequence = 1;
     }
 
