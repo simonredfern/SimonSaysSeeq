@@ -124,10 +124,10 @@ unsigned int binary_sequence_input_last;
 unsigned int binary_sequence_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
-unsigned int lower_pot_high_value_raw;
-unsigned int lower_pot_high_value = 20;
-unsigned int lower_pot_high_value_last;
-unsigned int lower_pot_high_value_at_button_change;
+unsigned int lfo_frequency_input_raw;
+unsigned int lfo_frequency_input = 20;
+unsigned int lfo_frequency_input_last;
+unsigned int lfo_frequency_input_at_button_change;
 
 //bool upper_pot_low_engaged = true;
 unsigned int sequence_length_input_raw;
@@ -363,6 +363,11 @@ void printStatus(){
 		  rt_printf("printStatus says gCount is: %d \n",gCount);
 		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
+      rt_printf("printStatus says lfo_frequency_input is: %d \n", lfo_frequency_input);
+
+
+
+
 	}
 	
 
@@ -1025,11 +1030,11 @@ int SequenceSettings(){
     rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
   }
   
-  if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, FUZZINESS_AMOUNT)) {    
-    lower_pot_high_value = GetValue(lower_input_raw, lower_pot_high_value, jitter_reduction);
-    rt_printf("**** NEW value for lower_pot_high_value is: %s ", lower_pot_high_value  );  
+  if ((button_1_state == HIGH) & IsCrossing(lfo_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
+    lfo_frequency_input = GetValue(lower_input_raw, lfo_frequency_input, jitter_reduction);
+    rt_printf("**** NEW value for lfo_frequency_input is: %s ", lfo_frequency_input  );  
   } else {
-    rt_printf("NO new value for lower_pot_high_value . Sticking at: %s", lower_pot_high_value  );
+    rt_printf("NO new value for lfo_frequency_input . Sticking at: %s", lfo_frequency_input  );
   }
   
   
@@ -1043,7 +1048,7 @@ int SequenceSettings(){
 
 //rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
 //rt_printf("**** sequence_length_input is now: ") + sequence_length_input  ); 
-//rt_printf("**** lower_pot_high_value is now: ") + lower_pot_high_value  );
+//rt_printf("**** lfo_frequency_input is now: ") + lfo_frequency_input  );
 //rt_printf("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
 
 
@@ -1211,9 +1216,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    ////////////////////////////////////// 
    // CV stuff
    // ***LOWER Pot HIGH Button***
-   // cv_waveform_a_frequency_raw =  (lower_pot_high_value & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
+   // cv_waveform_a_frequency_raw =  (lfo_frequency_input & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
    
-   cv_waveform_a_frequency_raw =  lower_pot_high_value; 
+   cv_waveform_a_frequency_raw =  lfo_frequency_input; 
    
    //rt_printf("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
    // LFO up to 20Hz
