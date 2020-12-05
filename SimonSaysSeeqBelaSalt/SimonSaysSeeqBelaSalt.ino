@@ -130,10 +130,10 @@ unsigned int lower_pot_high_value_last;
 unsigned int lower_pot_high_value_at_button_change;
 
 //bool upper_pot_low_engaged = true;
-unsigned int upper_pot_low_value_raw;
-unsigned int upper_pot_low_value = 20;
-unsigned int upper_pot_low_value_last;
-unsigned int upper_pot_low_value_at_button_change;
+unsigned int sequence_length_input_raw;
+unsigned int sequence_length_input = 20;
+unsigned int sequence_length_input_last;
+unsigned int sequence_length_input_at_button_change;
 
 //bool lower_pot_low_engaged = true;
 unsigned int lower_pot_low_value_raw;
@@ -360,8 +360,9 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 void printStatus(){
 	
     if(gCount % 100000 == 0) {
-		rt_printf("printStatus gCount %d \n",gCount);
-		rt_printf("printStatus binary_sequence_input is: %d \n", binary_sequence_input);
+		  rt_printf("printStatus says gCount is: %d \n",gCount);
+		  rt_printf("printStatus says binary_sequence_input is: %d \n", binary_sequence_input);
+      rt_printf("printStatus says sequence_length_input is: %d \n", sequence_length_input);
 	}
 	
 
@@ -1017,11 +1018,11 @@ int SequenceSettings(){
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
   //}
   
-  if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, FUZZINESS_AMOUNT)) {   
-    upper_pot_low_value = GetValue(upper_input_raw, upper_pot_low_value, jitter_reduction);
-    rt_printf("**** NEW value for upper_pot_low_value is: %s ", upper_pot_low_value  );
+  if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
+    sequence_length_input = GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
+    rt_printf("**** NEW value for sequence_length_input is: %s ", sequence_length_input  );
   } else {
-    rt_printf("NO new value for upper_pot_low_value . Sticking at: %s ", upper_pot_low_value  );
+    rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
   }
   
   if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, FUZZINESS_AMOUNT)) {    
@@ -1041,7 +1042,7 @@ int SequenceSettings(){
 
 
 //rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
-//rt_printf("**** upper_pot_low_value is now: ") + upper_pot_low_value  ); 
+//rt_printf("**** sequence_length_input is now: ") + sequence_length_input  ); 
 //rt_printf("**** lower_pot_high_value is now: ") + lower_pot_high_value  );
 //rt_printf("**** lower_pot_low_value is now: ") + lower_pot_low_value  ); 
 
@@ -1149,10 +1150,10 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 // Sequence length raw
 // ***UPPER pot LOW value***
- sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   ;
+ sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
  // rt_printf("sequence_length_in_steps is: ") + sequence_length_in_steps  );
    
-   //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
+   //((sequence_length_input & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    
 
   // Highlight the first step 
@@ -1189,7 +1190,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
   // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, sequence_length_in_steps, -1.5));   
    
    // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-   //jitter_reduction = (upper_pot_low_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
+   //jitter_reduction = (sequence_length_input & jitter_reduction_bits_5_4_3_2_1) >> 0;
    //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
 
    
