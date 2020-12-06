@@ -1,4 +1,6 @@
 
+// TO Understand render see the example in Fundamentals: minimal/render.cpp
+
 
 
 
@@ -65,7 +67,8 @@ void recalculate_frequencies(void*);
 OscillatorBank osc;
 
 
-
+int gAudioChannelNum; // number of audio channels to iterate over
+int gAnalogChannelNum; // number of analog channels to iterate over
 
 
 
@@ -143,7 +146,7 @@ unsigned int lfo_b_frequency_input_at_button_change;
 
 
 
-float analogue_clock_level;
+float analog_clock_level;
 float right_peak_level;
 
 float external_modulator_object_level;
@@ -364,8 +367,11 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 
 
 void printStatus(){
+
+    // We don't want to print every time else we overload the CPU
+    gCount++;
 	
-    if(gCount % 100000 == 0) {
+    if(gCount % 1000 == 0) {
       rt_printf("================ \n");
 		  rt_printf("printStatus says gCount is: %d \n",gCount);
 
@@ -1263,9 +1269,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
 
 
-// analogue_clock_level check TODO is this correct?
+// analog_clock_level check TODO is this correct?
  
-   float amp_1_gain = fscale( 0, 1, 0, 1, analogue_clock_level, 0);
+   float amp_1_gain = fscale( 0, 1, 0, 1, analog_clock_level, 0);
    //rt_printf("amp_1_gain is: ") + amp_1_gain  );
 // TODO what is this really setting ?
   // amp_1_object.gain(amp_1_gain); // setting-
@@ -1436,7 +1442,7 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
-  rt_printf("Hello from OnTick \n");
+  //rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
   SequenceSettings();
@@ -1479,8 +1485,22 @@ bool setup(BelaContext *context, void *userData)
 {
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
-	
-	
+ 
+ 	// If the amout of audio and analog input and output channels is not the same
+	// we will use the minimum between input and output
+	gAudioChannelNum = std::min(context->audioInChannels, context->audioOutChannels);
+	gAnalogChannelNum = std::min(context->analogInChannels, context->analogOutChannels);
+ 
+ 
+ 
+  rt_printf("context->audioSampleRate is: %d \n", context->audioSampleRate);
+  rt_printf("context->analogSampleRate is: %d \n", context->analogSampleRate);
+  rt_printf("context->audioFrames (per block) is: %d \n", context->audioFrames);
+
+  rt_printf("Using %d audio In/Out audio channels\n", gAudioChannelNum);
+  rt_printf("Using %d audio In/Out analog channels\n", gAnalogChannelNum);
+
+
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(false);
@@ -1552,13 +1572,10 @@ bool setup(BelaContext *context, void *userData)
         if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
                 return false;
         gSampleCount = 0;
+
+        rt_printf("Bye from Setup \n");
+
         return true;
-	
-	
-	
-	
-///////	
-//	return true;
 }
 
 
@@ -1667,9 +1684,50 @@ void render(BelaContext *context, void *userData)
     ///////////////////////////////////////////
    // Look for Analogue Clock (24 PPQ)
    // Note: We use this input for other things too.
+   
+
+  // AUDIO 
+	// Simplest possible case: pass inputs through to outputs
+	for(unsigned int n = 0; n < context->audioFrames; n++) {
+		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
+			//audioWrite(context, n, ch, audioRead(context, n, ch));
+		}
+	}
+
+  // ANALOG
+	// Same with analog channels
+
+	//for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++) {
+
+  //  if(ch == CLOCK_INPUT_ANALOGUE_IN_PIN ){
+        // Detect Analogue clock. 
+      
+      // We have something like 16 audio frames (block size) each time render runs.
+      // Loop Through them and see if we have a high level this time.
+	    for(unsigned int n = 0; n < context->analogFrames; n++) {
+
+	  // This function returns the value of an analog input, at the time indicated by frame. 
+			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
+			  analog_clock_level = analogRead(context, n, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			 
+      }
+
+			//analogWriteOnce(context, n, ch, analogRead(context, n, ch));
+		//}
+
+//}
+
+
+	}
+   
+   
+   
+   
+   
+   
    //if (peak_L.available()){
    
-   
+  /* 
    	for(unsigned int n = 0; n < context->audioFrames; n++) {
    		
    		// Increment a counter on every frame
@@ -1693,10 +1751,10 @@ void render(BelaContext *context, void *userData)
 			
 			  // This function returns the value of an analog input, at the time indicated by frame. 
 			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			  analogue_clock_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			  analog_clock_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
 			 
 			 
-			 //rt_printf("analogue_clock_level is: %f \n", analogue_clock_level);
+			 //rt_printf("analog_clock_level is: %f \n", analog_clock_level);
 			
 		  }
 
@@ -1712,7 +1770,7 @@ void render(BelaContext *context, void *userData)
 			
 			
 		        // 1.0; // peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
-        // rt_printf("**** analogue_clock_level: ") + analogue_clock_level) ;
+        // rt_printf("**** analog_clock_level: ") + analog_clock_level) ;
 
         //rt_printf("analogue_gate_state: ") + analogue_gate_state) ;
 
@@ -1724,18 +1782,18 @@ void render(BelaContext *context, void *userData)
           // Only look for this clock if we don't have midi.
 
             // Rising clock edge? // state-change-1
-            if ((analogue_clock_level > 0.5) && (analogue_gate_state == LOW)){
+            if ((analog_clock_level > 0.5) && (analogue_gate_state == LOW)){
     
               if (sequence_is_running == LOW){
               	// TODO
-              	 //rt_printf("would StartSequencer because: %f \n", analogue_clock_level);
+              	 //rt_printf("would StartSequencer because: %f \n", analog_clock_level);
               	
                 StartSequencer();
               }
               
               analogue_gate_state = HIGH;
               
-              //rt_printf("Set analogue_gate_state HIGH because: %f \n", analogue_clock_level);
+              //rt_printf("Set analogue_gate_state HIGH because: %f \n", analog_clock_level);
               
               //rt_printf("Went HIGH "));
               
@@ -1747,10 +1805,10 @@ void render(BelaContext *context, void *userData)
             } 
     
             // Falling clock edge?
-            if ((analogue_clock_level < 0.5) && (analogue_gate_state == HIGH)){
+            if ((analog_clock_level < 0.5) && (analogue_gate_state == HIGH)){
               analogue_gate_state = LOW;
               
-              //rt_printf("I set analogue_gate_state LOW because: %f \n", analogue_clock_level);
+              //rt_printf("I set analogue_gate_state LOW because: %f \n", analog_clock_level);
               
               
               //rt_printf("Went LOW "));
@@ -1760,8 +1818,15 @@ void render(BelaContext *context, void *userData)
 			
 			
 	}
-   
+
 }
+
+*/
+
+
+
+   
+
 
 void cleanup(BelaContext *context, void *userData)
 {
