@@ -167,6 +167,9 @@ unsigned int last_binary_sequence_result; // So we can detect changes
 // Sequence Length (and default)
 uint8_t sequence_length_in_steps = 8; 
 
+
+bool do_tick = true;
+
 // Used to control when/how we change sequence length 
 uint8_t new_sequence_length_in_ticks; 
 
@@ -605,7 +608,10 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
 		rt_printf("type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
 
-    // OnTick();
+
+    do_tick = true;
+
+    //OnTick();
 
 
   }
@@ -615,6 +621,7 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
   
 }
+
 
 
 //////////////
@@ -1371,35 +1378,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 ////
 
-void OnTick(){
-// Called on Every MIDI or Analogue clock pulse
-// Drives sequencer settings and activity.
 
-  rt_printf("Hello from OnTick ");
-
-  // Read inputs and update settings.  
-  SequenceSettings();
-
-  // Decide if we have a "step"
-  if (loop_timing.tick_count_in_sequence % 6 == 0){
-    clockShowHigh();
-    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
-    //////////////////////////////////////////
-    OnStep();
-    /////////////////////////////////////////   
-  } else {
-    clockShowLow();
-    // The other ticks which are not "steps".
-    OnNotStep();
-    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
-  }
-
-  // Play any suitable midi in the sequence 
-  PlayMidi();
-   
-  // Advance and Reset ticks and steps
-  AdvanceSequenceChronology();
-}
 
 
 
@@ -1449,6 +1428,47 @@ rt_printf("InitMidiSequence Done");
 
 
 
+
+
+
+
+void OnTick(){
+// Called on Every MIDI or Analogue clock pulse
+// Drives sequencer settings and activity.
+
+  rt_printf("Hello from OnTick ");
+
+  // Read inputs and update settings.  
+  SequenceSettings();
+
+  // Decide if we have a "step"
+  if (loop_timing.tick_count_in_sequence % 6 == 0){
+    clockShowHigh();
+    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStep();
+    /////////////////////////////////////////   
+  } else {
+    clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStep();
+    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+  // Play any suitable midi in the sequence 
+  PlayMidi();
+   
+  // Advance and Reset ticks and steps
+  AdvanceSequenceChronology();
+
+  do_tick = false;
+}
+
+void MaybeOnTick(){
+  if (do_tick == true){
+    OnTick();
+  }
+}
 
 
 /////////////////////////////////////////////////////////
@@ -1633,13 +1653,13 @@ void render(BelaContext *context, void *userData)
 		}
 	}
 	
-	////////////////
+	    ////////////////
 	
 	
-	/// SimonSaysSeeq first bits_2_1
+	  /// SimonSaysSeeq first bits_2_1
 	
 	
-// Analog Clock (and left input checking) //////
+    // Analog Clock (and left input checking) //////
 
 
     ///////////////////////////////////////////
@@ -1713,8 +1733,8 @@ void render(BelaContext *context, void *userData)
               //rt_printf("Went HIGH "));
               
               
-              // TODO
-              OnTick();
+              
+              do_tick = true;
               last_clock_pulse = milliseconds();
               
             } 
@@ -1753,7 +1773,7 @@ void render(BelaContext *context, void *userData)
 	
 	////
 
-
+  MaybeOnTick();
 	
 /////
 }
