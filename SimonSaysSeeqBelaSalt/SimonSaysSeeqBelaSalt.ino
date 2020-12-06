@@ -1071,12 +1071,12 @@ int SequenceSettings(){
 
 
   lower_input_raw = analogRead(lower_pot_pin);
-  rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
+  //rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
 
 
 //  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
     binary_sequence_input = GetValue(upper_input_raw, binary_sequence_input, jitter_reduction);
-    rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
+    //rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
     
   //} else {
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
@@ -1084,14 +1084,14 @@ int SequenceSettings(){
   
   //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
     sequence_length_input = GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
-    rt_printf("**** NEW value for sequence_length_input is: %s ", sequence_length_input  );
+    //rt_printf("**** NEW value for sequence_length_input is: %s ", sequence_length_input  );
   //} else {
   //  rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
   //}
   
   //if ((button_1_state == HIGH) & IsCrossing(lfo_a_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
     lfo_a_frequency_input = GetValue(lower_input_raw, lfo_a_frequency_input, jitter_reduction);
-    rt_printf("**** NEW value for lfo_a_frequency_input is: %s ", lfo_a_frequency_input  );  
+    //rt_printf("**** NEW value for lfo_a_frequency_input is: %s ", lfo_a_frequency_input  );  
   //} else {
    // rt_printf("NO new value for lfo_a_frequency_input . Sticking at: %s", lfo_a_frequency_input  );
   //}
@@ -1099,7 +1099,7 @@ int SequenceSettings(){
   
   //if ((button_1_state == LOW) & IsCrossing(lfo_b_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {   
     lfo_b_frequency_input = GetValue(lower_input_raw, lfo_b_frequency_input, jitter_reduction);
-    rt_printf("**** NEW value for lfo_b_frequency_input is: %s", lfo_b_frequency_input  );
+    //rt_printf("**** NEW value for lfo_b_frequency_input is: %s", lfo_b_frequency_input  );
   //} else {
    // rt_printf("NO new value for lfo_b_frequency_input . Sticking at: %s", lfo_b_frequency_input  );
  // }
@@ -1201,7 +1201,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     
     
 
-   rt_printf("the_sequence is: %s ", the_sequence  );
+   //rt_printf("the_sequence is: %s ", the_sequence  );
    //Serial.print("\t");
    //Serial.print(the_sequence, BIN);
    //Serial.println();
@@ -1436,10 +1436,12 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
-  rt_printf("Hello from OnTick ");
+  rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
   SequenceSettings();
+
+/*
 
   // Decide if we have a "step"
   if (loop_timing.tick_count_in_sequence % 6 == 0){
@@ -1460,12 +1462,12 @@ void OnTick(){
    
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
-
-  do_tick = false;
+*/
 }
 
 void MaybeOnTick(){
   if (do_tick == true){
+    do_tick = false;
     OnTick();
   }
 }
@@ -1672,26 +1674,31 @@ void render(BelaContext *context, void *userData)
    		
    		// Increment a counter on every frame
         gCount++;
+        //MaybeOnTick();
    		
-		if(gAudioFramesPerAnalogFrame && !(n % gAudioFramesPerAnalogFrame)) {
-			// read analog inputs and update frequency and amplitude
-			// Depending on the sampling rate of the analog inputs, this will
-			// happen every audio frame (if it is 44100)
-			// or every two audio frames (if it is 22050)
-			//frequency = map(analogRead(context, n/gAudioFramesPerAnalogFrame, gSensorInputFrequency), 0, 1, 100, 1000);
-			//amplitude = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+		  if(gAudioFramesPerAnalogFrame && !(n % gAudioFramesPerAnalogFrame)) {
+
+
+        MaybeOnTick();
+
+			  // read analog inputs and update frequency and amplitude
+			  // Depending on the sampling rate of the analog inputs, this will
+			  // happen every audio frame (if it is 44100)
+			  // or every two audio frames (if it is 22050)
+			  //frequency = map(analogRead(context, n/gAudioFramesPerAnalogFrame, gSensorInputFrequency), 0, 1, 100, 1000);
+			  //amplitude = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
 			
 
 			
 			
-			// This function returns the value of an analog input, at the time indicated by frame. 
-			// The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			 analogue_clock_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
+			  // This function returns the value of an analog input, at the time indicated by frame. 
+			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
+			  analogue_clock_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOGUE_IN_PIN);
 			 
 			 
 			 //rt_printf("analogue_clock_level is: %f \n", analogue_clock_level);
 			
-		}
+		  }
 
 		// float out = amplitude * sinf(gPhase);
 
@@ -1752,30 +1759,8 @@ void render(BelaContext *context, void *userData)
         } // 	
 			
 			
-			
-			
-			
 	}
    
-   
-   
-   
-   
-   
-   
-
-        
-
-	
-	
-	
-	
-	
-	////
-
-  MaybeOnTick();
-	
-/////
 }
 
 void cleanup(BelaContext *context, void *userData)
