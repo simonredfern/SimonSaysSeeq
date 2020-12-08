@@ -506,7 +506,7 @@ uint8_t ReadBit (int number, int b ){
 
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
-void OnStep(){
+void OnStep(BelaContext *context){
 
   
 
@@ -1487,7 +1487,7 @@ void OnTick(BelaContext *context){
     clockShowHigh();
     //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
-    OnStep();
+    OnStep(context);
     /////////////////////////////////////////   
   } else {
     clockShowLow();
