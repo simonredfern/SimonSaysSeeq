@@ -71,6 +71,7 @@ int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
 
+const int SEQUENCE_OUT_PIN = 5;
 
 ////////////////////////////////////////////////
 
@@ -434,20 +435,16 @@ void printStatus(){
 void GateHigh(BelaContext *context){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
-  // SEQUENCE_OUTPUT_DIGITAL_PIN
-  
   for(unsigned int n = 0; n < context->digitalFrames; ++n){
-			digitalWrite(context, n, 0, HIGH);
+			digitalWrite(context, n, SEQUENCE_OUT_PIN, HIGH);
 	}
 }
 
 void GateLow(BelaContext *context){
   //rt_printf("Gate LOW");
   
-  // SEQUENCE_OUTPUT_DIGITAL_PIN
-  
   for(unsigned int n = 0; n < context->digitalFrames; ++n){
-			digitalWrite(context, n, 0, LOW);
+			digitalWrite(context, n, SEQUENCE_OUT_PIN, LOW);
 	}
 }
 
@@ -627,7 +624,7 @@ const int CLOCK_INPUT_DIGITAL_PIN = 15;
 
 const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
-int SEQUENCE_OUTPUT_DIGITAL_PIN = 5;
+
 
 /*
  * This callback is called every time a new input Midi message is available
