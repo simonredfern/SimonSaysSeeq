@@ -493,6 +493,17 @@ void SyncAndResetCv(){
 }
 
 
+
+// Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
+uint8_t ReadBit (int number, int b ){
+	(number & ( 1 << b )) >> b;
+}
+
+
+
+
+
+
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
 void OnStep(){
@@ -516,15 +527,20 @@ void OnStep(){
     }
   
   
+  step_count = StepCountSanity(step_count);
   
-  uint8_t play_note = true; // TODO READ BIG BELA  bitRead(the_sequence, step_count_sanity(step_count));
+  
+  uint8_t play_note = (the_sequence & ( 1 << step_count )) >> step_count;  
+  
+  // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
+  //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     //rt_printf("****************** play ")   );
+     //rt_printf("****************** play \n");
     GateHigh(); 
    } else {
     GateLow();
-     //rt_printf("not play ")   );
+     //rt_printf("not play \n");
    }
 
    
@@ -651,7 +667,7 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
 
 // That will clear the nth bit of number. You must invert the bit string with the bitwise NOT operator (~), then AND it.
-int BitClear (int number, int n) {
+int BitClear (unsigned int number, unsigned int n) {
 number &= ~(1UL << n);
 }
 
