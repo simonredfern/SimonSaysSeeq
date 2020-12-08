@@ -550,7 +550,7 @@ void OnStep(BelaContext *context){
 
 
 // These are ticks which are not steps - so in between possible beats.
-void OnNotStep(){
+void OnNotStep(BelaContext *context){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
   GateLow();
@@ -1492,7 +1492,7 @@ void OnTick(BelaContext *context){
   } else {
     clockShowLow();
     // The other ticks which are not "steps".
-    OnNotStep();
+    OnNotStep(context);
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
