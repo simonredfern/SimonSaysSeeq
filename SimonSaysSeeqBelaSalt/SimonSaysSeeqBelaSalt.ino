@@ -431,7 +431,7 @@ void printStatus(){
 
 
 
-void GateHigh(){
+void GateHigh(BelaContext *context){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
   // TODO
@@ -439,7 +439,7 @@ void GateHigh(){
 
 }
 
-void GateLow(){
+void GateLow(BelaContext *context){
   //rt_printf("Gate LOW");
   
   // TODO
@@ -537,9 +537,9 @@ void OnStep(BelaContext *context){
   
    if (play_note){
      //rt_printf("****************** play \n");
-    GateHigh(); 
+    GateHigh(context); 
    } else {
-    GateLow();
+    GateLow(context);
      //rt_printf("not play \n");
    }
 
@@ -553,7 +553,7 @@ void OnStep(BelaContext *context){
 void OnNotStep(BelaContext *context){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLow();
+  GateLow(context);
   
 }
 
@@ -897,14 +897,14 @@ void clockShowLow(){
 
 
 // Each time we start the sequencer we want to start from the same conditions.
-void InitSequencer(){
-  GateLow();
+void InitSequencer(BelaContext *context){
+  GateLow(context);
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
 }
 
-void StartSequencer(){
+void StartSequencer(BelaContext *context){
   //rt_printf("Start Sequencer ");
   
   //debugPrint('A', 'B', 'C', 1,2,3);
@@ -912,13 +912,13 @@ void StartSequencer(){
   //char a[200] = "simon \n";
   //pass_string(a);
   
-  InitSequencer();
+  InitSequencer(context);
   sequence_is_running = HIGH;
 }
 
-void StopSequencer(){
+void StopSequencer(BelaContext *context){
   //rt_printf("Stop Sequencer ");      
-  InitSequencer();
+  InitSequencer(context);
   sequence_is_running = LOW;        
 }
 
@@ -1793,7 +1793,7 @@ WORKS
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
     
               if (sequence_is_running == LOW){
-                StartSequencer();
+                StartSequencer(context);
               }
               
               current_digital_clock_in_state = HIGH;
