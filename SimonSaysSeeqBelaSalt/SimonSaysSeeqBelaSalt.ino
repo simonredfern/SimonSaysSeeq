@@ -145,7 +145,8 @@ unsigned int lfo_b_frequency_input_last;
 unsigned int lfo_b_frequency_input_at_button_change;
 
 
-
+int new_digital_clock_in_state;
+int current_digital_clock_in_state;
 float analog_clock_in_level;
 float right_peak_level;
 
@@ -381,7 +382,16 @@ void printStatus(){
       rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
 
       rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
+
+      rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
+      rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
+
       
+      
+
+
+
+
       rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
       rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
@@ -395,7 +405,7 @@ void printStatus(){
 
       rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
 
-      rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+
 
 
 
@@ -582,6 +592,13 @@ int gAudioFramesPerAnalogFrame = 0;
 const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 
+
+// Salt Pinouts are here https://github.com/BelaPlatform/Bela/wiki/Salt
+
+// T2 (Trigger 2) is Physical Channel / Pin 14 
+
+// T1 in is	digital channel 15
+const int CLOCK_INPUT_DIGITAL_IN_PIN = 15;
 
 
 
@@ -1501,6 +1518,11 @@ bool setup(BelaContext *context, void *userData)
   rt_printf("Using %d audio In/Out analog channels\n", gAnalogChannelNum);
 
 
+
+
+pinMode(context, 0, 0, INPUT); //set input
+
+
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(false);
@@ -1704,7 +1726,9 @@ void render(BelaContext *context, void *userData)
           
           
 
+/*
 
+WORKS
       // We have something like 16 audio frames (block size) each time render runs.
       // Loop Through them and see if we have a high level this time.
 	    for(unsigned int n = 0; n < context->analogFrames; n++) {
@@ -1737,8 +1761,40 @@ void render(BelaContext *context, void *userData)
 			 
       }
 
+*/
+
+// Using Digital input 
+	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
+
+	  // This function returns the value of an analog input, at the time indicated by frame. 
+			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
+			  
+        // Next state
+        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_IN_PIN);
 
 
+            // Rising clock edge? // state-change-1
+            if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
+    
+              if (sequence_is_running == LOW){
+                StartSequencer();
+              }
+              
+              current_digital_clock_in_state = HIGH;
+              //Serial.println(String("Went HIGH "));
+               
+              OnTick();
+              last_clock_pulse = milliseconds();
+              
+            } 
+    
+            // Falling clock edge?
+            if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
+              current_digital_clock_in_state = LOW;
+              //Serial.println(String("Went LOW "));
+            } 
+			 
+      }
 
         } 
 	} // End of render
