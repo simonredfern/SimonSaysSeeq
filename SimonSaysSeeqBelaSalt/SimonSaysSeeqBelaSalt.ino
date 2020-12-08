@@ -609,13 +609,17 @@ const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 
 
-// Salt Pinouts are here https://github.com/BelaPlatform/Bela/wiki/Salt
+// Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
 
 // T2 (Trigger 2) is Physical Channel / Pin 14 
 
 // T1 in is	digital channel 15
-const int CLOCK_INPUT_DIGITAL_IN_PIN = 15;
+const int CLOCK_INPUT_DIGITAL_PIN = 15;
 
+
+// T1 out	digital channel 0
+
+const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 
 /*
@@ -1536,7 +1540,10 @@ bool setup(BelaContext *context, void *userData)
 
 
 
-pinMode(context, 0, 0, INPUT); //set input
+	pinMode(context, 0, 0, INPUT); //set input
+
+
+	pinMode(context, 0, 0, OUTPUT); // Set gOutputPin as output
 
 
 	midi.readFrom(gMidiPort0);
@@ -1786,7 +1793,7 @@ WORKS
 			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
 			  
         // Next state
-        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_IN_PIN);
+        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
 
 
             // Rising clock edge? // state-change-1
