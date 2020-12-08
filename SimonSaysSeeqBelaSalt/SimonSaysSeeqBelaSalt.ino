@@ -1471,7 +1471,7 @@ rt_printf("InitMidiSequence Done");
 
 
 
-void OnTick(){
+void OnTick(BelaContext *context){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
@@ -1504,10 +1504,10 @@ void OnTick(){
 
 }
 
-void MaybeOnTick(){
+void MaybeOnTick(BelaContext *context){
   if (do_tick == true){
     do_tick = false;
-    OnTick();
+    OnTick(context);
   }
 }
 
@@ -1764,7 +1764,7 @@ WORKS
               analog_clock_in_state = HIGH;
               //Serial.println(String("Went HIGH "));
                
-              OnTick();
+              OnTick(context);
               last_clock_pulse = milliseconds();
               
             } 
@@ -1799,7 +1799,7 @@ WORKS
               current_digital_clock_in_state = HIGH;
               //Serial.println(String("Went HIGH "));
                
-              OnTick();
+              OnTick(context);
               last_clock_pulse = milliseconds();
               
             } 
