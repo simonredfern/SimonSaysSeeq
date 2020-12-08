@@ -499,12 +499,12 @@ void OnStep(){
 
   
 
-  rt_printf("OnStep: %d", step_count);
+  rt_printf("OnStep: %d \n", step_count);
 
   if (step_count > MAX_STEP) {
-    rt_printf("----------------------------------------------------------------------------");  
-    rt_printf("------------------ ERROR! step_count is: %s --- ERROR ---", + step_count);
-    rt_printf("----------------------------------------------------------------------------");    
+    rt_printf("----------------------------------------------------------------------------\n");  
+    rt_printf("------------------ ERROR! step_count is: %s --- ERROR ---\n", + step_count);
+    rt_printf("----------------------------------------------------------------------------\n");    
   }
 
   
@@ -1459,12 +1459,12 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
-  //rt_printf("Hello from OnTick \n");
+  rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
-  SequenceSettings();
+  //SequenceSettings();
 
-/*
+
 
   // Decide if we have a "step"
   if (loop_timing.tick_count_in_sequence % 6 == 0){
@@ -1485,7 +1485,7 @@ void OnTick(){
    
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
-*/
+
 }
 
 void MaybeOnTick(){
