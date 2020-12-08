@@ -434,16 +434,21 @@ void printStatus(){
 void GateHigh(BelaContext *context){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
-  // TODO
-  //gate_dc_waveform.amplitude(0.99, 10);
-
+  // SEQUENCE_OUTPUT_DIGITAL_PIN
+  
+  for(unsigned int n = 0; n < context->digitalFrames; ++n){
+			digitalWrite(context, n, 0, HIGH);
+	}
 }
 
 void GateLow(BelaContext *context){
   //rt_printf("Gate LOW");
   
-  // TODO
-  //gate_dc_waveform.amplitude(0);
+  // SEQUENCE_OUTPUT_DIGITAL_PIN
+  
+  for(unsigned int n = 0; n < context->digitalFrames; ++n){
+			digitalWrite(context, n, 0, LOW);
+	}
 }
 
 bool RampIsPositive(){
@@ -618,9 +623,11 @@ const int CLOCK_INPUT_DIGITAL_PIN = 15;
 
 
 // T1 out	digital channel 0
+// T2 out	digital channel 5
 
 const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
+int SEQUENCE_OUTPUT_DIGITAL_PIN = 5;
 
 /*
  * This callback is called every time a new input Midi message is available
