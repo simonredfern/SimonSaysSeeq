@@ -73,6 +73,33 @@ int gAnalogChannelNum; // number of analog channels to iterate over
 
 const int SEQUENCE_OUT_PIN = 5;
 
+
+
+// Set the analog channels to read from
+//int gSensorInputFrequency = 0;
+const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
+
+
+
+// Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
+
+// T2 (Trigger 2) is Physical Channel / Pin 14 
+
+// T1 in is	digital channel 15
+const int CLOCK_INPUT_DIGITAL_PIN = 15;
+
+
+// T1 out	digital channel 0
+// T2 out	digital channel 5
+
+const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
+
+
+
+// CV I/O 1-8	analog channel 0-7
+const int SEQUENCE_CV_IN_PIN = 0;
+
+
 ////////////////////////////////////////////////
 
 // Setup pins
@@ -375,9 +402,11 @@ void printStatus(){
 	
     if(gCount % 1000 == 0) {
       rt_printf("================ \n");
-		  rt_printf("printStatus says gCount is: %d \n",gCount);
+	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
-		  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
+
+      rt_printf("binary_sequence_input_raw is: %d \n", binary_sequence_input_raw);
+	  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
       rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
@@ -538,11 +567,11 @@ void OnStep(BelaContext *context){
   //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     //rt_printf("****************** play \n");
+     rt_printf("****************** play \n");
     GateHigh(context); 
    } else {
     GateLow(context);
-     //rt_printf("not play \n");
+     rt_printf("not play \n");
    }
 
    
@@ -605,24 +634,7 @@ float gPhase;
 float gInverseSampleRate;
 int gAudioFramesPerAnalogFrame = 0;
 
-// Set the analog channels to read from
-//int gSensorInputFrequency = 0;
-const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
-
-
-// Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
-
-// T2 (Trigger 2) is Physical Channel / Pin 14 
-
-// T1 in is	digital channel 15
-const int CLOCK_INPUT_DIGITAL_PIN = 15;
-
-
-// T1 out	digital channel 0
-// T2 out	digital channel 5
-
-const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 
 
@@ -1004,13 +1016,13 @@ void AdvanceSequenceChronology(){
 
   // But first check / set the desired sequence length
 
-  rt_printf("Hello from AdvanceSequenceChronology ");
+  //rt_printf("Hello from AdvanceSequenceChronology ");
 
     //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
-  rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
+  //rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
     rt_printf("**** ERROR with sequence_length_in_steps it WAS: %d but setting it to: %d ", sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
@@ -1117,12 +1129,12 @@ int SequenceSettings(){
   
 
 
-  lower_input_raw = analogRead(lower_pot_pin);
+  //lower_input_raw = analogRead(lower_pot_pin);
   //rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
 
 
 //  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-    binary_sequence_input = GetValue(upper_input_raw, binary_sequence_input, jitter_reduction);
+    binary_sequence_input = binary_sequence_input_raw; // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
     //rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
     
   //} else {
@@ -1483,7 +1495,7 @@ void OnTick(BelaContext *context){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
-  rt_printf("Hello from OnTick \n");
+ // rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
   //SequenceSettings();
@@ -1822,13 +1834,25 @@ WORKS
             } 
 			 
       }
+      
+      
+      
+         for(unsigned int p = 0; p < context->analogFrames; p++) {
+        	// This will grab the last value from the last frame 
+        	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
+		}
+   
+      
+      
 
         } 
 	} // End of render
    
    
-   
-   
+
+
+
+
    
    
    //if (peak_L.available()){
