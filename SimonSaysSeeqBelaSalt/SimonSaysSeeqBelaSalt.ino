@@ -1836,10 +1836,19 @@ WORKS
       }
       
       
+
+
+
+
+
       
          for(unsigned int p = 0; p < context->analogFrames; p++) {
         	// This will grab the last value from the last frame 
-        	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
+        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
+
+	          if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
+			          binary_sequence_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
+		        }
 		}
    
       
