@@ -416,14 +416,9 @@ void printStatus(){
       rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
       rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
 
-      
-      
 
-
-
-
-      rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-      rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+     // rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
+     // rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
       rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
 
@@ -1543,16 +1538,16 @@ bool setup(BelaContext *context, void *userData)
 	// we will use the minimum between input and output
 	gAudioChannelNum = std::min(context->audioInChannels, context->audioOutChannels);
 	gAnalogChannelNum = std::min(context->analogInChannels, context->analogOutChannels);
- 
+ 	//gDigitalChannelNum = context->digitalChannels;
  
  
   rt_printf("context->audioSampleRate is: %d \n", context->audioSampleRate);
   rt_printf("context->analogSampleRate is: %d \n", context->analogSampleRate);
   rt_printf("context->audioFrames (per block) is: %d \n", context->audioFrames);
 
-  rt_printf("Using %d audio In/Out audio channels\n", gAudioChannelNum);
-  rt_printf("Using %d audio In/Out analog channels\n", gAnalogChannelNum);
-
+  rt_printf("Using %d In/Out audio channels\n", gAudioChannelNum);
+  rt_printf("Using %d In/Out analog channels\n", gAnalogChannelNum);
+  //rt_printf("Using %d In/Out digital channels\n", gDigitalChannelNum);
 
 
 
@@ -1747,16 +1742,77 @@ void render(BelaContext *context, void *userData)
    // Note: We use this input for other things too.
    
 
-  // AUDIO 
 	// Simplest possible case: pass inputs through to outputs
+  // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
-			//audioWrite(context, n, ch, audioRead(context, n, ch));
+			audioWrite(context, n, ch, audioRead(context, n, ch));
 		}
 	}
 
-  // ANALOG
+// ANALOG LOOP
+	for(unsigned int n = 0; n < context->analogFrames; n++) {
+		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
+			analogWrite(context, n, ch, analogRead(context, n, ch));
+		}
+	}
 
+
+// DIGITAL LOOP need to handle this differently because of pin in / out
+ // for(unsigned int n = 0; n < context->digitalFrames; n++) {
+	// 	for(unsigned int ch = 0; ch < gDigitalChannelNum; ch++){
+	// 		digitalWrite(context, n, ch, digitalRead(context, n, ch));
+	// 	}
+	// }
+
+
+  /*
+
+  // ANALOG LOOP
+  for(unsigned int p = 0; p < context->analogFrames; p++) {
+        	// This will grab the last value from the last frame 
+        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
+
+      if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
+	          binary_sequence_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
+        }
+	}
+	
+	*/
+	
+	// DIGITAL LOOP 
+	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
+
+	  // This function returns the value of an analog input, at the time indicated by frame. 
+			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
+			  
+        // Next state
+        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
+
+
+            // Rising clock edge? // state-change-1
+            if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
+    
+              if (sequence_is_running == LOW){
+                StartSequencer(context);
+              }
+              
+              current_digital_clock_in_state = HIGH;
+              //Serial.println(String("Went HIGH "));
+               
+              OnTick(context);
+              last_clock_pulse = milliseconds();
+              
+            } 
+    
+            // Falling clock edge?
+            if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
+              current_digital_clock_in_state = LOW;
+              //Serial.println(String("Went LOW "));
+            } 
+			 
+      }
+	
 
         // Only look for this clock if we don't have midi.
         if (midi_clock_detected == LOW) {
@@ -1802,38 +1858,7 @@ WORKS
 
 */
 
-// Using Digital input 
-	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
 
-	  // This function returns the value of an analog input, at the time indicated by frame. 
-			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			  
-        // Next state
-        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
-
-
-            // Rising clock edge? // state-change-1
-            if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
-    
-              if (sequence_is_running == LOW){
-                StartSequencer(context);
-              }
-              
-              current_digital_clock_in_state = HIGH;
-              //Serial.println(String("Went HIGH "));
-               
-              OnTick(context);
-              last_clock_pulse = milliseconds();
-              
-            } 
-    
-            // Falling clock edge?
-            if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
-              current_digital_clock_in_state = LOW;
-              //Serial.println(String("Went LOW "));
-            } 
-			 
-      }
       
       
 
@@ -1842,14 +1867,7 @@ WORKS
 
 
       
-         for(unsigned int p = 0; p < context->analogFrames; p++) {
-        	// This will grab the last value from the last frame 
-        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
 
-	          if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
-			          binary_sequence_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
-		        }
-		}
    
       
       
