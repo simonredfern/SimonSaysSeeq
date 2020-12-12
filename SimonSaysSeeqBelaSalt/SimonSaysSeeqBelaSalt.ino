@@ -12,6 +12,22 @@
 
 #include <chrono>
 
+
+
+// For calling URLs ///
+#include <stdio.h>
+#include <string.h>
+#include <fstream>
+///////////////////////
+
+
+
+#include <iostream>
+
+
+
+
+
 // ...
 
 using namespace std::chrono;
@@ -436,7 +452,72 @@ void printStatus(){
 
       rt_printf("================ \n");
 
+        char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/adapter";
 
+        // char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/root";
+
+
+//char result[1000]
+
+
+    std::fstream fs;
+    fs.open(url);
+
+
+//char c = fs.get();
+//rt_printf("-%c", c);
+
+// while ( getline (fs,line) ){
+//       //use line here
+//       rt_printf("-%c", line);
+//     }
+
+  // while (fs.good()) {
+  //   rt_printf("-%c", c);
+  //   c = fs.get();
+  // }
+
+
+
+// Thanks to: https://gehrcke.de/2011/06/reading-files-in-c-using-ifstream-dealing-correctly-with-badbit-failbit-eofbit-and-perror/
+
+std::string line;
+std::string error_opening;
+std::ifstream f (url);
+if (!f.is_open())
+	//std::cout << perror("Cannot open file");
+	//std::error >> error_opening;
+	
+	std::cerr << "Could not open file...\n";
+	std::cerr << url << std::endl;
+	std::cerr << strerror(errno) << std::endl;
+	
+	
+	//std::cerr << "LARA";
+//	std::cerr >> error_opening;
+	
+//	stderr << strerror(errno) << std::endl;
+	
+	//error_opening = perror("lalala");	
+    //rt_printf("error opening %s", &error_opening);
+    
+    //rt_printf("error opening %s", stderr);
+    
+    
+    // perror("error while opening file");
+while(getline(f, line)) {
+    rt_printf("-%c", &line);
+    //process(&line);
+    }
+if (f.bad())
+    rt_printf("error reading ");
+    //perror("error while reading file");
+
+
+
+
+
+    fs.close();
 
 
 
