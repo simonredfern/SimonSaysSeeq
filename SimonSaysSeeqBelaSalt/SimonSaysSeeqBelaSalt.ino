@@ -47,7 +47,7 @@
 
 #include <libraries/UdpClient/UdpClient.h>
 
-
+UdpClient myUdpClient;
 
 // ...
 
@@ -437,7 +437,7 @@ void printStatus(){
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1000 == 0) {
+    if(gCount % 10000 == 0) {
       rt_printf("================ \n");
 	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
@@ -469,6 +469,18 @@ void printStatus(){
 
 
 
+      std::string message = "$simon!";
+      
+      //int signal = 1; 
+      //float signal2 = 1.23456;
+      //int my_result  = myUdpClient.send(&message, message.length()+1);
+
+	  int my_result  = myUdpClient.send(&message, 16);
+
+
+	//	int my_result  = myUdpClient.send(&signal2, sizeof(float));
+
+rt_printf("sent %d  bytes \n", my_result);
 
 
       rt_printf("================ \n");
@@ -478,12 +490,13 @@ void printStatus(){
 
 
 ///////      
+/*
+  // can't open a url with this lib it seems libcurl is tricky to link.
 
-        char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/adapter";
+    char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/adapter";
 
-  
     std::fstream fs;
-    fs.open(url); // can't open url with this lib
+    fs.open(url); 
 
 // Thanks to: https://gehrcke.de/2011/06/reading-files-in-c-using-ifstream-dealing-correctly-with-badbit-failbit-eofbit-and-perror/
 
@@ -498,10 +511,18 @@ if (!f.is_open())
 while(getline(f, line)) {
     rt_printf("-%c", &line);
     }
+    
 if (f.bad())
     rt_printf("error reading ");
     fs.close();
-	}
+*/	
+    	
+    	
+    }
+
+
+
+
 } 
 
 
@@ -1696,15 +1717,13 @@ bool setup(BelaContext *context, void *userData)
         
         // here
         
-        UdpClient myUdpClient;
+        
         
         
         myUdpClient.setup(50002, "18.195.30.76"); 
         
         
-       std::string my_string = "simon";
-      
-       int my_result  = myUdpClient.send(&my_string, 6);
+ 
 
         
 
