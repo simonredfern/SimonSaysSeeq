@@ -12,7 +12,7 @@
 // iface usb1 inet dhcp
 // And enable Mac OS Sharing like this:
 // Mac OS Preferences. Sharing From = Wifi. (drop down list) To Computers using = Bela (check box). Internet Sharing = Yes. (ticked)  
-// then on Bela systemctl restart networking.service
+// then on Bela: systemctl restart networking.service
 // Login again and
 // ping 8.8.8.8
 
@@ -43,7 +43,7 @@
 #include <iostream>
 
 
-#include <curl/curl.h>
+//#include <curl/curl.h>
 
 #include <libraries/UdpClient/UdpClient.h>
 
@@ -469,18 +469,18 @@ void printStatus(){
 
 
 
-      std::string message = "$simon!";
+      //std::string message = "$simon!";
       
       //int signal = 1; 
       //float signal2 = 1.23456;
       //int my_result  = myUdpClient.send(&message, message.length()+1);
 
-	  int my_result  = myUdpClient.send(&message, 16);
+	  //int my_result  = myUdpClient.send(&message, 16);
 
 
 	//	int my_result  = myUdpClient.send(&signal2, sizeof(float));
 
-rt_printf("sent %d  bytes \n", my_result);
+//rt_printf("sent %d  bytes \n", my_result);
 
 
       rt_printf("================ \n");
@@ -610,6 +610,9 @@ void OnStep(BelaContext *context){
 
   rt_printf("OnStep: %d \n", step_count);
 
+
+
+
   if (step_count > MAX_STEP) {
     rt_printf("----------------------------------------------------------------------------\n");  
     rt_printf("------------------ ERROR! step_count is: %s --- ERROR ---\n", + step_count);
@@ -626,6 +629,14 @@ void OnStep(BelaContext *context){
   
   
   step_count = StepCountSanity(step_count);
+
+      std::string message = "--:OnStep:" + std::to_string(step_count) + "--";
+
+      
+
+
+
+	  int my_result  = myUdpClient.send(&message, 32);
   
   
   uint8_t play_note = (the_sequence & ( 1 << step_count )) >> step_count;  
