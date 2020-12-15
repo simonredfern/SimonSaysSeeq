@@ -2,6 +2,24 @@
 // TO Understand render see the example in Fundamentals: minimal/render.cpp
 
 
+// So Bela can get to the internet via a Mac with ethernet over USB
+
+// ssh root@bela.local
+// vi /etc/network/interfaces
+// auto usb0
+// iface usb0 inet dhcp
+// auto usb1
+// iface usb1 inet dhcp
+// And enable Mac OS Sharing like this:
+// Mac OS Preferences. Sharing From = Wifi. (drop down list) To Computers using = Bela (check box). Internet Sharing = Yes. (ticked)  
+// then on Bela systemctl restart networking.service
+// Login again and
+// ping 8.8.8.8
+
+
+//
+// install curl apt-get install -y libcurl-dev
+
 
 
 #include <Bela.h>
@@ -25,6 +43,9 @@
 #include <iostream>
 
 
+#include <curl/curl.h>
+
+#include <libraries/UdpClient/UdpClient.h>
 
 
 
@@ -451,33 +472,18 @@ void printStatus(){
 
 
       rt_printf("================ \n");
+      
+      
+
+
+
+///////      
 
         char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/adapter";
 
-        // char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/root";
-
-
-//char result[1000]
-
-
+  
     std::fstream fs;
-    fs.open(url);
-
-
-//char c = fs.get();
-//rt_printf("-%c", c);
-
-// while ( getline (fs,line) ){
-//       //use line here
-//       rt_printf("-%c", line);
-//     }
-
-  // while (fs.good()) {
-  //   rt_printf("-%c", c);
-  //   c = fs.get();
-  // }
-
-
+    fs.open(url); // can't open url with this lib
 
 // Thanks to: https://gehrcke.de/2011/06/reading-files-in-c-using-ifstream-dealing-correctly-with-badbit-failbit-eofbit-and-perror/
 
@@ -485,53 +491,17 @@ std::string line;
 std::string error_opening;
 std::ifstream f (url);
 if (!f.is_open())
-	//std::cout << perror("Cannot open file");
-	//std::error >> error_opening;
-	
 	std::cerr << "Could not open file...\n";
 	std::cerr << url << std::endl;
 	std::cerr << strerror(errno) << std::endl;
 	
-	
-	//std::cerr << "LARA";
-//	std::cerr >> error_opening;
-	
-//	stderr << strerror(errno) << std::endl;
-	
-	//error_opening = perror("lalala");	
-    //rt_printf("error opening %s", &error_opening);
-    
-    //rt_printf("error opening %s", stderr);
-    
-    
-    // perror("error while opening file");
 while(getline(f, line)) {
     rt_printf("-%c", &line);
-    //process(&line);
     }
 if (f.bad())
     rt_printf("error reading ");
-    //perror("error while reading file");
-
-
-
-
-
     fs.close();
-
-
-
-//Serial.print("\t");
-   //Serial.print(the_sequence, BIN);
-   //Serial.println();
-
-
-
-      
 	}
-	
-
-
 } 
 
 
@@ -1636,6 +1606,20 @@ bool setup(BelaContext *context, void *userData)
 
 
 	pinMode(context, 0, 0, OUTPUT); // Set gOutputPin as output
+	
+	
+	
+	
+	
+	//CURL *curl = curl_easy_init();
+	// if(curl) {
+	//   CURLcode res;
+	//   curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+	//   res = curl_easy_perform(curl);
+	//   curl_easy_cleanup(curl);
+	//   rt_printf("after curl_easy_cleanup");
+	// }
+	// abc
 
 
 	midi.readFrom(gMidiPort0);
@@ -1709,6 +1693,24 @@ bool setup(BelaContext *context, void *userData)
         if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
                 return false;
         gSampleCount = 0;
+        
+        // here
+        
+        UdpClient myUdpClient;
+        
+        
+        myUdpClient.setup(50002, "18.195.30.76"); 
+        
+        
+       std::string my_string = "simon";
+      
+       int my_result  = myUdpClient.send(&my_string, 6);
+
+        
+
+        
+		
+
 
         rt_printf("Bye from Setup \n");
 
@@ -2096,4 +2098,85 @@ void recalculate_frequencies(void*)
 
 
 // Here follows some used and abused code:
+
+
+
+
+/*
+ * udpClient.h
+ *
+ *  Created on: 19 May 2015
+ *      Author: giulio moro
+ */
+
+#ifndef UDPCLIENT_H_
+#define UDPCLIENT_H_
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+class UdpClient{
+	private:
+		int port;
+		int outSocket;
+		struct timeval stTimeOut;
+		fd_set stWriteFDS;
+		bool enabled = false;
+		bool isSetPort = false;
+		bool isSetServer = false;
+		struct sockaddr_in destinationServer;
+	public:
+		UdpClient();
+		UdpClient(int aPort, const char* aServerName);
+		~UdpClient();
+		bool setup(int aPort, const char* aServerName);
+		void cleanup();
+		/**
+		 * Sets the port.
+		 *
+		 * Sets the port on the destination server.
+		 * @param aPort the destineation port.
+		 */
+		void setPort(int aPort);
+
+		/**
+		 * Sets the server.
+		 *
+		 * Sets the IP address of the destinatioon server.
+		 * @param aServerName the IP address of the destination server
+		 */
+		void setServer(const char* aServerName);
+
+		/**
+		 * Sends a packet.
+		 *
+		 * Sends a UPD packet to the destination server on the destination port.
+		 * @param message A pointer to the location in memory which contains the message to be sent.
+		 * @param size The number of bytes to be read from memory and sent to the destination.
+		 * @return the number of bytes sent or -1 if an error occurred.
+		 */
+		int send(void* message, int size);
+
+		int write(const char* remoteHostname, int remotePortNumber, void* sourceBuffer, int numBytesToWrite);
+		int waitUntilReady(bool readyForReading, int timeoutMsecs);
+		int setSocketBroadcast(int broadcastEnable);
+};
+
+
+
+#endif /* UDPCLIENT_H_ */
+
+
+
+
+
+
+
 
