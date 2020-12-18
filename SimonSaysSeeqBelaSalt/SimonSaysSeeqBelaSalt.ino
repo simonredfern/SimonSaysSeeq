@@ -186,25 +186,25 @@ unsigned int lower_input_raw;
 // To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 //bool upper_pot_high_engaged = true;
-unsigned int binary_sequence_input_raw;
-unsigned int binary_sequence_input = 20;
+float binary_sequence_input_raw;
+double binary_sequence_input = 20;
 unsigned int binary_sequence_input_last;
 unsigned int binary_sequence_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
-unsigned int lfo_a_frequency_input_raw;
+float lfo_a_frequency_input_raw;
 unsigned int lfo_a_frequency_input = 20;
 unsigned int lfo_a_frequency_input_last;
 unsigned int lfo_a_frequency_input_at_button_change;
 
 //bool upper_pot_low_engaged = true;
-unsigned int sequence_length_input_raw;
+float sequence_length_input_raw;
 unsigned int sequence_length_input = 20;
 unsigned int sequence_length_input_last;
 unsigned int sequence_length_input_at_button_change;
 
 //bool lower_pot_low_engaged = true;
-unsigned int lfo_b_frequency_input_raw;
+float lfo_b_frequency_input_raw;
 unsigned int lfo_b_frequency_input = 20;
 unsigned int lfo_b_frequency_input_last;
 unsigned int lfo_b_frequency_input_at_button_change;
@@ -442,7 +442,7 @@ void printStatus(){
 	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
 
-      rt_printf("binary_sequence_input_raw is: %d \n", binary_sequence_input_raw);
+      rt_printf("binary_sequence_input_raw is: %f \n", binary_sequence_input_raw);
 	  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
       rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
@@ -1212,7 +1212,7 @@ int SequenceSettings(){
 
 
 //  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-    binary_sequence_input = binary_sequence_input_raw; // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+    binary_sequence_input = round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0)); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
     //rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
     
   //} else {
@@ -1866,7 +1866,20 @@ void render(BelaContext *context, void *userData)
 // ANALOG LOOP
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
-			analogWrite(context, n, ch, analogRead(context, n, ch));
+			
+      // Pass everyting through
+      analogWrite(context, n, ch, analogRead(context, n, ch));
+
+      // Get the binary_sequence_input_raw
+      if (ch == SEQUENCE_CV_IN_PIN ){
+      	// note this is getting all the frames
+        binary_sequence_input_raw = analogRead(context, n, SEQUENCE_CV_IN_PIN);
+        //rt_printf("Set binary_sequence_input_raw %d ", binary_sequence_input_raw); 
+        
+        //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_CV_IN_PIN)); 
+        
+        
+      }
 		}
 	}
 
