@@ -239,6 +239,9 @@ uint8_t sequence_length_in_steps = 8;
 
 bool do_tick = true;
 
+
+bool target_gate_out_state = false;
+
 // Used to control when/how we change sequence length 
 uint8_t new_sequence_length_in_ticks; 
 
@@ -531,17 +534,20 @@ if (f.bad())
 void GateHigh(BelaContext *context){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
-  for(unsigned int n = 0; n < context->digitalFrames; ++n){
-			digitalWrite(context, n, SEQUENCE_OUT_PIN, HIGH);
-	}
+  
+  target_gate_out_state = true;
+  
+
 }
 
 void GateLow(BelaContext *context){
   //rt_printf("Gate LOW");
   
-  for(unsigned int n = 0; n < context->digitalFrames; ++n){
-			digitalWrite(context, n, SEQUENCE_OUT_PIN, LOW);
-	}
+  target_gate_out_state = false;
+  
+ // for(unsigned int n = 0; n < context->digitalFrames; ++n){
+	// 		digitalWrite(context, n, SEQUENCE_OUT_PIN, LOW);
+	// }
 }
 
 bool RampIsPositive(){
@@ -645,11 +651,11 @@ void OnStep(BelaContext *context){
   //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     rt_printf("****************** play \n");
+     rt_printf("****++++++****** play \n");
     GateHigh(context); 
    } else {
     GateLow(context);
-     rt_printf("not play \n");
+     rt_printf("***-----***** NOT play \n");
    }
 
    
@@ -1238,7 +1244,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
    if (binary_sequence_result != last_binary_sequence_result){
-    //rt_printf("binary_sequence has changed **"));
+    rt_printf("binary_sequence has changed **");
    }
 
 
@@ -1270,9 +1276,9 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
    
     // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence_result == 1){
-      the_sequence = 1;
-    }
+    // if (binary_sequence_result == 1){
+    //   the_sequence = 1;
+    // }
 
 
 
@@ -2046,12 +2052,17 @@ void render(BelaContext *context, void *userData)
 	
 	// DIGITAL LOOP 
 	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
+	    
+		
+	
 
 	  // This function returns the value of an analog input, at the time indicated by frame. 
 			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
 			  
         // Next state
         new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
+        
+        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
 
 
             // Rising clock edge? // state-change-1
