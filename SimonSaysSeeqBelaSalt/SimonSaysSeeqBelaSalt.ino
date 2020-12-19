@@ -1177,10 +1177,10 @@ void AdvanceSequenceChronology(){
 
 void ChangeSequence(){
 	
-	 rt_printf(" ChangeSequence " );
+	 //rt_printf(" ChangeSequence " );
 	
 	    binary_sequence_input = static_cast<int>(round(map(binary_sequence_input_raw, 0, 1, 0, 1023))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+    //rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
     
   //} else {
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
@@ -1189,21 +1189,27 @@ void ChangeSequence(){
   //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
     sequence_length_input = 1023; //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
     
-  /*  
+ 
     //////////////////////////////////////////
 // Assign values to change the sequencer.
 ///////////////////////////////////
 
    last_binary_sequence_result = binary_sequence_result;
 
+ 
 
    // If we have 8 bits, use the range up to 255
 
    
    uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+ 
+
+ 
+ 
    // TODO Could probably use a smaller type 
    unsigned int binary_sequence_upper_limit; 
 
+  
 
 //binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
 
@@ -1212,6 +1218,8 @@ void ChangeSequence(){
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^sequence_length_in_steps) - 1
 binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+
+
 
    //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
@@ -1246,7 +1254,12 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
     the_sequence = gray_code_sequence;
 
+
+/* 
+
     the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+
+
 
     the_sequence = ~ the_sequence; // Invert
 
