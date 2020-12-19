@@ -1175,15 +1175,124 @@ void AdvanceSequenceChronology(){
 
 ////
 
+void ChangeSequence(){
+	    binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+    //rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+    
+  //} else {
+  //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
+  //}
+  
+  //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
+    sequence_length_input = 1023; //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
+    
+  /*  
+    //////////////////////////////////////////
+// Assign values to change the sequencer.
+///////////////////////////////////
+
+   last_binary_sequence_result = binary_sequence_result;
+
+
+   // If we have 8 bits, use the range up to 255
+
+   
+   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+   // TODO Could probably use a smaller type 
+   unsigned int binary_sequence_upper_limit; 
+
+
+//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
+
+// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
+// i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
+// or (2^sequence_length_in_steps) - 1
+binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+
+   //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+    
+
+
+  // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
+   // ***UPPER Pot HIGH Button*** //////////
+  // Generally the lowest value from the pot we get is 2 or 3 
+  // setting-1
+  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
+
+   
+
+
+   if (binary_sequence_result != last_binary_sequence_result){
+    //rt_printf("binary_sequence has changed **"));
+   }
+
+
+   //rt_printf("binary_sequence_result is: ") + binary_sequence_result  );
+   //Serial.print("\t");
+   //Serial.print(binary_sequence_result, BIN);
+   //Serial.println();
+
+   gray_code_sequence = Binary2Gray(binary_sequence_result);
+   //rt_printf("gray_code_sequence is: ") + gray_code_sequence  );
+   //Serial.print("\t");
+   //Serial.print(gray_code_sequence, BIN);
+   //Serial.println();
+
+
+
+    the_sequence = gray_code_sequence;
+
+    the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+
+    the_sequence = ~ the_sequence; // Invert
+
+   
+    // So pot fully counter clockwise is 1 on the first beat 
+    if (binary_sequence_result == 1){
+      the_sequence = 1;
+    }
+
+
+    
+    
+
+   //rt_printf("the_sequence is: %s ", the_sequence  );
+   //Serial.print("\t");
+   //Serial.print(the_sequence, BIN);
+   //Serial.println();
+
+
+   
+  //rt_printf("right_peak_level is: ") + right_peak_level  );
+
+ 
+
+// Sequence length raw
+// ***UPPER pot LOW value***
+ sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
+ // rt_printf("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+   
+   //((sequence_length_input & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
+   
+
+    
+    */
+    
+    
+	
+}
+
+
 
 //////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
 // It contains things that we want to check / happen every tick..
-int SequenceSettings(){
+void SequenceSettings(){
   // Note we set tick_count_in_sequence to 0 following stop and start midi messages.
   // The midi clock standard sends 24 ticks per crochet. (quarter note).
 
- int called_on_step = 0; // not currently used
+ //int called_on_step = 0; // not currently used
 
 
   ////////////////////////////////////////////////////////////////
@@ -1203,7 +1312,7 @@ int SequenceSettings(){
   ////////////////////////////////////////////
   // Get the Pot positions. 
   // We will later assign the values dependant on the push button state
-  upper_input_raw = analogRead(upper_pot_pin);
+  //upper_input_raw = analogRead(upper_pot_pin);
   
 
 
@@ -1212,8 +1321,8 @@ int SequenceSettings(){
 
 
 //  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-    binary_sequence_input = round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0)); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    //rt_printf("**** NEW value for binary_sequence_input is: %s ", binary_sequence_input  );
+    binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+    rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
     
   //} else {
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
@@ -1506,7 +1615,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     // }
 
 
-  return called_on_step;
+  //return called_on_step;
  
   } // End of SequenceSettings
 ////////////////////////////////////////////////
@@ -1879,9 +1988,15 @@ void render(BelaContext *context, void *userData)
         //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_CV_IN_PIN)); 
         
         
+        //binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+    	//rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+        
+        
       }
 		}
 	}
+	
+	ChangeSequence();
 
 
 // DIGITAL LOOP need to handle this differently because of pin in / out
