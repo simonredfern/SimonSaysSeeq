@@ -187,7 +187,7 @@ unsigned int lower_input_raw;
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 //bool upper_pot_high_engaged = true;
 float binary_sequence_input_raw;
-double binary_sequence_input = 20;
+unsigned int binary_sequence_input = 20;
 unsigned int binary_sequence_input_last;
 unsigned int binary_sequence_input_at_button_change;
 
@@ -1176,8 +1176,11 @@ void AdvanceSequenceChronology(){
 ////
 
 void ChangeSequence(){
-	    binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    //rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+	
+	 rt_printf(" ChangeSequence " );
+	
+	    binary_sequence_input = static_cast<int>(round(map(binary_sequence_input_raw, 0, 1, 0, 1023))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+    rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
     
   //} else {
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
@@ -1321,8 +1324,8 @@ void SequenceSettings(){
 
 
 //  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-    binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+   // binary_sequence_input = static_cast<int>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 1023.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
+   // rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
     
   //} else {
   //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
@@ -1983,6 +1986,8 @@ void render(BelaContext *context, void *userData)
       if (ch == SEQUENCE_CV_IN_PIN ){
       	// note this is getting all the frames
         binary_sequence_input_raw = analogRead(context, n, SEQUENCE_CV_IN_PIN);
+        
+        ChangeSequence();
         //rt_printf("Set binary_sequence_input_raw %d ", binary_sequence_input_raw); 
         
         //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_CV_IN_PIN)); 
@@ -1996,7 +2001,7 @@ void render(BelaContext *context, void *userData)
 		}
 	}
 	
-	ChangeSequence();
+	
 
 
 // DIGITAL LOOP need to handle this differently because of pin in / out
