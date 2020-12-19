@@ -763,10 +763,13 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
 //////////////
 
-
+// https://www.codesdope.com/blog/article/set-toggle-and-clear-a-bit-in-c/
 // That will clear the nth bit of number. You must invert the bit string with the bitwise NOT operator (~), then AND it.
 int BitClear (unsigned int number, unsigned int n) {
-number &= ~(1UL << n);
+	
+// return number &= ~(1 << n);	
+	
+return number &= ~(1UL << n);
 }
 
 
@@ -1255,13 +1258,15 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     the_sequence = gray_code_sequence;
 
 
-/* 
+
 
     the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
 
 
     the_sequence = ~ the_sequence; // Invert
+
+
 
    
     // So pot fully counter clockwise is 1 on the first beat 
@@ -1270,8 +1275,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
     }
 
 
-    
-    
+
 
    //rt_printf("the_sequence is: %s ", the_sequence  );
    //Serial.print("\t");
@@ -1291,6 +1295,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    //((sequence_length_input & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    
+/* 
 
     
     */
