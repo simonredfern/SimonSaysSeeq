@@ -189,10 +189,10 @@ unsigned int lower_input_raw;
 // To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 //bool upper_pot_high_engaged = true;
-float binary_sequence_input_raw;
-unsigned int binary_sequence_input = 20;
-unsigned int binary_sequence_input_last;
-unsigned int binary_sequence_input_at_button_change;
+float binary_sequence_pattern_input_raw;
+unsigned int binary_sequence_pattern_input = 20;
+unsigned int binary_sequence_pattern_input_last;
+unsigned int binary_sequence_pattern_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
 float lfo_a_frequency_input_raw;
@@ -448,8 +448,8 @@ void printStatus(){
 	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
 
-      rt_printf("binary_sequence_input_raw is: %f \n", binary_sequence_input_raw);
-	  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
+      rt_printf("binary_sequence_pattern_input_raw is: %f \n", binary_sequence_pattern_input_raw);
+	  rt_printf("binary_sequence_pattern_input is: %d \n", binary_sequence_pattern_input);
 	  
 	  rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 	  
@@ -1196,11 +1196,11 @@ void ChangeSequence(){
 	
 	 //rt_printf(" ChangeSequence " );
 	
-	    binary_sequence_input = static_cast<int>(round(map(binary_sequence_input_raw, 0, 1, 0, 1023))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    //rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+	    binary_sequence_pattern_input = static_cast<int>(round(map(binary_sequence_pattern_input_raw, 0, 1, 0, 1023))); // GetValue(binary_sequence_pattern_input_raw, binary_sequence_pattern_input, jitter_reduction);
+    //rt_printf("**** NEW value for binary_sequence_pattern_input is: %d ", binary_sequence_pattern_input  );
     
   //} else {
-  //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
+  //  rt_printf("NO new value for binary_sequence_pattern_input . Sticking at: %s", binary_sequence_pattern_input  );
   //}
   
   //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
@@ -1246,7 +1246,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
+  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_pattern_input, 0);
 
    
 
@@ -1355,12 +1355,12 @@ void SequenceSettings(){
   //rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
 
 
-//  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-   // binary_sequence_input = static_cast<int>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 1023.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-   // rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+//  if ((button_1_state == HIGH) & IsCrossing(binary_sequence_pattern_input, upper_input_raw, FUZZINESS_AMOUNT)) {
+   // binary_sequence_pattern_input = static_cast<int>(round(map(binary_sequence_pattern_input_raw, 0.0, 1.0, 0.0, 1023.0))); // GetValue(binary_sequence_pattern_input_raw, binary_sequence_pattern_input, jitter_reduction);
+   // rt_printf("**** NEW value for binary_sequence_pattern_input is: %d ", binary_sequence_pattern_input  );
     
   //} else {
-  //  rt_printf("NO new value for binary_sequence_input . Sticking at: %s", binary_sequence_input  );
+  //  rt_printf("NO new value for binary_sequence_pattern_input . Sticking at: %s", binary_sequence_pattern_input  );
   //}
   
   //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
@@ -1386,7 +1386,7 @@ void SequenceSettings(){
  // }
 
 
-//rt_printf("**** binary_sequence_input is now: ") + binary_sequence_input  ); 
+//rt_printf("**** binary_sequence_pattern_input is now: ") + binary_sequence_pattern_input  ); 
 //rt_printf("**** sequence_length_input is now: ") + sequence_length_input  ); 
 //rt_printf("**** lfo_a_frequency_input is now: ") + lfo_a_frequency_input  );
 //rt_printf("**** lfo_b_frequency_input is now: ") + lfo_b_frequency_input  ); 
@@ -1417,7 +1417,7 @@ void SequenceSettings(){
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence_result = binary_sequence_result;
 
- //  binary_sequence = (binary_sequence_input & sequence_bits_8_through_1) + 1;
+ //  binary_sequence = (binary_sequence_pattern_input & sequence_bits_8_through_1) + 1;
 
    // If we have 8 bits, use the range up to 255
 
@@ -1443,7 +1443,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_input, 0);
+  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, binary_sequence_pattern_input, 0);
 
    
 
@@ -2019,19 +2019,19 @@ void render(BelaContext *context, void *userData)
 	  }	
 
 
-      // Get the binary_sequence_input_raw
+      // Get the binary_sequence_pattern_input_raw
       if (ch == SEQUENCE_PATTERN_INPUT_PIN ){
       	// note this is getting all the frames
-        binary_sequence_input_raw = analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN);
+        binary_sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN);
         
         ChangeSequence();
-        //rt_printf("Set binary_sequence_input_raw %d ", binary_sequence_input_raw); 
+        //rt_printf("Set binary_sequence_pattern_input_raw %d ", binary_sequence_pattern_input_raw); 
         
-        //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN)); 
+        //rt_printf("Set binary_sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN)); 
         
         
-        //binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
-    	//rt_printf("**** NEW value for binary_sequence_input is: %d ", binary_sequence_input  );
+        //binary_sequence_pattern_input = static_cast<double>(round(map(binary_sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_pattern_input_raw, binary_sequence_pattern_input, jitter_reduction);
+    	//rt_printf("**** NEW value for binary_sequence_pattern_input is: %d ", binary_sequence_pattern_input  );
         
         
       }
@@ -2054,10 +2054,10 @@ void render(BelaContext *context, void *userData)
   // ANALOG LOOP
   for(unsigned int p = 0; p < context->analogFrames; p++) {
         	// This will grab the last value from the last frame 
-        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_PATTERN_INPUT_PIN);
+        //	binary_sequence_pattern_input_raw = analogRead(context, p, SEQUENCE_PATTERN_INPUT_PIN);
 
       if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
-	          binary_sequence_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
+	          binary_sequence_pattern_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
         }
 	}
 	
