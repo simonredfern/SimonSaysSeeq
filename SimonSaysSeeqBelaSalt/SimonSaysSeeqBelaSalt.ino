@@ -134,10 +134,10 @@ const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 
 // CV I/O 1-8	analog channel 0-7
-const int SEQUENCE_PATTERN_INPUT_PIN = 0;
+const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0;
 
 
-const int SEQUENCE_LENGTH_INPUT_PIN = 1; //  who knows if this number is good
+const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; //  who knows if this number is good
 
 
 ////////////////////////////////////////////////
@@ -2014,20 +2014,20 @@ void render(BelaContext *context, void *userData)
       // Pass everyting through
       analogWrite(context, n, ch, analogRead(context, n, ch));
 
-	  if (ch == SEQUENCE_LENGTH_INPUT_PIN){
-	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_INPUT_PIN);
+	  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
+	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
 	  }	
 
 
       // Get the sequence_pattern_input_raw
-      if (ch == SEQUENCE_PATTERN_INPUT_PIN ){
+      if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
       	// note this is getting all the frames
-        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN);
+        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
         
         ChangeSequence();
         //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
         
-        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN)); 
+        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
         
         
         //sequence_pattern_input = static_cast<double>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
@@ -2054,7 +2054,7 @@ void render(BelaContext *context, void *userData)
   // ANALOG LOOP
   for(unsigned int p = 0; p < context->analogFrames; p++) {
         	// This will grab the last value from the last frame 
-        //	sequence_pattern_input_raw = analogRead(context, p, SEQUENCE_PATTERN_INPUT_PIN);
+        //	sequence_pattern_input_raw = analogRead(context, p, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
 
       if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
 	          sequence_pattern_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
