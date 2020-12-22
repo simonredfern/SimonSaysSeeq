@@ -471,6 +471,9 @@ void printStatus(){
       rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
 
 
+	  rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
+
+
       rt_printf("the_sequence is: %d \n", the_sequence);
 
       rt_printf("sequence_is_running is: %d \n", sequence_is_running);
@@ -1196,7 +1199,12 @@ void ChangeSequence(){
 	
 	 //rt_printf(" ChangeSequence " );
 	
-	    sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, 0, 1023))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
+	
+	
+	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
+    unsigned int sequence_pattern_upper_limit = 1023; 
+	
+	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
     //rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
     
   //} else {
@@ -1204,7 +1212,12 @@ void ChangeSequence(){
   //}
   
   //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
-    sequence_length_input = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, 1, 16))); //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
+
+
+	uint8_t sequence_length_lower_limit = 1;
+	uint8_t sequence_length_upper_limit = 16;
+
+    sequence_length_input = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, sequence_length_lower_limit, sequence_length_upper_limit))); //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
     
  
     //////////////////////////////////////////
@@ -1217,14 +1230,7 @@ void ChangeSequence(){
 
    // If we have 8 bits, use the range up to 255
 
-   
-   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
- 
 
- 
- 
-   // TODO Could probably use a smaller type 
-   unsigned int binary_sequence_upper_limit; 
 
   
 
@@ -1234,7 +1240,7 @@ void ChangeSequence(){
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1; 
 
 
 
@@ -1246,7 +1252,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, sequence_pattern_input, 0);
+  binary_sequence_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_pattern_input, 0);
 
    
 
