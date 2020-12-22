@@ -134,7 +134,10 @@ const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 
 // CV I/O 1-8	analog channel 0-7
-const int SEQUENCE_CV_IN_PIN = 0;
+const int SEQUENCE_PATTERN_INPUT_PIN = 0;
+
+
+const int SEQUENCE_LENGTH_INPUT_PIN = 1; //  who knows if this number is good
 
 
 ////////////////////////////////////////////////
@@ -447,6 +450,11 @@ void printStatus(){
 
       rt_printf("binary_sequence_input_raw is: %f \n", binary_sequence_input_raw);
 	  rt_printf("binary_sequence_input is: %d \n", binary_sequence_input);
+	  
+	  rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+	  
+	  
+	  
       rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
       rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
@@ -2006,15 +2014,20 @@ void render(BelaContext *context, void *userData)
       // Pass everyting through
       analogWrite(context, n, ch, analogRead(context, n, ch));
 
+	  if (ch == SEQUENCE_LENGTH_INPUT_PIN){
+	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_INPUT_PIN);
+	  }	
+
+
       // Get the binary_sequence_input_raw
-      if (ch == SEQUENCE_CV_IN_PIN ){
+      if (ch == SEQUENCE_PATTERN_INPUT_PIN ){
       	// note this is getting all the frames
-        binary_sequence_input_raw = analogRead(context, n, SEQUENCE_CV_IN_PIN);
+        binary_sequence_input_raw = analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN);
         
         ChangeSequence();
         //rt_printf("Set binary_sequence_input_raw %d ", binary_sequence_input_raw); 
         
-        //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_CV_IN_PIN)); 
+        //rt_printf("Set binary_sequence_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_INPUT_PIN)); 
         
         
         //binary_sequence_input = static_cast<double>(round(map(binary_sequence_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(binary_sequence_input_raw, binary_sequence_input, jitter_reduction);
@@ -2041,7 +2054,7 @@ void render(BelaContext *context, void *userData)
   // ANALOG LOOP
   for(unsigned int p = 0; p < context->analogFrames; p++) {
         	// This will grab the last value from the last frame 
-        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_CV_IN_PIN);
+        //	binary_sequence_input_raw = analogRead(context, p, SEQUENCE_PATTERN_INPUT_PIN);
 
       if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
 	          binary_sequence_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
