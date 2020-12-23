@@ -108,6 +108,26 @@ int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
 
+
+
+
+
+
+// recursive function to print binary representation of a positive integer
+void print_binary(unsigned int number)
+{
+    if (number >> 1) {
+        print_binary(number >> 1);
+    }
+    
+    rt_printf("%c" , (number & 1) ? '1' : '0' );
+    
+    
+  //  putc((number & 1) ? '1' : '0', stdout);
+
+}
+
+
 const int SEQUENCE_OUT_PIN = 5;
 
 
@@ -220,6 +240,9 @@ float right_peak_level;
 
 float external_modulator_object_level;
 
+
+float audio_left_input_raw;
+float audio_right_input_raw;
 
 ////////////////////////////////////////////////////
 
@@ -443,7 +466,7 @@ void printStatus(){
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 10000 == 0) {
+    if(gCount % 1000 == 0) {
       rt_printf("================ \n");
 	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
@@ -456,8 +479,15 @@ void printStatus(){
 	  
 	  
       rt_printf("sequence_length_input is: %d \n", sequence_length_input);
+      
+      
       rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
       rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
+
+
+	  rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
+	  rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
+
 
       rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
 
@@ -472,6 +502,8 @@ void printStatus(){
 
 
 	  rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
+	  print_binary(gray_code_sequence);
+	  rt_printf("%c \n", 'B');
 
 
       rt_printf("the_sequence is: %d \n", the_sequence);
@@ -497,7 +529,13 @@ void printStatus(){
 //rt_printf("sent %d  bytes \n", my_result);
 
 
-      rt_printf("================ \n");
+
+	
+	
+
+
+
+      rt_printf("\n================ \n");
       
       
 
@@ -1215,7 +1253,7 @@ void ChangeSequence(){
 
 
 	uint8_t sequence_length_lower_limit = 1;
-	uint8_t sequence_length_upper_limit = 16;
+	uint8_t sequence_length_upper_limit = 8;
 
     sequence_length_input = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, sequence_length_lower_limit, sequence_length_upper_limit))); //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
     
@@ -1258,7 +1296,7 @@ sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
    if (binary_sequence_result != last_binary_sequence_result){
-    rt_printf("binary_sequence has changed **");
+    // rt_printf("binary_sequence has changed **");
    }
 
 
@@ -2010,6 +2048,16 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
 			audioWrite(context, n, ch, audioRead(context, n, ch));
+			
+			if (ch = 0) {
+				audio_left_input_raw = audioRead(context, n, ch);
+			}
+			
+			if (ch = 1) {
+				audio_right_input_raw = audioRead(context, n, ch);
+			}
+			
+			
 		}
 	}
 
@@ -2028,7 +2076,7 @@ void render(BelaContext *context, void *userData)
       // Get the sequence_pattern_input_raw
       if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
       	// note this is getting all the frames
-        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+        sequence_pattern_input_raw = 10 * analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
         
         ChangeSequence();
         //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
