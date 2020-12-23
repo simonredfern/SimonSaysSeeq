@@ -475,9 +475,6 @@ void printStatus(){
 	  rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 	  rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
-	  
-	  
-	  
       rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       
       
@@ -507,6 +504,8 @@ void printStatus(){
 
 
       rt_printf("the_sequence is: %d \n", the_sequence);
+      print_binary(the_sequence);
+	  rt_printf("%c \n", 'B');
 
       rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
@@ -1318,11 +1317,11 @@ sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
 
-    the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+    //the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
 
 
-    the_sequence = ~ the_sequence; // Invert
+    //the_sequence = ~ the_sequence; // Invert
 
 
 
@@ -1939,6 +1938,9 @@ bool setup(BelaContext *context, void *userData)
 enum {kVelocity, kNoteOn, kNoteNumber};
 void render(BelaContext *context, void *userData)
 {
+	
+	
+	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
 	// Added by Simon
 	bool noteOn;
@@ -2069,16 +2071,16 @@ void render(BelaContext *context, void *userData)
       analogWrite(context, n, ch, analogRead(context, n, ch));
 
 	  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
-	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
+	  	sequence_length_input_raw = 0.5 + rand()/RAND_MAX + analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
 	  }	
 
 
       // Get the sequence_pattern_input_raw
       if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
       	// note this is getting all the frames
-        sequence_pattern_input_raw = 10 * analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+        sequence_pattern_input_raw = 0.5 + rand()/RAND_MAX + analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
         
-        ChangeSequence();
+        
         //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
         
         //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
@@ -2091,6 +2093,8 @@ void render(BelaContext *context, void *userData)
       }
 		}
 	}
+	
+	ChangeSequence();
 	
 	
 
