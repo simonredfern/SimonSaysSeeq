@@ -427,6 +427,7 @@ float gInterval = 0.5;
 float gSecondsElapsed = 0;
 int gCount = 0;
 
+int temp_count = 0;
 
 // void pass_string_2(const std::string&){
 // 	 if(gCount % 100000 == 0) {
@@ -1114,6 +1115,77 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 }
 
 
+
+enum {kVelocity, kNoteOn, kNoteNumber};
+void ReadMidi(){
+	
+	
+		// Added by Simon
+	bool noteOn;
+	int velocity;
+
+
+	
+	
+		static midi_byte_t noteOnStatus = 0x90; //on channel 1
+	static int noteNumber = 0;
+	static int waitingFor = kNoteOn;
+	static int playingNote = -1;
+	int message;
+	
+	// Some kind of MIDI detection
+	// MIDI LOOP // todo get midi code out of euroshield 
+	while ((message = midi.getInput()) >= 0){
+		rt_printf("%d\n", message);
+		switch(waitingFor){
+		case kNoteOn:
+			if(message == noteOnStatus){
+				waitingFor = kNoteNumber;
+			}
+			break;
+		case kNoteNumber:
+			if((message & (1<<8)) == 0){
+				noteNumber = message;
+				waitingFor = kVelocity;
+			}
+			break;
+		case kVelocity:
+			if((message & (1<<8)) == 0){
+				int _velocity = message;
+				waitingFor = kNoteOn;
+				// "monophonic" behaviour, with priority to the latest note on
+				// i.e.: a note off from a previous note does not stop the current note
+				// still you might end up having a key down and no note being played if you pressed and released another
+				// key in the meantime
+				if(_velocity == 0 && noteNumber == playingNote){
+					noteOn = false;
+					playingNote = -1;
+					velocity = _velocity;
+					
+					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
+					
+				} else if (_velocity > 0) {
+					noteOn = true;
+					velocity = _velocity;
+					playingNote = noteNumber;
+					
+				//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
+					
+					
+					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
+					//phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
+				}
+				rt_printf("NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
+			}
+			break;
+		}
+	}
+	
+
+}// End of ReadMidi
+
+
+
 void PlayMidi(){
   // rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
@@ -1781,6 +1853,8 @@ void OnTick(BelaContext *context){
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
+  ReadMidi();
+  
   // Play any suitable midi in the sequence 
   PlayMidi();
    
@@ -1935,18 +2009,14 @@ bool setup(BelaContext *context, void *userData)
 }
 
 
-enum {kVelocity, kNoteOn, kNoteNumber};
+
+
 void render(BelaContext *context, void *userData)
 {
 	
 	
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-	// Added by Simon
-	bool noteOn;
-	int velocity;
-	float f0;
-	float phaseIncrement;
 
 	
 
@@ -1957,11 +2027,7 @@ void render(BelaContext *context, void *userData)
 	// one way of getting the midi data is to parse them yourself
 //	(you should set midi.enableParser(false) above):
 
-	static midi_byte_t noteOnStatus = 0x90; //on channel 1
-	static int noteNumber = 0;
-	static int waitingFor = kNoteOn;
-	static int playingNote = -1;
-	int message;
+
 	
 	////////////
 	
@@ -1989,55 +2055,7 @@ void render(BelaContext *context, void *userData)
 	
 	
 	/////////// END BELA OSC
-	
-	// Some kind of MIDI detection
-	// MIDI LOOP // todo get midi code out of euroshield 
-	while ((message = midi.getInput()) >= 0){
-		rt_printf("%d\n", message);
-		switch(waitingFor){
-		case kNoteOn:
-			if(message == noteOnStatus){
-				waitingFor = kNoteNumber;
-			}
-			break;
-		case kNoteNumber:
-			if((message & (1<<8)) == 0){
-				noteNumber = message;
-				waitingFor = kVelocity;
-			}
-			break;
-		case kVelocity:
-			if((message & (1<<8)) == 0){
-				int _velocity = message;
-				waitingFor = kNoteOn;
-				// "monophonic" behaviour, with priority to the latest note on
-				// i.e.: a note off from a previous note does not stop the current note
-				// still you might end up having a key down and no note being played if you pressed and released another
-				// key in the meantime
-				if(_velocity == 0 && noteNumber == playingNote){
-					noteOn = false;
-					playingNote = -1;
-					velocity = _velocity;
-					
-					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
-					
-				} else if (_velocity > 0) {
-					noteOn = true;
-					velocity = _velocity;
-					playingNote = noteNumber;
-					
-				//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
-					
-					
-					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
-					//phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
-				}
-				rt_printf("NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
-			}
-			break;
-		}
-	}
-	
+
 	    ////////////////
 	    
 
@@ -2138,21 +2156,14 @@ void render(BelaContext *context, void *userData)
 	// DIGITAL LOOP 
 	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
 	    
-		
-	
-
-	  // This function returns the value of an analog input, at the time indicated by frame. 
-			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			  
-        // Next state
-        new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
+        	// Next state
+        	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
         
         	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
 
 
             // Rising clock edge? // state-change-1
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
-    
               if (sequence_is_running == LOW){
                 StartSequencer(context);
               }
@@ -2172,6 +2183,13 @@ void render(BelaContext *context, void *userData)
             } 
 			 
       }
+	
+	
+		// Temp code until we have clock
+	   temp_count++;
+	    if(temp_count % 100000 == 0) {
+	    	OnTick(context);	
+	    }
 	
 
         // Only look for this clock if we don't have midi.
