@@ -2018,12 +2018,19 @@ void render(BelaContext *context, void *userData)
 					noteOn = false;
 					playingNote = -1;
 					velocity = _velocity;
+					
+					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
+					
 				} else if (_velocity > 0) {
 					noteOn = true;
 					velocity = _velocity;
 					playingNote = noteNumber;
-					f0 = powf(2, (playingNote-69)/12.0f) * 440;
-					phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
+					
+				//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
+					
+					
+					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
+					//phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
 				}
 				rt_printf("NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
 			}
@@ -2032,6 +2039,13 @@ void render(BelaContext *context, void *userData)
 	}
 	
 	    ////////////////
+	    
+
+	    
+	    
+	    
+	    
+	    ///////
 	
 	
 	  /// SimonSaysSeeq first bits_2_1
