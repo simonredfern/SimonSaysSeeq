@@ -1227,7 +1227,7 @@ void AdvanceSequenceChronology(){
 
     //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+  sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - sequence_length_in_steps_raw;
 
   //rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
 
