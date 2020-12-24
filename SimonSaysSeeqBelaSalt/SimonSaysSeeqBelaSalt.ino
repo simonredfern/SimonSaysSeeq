@@ -187,8 +187,11 @@ const uint8_t BRIGHT_5 = 255;
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
-const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 1; // ONE INDEXED
-const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
+const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 8; // ONE INDEXED
+
+// Sequence Length (and default)
+uint8_t sequence_length_in_steps = 8; 
 
 ///////////////////////
 
@@ -259,8 +262,7 @@ unsigned int gray_code_sequence;
 unsigned int the_sequence;
 unsigned int last_binary_sequence_result; // So we can detect changes
 
-// Sequence Length (and default)
-uint8_t sequence_length_in_steps = 8; 
+
 
 
 bool do_tick = true;
@@ -467,7 +469,7 @@ void printStatus(){
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1000 == 0) {
+    if(gCount % 100000 == 0) {
       rt_printf("================ \n");
 	  rt_printf("printStatus says gCount is: %d \n",gCount);
 
@@ -735,10 +737,6 @@ milliseconds last_clock_pulse=milliseconds();
 
 
 
-// Midi clock and start / stop related
-//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-
-
 
 
 
@@ -759,6 +757,10 @@ float gFreq;
 float gPhaseIncrement = 0;
 bool gIsNoteOn = 0;
 int gVelocity = 0;
+
+int my_note = 0;
+
+
 float gSamplingPeriod = 0;
 //int gSampleCount = 44100; // how often to send out a control change
 
@@ -777,42 +779,83 @@ int gAudioFramesPerAnalogFrame = 0;
  * Note that this is called in a different thread than the audio processing one.
  *
  */
+ /*
 void midiMessageCallback(MidiChannelMessage message, void* arg){
 	if(arg != NULL){
-		rt_printf("Message from midi port %s ", (const char*) arg);
+		rt_printf("midiMessageCallback ** Message from midi port %s ", (const char*) arg);
 	}
 	message.prettyPrint();
 	if(message.getType() == kmmNoteOn){
 		gFreq = powf(2, (message.getDataByte(0) - 69) / 12.f) * 440.f;
 		gVelocity = message.getDataByte(1);
+		
+		my_note = message.getDataByte(0);
+		
+		
 		gPhaseIncrement = 2.f * (float)M_PI * gFreq * gSamplingPeriod;
 		gIsNoteOn = gVelocity > 0;
 		rt_printf("v0:%f, ph: %6.5f, gVelocity: %d\n", gFreq, gPhaseIncrement, gVelocity);
 	} else {
-
-
-// Midi clock  (decimal 248, hex 0xF8)
-
-
+		// Midi clock  (decimal 248, hex 0xF8)
 		int byte0 = message.getDataByte(0);
 		int byte1 = message.getDataByte(1);
-    int type = message.getType();
+    	int type = message.getType();
 
 		rt_printf("type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
 
 
-    do_tick = true;
+    	do_tick = true;
 
-    //OnTick();
-
-
+    	//OnTick();
   }
-
-
-
-
-  
 }
+*/
+
+////////////
+
+
+void midiCallback(MidiChannelMessage message, void* arg){
+	if(message.getType() == kmmNoteOn){
+		if(message.getDataByte(1) > 0){
+			int note = message.getDataByte(0);
+
+		
+			rt_printf("note: %d  \n", note);
+			
+			// todo write to array here.
+			
+		}
+	}
+
+	bool shouldPrint = false;
+	/*
+	if(message.getType() == kmmControlChange){
+		float data = message.getDataByte(1) / 127.0f;
+		switch (message.getDataByte(0)){
+		case 2 :
+			gEffect = (int)(data * 2 + 0.5); // CC2 selects an effect between 0,1,2
+			break;
+		case 3 :
+			gPlaybackLive = data;
+			break;
+		case 4 :
+			gDryWet = data;
+			break;
+		case 5:
+			gGain = data * 300;
+			break;
+		default:
+			shouldPrint = true;
+		}
+	}
+	*/
+	
+	if(shouldPrint){
+		message.prettyPrint();
+	}
+}
+
+
 
 
 
@@ -1133,10 +1176,14 @@ void ReadMidi(){
 	static int playingNote = -1;
 	int message;
 	
+	
+	rt_printf("*** ReadMidi ****** \n");
+	
+	
 	// Some kind of MIDI detection
-	// MIDI LOOP // todo get midi code out of euroshield 
+	// MIDI LOOP // todo get midi code out of Bela 
 	while ((message = midi.getInput()) >= 0){
-		rt_printf("%d\n", message);
+		rt_printf("******* ReadMidi says: %d\n", message);
 		switch(waitingFor){
 		case kNoteOn:
 			if(message == noteOnStatus){
@@ -1175,7 +1222,7 @@ void ReadMidi(){
 					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
 					//phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
 				}
-				rt_printf("NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
+				rt_printf("********* NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
 			}
 			break;
 		}
@@ -1832,7 +1879,7 @@ void OnTick(BelaContext *context){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
- // rt_printf("Hello from OnTick \n");
+ rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
   //SequenceSettings();
@@ -1917,8 +1964,8 @@ bool setup(BelaContext *context, void *userData)
 
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
-	midi.enableParser(false);
-	midi.setParserCallback(midiMessageCallback, (void*) gMidiPort0);
+	midi.enableParser(true);
+	midi.setParserCallback(midiCallback, (void*) gMidiPort0);
 	gSamplingPeriod = 1 / context->audioSampleRate;
 	
 	
