@@ -642,7 +642,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   } 
 
 
-void GateHigh(BelaContext *context){
+void GateHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
   
@@ -651,14 +651,12 @@ void GateHigh(BelaContext *context){
 
 }
 
-void GateLow(BelaContext *context){
+void GateLow(){
   //rt_printf("Gate LOW");
   
   target_gate_out_state = false;
   
- // for(unsigned int n = 0; n < context->digitalFrames; ++n){
-	// 		digitalWrite(context, n, SEQUENCE_OUT_PIN, LOW);
-	// }
+
 }
 
 bool RampIsPositive(){
@@ -721,7 +719,7 @@ uint8_t ReadBit (int number, int b ){
 
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
-void OnStep(BelaContext *context){
+void OnStep(){
 
   
 
@@ -759,9 +757,9 @@ void OnStep(BelaContext *context){
   
    if (play_note){
      rt_printf("****++++++****** play \n");
-    GateHigh(context); 
+    GateHigh(); 
    } else {
-    GateLow(context);
+    GateLow();
      rt_printf("***-----***** NOT play \n");
    }
 
@@ -772,10 +770,10 @@ void OnStep(BelaContext *context){
 
 
 // These are ticks which are not steps - so in between possible beats.
-void OnNotStep(BelaContext *context){
+void OnNotStep(){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLow(context);
+  GateLow();
   
 }
 
@@ -1199,14 +1197,14 @@ void clockShowLow(){
 
 
 // Each time we start the sequencer we want to start from the same conditions.
-void InitSequencer(BelaContext *context){
-  GateLow(context);
+void InitSequencer(){
+  GateLow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
 }
 
-void StartSequencer(BelaContext *context){
+void StartSequencer(){
   //rt_printf("Start Sequencer ");
   
   //debugPrint('A', 'B', 'C', 1,2,3);
@@ -1214,13 +1212,13 @@ void StartSequencer(BelaContext *context){
   //char a[200] = "simon \n";
   //pass_string(a);
   
-  InitSequencer(context);
+  InitSequencer();
   sequence_is_running = HIGH;
 }
 
-void StopSequencer(BelaContext *context){
+void StopSequencer(){
   //rt_printf("Stop Sequencer ");      
-  InitSequencer(context);
+  InitSequencer();
   sequence_is_running = LOW;        
 }
 
@@ -1906,7 +1904,7 @@ rt_printf("InitMidiSequence Done");
 
 
 
-void OnTick(BelaContext *context){
+void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
@@ -1922,12 +1920,12 @@ void OnTick(BelaContext *context){
     clockShowHigh();
     //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
-    OnStep(context);
+    OnStep();
     /////////////////////////////////////////   
   } else {
     clockShowLow();
     // The other ticks which are not "steps".
-    OnNotStep(context);
+    OnNotStep();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
@@ -1941,10 +1939,10 @@ void OnTick(BelaContext *context){
 
 }
 
-void MaybeOnTick(BelaContext *context){
+void MaybeOnTick(){
   if (do_tick == true){
     do_tick = false;
-    OnTick(context);
+    OnTick();
   }
 }
 
@@ -2243,13 +2241,13 @@ void render(BelaContext *context, void *userData)
             // Rising clock edge? // state-change-1
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               if (sequence_is_running == LOW){
-                StartSequencer(context);
+                StartSequencer();
               }
               
               current_digital_clock_in_state = HIGH;
               //Serial.println(String("Went HIGH "));
                
-              OnTick(context);
+              OnTick();
               last_clock_pulse = milliseconds();
               
             } 
@@ -2266,7 +2264,7 @@ void render(BelaContext *context, void *userData)
 		// Temp code until we have clock
 	   temp_count++;
 	    if(temp_count % 1000 == 0) {
-	    	OnTick(context);	
+	    	OnTick();	
 	    }
 	
 
