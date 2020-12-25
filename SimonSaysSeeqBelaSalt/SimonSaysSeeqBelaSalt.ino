@@ -948,7 +948,7 @@ void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer settings and activity.
 
- rt_printf("Hello from OnTick \n");
+ //rt_printf("Hello from OnTick \n");
 
   // Read inputs and update settings.  
   //SequenceSettings();
@@ -992,7 +992,7 @@ void OnTick(){
 // Nice reference: http://www.giordanobenicchi.it/midi-tech/midispec.htm
 
 
-int MIDI_STATUS_OF_CLOCK = 7;
+int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
@@ -1023,7 +1023,9 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		int byte1 = message.getDataByte(1);
     	
 
-		rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+		//rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+		midi_clock_detected = 1;
+		
 		
 		OnTick();
 
@@ -2228,10 +2230,10 @@ void render(BelaContext *context, void *userData)
 	
 	
 		// Temp code until we have clock
-	   temp_count++;
-	    if(temp_count % 1000 == 0) {
-	    	OnTick();	
-	    }
+	   //temp_count++;
+	   // if(temp_count % 1000 == 0) {
+	   // 	OnTick();	
+	   // }
 	
 
         // Only look for this clock if we don't have midi.
