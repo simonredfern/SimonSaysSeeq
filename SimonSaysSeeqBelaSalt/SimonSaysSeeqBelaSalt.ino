@@ -580,6 +580,65 @@ if (f.bad())
 } 
 
 
+void DisableNotes(uint8_t note){
+             // Disable that note for all steps.
+           uint8_t sc = 0;
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+              // WRITE MIDI MIDI_DATA
+              channel_a_midi_note_events[sc][note][1].velocity = 0;
+              channel_a_midi_note_events[sc][note][1].is_active = 0;
+              channel_a_midi_note_events[sc][note][0].velocity = 0;
+              channel_a_midi_note_events[sc][note][0].is_active = 0;         
+            }
+}
+
+
+void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+
+  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  if (on_off == MIDI_NOTE_ON){
+
+        // A mechanism to clear notes from memory by playing them quietly.
+        if (velocity < 7 ){
+           // Send Note OFF
+           // TODO BELA MIDI.sendNoteOff(note, 0, 1);
+           
+           // Disable the note on all steps
+           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
+           DisableNotes(note);
+
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
+          // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
+          // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
+          // these Note OFF events. 
+          // One way is to store them here for processing after the note OFF actually happens. 
+          channel_a_ghost_events[note].is_active=1;
+    
+        } else {
+          // We want the note on, so set it on.
+          //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          // WRITE MIDI MIDI_DATA
+          channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
+          channel_a_midi_note_events[step_count][note][1].velocity = velocity;
+          channel_a_midi_note_events[step_count][note][1].is_active = 1;
+          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
+
+        } 
+      
+          
+        } else {
+          
+            // Note Off
+             //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+             // WRITE MIDI MIDI_DATA
+             channel_a_midi_note_events[step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
+             channel_a_midi_note_events[step_count][note][0].velocity = velocity;
+             channel_a_midi_note_events[step_count][note][0].is_active = 1;
+             //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+
+          
+  }
+  } 
 
 
 void GateHigh(BelaContext *context){
@@ -687,13 +746,9 @@ void OnStep(BelaContext *context){
   
   step_count = StepCountSanity(step_count);
 
-      std::string message = "--:OnStep:" + std::to_string(step_count) + "--";
-
-      
-
-
-
-	  int my_result  = myUdpClient.send(&message, 32);
+      // std::string message = "--:OnStep:" + std::to_string(step_count) + "--";
+	 // This sends a UDP message 
+	 // int my_result  = myUdpClient.send(&message, 32);
   
   
   uint8_t play_note = (the_sequence & ( 1 << step_count )) >> step_count;  
@@ -814,18 +869,47 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 ////////////
 
 
-void midiCallback(MidiChannelMessage message, void* arg){
+void readMidi(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
-			int note = message.getDataByte(0);
+			uint8_t note = message.getDataByte(0);
+			
+			uint8_t velocity = 127;
+			uint8_t channel = 1;
 
 		
-			rt_printf("note: %d  \n", note);
+			rt_printf("note ON: %d  \n", note);
 			
-			// todo write to array here.
+			// Write any note ON into the sequence
+			OnMidiNoteInEvent(MIDI_NOTE_ON, note, velocity, channel);
+			
 			
 		}
 	}
+	
+		if(message.getType() == kmmNoteOff){
+		if(message.getDataByte(1) > 0){
+			uint8_t note = message.getDataByte(0);
+			
+			uint8_t velocity = 0;
+			uint8_t channel = 1;
+
+		
+			rt_printf("note OFF: %d  \n", note);
+			
+			// Write any note ON into the sequence
+			OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
+			
+	
+			
+		}
+	}
+	
+	
+	
+	
+					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
+						//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
 
 	bool shouldPrint = false;
 	/*
@@ -1158,7 +1242,7 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 }
 
 
-
+/*
 enum {kVelocity, kNoteOn, kNoteNumber};
 void ReadMidi(){
 	
@@ -1209,14 +1293,14 @@ void ReadMidi(){
 					playingNote = -1;
 					velocity = _velocity;
 					
-					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
+	
 					
 				} else if (_velocity > 0) {
 					noteOn = true;
 					velocity = _velocity;
 					playingNote = noteNumber;
 					
-				//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
+			
 					
 					
 					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
@@ -1230,7 +1314,7 @@ void ReadMidi(){
 	
 
 }// End of ReadMidi
-
+*/
 
 
 void PlayMidi(){
@@ -1900,9 +1984,9 @@ void OnTick(BelaContext *context){
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
-  ReadMidi();
   
-  // Play any suitable midi in the sequence 
+  
+  // Play any suitable midi in the sequence (note, we read midi using a callback)
   PlayMidi();
    
   // Advance and Reset ticks and steps
@@ -1965,7 +2049,7 @@ bool setup(BelaContext *context, void *userData)
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(true);
-	midi.setParserCallback(midiCallback, (void*) gMidiPort0);
+	midi.setParserCallback(readMidi, (void*) gMidiPort0);
 	gSamplingPeriod = 1 / context->audioSampleRate;
 	
 	
@@ -2514,70 +2598,4 @@ class UdpClient{
 
 
 #endif /* UDPCLIENT_H_ */
-
-void DisableNotes(uint8_t note){
-             // Disable that note for all steps.
-           uint8_t sc = 0;
-            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
-              // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[sc][note][1].velocity = 0;
-              channel_a_midi_note_events[sc][note][1].is_active = 0;
-              channel_a_midi_note_events[sc][note][0].velocity = 0;
-              channel_a_midi_note_events[sc][note][0].is_active = 0;         
-            }
-}
-
-
-void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
-
-  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
-  if (on_off == MIDI_NOTE_ON){
-
-        // A mechanism to clear notes from memory by playing them quietly.
-        if (velocity < 7 ){
-           // Send Note OFF
-           // TODO BELA MIDI.sendNoteOff(note, 0, 1);
-           
-           // Disable the note on all steps
-           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
-           DisableNotes(note);
-
-          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
-          // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
-          // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
-          // these Note OFF events. 
-          // One way is to store them here for processing after the note OFF actually happens. 
-          channel_a_ghost_events[note].is_active=1;
-    
-        } else {
-          // We want the note on, so set it on.
-          //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
-          // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
-          channel_a_midi_note_events[step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[step_count][note][1].is_active = 1;
-          // Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
-
-        } 
-      
-          
-        } else {
-          
-            // Note Off
-             //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
-             // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
-             channel_a_midi_note_events[step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[step_count][note][0].is_active = 1;
-             //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
-
-          
-  }
-  } 
-
-
-
-
-
-
 
