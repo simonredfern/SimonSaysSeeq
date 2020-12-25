@@ -637,7 +637,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              channel_a_midi_note_events[step_count][note][0].is_active = 1;
              //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
 
-          
+        	rt_printf("Done setting MIDI note OFF for note %d when step is %d \n", note,  step_count );
   }
   } 
 
@@ -869,48 +869,66 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
 ////////////
 
+// read midi loop
 
-void readMidi(MidiChannelMessage message, void* arg){
+// start = 0xfa
+// stop = 0xfc
+// clock tick = 0xf8 (248 decimal)
+// continue = 0xfb
+
+
+// Nice reference: http://www.giordanobenicchi.it/midi-tech/midispec.htm
+
+
+int MIDI_STATUS_OF_CLOCK = 7;
+
+
+void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
-			
 			uint8_t velocity = 127;
 			uint8_t channel = 1;
-
-		
-			rt_printf("note ON: %d  \n", note);
+			rt_printf("note ON: %d type: %d  \n", note, kmmNoteOn);
 			
 			// Write any note ON into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_ON, note, velocity, channel);
 			
-			
 		}
-	}
-	
-		if(message.getType() == kmmNoteOff){
+	} else if(message.getType() == kmmNoteOff){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
-			
 			uint8_t velocity = 0;
 			uint8_t channel = 1;
-
-		
 			rt_printf("note OFF: %d  \n", note);
 			
 			// Write any note ON into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
 			
-	
-			
 		}
+	} else if(message.getType() == MIDI_STATUS_OF_CLOCK) {
+			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock 
+		int type = message.getType();
+		int byte0 = message.getDataByte(0);
+		int byte1 = message.getDataByte(1);
+    	
+
+		rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+
 	}
 	
 	
 	
+	// if(message.getType() == kmmSystem){
+	// 	if(message.getDataByte(1) > 0){
+	// 		uint8_t thing1 = message.getDataByte(0);
+	// 		uint8_t thing2 = message.getDataByte(1);	
+	// 		rt_printf("****system message thing1: %d thing2 %d  \n", thing1, thing2);
+			
+	// 	}
+	// }
 	
-					// OnMidiNoteInEvent(MIDI_NOTE_OFF,playingNote, velocity,1);
-						//	OnMidiNoteInEvent(MIDI_NOTE_ON,playingNote, velocity,1);
+	
 
 	bool shouldPrint = false;
 	/*
@@ -1243,79 +1261,7 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 }
 
 
-/*
-enum {kVelocity, kNoteOn, kNoteNumber};
-void ReadMidi(){
-	
-	
-		// Added by Simon
-	bool noteOn;
-	int velocity;
 
-
-	
-	
-		static midi_byte_t noteOnStatus = 0x90; //on channel 1
-	static int noteNumber = 0;
-	static int waitingFor = kNoteOn;
-	static int playingNote = -1;
-	int message;
-	
-	
-	rt_printf("*** ReadMidi ****** \n");
-	
-	
-	// Some kind of MIDI detection
-	// MIDI LOOP // todo get midi code out of Bela 
-	while ((message = midi.getInput()) >= 0){
-		rt_printf("******* ReadMidi says: %d\n", message);
-		switch(waitingFor){
-		case kNoteOn:
-			if(message == noteOnStatus){
-				waitingFor = kNoteNumber;
-			}
-			break;
-		case kNoteNumber:
-			if((message & (1<<8)) == 0){
-				noteNumber = message;
-				waitingFor = kVelocity;
-			}
-			break;
-		case kVelocity:
-			if((message & (1<<8)) == 0){
-				int _velocity = message;
-				waitingFor = kNoteOn;
-				// "monophonic" behaviour, with priority to the latest note on
-				// i.e.: a note off from a previous note does not stop the current note
-				// still you might end up having a key down and no note being played if you pressed and released another
-				// key in the meantime
-				if(_velocity == 0 && noteNumber == playingNote){
-					noteOn = false;
-					playingNote = -1;
-					velocity = _velocity;
-					
-	
-					
-				} else if (_velocity > 0) {
-					noteOn = true;
-					velocity = _velocity;
-					playingNote = noteNumber;
-					
-			
-					
-					
-					//f0 = powf(2, (playingNote-69)/12.0f) * 440;
-					//phaseIncrement = 2 * M_PI * f0 / context->audioSampleRate;
-				}
-				rt_printf("********* NoteOn: %d, NoteNumber: %d, velocity: %d\n", noteOn, noteNumber, velocity);
-			}
-			break;
-		}
-	}
-	
-
-}// End of ReadMidi
-*/
 
 
 void PlayMidi(){
@@ -2050,7 +1996,7 @@ bool setup(BelaContext *context, void *userData)
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(true);
-	midi.setParserCallback(readMidi, (void*) gMidiPort0);
+	midi.setParserCallback(readMidiLoop, (void*) gMidiPort0);
 	gSamplingPeriod = 1 / context->audioSampleRate;
 	
 	
