@@ -2319,7 +2319,7 @@ void render(BelaContext *context, void *userData)
 	
 		// Temp code until we have clock
 	   temp_count++;
-	    if(temp_count % 10000 == 0) {
+	    if(temp_count % 1000 == 0) {
 	    	OnTick(context);	
 	    }
 	
