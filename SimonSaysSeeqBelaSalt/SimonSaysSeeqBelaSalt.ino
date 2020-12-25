@@ -394,7 +394,7 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP; 
-  //rt_printf(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  rt_printf("ResetSequenceCounters Done. sequence_length_in_steps is: %d step_count is now: %d \n", sequence_length_in_steps, step_count);
 }
 
 
@@ -415,13 +415,14 @@ uint8_t StepCountSanity(uint8_t step_count_){
 
 
 
-
+/* Seems not used
 uint8_t IncrementStepCount(){
   step_count = StepCountSanity(step_count + 1);
 
-  rt_printf("IncrementStepCount. sequence_length_in_steps is: %f step_count is now: %f ", sequence_length_in_steps, step_count);
+  rt_printf("IncrementStepCount. sequence_length_in_steps is: %d step_count is now: %d ", sequence_length_in_steps, step_count);
   return StepCountSanity(step_count);
 }
+*/
 
 
 
@@ -2318,7 +2319,7 @@ void render(BelaContext *context, void *userData)
 	
 		// Temp code until we have clock
 	   temp_count++;
-	    if(temp_count % 100000 == 0) {
+	    if(temp_count % 10000 == 0) {
 	    	OnTick(context);	
 	    }
 	
