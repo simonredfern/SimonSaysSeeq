@@ -827,43 +827,157 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-/*
- * This callback is called every time a new input Midi message is available
- *
- * Note that this is called in a different thread than the audio processing one.
- *
- */
- /*
-void midiMessageCallback(MidiChannelMessage message, void* arg){
-	if(arg != NULL){
-		rt_printf("midiMessageCallback ** Message from midi port %s ", (const char*) arg);
-	}
-	message.prettyPrint();
-	if(message.getType() == kmmNoteOn){
-		gFreq = powf(2, (message.getDataByte(0) - 69) / 12.f) * 440.f;
-		gVelocity = message.getDataByte(1);
-		
-		my_note = message.getDataByte(0);
-		
-		
-		gPhaseIncrement = 2.f * (float)M_PI * gFreq * gSamplingPeriod;
-		gIsNoteOn = gVelocity > 0;
-		rt_printf("v0:%f, ph: %6.5f, gVelocity: %d\n", gFreq, gPhaseIncrement, gVelocity);
-	} else {
-		// Midi clock  (decimal 248, hex 0xF8)
-		int byte0 = message.getDataByte(0);
-		int byte1 = message.getDataByte(1);
-    	int type = message.getType();
 
-		rt_printf("type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+void PlayMidi(){
+  // rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
 
-    	do_tick = true;
 
-    	//OnTick();
-  }
+  for (uint8_t n = 0; n <= 127; n++) {
+    //rt_printf("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].is_active == 1) { 
+           // The note could be on one of 6 ticks in the sequence
+           if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+             // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             // TODO SEND BELA MIDI MIDI.sendNoteOn(n, channel_a_midi_note_events[StepCountSanity(step_count)][n][1].velocity, 1);
+           }
+    } 
+
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+           // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+          // TODO SEND BELA MIDI  MIDI.sendNoteOff(n, 0, 1);
+       }
+    }
+} // End midi note loop
+
 }
-*/
+
+
+
+void AdvanceSequenceChronology(){
+  
+  // This function advances or resets the sequence powered by the clock.
+
+  // But first check / set the desired sequence length
+
+  //rt_printf("Hello from AdvanceSequenceChronology ");
+
+    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
+  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
+  sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - sequence_length_in_steps_raw;
+
+  //rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
+
+  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with sequence_length_in_steps it WAS: %d but setting it to: %d ", sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+    
+  }
+  
+  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with sequence_length_in_steps but it is NOW: %d ", sequence_length_in_steps  );
+  }
+
+  new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+
+  // Always advance the ticks SINCE START
+  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+
+
+
+
+  // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
+  // 
+  // We want to "advance" our sequencer every (24/2)/2 = 6 pulses aka ticks. (every semi-quaver / "sixteenth" even if we have 8 of them in a sequence)
+
+   // (
+   // We have 24 ticks per beat 
+   // crotchet * 1 = 24 (4 semiquavers)
+   // crotchet * 2 = 48 (8 semiquavers)
+   // crotchet * 4 = 96 (16 semiauqvers)
+   // )
+
+  // Advance the tick_count as long as we're not at the end of the sequence
+  // tick_count_in_sequence is zero indexed
+  // new_sequence_length_in_ticks is one indexed
+  // 
+
+  // If we're at the end of the sequence
+  if (
+    (loop_timing.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
+
+  // or we past the end and we're at new beat  
+  ||
+  (loop_timing.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
+      && 
+      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      // If somehow we overshot (because pot was being turned whilst sequence running), only 
+      loop_timing.tick_count_since_start % 6 == 0 
+  )
+  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
+  || 
+  loop_timing.tick_count_in_sequence >= 16 * 6
+  ) { // Reset
+    ResetSequenceCounters();
+  } else {
+    SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
+  }
+
+  // Update Step Count (this could also be a function but probably makes sense to store it)
+  // An integer operation - we just want the quotient.
+  step_count = loop_timing.tick_count_in_sequence / 6;
+
+  // Just to show the tick progress  
+  ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+
+ //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+
+  
+}
+
+
+
+void OnTick(){
+// Called on Every MIDI or Analogue clock pulse
+// Drives sequencer settings and activity.
+
+ rt_printf("Hello from OnTick \n");
+
+  // Read inputs and update settings.  
+  //SequenceSettings();
+
+
+
+  // Decide if we have a "step"
+  if (loop_timing.tick_count_in_sequence % 6 == 0){
+    //clockShowHigh();
+    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStep();
+    /////////////////////////////////////////   
+  } else {
+    //clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStep();
+    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+  
+  
+  // Play any suitable midi in the sequence (note, we read midi using a callback)
+  PlayMidi();
+   
+  // Advance and Reset ticks and steps
+  AdvanceSequenceChronology();
+
+}
 
 ////////////
 
@@ -879,8 +993,6 @@ void midiMessageCallback(MidiChannelMessage message, void* arg){
 
 
 int MIDI_STATUS_OF_CLOCK = 7;
-
-
 void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
@@ -912,6 +1024,8 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
     	
 
 		rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
+		
+		OnTick();
 
 	}
 	
@@ -1205,13 +1319,6 @@ void InitSequencer(){
 }
 
 void StartSequencer(){
-  //rt_printf("Start Sequencer ");
-  
-  //debugPrint('A', 'B', 'C', 1,2,3);
-  
-  //char a[200] = "simon \n";
-  //pass_string(a);
-  
   InitSequencer();
   sequence_is_running = HIGH;
 }
@@ -1262,120 +1369,12 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 
 
-void PlayMidi(){
-  // rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
-
-
-
-  for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
-    
-    // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].is_active == 1) { 
-           // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
-             // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
-             // TODO SEND BELA MIDI MIDI.sendNoteOn(n, channel_a_midi_note_events[StepCountSanity(step_count)][n][1].velocity, 1);
-           }
-    } 
-
-    // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
-           // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-          // TODO SEND BELA MIDI  MIDI.sendNoteOff(n, 0, 1);
-       }
-    }
-} // End midi note loop
-
-}
 
 
 
 
-void AdvanceSequenceChronology(){
-  
-  // This function advances or resets the sequence powered by the clock.
-
-  // But first check / set the desired sequence length
-
-  //rt_printf("Hello from AdvanceSequenceChronology ");
-
-    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
-  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - sequence_length_in_steps_raw;
-
-  //rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
-
-  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
-    rt_printf("**** ERROR with sequence_length_in_steps it WAS: %d but setting it to: %d ", sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
-    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
-    
-  }
-  
-  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
-    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
-    rt_printf("**** ERROR with sequence_length_in_steps but it is NOW: %d ", sequence_length_in_steps  );
-  }
-
-  new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
-  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
-
-  // Always advance the ticks SINCE START
-  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
 
 
-
-
-  // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
-  // 
-  // We want to "advance" our sequencer every (24/2)/2 = 6 pulses aka ticks. (every semi-quaver / "sixteenth" even if we have 8 of them in a sequence)
-
-   // (
-   // We have 24 ticks per beat 
-   // crotchet * 1 = 24 (4 semiquavers)
-   // crotchet * 2 = 48 (8 semiquavers)
-   // crotchet * 4 = 96 (16 semiauqvers)
-   // )
-
-  // Advance the tick_count as long as we're not at the end of the sequence
-  // tick_count_in_sequence is zero indexed
-  // new_sequence_length_in_ticks is one indexed
-  // 
-
-  // If we're at the end of the sequence
-  if (
-    (loop_timing.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
-
-  // or we past the end and we're at new beat  
-  ||
-  (loop_timing.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
-      && 
-      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
-      // If somehow we overshot (because pot was being turned whilst sequence running), only 
-      loop_timing.tick_count_since_start % 6 == 0 
-  )
-  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
-  || 
-  loop_timing.tick_count_in_sequence >= 16 * 6
-  ) { // Reset
-    ResetSequenceCounters();
-  } else {
-    SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
-  }
-
-  // Update Step Count (this could also be a function but probably makes sense to store it)
-  // An integer operation - we just want the quotient.
-  step_count = loop_timing.tick_count_in_sequence / 6;
-
-  // Just to show the tick progress  
-  ticks_after_step = loop_timing.tick_count_in_sequence % 6;
-
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
-
-  
-}
 
 
 ////
@@ -1904,40 +1903,7 @@ rt_printf("InitMidiSequence Done");
 
 
 
-void OnTick(){
-// Called on Every MIDI or Analogue clock pulse
-// Drives sequencer settings and activity.
 
- rt_printf("Hello from OnTick \n");
-
-  // Read inputs and update settings.  
-  //SequenceSettings();
-
-
-
-  // Decide if we have a "step"
-  if (loop_timing.tick_count_in_sequence % 6 == 0){
-    clockShowHigh();
-    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
-    //////////////////////////////////////////
-    OnStep();
-    /////////////////////////////////////////   
-  } else {
-    clockShowLow();
-    // The other ticks which are not "steps".
-    OnNotStep();
-    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
-  }
-
-  
-  
-  // Play any suitable midi in the sequence (note, we read midi using a callback)
-  PlayMidi();
-   
-  // Advance and Reset ticks and steps
-  AdvanceSequenceChronology();
-
-}
 
 void MaybeOnTick(){
   if (do_tick == true){
