@@ -33,14 +33,14 @@
 
 
 // For calling URLs ///
-#include <stdio.h>
-#include <string.h>
-#include <fstream>
+//#include <stdio.h>
+//#include <string.h>
+//#include <fstream>
 ///////////////////////
 
 
 
-#include <iostream>
+//#include <iostream>
 
 
 //#include <curl/curl.h>
@@ -83,8 +83,8 @@ http://www.eecs.qmul.ac.uk/~andrewm
 The Bela software is distributed under the GNU Lesser General Public License
 (LGPL 3.0), available here: https://www.gnu.org/licenses/lgpl-3.0.txt
 */
-#include <Bela.h>
-#include <stdlib.h> //random
+//#include <Bela.h>
+//#include <stdlib.h> //random
 #include <math.h> //sinf
 #include <time.h> //time
 #include <libraries/OscillatorBank/OscillatorBank.h>
