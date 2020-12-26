@@ -949,8 +949,8 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
-			uint8_t velocity = message.getDataByte(1);;
-			uint8_t channel = 1;
+			uint8_t velocity = message.getDataByte(1);
+			uint8_t channel = message.getChannel();
 			rt_printf("note ON: %d type: %d  \n", note, kmmNoteOn);
 			
 			// Write any note ON into the sequence
@@ -961,10 +961,10 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
 			uint8_t velocity = 0;
-			uint8_t channel = 1;
+			uint8_t channel = message.getChannel();
 			rt_printf("note OFF: %d  \n", note);
 			
-			// Write any note ON into the sequence
+			// Write any note OFF into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
 			
 		}
