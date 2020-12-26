@@ -143,7 +143,7 @@ const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 8; // ONE INDEXED
 
 // Sequence Length (and default)
-uint8_t sequence_length_in_steps = 8; 
+uint8_t current_sequence_length_in_steps = 8; 
 
 ///////////////////////
 
@@ -205,7 +205,7 @@ float audio_right_input_raw;
 ////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
-uint8_t sequence_length_in_steps_raw;
+uint8_t current_sequence_length_in_steps_raw;
 
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
@@ -346,7 +346,7 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP; 
-  rt_printf("ResetSequenceCounters Done. sequence_length_in_steps is: %d step_count is now: %d \n", sequence_length_in_steps, step_count);
+  rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
 }
 
 
@@ -371,7 +371,7 @@ uint8_t StepCountSanity(uint8_t step_count_){
 uint8_t IncrementStepCount(){
   step_count = StepCountSanity(step_count + 1);
 
-  rt_printf("IncrementStepCount. sequence_length_in_steps is: %d step_count is now: %d ", sequence_length_in_steps, step_count);
+  rt_printf("IncrementStepCount. current_sequence_length_in_steps is: %d step_count is now: %d ", current_sequence_length_in_steps, step_count);
   return StepCountSanity(step_count);
 }
 */
@@ -818,25 +818,25 @@ void AdvanceSequenceChronology(){
 
   //rt_printf("Hello from AdvanceSequenceChronology ");
 
-    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
+    //Serial.println(String("current_sequence_length_in_steps_raw is: ") + current_sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - sequence_length_in_steps_raw;
+  current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
 
-  //rt_printf("sequence_length_in_steps is: %d ", sequence_length_in_steps  );
+  //rt_printf("current_sequence_length_in_steps is: %d ", current_sequence_length_in_steps  );
 
-  if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
-    rt_printf("**** ERROR with sequence_length_in_steps it WAS: %d but setting it to: %d ", sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
-    sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+  if (current_sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with current_sequence_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    current_sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
     
   }
   
-  if (sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
-    sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
-    rt_printf("**** ERROR with sequence_length_in_steps but it is NOW: %d ", sequence_length_in_steps  );
+  if (current_sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with current_sequence_length_in_steps but it is NOW: %d ", current_sequence_length_in_steps  );
   }
 
-  new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  ); 
+  new_sequence_length_in_ticks = (current_sequence_length_in_steps) * 6;
+  //Serial.println(String("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  ); 
   //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
 
   // Always advance the ticks SINCE START
@@ -1335,13 +1335,13 @@ void ChangeSequence(){
 
   
 
-//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
+//binary_sequence_upper_limit = pow(current_sequence_length_in_steps, 2);
 
-// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// REMEMBER, current_sequence_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^sequence_length_in_steps) - 1
-sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+// or (2^current_sequence_length_in_steps) - 1
+sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1; 
 
 
 
@@ -1381,7 +1381,7 @@ sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 
 
-    //the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+    //the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
 
 
@@ -1411,10 +1411,10 @@ sequence_pattern_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 // Sequence length raw
 // ***UPPER pot LOW value***
- //sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
- // rt_printf("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+ //current_sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
+ // rt_printf("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  );
    
-   //((sequence_length_input & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
+   //((sequence_length_input & current_sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    
 /* 
 
@@ -1439,13 +1439,13 @@ void SequenceSettings(){
 
   ////////////////////////////////////////////////////////////////
   // Read button state
-  int button_1_state = 1; // TODO digitalRead(euroshield_button_pin); // Pressed = LOW, Normal = HIGH
+  //int button_1_state = 1; // TODO digitalRead(euroshield_button_pin); // Pressed = LOW, Normal = HIGH
   //rt_printf("button_1_state is: ") + button_1_state);
 
 
   // state-change-3
   
-  int button_1_has_changed = 0; // TODO Button1HasChanged(button_1_state);
+  //int button_1_has_changed = 0; // TODO Button1HasChanged(button_1_state);
   //rt_printf("button_1_has_changed is: ") + button_1_has_changed);
 
 
@@ -1534,13 +1534,13 @@ void SequenceSettings(){
    unsigned int binary_sequence_upper_limit; 
 
 
-//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
+//binary_sequence_upper_limit = pow(current_sequence_length_in_steps, 2);
 
-// REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// REMEMBER, current_sequence_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+// or (2^current_sequence_length_in_steps) - 1
+binary_sequence_upper_limit = pow(2, current_sequence_length_in_steps) - 1; 
 
    //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
@@ -1575,7 +1575,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
     the_sequence = gray_code_sequence;
 
-    the_sequence = BitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+    the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
     the_sequence = ~ the_sequence; // Invert
 
@@ -1602,22 +1602,22 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 // Sequence length raw
 // ***UPPER pot LOW value***
- sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
- // rt_printf("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+ current_sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
+ // rt_printf("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  );
    
-   //((sequence_length_input & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
+   //((sequence_length_input & current_sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
    
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
 
     // If the sequence length is 8 (very predictable), make it shine!
-    if (sequence_length_in_steps == 8){
+    if (current_sequence_length_in_steps == 8){
       Led2Level(BRIGHT_5);
       //Led4Digital(true);
     } else {
       Led2Level(BRIGHT_2);
-      //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
+      //Led2Level(fscale( FIRST_STEP, current_sequence_length_in_steps, 0, BRIGHT_1, current_sequence_length_in_steps, 0));
       //Led4Digital(false);
     }
   
@@ -1628,18 +1628,18 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
   }
 
 // continuous indication of length
-    if (sequence_length_in_steps == 16){
+    if (current_sequence_length_in_steps == 16){
       Led3Level(BRIGHT_2);     
-    } else if (sequence_length_in_steps == 8){
+    } else if (current_sequence_length_in_steps == 8){
       Led3Level(BRIGHT_5);
-    } else if (sequence_length_in_steps == 4){
+    } else if (current_sequence_length_in_steps == 4){
       Led3Level(BRIGHT_4);
     } else {
       Led3Level(BRIGHT_0);
     }
 
 
-  // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, sequence_length_in_steps, -1.5));   
+  // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, current_sequence_length_in_steps, -1.5));   
    
    // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
    //jitter_reduction = (sequence_length_input & jitter_reduction_bits_5_4_3_2_1) >> 0;
@@ -1859,21 +1859,6 @@ bool setup(BelaContext *context, void *userData)
 
 	pinMode(context, 0, 0, OUTPUT); // Set gOutputPin as output
 	
-	
-	
-	
-	
-	//CURL *curl = curl_easy_init();
-	// if(curl) {
-	//   CURLcode res;
-	//   curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-	//   res = curl_easy_perform(curl);
-	//   curl_easy_cleanup(curl);
-	//   rt_printf("after curl_easy_cleanup");
-	// }
-	// abc
-
-
 	midi.readFrom(gMidiPort0);
 	midi.writeTo(gMidiPort0);
 	midi.enableParser(true);
@@ -1946,22 +1931,8 @@ bool setup(BelaContext *context, void *userData)
                 return false;
         gSampleCount = 0;
         
-        // here
-        
-        
-        
-        
         myUdpClient.setup(50002, "18.195.30.76"); 
         
-        
- 
-
-        
-
-        
-		
-
-
         rt_printf("Bye from Setup \n");
 
         return true;
@@ -1982,10 +1953,6 @@ void render(BelaContext *context, void *userData)
     // Print the global variables periodically for debugging purposes.
     printStatus();
 	
-
-	// one way of getting the midi data is to parse them yourself
-//	(you should set midi.enableParser(false) above):
-
 
 	
 	////////////
@@ -2022,18 +1989,11 @@ void render(BelaContext *context, void *userData)
 	    
 	    
 	    
-	    ///////
-	
-	
-	  /// SimonSaysSeeq first bits_2_1
-	
-	
-    // Analog Clock (and left input checking) //////
 
 
     ///////////////////////////////////////////
    // Look for Analogue Clock (24 PPQ)
-   // Note: We use this input for other things too.
+
    
 
 	// Simplest possible case: pass inputs through to outputs
