@@ -949,7 +949,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
-			uint8_t velocity = 127;
+			uint8_t velocity = message.getDataByte(1);;
 			uint8_t channel = 1;
 			rt_printf("note ON: %d type: %d  \n", note, kmmNoteOn);
 			
