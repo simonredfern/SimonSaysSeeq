@@ -30,21 +30,6 @@
 
 #include <chrono>
 
-
-
-// For calling URLs ///
-//#include <stdio.h>
-//#include <string.h>
-//#include <fstream>
-///////////////////////
-
-
-
-//#include <iostream>
-
-
-//#include <curl/curl.h>
-
 #include <libraries/UdpClient/UdpClient.h>
 
 UdpClient myUdpClient;
@@ -56,14 +41,6 @@ milliseconds ms = duration_cast< milliseconds >(
     system_clock::now().time_since_epoch()
 );
 
-/////////////
-
-
-//#define BitClear(x, bitPosition)\
-//    ((x) &= ~(1 << (bitPosition)))
-
-
-/////////////////////////////////////////////////
 
 
 /*
@@ -83,8 +60,7 @@ http://www.eecs.qmul.ac.uk/~andrewm
 The Bela software is distributed under the GNU Lesser General Public License
 (LGPL 3.0), available here: https://www.gnu.org/licenses/lgpl-3.0.txt
 */
-//#include <Bela.h>
-//#include <stdlib.h> //random
+
 #include <math.h> //sinf
 #include <time.h> //time
 #include <libraries/OscillatorBank/OscillatorBank.h>
@@ -119,12 +95,7 @@ void print_binary(unsigned int number)
     if (number >> 1) {
         print_binary(number >> 1);
     }
-    
     rt_printf("%c" , (number & 1) ? '1' : '0' );
-    
-    
-  //  putc((number & 1) ? '1' : '0', stdout);
-
 }
 
 
@@ -133,10 +104,7 @@ const int SEQUENCE_OUT_PIN = 5;
 
 
 // Set the analog channels to read from
-//int gSensorInputFrequency = 0;
 const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
-
-
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
 
@@ -145,13 +113,10 @@ const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
 
-
 // T1 out	digital channel 0
 // T2 out	digital channel 5
 
-const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
-
-
+//const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 // CV I/O 1-8	analog channel 0-7
 const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0;
@@ -161,19 +126,6 @@ const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; //  who knows if this number is 
 
 
 ////////////////////////////////////////////////
-
-// Setup pins
-const uint8_t teensy_led_pin = 13;
-const uint8_t audio1OutPin = 22; 
-const uint8_t euroshield_button_pin = 2;
-
-const uint8_t euroshield_led_pin_count = 4;
-const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 }; // { 3, 4, 5, 6 }; 
-
-// This the the pin for the upper pot on the Euroshield
-const uint8_t upper_pot_pin = 20;
-// This the the pin for the upper pot on the Euroshield
-const uint8_t lower_pot_pin = 21;
 
 
 const uint8_t BRIGHT_0 = 0;
@@ -946,13 +898,10 @@ void AdvanceSequenceChronology(){
 
 void OnTick(){
 // Called on Every MIDI or Analogue clock pulse
-// Drives sequencer settings and activity.
+// Drives sequencer activity.
+// Can be called from Midi Clock and/or Digital Clock In.
 
  //rt_printf("Hello from OnTick \n");
-
-  // Read inputs and update settings.  
-  //SequenceSettings();
-
 
 
   // Decide if we have a "step"
@@ -992,8 +941,11 @@ void OnTick(){
 // Nice reference: http://www.giordanobenicchi.it/midi-tech/midispec.htm
 
 
-int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
+
 void readMidiLoop(MidiChannelMessage message, void* arg){
+
+	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
+
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
@@ -1017,7 +969,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			
 		}
 	} else if(message.getType() == MIDI_STATUS_OF_CLOCK) {
-			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock 
+			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock (kmmSystem ?)
 		int type = message.getType();
 		int byte0 = message.getDataByte(0);
 		int byte1 = message.getDataByte(1);
@@ -1032,41 +984,9 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	}
 	
 	
-	
-	// if(message.getType() == kmmSystem){
-	// 	if(message.getDataByte(1) > 0){
-	// 		uint8_t thing1 = message.getDataByte(0);
-	// 		uint8_t thing2 = message.getDataByte(1);	
-	// 		rt_printf("****system message thing1: %d thing2 %d  \n", thing1, thing2);
-			
-	// 	}
-	// }
-	
-	
+   // float data = message.getDataByte(1) / 127.0f;
 
 	bool shouldPrint = false;
-	/*
-	if(message.getType() == kmmControlChange){
-		float data = message.getDataByte(1) / 127.0f;
-		switch (message.getDataByte(0)){
-		case 2 :
-			gEffect = (int)(data * 2 + 0.5); // CC2 selects an effect between 0,1,2
-			break;
-		case 3 :
-			gPlaybackLive = data;
-			break;
-		case 4 :
-			gDryWet = data;
-			break;
-		case 5:
-			gGain = data * 300;
-			break;
-		default:
-			shouldPrint = true;
-		}
-	}
-	*/
-	
 	if(shouldPrint){
 		message.prettyPrint();
 	}
@@ -1081,10 +1001,8 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 // https://www.codesdope.com/blog/article/set-toggle-and-clear-a-bit-in-c/
 // That will clear the nth bit of number. You must invert the bit string with the bitwise NOT operator (~), then AND it.
 int BitClear (unsigned int number, unsigned int n) {
-	
-// return number &= ~(1 << n);	
-	
-return number &= ~(1UL << n);
+	// return number &= ~(1 << n);	
+	return number &= ~(1UL << n);
 }
 
 
@@ -1121,10 +1039,7 @@ newEnd, float inputValue, float curve){
   curve = (curve * -.1) ; // - invert and scale - this seems more intuitive - postive numbers give more weight to high end on output
   curve = pow(10, curve); // convert linear scale into lograthimic exponent for other pow function
 
-  /*
-   Serial.println(curve * 100, DEC);   // multply by 100 to preserve resolution  
-   Serial.println();
-   */
+
 
   // Check for out of range inputValues
   if (inputValue < originalMin) {
