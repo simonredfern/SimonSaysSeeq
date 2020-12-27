@@ -1314,11 +1314,6 @@ void ChangeSequence(void*){
 	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
     //rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
     
-  //} else {
-  //  rt_printf("NO new value for sequence_pattern_input . Sticking at: %s", sequence_pattern_input  );
-  //}
-  
-  //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
 
 
 	uint8_t sequence_length_lower_limit = 1;
@@ -1384,50 +1379,19 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
     the_sequence = gray_code_sequence;
 
-
-
-
     //the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-
-
     //the_sequence = ~ the_sequence; // Invert
 
-
-
-   
     // So pot fully counter clockwise is 1 on the first beat 
     // if (binary_sequence_result == 1){
     //   the_sequence = 1;
     // }
-
-
-
 
    //rt_printf("the_sequence is: %s ", the_sequence  );
    //Serial.print("\t");
    //Serial.print(the_sequence, BIN);
    //Serial.println();
 
-
-   
-  //rt_printf("right_peak_level is: ") + right_peak_level  );
-
- 
-
-// Sequence length raw
-// ***UPPER pot LOW value***
- //current_sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
- // rt_printf("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  );
-   
-   //((sequence_length_input & current_sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   
-/* 
-
-    
-    */
-    
-    
     // Print the global variables periodically for debugging purposes.
     printStatus();
     
@@ -2059,6 +2023,11 @@ void render(BelaContext *context, void *userData)
         
         
       }
+      
+      // Next LFO Freq and LFO Ramp input
+      
+      
+      
 		}
 	}
 	
