@@ -71,6 +71,9 @@ float gNewMinFrequency;
 float gNewMaxFrequency;
 // Task for handling the update of the frequencies using the analog inputs
 AuxiliaryTask gFrequencyUpdateTask;
+
+AuxiliaryTask gChangeSequenceTask;
+
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in setup()
@@ -140,7 +143,7 @@ const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
-const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 8; // ONE INDEXED
+const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 // Sequence Length (and default)
 uint8_t current_sequence_length_in_steps = 8; 
@@ -946,6 +949,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 
+    // TODO Need to check its really On i.e. if velocity is zero its off...
 	if(message.getType() == kmmNoteOn){
 		if(message.getDataByte(1) > 0){
 			uint8_t note = message.getDataByte(0);
@@ -1296,7 +1300,9 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 ////
 
-void ChangeSequence(){
+
+
+void ChangeSequence(void*){
 	
 	 //rt_printf(" ChangeSequence " );
 	
@@ -1421,6 +1427,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
     
     */
     
+    
+    // Print the global variables periodically for debugging purposes.
+    printStatus();
     
 	
 }
@@ -1832,8 +1841,7 @@ void MaybeOnTick(){
 
 /////////////////////////////////////////////////////////
 
-bool setup(BelaContext *context, void *userData)
-{
+bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
  
@@ -1929,6 +1937,16 @@ bool setup(BelaContext *context, void *userData)
         // Initialise auxiliary tasks
         if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
                 return false;
+        
+        
+        if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
+                return false;
+        
+        
+
+    
+        
+        
         gSampleCount = 0;
         
         myUdpClient.setup(50002, "18.195.30.76"); 
@@ -1950,8 +1968,7 @@ void render(BelaContext *context, void *userData)
 
 	
 
-    // Print the global variables periodically for debugging purposes.
-    printStatus();
+
 	
 
 	
@@ -2045,7 +2062,9 @@ void render(BelaContext *context, void *userData)
 		}
 	}
 	
-	ChangeSequence();
+
+	
+	Bela_scheduleAuxiliaryTask(gChangeSequenceTask);
 	
 	
 
