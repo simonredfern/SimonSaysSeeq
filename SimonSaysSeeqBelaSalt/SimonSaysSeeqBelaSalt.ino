@@ -44,15 +44,19 @@ milliseconds ms = duration_cast< milliseconds >(
 );
 
 
-std::chrono::milliseconds my_now (){
-  auto t0 = std::chrono::high_resolution_clock::now();
-  auto t1 = std::chrono::high_resolution_clock::now();
+// std::chrono::milliseconds my_now (){
+//   auto t0 = std::chrono::high_resolution_clock::now();
+//   auto t1 = std::chrono::high_resolution_clock::now();
 
-  std::chrono::duration< double > fs = t1 - t0;
-  std::chrono::milliseconds d = std::chrono::duration_cast< std::chrono::milliseconds >( fs );
+//   std::chrono::duration< double > fs = t1 - t0;
+//   std::chrono::milliseconds d = std::chrono::duration_cast< std::chrono::milliseconds >( fs );
 
-  return d;
-}
+//   return d;
+// }
+
+
+
+
 
  
 
@@ -254,6 +258,9 @@ uint8_t ticks_after_step;
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots. 
 // Actually we like the glitches - it makes the sequencer more interesting
+
+
+double	wait_time_ms;
 
 
 uint8_t NO_JITTER_REDUCTION = 0;
@@ -467,6 +474,13 @@ void printStatus(){
 
 
       rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
+
+      rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
+
+     rt_printf("wait_time_ms is: %d \n", wait_time_ms);
+
+
+      
 
       rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
       rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
@@ -2120,14 +2134,24 @@ void render(BelaContext *context, void *userData)
       //wait_time = 500;
       
       
-      duration wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(500);
+     // duration wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(500);
       
       
       /////////////////////////////////////////////////////////////////////////////////
 		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
 		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 		if (midi_clock_detected == LOW){
-		  if ((milliseconds() - last_clock_pulse > 500) && (sequence_is_running == HIGH)) {
+			
+			
+//			std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+//std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
+			
+		wait_time_ms  = std::chrono::duration_cast<std::chrono::milliseconds> (milliseconds() - last_clock_pulse).count();
+			
+		  if ((wait_time_ms > 500) && (sequence_is_running == HIGH)) {
 		    rt_printf("No analogue clock for a moment. Stopping sequencer.");
 		
 		    // state-change-2
