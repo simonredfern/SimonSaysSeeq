@@ -36,10 +36,26 @@ UdpClient myUdpClient;
 
 // ...
 
+
+// Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
 using namespace std::chrono;
 milliseconds ms = duration_cast< milliseconds >(
     system_clock::now().time_since_epoch()
 );
+
+
+std::chrono::milliseconds my_now (){
+  auto t0 = std::chrono::high_resolution_clock::now();
+  auto t1 = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration< double > fs = t1 - t0;
+  std::chrono::milliseconds d = std::chrono::duration_cast< std::chrono::milliseconds >( fs );
+
+  return d;
+}
+
+ 
+
 
 
 
@@ -737,7 +753,7 @@ void OnStep(){
 void OnNotStep(){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLow();
+  //GateLow();
   
 }
 
@@ -746,7 +762,7 @@ void OnNotStep(){
 
 
 
-milliseconds last_clock_pulse=milliseconds();
+milliseconds last_clock_pulse = milliseconds();
 
 
 
@@ -2099,6 +2115,29 @@ void render(BelaContext *context, void *userData)
             } 
 			 
       }
+      
+      
+      //wait_time = 500;
+      
+      
+      duration wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(500);
+      
+      
+      /////////////////////////////////////////////////////////////////////////////////
+		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
+		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
+		if (midi_clock_detected == LOW){
+		  if ((milliseconds() - last_clock_pulse > 500) && (sequence_is_running == HIGH)) {
+		    rt_printf("No analogue clock for a moment. Stopping sequencer.");
+		
+		    // state-change-2
+		    
+		    StopSequencer();
+		  }
+		}
+      
+      
+      
 	
 	
 		// Temp code until we have clock
