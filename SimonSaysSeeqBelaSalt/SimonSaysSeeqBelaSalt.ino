@@ -102,7 +102,7 @@ void print_binary(unsigned int number)
 }
 
 
-const int SEQUENCE_OUT_PIN = 5;
+
 
 
 
@@ -116,8 +116,13 @@ const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
 
+////////////////////////////////
+// Digital Outputs
 // T1 out	digital channel 0
 // T2 out	digital channel 5
+const int SEQUENCE_OUT_PIN = 0;
+
+
 
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
@@ -678,7 +683,11 @@ void OnStep(){
 
   
 
-  rt_printf("OnStep: %d \n", step_count);
+  rt_printf("Hello from OnStep: %d \n", step_count);
+  
+       rt_printf("the_sequence is: %d \n", the_sequence);
+      print_binary(the_sequence);
+	  rt_printf("%c \n", 'B');
 
 
 
@@ -711,14 +720,14 @@ void OnStep(){
   //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     rt_printf("****++++++****** play \n");
+     rt_printf("OnStep: %d ****++++++****** PLAY \n", step_count);
     GateHigh(); 
    } else {
     GateLow();
-     rt_printf("***-----***** NOT play \n");
+     rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
    }
 
-   
+   rt_printf("==== End of OnStep: %d \n", step_count);
       
 }
 
