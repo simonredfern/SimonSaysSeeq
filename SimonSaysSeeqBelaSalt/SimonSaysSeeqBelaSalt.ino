@@ -377,7 +377,7 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP; 
-  rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
+  //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
 }
 
 
@@ -453,9 +453,9 @@ void printStatus(){
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 100000 == 0) {
-      rt_printf("================ \n");
-	  rt_printf("printStatus says gCount is: %d \n",gCount);
+    if(gCount % 10000 == 0) {
+      //rt_printf("================ \n");
+	  rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
 
       rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
@@ -528,7 +528,7 @@ void printStatus(){
 
 
 
-      rt_printf("\n================ \n");
+      rt_printf("\n==== Bye from printStatus ======= \n");
       
       
 
@@ -713,11 +713,10 @@ void OnStep(){
 
   
 
-  rt_printf("Hello from OnStep: %d \n", step_count);
-  
-       rt_printf("the_sequence is: %d \n", the_sequence);
-      print_binary(the_sequence);
-	  rt_printf("%c \n", 'B');
+  //rt_printf("Hello from OnStep: %d \n", step_count);
+  //rt_printf("the_sequence is: %d \n", the_sequence);
+  //print_binary(the_sequence);
+  //rt_printf("%c \n", 'B');
 
 
 
@@ -750,14 +749,14 @@ void OnStep(){
   //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     rt_printf("OnStep: %d ****++++++****** PLAY \n", step_count);
+     //rt_printf("OnStep: %d ****++++++****** PLAY \n", step_count);
     GateHigh(); 
    } else {
     GateLow();
-     rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
+     //rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
    }
 
-   rt_printf("==== End of OnStep: %d \n", step_count);
+   //rt_printf("==== End of OnStep: %d \n", step_count);
       
 }
 
@@ -1284,7 +1283,7 @@ void StartSequencer(){
 }
 
 void StopSequencer(){
-  //rt_printf("Stop Sequencer ");      
+  rt_printf("Stop Sequencer ");      
   InitSequencer();
   sequence_is_running = LOW;        
 }
