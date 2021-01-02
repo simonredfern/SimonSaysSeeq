@@ -49,7 +49,7 @@ milliseconds ms = duration_cast< milliseconds >(
  auto last_clock_pulse = std::chrono::high_resolution_clock::now();
  
  
- auto clock_duration = last_clock_pulse - setup_time; // This will be updated
+ auto clock_width = last_clock_pulse - setup_time; // This will be updated
 
 
 // double my_now (){
@@ -494,13 +494,6 @@ void printStatus(){
 
 
 
-	  rt_printf("last_clock_pulse is: %d \n", last_clock_pulse);
-
-      rt_printf("wait_time_ms is: %d \n", wait_time_ms);
-
-
-      
-
       rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
       rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
 
@@ -530,15 +523,18 @@ void printStatus(){
       
    // auto t1 = std::chrono::high_resolution_clock::now();
     
-    auto print_time = std::chrono::high_resolution_clock::now();
+    auto status_time = std::chrono::high_resolution_clock::now();
  
     // floating-point duration: no duration_cast needed
-    std::chrono::duration<double, std::milli> time_since_setup = print_time - setup_time;
+    std::chrono::duration<double, std::milli> time_since_setup = status_time - setup_time;
       
       
       rt_printf("time_since_setup  is: %f \n", time_since_setup);  
       
-      
+
+	  rt_printf("last_clock_pulse is: %d \n", last_clock_pulse);
+
+      rt_printf("wait_time_ms is: %d \n", wait_time_ms);      
       
 
 
@@ -1276,7 +1272,7 @@ void SetWaveformBObjectAmplitude (){
 
 
 void CvStop(){
-  rt_printf("CvStop");
+  rt_printf("CvStop \n");
   
   // TODO
   //cv_waveform_b_amplitude = 0;
@@ -1318,7 +1314,7 @@ void StartSequencer(){
 }
 
 void StopSequencer(){
-  rt_printf("Stop Sequencer ");      
+  rt_printf("Stop Sequencer \n");      
   InitSequencer();
   sequence_is_running = LOW;        
 }
@@ -2167,15 +2163,15 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went LOW "));
               
               
-             auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
+            	auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
               
               
                // std::chrono::duration<double, std::milli> 
                 
                 
-               auto clock_duration = last_falling_clock_edge - last_clock_pulse;
+            	auto clock_width = last_falling_clock_edge - last_clock_pulse;
               
-             rt_printf("clock_duration %d", clock_duration);
+            	rt_printf("clock_width is: %d \n", clock_width);
               
               
             } 
@@ -2210,12 +2206,12 @@ void render(BelaContext *context, void *userData)
 		
 	
 	
-	auto bla = clock_duration + clock_duration + clock_duration;
+	auto clock_patience = clock_width + clock_width + clock_width;
 		
 			
-		  if (clock_wait_time > bla){
+		  if (clock_wait_time > clock_patience){
 		  	if (sequence_is_running == HIGH) {
-		    	rt_printf("No analogue clock for a moment. Stopping sequencer.");
+		    	rt_printf("Stopping sequencer because clock_wait_time: %d is greater than clock_patience: %d \n", clock_wait_time, clock_patience);
 			    StopSequencer();
 			}
 		  }
