@@ -43,6 +43,20 @@ milliseconds ms = duration_cast< milliseconds >(
     system_clock::now().time_since_epoch()
 );
 
+ auto setup_time = std::chrono::high_resolution_clock::now();
+ 
+ 
+ auto last_clock_pulse = std::chrono::high_resolution_clock::now();
+ 
+ 
+ auto clock_duration = last_clock_pulse - setup_time; // This will be updated
+
+
+// double my_now (){
+//     return system_clock::now().time_since_epoch();
+// }
+
+
 
 // std::chrono::milliseconds my_now (){
 //   auto t0 = std::chrono::high_resolution_clock::now();
@@ -477,7 +491,12 @@ void printStatus(){
 
       rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
 
-     rt_printf("wait_time_ms is: %d \n", wait_time_ms);
+
+
+
+	  rt_printf("last_clock_pulse is: %d \n", last_clock_pulse);
+
+      rt_printf("wait_time_ms is: %d \n", wait_time_ms);
 
 
       
@@ -505,6 +524,22 @@ void printStatus(){
 
 
       rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
+      
+      //rt_printf("My Now is: %d \n", my_now());
+      
+      
+   // auto t1 = std::chrono::high_resolution_clock::now();
+    
+    auto print_time = std::chrono::high_resolution_clock::now();
+ 
+    // floating-point duration: no duration_cast needed
+    std::chrono::duration<double, std::milli> time_since_setup = print_time - setup_time;
+      
+      
+      rt_printf("time_since_setup  is: %f \n", time_since_setup);  
+      
+      
+      
 
 
 
@@ -775,7 +810,7 @@ void OnNotStep(){
 
 
 
-milliseconds last_clock_pulse = milliseconds();
+
 
 
 
@@ -1841,11 +1876,16 @@ void MaybeOnTick(){
 }
 
 
+
+
+
 /////////////////////////////////////////////////////////
 
 bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
+	
+	setup_time = std::chrono::high_resolution_clock::now();
  
  	// If the amout of audio and analog input and output channels is not the same
 	// we will use the minimum between input and output
@@ -2117,7 +2157,7 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went HIGH "));
                
               OnTick();
-              last_clock_pulse = milliseconds();
+              last_clock_pulse = std::chrono::high_resolution_clock::now();
               
             } 
     
@@ -2125,6 +2165,19 @@ void render(BelaContext *context, void *userData)
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
               //Serial.println(String("Went LOW "));
+              
+              
+              auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
+              
+              
+               // std::chrono::duration<double, std::milli> 
+                
+                
+                auto clock_duration = last_falling_clock_edge - last_clock_pulse;
+              
+              rt_printf("clock_duration %d", clock_duration);
+              
+              
             } 
 			 
       }
@@ -2148,19 +2201,29 @@ void render(BelaContext *context, void *userData)
 //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
 			
-		wait_time_ms  = std::chrono::duration_cast<std::chrono::milliseconds> (milliseconds() - last_clock_pulse).count();
-			
-		  if ((wait_time_ms > 500) && (sequence_is_running == HIGH)) {
-		    rt_printf("No analogue clock for a moment. Stopping sequencer.");
+//		clock_wait_time  = std::chrono::duration_cast<std::chrono::milliseconds> (milliseconds() - last_clock_pulse).count();
 		
-		    // state-change-2
-		    
-		    StopSequencer();
-		  }
-		}
-      
-      
-      
+		
+		
+	auto now_time = std::chrono::high_resolution_clock::now();
+ 
+    // floating-point duration: no duration_cast needed
+    std::chrono::duration<double, std::milli> clock_wait_time = now_time - last_clock_pulse;
+    
+    
+    // 1 096 848 998
+	
+	 //rt_printf("clock_wait_time is: %d ", clock_wait_time);	
+		
+		
+			
+		 // if (clock_wait_time > (clock_duration * 5)){
+		 // 	if (sequence_is_running == HIGH) {
+		 //   	rt_printf("No analogue clock for a moment. Stopping sequencer.");
+			//     StopSequencer();
+			// }
+		 // }
+		  
 	
 	
 		// Temp code until we have clock
