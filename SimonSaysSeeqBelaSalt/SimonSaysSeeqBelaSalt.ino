@@ -2167,15 +2167,15 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went LOW "));
               
               
-             // auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
+             auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
               
               
                // std::chrono::duration<double, std::milli> 
                 
                 
-               // auto clock_duration = last_falling_clock_edge - last_clock_pulse;
+               auto clock_duration = last_falling_clock_edge - last_clock_pulse;
               
-             // rt_printf("clock_duration %d", clock_duration);
+             rt_printf("clock_duration %d", clock_duration);
               
               
             } 
@@ -2208,14 +2208,17 @@ void render(BelaContext *context, void *userData)
 	
 	 //rt_printf("clock_wait_time is: %d ", clock_wait_time);	
 		
+	
+	
+	auto bla = clock_duration + clock_duration + clock_duration;
 		
 			
-		 // if (clock_wait_time > (clock_duration * 5)){
-		 // 	if (sequence_is_running == HIGH) {
-		 //   	rt_printf("No analogue clock for a moment. Stopping sequencer.");
-			//     StopSequencer();
-			// }
-		 // }
+		  if (clock_wait_time > bla){
+		  	if (sequence_is_running == HIGH) {
+		    	rt_printf("No analogue clock for a moment. Stopping sequencer.");
+			    StopSequencer();
+			}
+		  }
 		  
 	
 	
