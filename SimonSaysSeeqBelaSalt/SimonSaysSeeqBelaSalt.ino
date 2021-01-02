@@ -37,6 +37,11 @@ UdpClient myUdpClient;
 // ...
 
 
+
+uint64_t elapsed_samples = 0;
+
+//long elapsed_samples = 0;
+
 // Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
 using namespace std::chrono;
 milliseconds ms = duration_cast< milliseconds >(
@@ -46,10 +51,10 @@ milliseconds ms = duration_cast< milliseconds >(
  auto setup_time = std::chrono::high_resolution_clock::now();
  
  
- auto last_clock_pulse = std::chrono::high_resolution_clock::now();
+ auto last_clock_rising_edge = std::chrono::high_resolution_clock::now();
  
  
- auto clock_width = last_clock_pulse - setup_time; // This will be updated
+ auto clock_width = last_clock_rising_edge - setup_time; // This will be updated
 
 
 // double my_now (){
@@ -521,20 +526,28 @@ void printStatus(){
       //rt_printf("My Now is: %d \n", my_now());
       
       
-   // auto t1 = std::chrono::high_resolution_clock::now();
+		// auto t1 = std::chrono::high_resolution_clock::now();
     
-    auto status_time = std::chrono::high_resolution_clock::now();
+    	auto status_time = std::chrono::high_resolution_clock::now();
  
-    // floating-point duration: no duration_cast needed
-    std::chrono::duration<double, std::milli> time_since_setup = status_time - setup_time;
+    	// floating-point duration: no duration_cast needed
+    	std::chrono::duration<double, std::milli> time_since_setup = status_time - setup_time;
       
       
-      rt_printf("time_since_setup  is: %f \n", time_since_setup);  
+    	rt_printf("time_since_setup  is: %f \n", time_since_setup);  
+    	
+    	
+    	auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    	
+    	rt_printf("millisec_since_epoch is: %d \n", millisec_since_epoch);
       
 
-	  rt_printf("last_clock_pulse is: %d \n", last_clock_pulse);
+		rt_printf("last_clock_rising_edge is: %d \n", last_clock_rising_edge);
+	  
+		rt_printf("clock_width is: %d \n", clock_width);
+	  
 
-      rt_printf("wait_time_ms is: %d \n", wait_time_ms);      
+    	rt_printf("wait_time_ms is: %d \n", wait_time_ms);      
       
 
 
@@ -1314,7 +1327,22 @@ void StartSequencer(){
 }
 
 void StopSequencer(){
-  rt_printf("Stop Sequencer \n");      
+//	auto millisec_since_epoch_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+	
+	
+//	unsigned long milliseconds_since_epoch = std::chrono::system_clock::now().time_since_epoch();
+	
+
+  // Note the format %llu is used to format 64bit unsigned integer. 
+  // see https://stackoverflow.com/questions/32112497/how-to-printf-a-64-bit-integer-as-hex
+  // https://stackoverflow.com/questions/18107426/printf-format-for-unsigned-int64-on-windows
+  //rt_printf("Stop Sequencer at: %llx \n", elapsed_samples);   // works - hex
+  rt_printf("Stop Sequencer at: %llu \n", elapsed_samples); // works - unsigned
+  
+  
+  // std::cout << millisec_since_epoch_2;
+  
+  
   InitSequencer();
   sequence_is_running = LOW;        
 }
@@ -2049,6 +2077,9 @@ void render(BelaContext *context, void *userData)
     ///////////////////////////////////////////
    // Look for Analogue Clock (24 PPQ)
 
+
+	elapsed_samples = context->audioFramesElapsed;
+
    
 
 	// Simplest possible case: pass inputs through to outputs
@@ -2153,7 +2184,7 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went HIGH "));
                
               OnTick();
-              last_clock_pulse = std::chrono::high_resolution_clock::now();
+              last_clock_rising_edge = std::chrono::high_resolution_clock::now();
               
             } 
     
@@ -2163,13 +2194,13 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went LOW "));
               
               
-            	auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
+            	auto last_clock_falling_edge = std::chrono::high_resolution_clock::now();
               
               
                // std::chrono::duration<double, std::milli> 
                 
                 
-            	auto clock_width = last_falling_clock_edge - last_clock_pulse;
+            	auto clock_width = last_clock_falling_edge - last_clock_rising_edge;
               
             	rt_printf("clock_width is: %d \n", clock_width);
               
@@ -2197,21 +2228,21 @@ void render(BelaContext *context, void *userData)
 	auto now_time = std::chrono::high_resolution_clock::now();
  
     // floating-point duration: no duration_cast needed
-    std::chrono::duration<double, std::milli> clock_wait_time = now_time - last_clock_pulse;
+    std::chrono::duration<double, std::milli> time_since_last_clock_rising_edge = now_time - last_clock_rising_edge;
     
     
     // 1 096 848 998
 	
-	 //rt_printf("clock_wait_time is: %d ", clock_wait_time);	
+	 //rt_printf("time_since_last_clock_rising_edge is: %d ", time_since_last_clock_rising_edge);	
 		
 	
 	
 	auto clock_patience = clock_width + clock_width + clock_width;
 		
 			
-		  if (clock_wait_time > clock_patience){
+		  if (time_since_last_clock_rising_edge > clock_patience){
 		  	if (sequence_is_running == HIGH) {
-		    	rt_printf("Stopping sequencer because clock_wait_time: %d is greater than clock_patience: %d \n", clock_wait_time, clock_patience);
+		    	rt_printf("Stopping sequencer because time_since_last_clock_rising_edge: %d is greater than clock_patience: %d \n", time_since_last_clock_rising_edge, clock_patience);
 			    StopSequencer();
 			}
 		  }
@@ -2255,7 +2286,7 @@ WORKS
               //Serial.println(String("Went HIGH "));
                
               OnTick(context);
-              last_clock_pulse = milliseconds();
+              last_clock_rising_edge = milliseconds();
               
             } 
     
@@ -2368,7 +2399,7 @@ WORKS
               
               
               do_tick = true;
-              last_clock_pulse = milliseconds();
+              last_clock_rising_edge = milliseconds();
               
             } 
     
