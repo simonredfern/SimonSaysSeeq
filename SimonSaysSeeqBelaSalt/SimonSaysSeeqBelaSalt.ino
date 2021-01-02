@@ -38,43 +38,25 @@ UdpClient myUdpClient;
 
 
 
-uint64_t elapsed_samples = 0;
+uint64_t frame_timer = 0;
 
-//long elapsed_samples = 0;
+uint64_t last_clock_falling_edge = 0; 
+
+uint64_t last_clock_rising_edge = 0;
+ 
+int clock_width = 0;
+
+uint64_t elapsed_since_last_clock_rising_edge = 0;
+
+int clock_patience = 112000;
+
+
 
 // Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
 using namespace std::chrono;
 milliseconds ms = duration_cast< milliseconds >(
     system_clock::now().time_since_epoch()
 );
-
- auto setup_time = std::chrono::high_resolution_clock::now();
- 
- 
- auto last_clock_rising_edge = std::chrono::high_resolution_clock::now();
- 
- 
- auto clock_width = last_clock_rising_edge - setup_time; // This will be updated
-
-
-// double my_now (){
-//     return system_clock::now().time_since_epoch();
-// }
-
-
-
-// std::chrono::milliseconds my_now (){
-//   auto t0 = std::chrono::high_resolution_clock::now();
-//   auto t1 = std::chrono::high_resolution_clock::now();
-
-//   std::chrono::duration< double > fs = t1 - t0;
-//   std::chrono::milliseconds d = std::chrono::duration_cast< std::chrono::milliseconds >( fs );
-
-//   return d;
-// }
-
-
-
 
 
  
@@ -474,81 +456,71 @@ void printStatus(){
 	
     if(gCount % 10000 == 0) {
       //rt_printf("================ \n");
-	  rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
+		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
+		// Global frame timing
 
-      rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
-	  rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
-	  
-	  rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
-      rt_printf("sequence_length_input is: %d \n", sequence_length_input);
-      
-      
-      rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
-      rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
-
-
-	  rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
-	  rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
-
-
-      rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
-
-      rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
-
-
-
-
-      rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
-      rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
-
-
-     // rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-     // rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
-
-      rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
-
-
-	  rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
-	  print_binary(gray_code_sequence);
-	  rt_printf("%c \n", 'B');
-
-
-      rt_printf("the_sequence is: %d \n", the_sequence);
-      print_binary(the_sequence);
-	  rt_printf("%c \n", 'B');
-
-      rt_printf("sequence_is_running is: %d \n", sequence_is_running);
-
-
-      rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
-      
-      //rt_printf("My Now is: %d \n", my_now());
-      
-      
-		// auto t1 = std::chrono::high_resolution_clock::now();
-    
-    	auto status_time = std::chrono::high_resolution_clock::now();
- 
-    	// floating-point duration: no duration_cast needed
-    	std::chrono::duration<double, std::milli> time_since_setup = status_time - setup_time;
-      
-      
-    	rt_printf("time_since_setup  is: %f \n", time_since_setup);  
-    	
-    	
-    	auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    	
-    	rt_printf("millisec_since_epoch is: %d \n", millisec_since_epoch);
-      
-
-		rt_printf("last_clock_rising_edge is: %d \n", last_clock_rising_edge);
-	  
+		rt_printf("frame_timer is: %llu \n", frame_timer);
+		
+		
+		// Analog / Digital Clock In.
+  		rt_printf("last_clock_rising_edge is: %llu \n", last_clock_rising_edge);
+		rt_printf("last_clock_falling_edge is: %llu \n", last_clock_falling_edge);
 		rt_printf("clock_width is: %d \n", clock_width);
-	  
+		rt_printf("clock_patience is: %d \n", clock_patience);
 
-    	rt_printf("wait_time_ms is: %d \n", wait_time_ms);      
+		// Other Inputs
+
+    	rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
+		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
+	  
+		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+    	rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       
+      
+    	rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
+    	rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
+
+
+		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
+		rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
+
+		// Clock derived values
+
+    	rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
+
+    	rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
+    	rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
+
+    	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
+    	
+
+    	// rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
+    	// rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+
+    	
+    	// Sequence derived results 
+    	rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
+
+		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
+		print_binary(gray_code_sequence);
+		rt_printf("%c \n", 'B');
+
+
+    	rt_printf("the_sequence is: %d \n", the_sequence);
+    	print_binary(the_sequence);
+		rt_printf("%c \n", 'B');
+
+		// Sequence state
+
+		
+    	rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+
+
+      
+    	// Sequence Outputs 
+      
+    	rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
 
 
 
@@ -1336,8 +1308,8 @@ void StopSequencer(){
   // Note the format %llu is used to format 64bit unsigned integer. 
   // see https://stackoverflow.com/questions/32112497/how-to-printf-a-64-bit-integer-as-hex
   // https://stackoverflow.com/questions/18107426/printf-format-for-unsigned-int64-on-windows
-  //rt_printf("Stop Sequencer at: %llx \n", elapsed_samples);   // works - hex
-  rt_printf("Stop Sequencer at: %llu \n", elapsed_samples); // works - unsigned
+  //rt_printf("Stop Sequencer at: %llx \n", frame_timer);   // works - hex
+  rt_printf("Stop Sequencer at: %llu \n", frame_timer); // works - unsigned
   
   
   // std::cout << millisec_since_epoch_2;
@@ -1909,7 +1881,7 @@ bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
 	
-	setup_time = std::chrono::high_resolution_clock::now();
+
  
  	// If the amout of audio and analog input and output channels is not the same
 	// we will use the minimum between input and output
@@ -2078,7 +2050,7 @@ void render(BelaContext *context, void *userData)
    // Look for Analogue Clock (24 PPQ)
 
 
-	elapsed_samples = context->audioFramesElapsed;
+	frame_timer = context->audioFramesElapsed;
 
    
 
@@ -2166,6 +2138,7 @@ void render(BelaContext *context, void *userData)
 	*/
 	
 	// DIGITAL LOOP 
+		// Looking at all frames in case the transition happens in these frames. However, as its a clock we could maybe look at only the first frame.
 	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
 	    
         	// Next state
@@ -2174,78 +2147,50 @@ void render(BelaContext *context, void *userData)
         	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
 
 
-            // Rising clock edge? // state-change-1
+            // If detect a rising clock edge
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
+              
+              current_digital_clock_in_state = HIGH;
+              last_clock_rising_edge = frame_timer;
+              
               if (sequence_is_running == LOW){
                 StartSequencer();
               }
-              
-              current_digital_clock_in_state = HIGH;
-              //Serial.println(String("Went HIGH "));
                
               OnTick();
-              last_clock_rising_edge = std::chrono::high_resolution_clock::now();
               
             } 
-    
-            // Falling clock edge?
+            
+            // If detect a Falling clock edge
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
-              //Serial.println(String("Went LOW "));
-              
-              
-            	auto last_clock_falling_edge = std::chrono::high_resolution_clock::now();
-              
-              
-               // std::chrono::duration<double, std::milli> 
-                
-                
-            	auto clock_width = last_clock_falling_edge - last_clock_rising_edge;
-              
-            	rt_printf("clock_width is: %d \n", clock_width);
-              
-              
+              last_clock_falling_edge = frame_timer;
+            	
+            	
+				// the pulse width of our clock (half actually)
+            	clock_width = last_clock_falling_edge - last_clock_rising_edge;
+            	//rt_printf("clock_width is: %llu \n", clock_width);
+            	
+            	//clock_patience = clock_width * 100;
             } 
-			 
       }
       
-      
-      //wait_time = 500;
-      
-      
-     // duration wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(500);
+     
       
       
       /////////////////////////////////////////////////////////////////////////////////
 		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
 		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 		if (midi_clock_detected == LOW){
-			
-			
-
+    		elapsed_since_last_clock_rising_edge = frame_timer - last_clock_rising_edge;
+			//rt_printf("elapsed_since_last_clock_rising_edge is: %d ", elapsed_since_last_clock_rising_edge);	
 		
-		
-	auto now_time = std::chrono::high_resolution_clock::now();
- 
-    // floating-point duration: no duration_cast needed
-    std::chrono::duration<double, std::milli> time_since_last_clock_rising_edge = now_time - last_clock_rising_edge;
-    
-    
-    // 1 096 848 998
-	
-	 //rt_printf("time_since_last_clock_rising_edge is: %d ", time_since_last_clock_rising_edge);	
-		
-	
-	
-	auto clock_patience = clock_width + clock_width + clock_width;
-		
-			
-		  if (time_since_last_clock_rising_edge > clock_patience){
-		  	if (sequence_is_running == HIGH) {
-		    	rt_printf("Stopping sequencer because time_since_last_clock_rising_edge: %d is greater than clock_patience: %d \n", time_since_last_clock_rising_edge, clock_patience);
-			    StopSequencer();
+			if (elapsed_since_last_clock_rising_edge > clock_patience){
+		  		if (sequence_is_running == HIGH) {
+		    		rt_printf("Stopping sequencer because elapsed_since_last_clock_rising_edge: %llu is greater than clock_patience: %llu \n", elapsed_since_last_clock_rising_edge, clock_patience);
+			    	StopSequencer();
+				}
 			}
-		  }
 		  
 	
 	
