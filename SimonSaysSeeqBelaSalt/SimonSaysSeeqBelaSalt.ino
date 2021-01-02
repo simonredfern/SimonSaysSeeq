@@ -1974,8 +1974,8 @@ bool setup(BelaContext *context, void *userData){
                 freq += increment;
         }
         // Initialise auxiliary tasks
-        if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
-                return false;
+        //if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
+        //        return false;
         
         
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
@@ -1988,7 +1988,7 @@ bool setup(BelaContext *context, void *userData){
         
         gSampleCount = 0;
         
-        myUdpClient.setup(50002, "18.195.30.76"); 
+        //myUdpClient.setup(50002, "18.195.30.76"); 
         
         rt_printf("Bye from Setup \n");
 
@@ -2002,70 +2002,31 @@ void render(BelaContext *context, void *userData)
 {
 	
 	
-	std::srand(static_cast<unsigned int>(std::time(nullptr)));
+//	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-
-	
-
-
-	
-
-	
-	////////////
-	
-	// BELA OSC LGPL
-	// float arr[context->audioFrames];
- //       // Render audio frames
- //       osc.process(context->audioFrames, arr);
- //       for(unsigned int n = 0; n < context->audioFrames; ++n){
- //               audioWrite(context, n, 0, arr[n]);
- //               audioWrite(context, n, 1, arr[n]);
- //       }
- //       if(context->analogFrames != 0 && (gSampleCount += context->audioFrames) >= 128) {
- //               gSampleCount = 0;
- //               gNewMinFrequency = map(context->analogIn[0], 0, 1.0, 1000.0f, 8000.0f);
- //               gNewMaxFrequency = map(context->analogIn[1], 0, 1.0, 1000.0f, 8000.0f);
- //               // Make sure max >= min
- //               if(gNewMaxFrequency < gNewMinFrequency) {
- //                       float temp = gNewMaxFrequency;
- //                       gNewMaxFrequency = gNewMinFrequency;
- //                       gNewMinFrequency = temp;
- //               }
- //               // Request that the lower-priority task run at next opportunity
- //               Bela_scheduleAuxiliaryTask(gFrequencyUpdateTask);
- //       }
-	
-	
-	/////////// END BELA OSC
-
-	    ////////////////
-	    
-
-	    
-	    
-	    
+  
 	    
 
 
     ///////////////////////////////////////////
    // Look for Analogue Clock (24 PPQ)
 
-
+	// Use this global variable as a timing device
+	// Set other time points from this frame_timer
 	frame_timer = context->audioFramesElapsed;
 
-   
 
-	// Simplest possible case: pass inputs through to outputs
-  // AUDIO LOOP
+    // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
+			// Pass input to output
 			audioWrite(context, n, ch, audioRead(context, n, ch));
 			
-			if (ch = 0) {
+			if (ch == 0) {
 				audio_left_input_raw = audioRead(context, n, ch);
 			}
 			
-			if (ch = 1) {
+			if (ch == 1) {
 				audio_right_input_raw = audioRead(context, n, ch);
 			}
 			
@@ -2081,14 +2042,14 @@ void render(BelaContext *context, void *userData)
       analogWrite(context, n, ch, analogRead(context, n, ch));
 
 	  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
-	  	sequence_length_input_raw = 0.5 + rand()/RAND_MAX + analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
+	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
 	  }	
 
 
       // Get the sequence_pattern_input_raw
       if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
-      	// note this is getting all the frames
-        sequence_pattern_input_raw = 0.5 + rand()/RAND_MAX + analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+      	// note this is getting all the frames // 0.5 + rand()/RAND_MAX + 
+        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
         
         
         //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
@@ -2113,30 +2074,6 @@ void render(BelaContext *context, void *userData)
 	
 	Bela_scheduleAuxiliaryTask(gChangeSequenceTask);
 	
-	
-
-
-// DIGITAL LOOP need to handle this differently because of pin in / out
- // for(unsigned int n = 0; n < context->digitalFrames; n++) {
-	// 	for(unsigned int ch = 0; ch < gDigitalChannelNum; ch++){
-	// 		digitalWrite(context, n, ch, digitalRead(context, n, ch));
-	// 	}
-	// }
-
-
-  /*
-
-  // ANALOG LOOP
-  for(unsigned int p = 0; p < context->analogFrames; p++) {
-        	// This will grab the last value from the last frame 
-        //	sequence_pattern_input_raw = analogRead(context, p, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
-
-      if(gAudioFramesPerAnalogFrame && !(p % gAudioFramesPerAnalogFrame)) {
-	          sequence_pattern_input_raw = analogRead(context, p/gAudioFramesPerAnalogFrame, 0);
-        }
-	}
-	
-	*/
 	
 	// DIGITAL LOOP 
 		// Looking at all frames in case the transition happens in these frames. However, as its a clock we could maybe look at only the first frame.
@@ -2176,6 +2113,7 @@ void render(BelaContext *context, void *userData)
             	clock_width = last_clock_falling_edge - last_clock_rising_edge;
             	//rt_printf("clock_width is: %llu \n", clock_width);
             	
+            	// currently a constant 
             	//clock_patience = clock_width * 100;
             } 
       }
@@ -2249,20 +2187,7 @@ WORKS
       }
 
 */
-
-
-      
-      
-
-
-
-
-
-      
-
-   
-      
-      
+  
 
         } 
 	} // End of render
