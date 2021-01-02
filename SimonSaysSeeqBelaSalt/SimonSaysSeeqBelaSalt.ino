@@ -95,6 +95,9 @@ AuxiliaryTask gFrequencyUpdateTask;
 
 AuxiliaryTask gChangeSequenceTask;
 
+AuxiliaryTask gPrintStatus;
+
+
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in setup()
@@ -450,12 +453,12 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 } 
 
 
-void printStatus(){
+void printStatus(void*){
 
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 10000 == 0) {
+    if(gCount % 4 == 0) {
       //rt_printf("================ \n");
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -727,6 +730,9 @@ uint8_t ReadBit (int number, int b ){
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
 void OnStep(){
+	
+	
+  Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
   
 
@@ -1462,8 +1468,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    //Serial.print(the_sequence, BIN);
    //Serial.println();
 
-    // Print the global variables periodically for debugging purposes.
-    printStatus();
+
     
 	
 }
@@ -1981,7 +1986,8 @@ bool setup(BelaContext *context, void *userData){
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
                 return false;
         
-        
+        if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 80, "bela-print-status")) == 0)
+                return false;
 
     
         
