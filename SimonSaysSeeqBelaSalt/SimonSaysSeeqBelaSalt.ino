@@ -250,6 +250,7 @@ bool do_tick = true;
 
 
 bool target_gate_out_state = false;
+bool set_gate_out_state = false;
 
 // Used to control when/how we change sequence length 
 uint8_t new_sequence_length_in_ticks; 
@@ -2144,7 +2145,11 @@ void render(BelaContext *context, void *userData)
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
         
-        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
+        	// Only set new state if target is changed
+        	if (target_gate_out_state != set_gate_out_state){
+	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
+	        	set_gate_out_state = target_gate_out_state;
+        	}
 
 
             // If detect a rising clock edge
