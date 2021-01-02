@@ -2167,15 +2167,15 @@ void render(BelaContext *context, void *userData)
               //Serial.println(String("Went LOW "));
               
               
-              auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
+             // auto last_falling_clock_edge = std::chrono::high_resolution_clock::now();
               
               
                // std::chrono::duration<double, std::milli> 
                 
                 
-                auto clock_duration = last_falling_clock_edge - last_clock_pulse;
+               // auto clock_duration = last_falling_clock_edge - last_clock_pulse;
               
-              rt_printf("clock_duration %d", clock_duration);
+             // rt_printf("clock_duration %d", clock_duration);
               
               
             } 
@@ -2195,14 +2195,7 @@ void render(BelaContext *context, void *userData)
 		if (midi_clock_detected == LOW){
 			
 			
-//			std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-//std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
-			
-//		clock_wait_time  = std::chrono::duration_cast<std::chrono::milliseconds> (milliseconds() - last_clock_pulse).count();
-		
 		
 		
 	auto now_time = std::chrono::high_resolution_clock::now();
@@ -2234,7 +2227,7 @@ void render(BelaContext *context, void *userData)
 	
 
         // Only look for this clock if we don't have midi.
-        if (midi_clock_detected == LOW) {
+   //     if (midi_clock_detected == LOW) {
 
           //Serial.println(String(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
           
