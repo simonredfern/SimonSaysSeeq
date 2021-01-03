@@ -237,7 +237,7 @@ float audio_right_input_raw;
 ////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
-uint8_t current_sequence_length_in_steps_raw;
+//uint8_t current_sequence_length_in_steps_raw;
 
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
@@ -902,7 +902,7 @@ void AdvanceSequenceChronology(){
 
 
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
+  //current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
 
   //rt_printf("current_sequence_length_in_steps is: %d ", current_sequence_length_in_steps  );
 
