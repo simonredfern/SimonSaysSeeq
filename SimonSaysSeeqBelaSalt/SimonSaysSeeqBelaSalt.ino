@@ -209,7 +209,7 @@ unsigned int lfo_a_frequency_input_at_button_change;
 
 //bool upper_pot_low_engaged = true;
 float sequence_length_input_raw;
-unsigned int sequence_length_input = 20;
+//unsigned int sequence_length_input = 20;
 unsigned int sequence_length_input_last;
 unsigned int sequence_length_input_at_button_change;
 
@@ -455,7 +455,7 @@ void debugPrint(char a, char b, char c, int x, int y, int z ){
 
 void printStatus(void*){
 
-    // We don't want to print every time else we overload the CPU
+    // Might not want to print every time else we overload the CPU
     gCount++;
 	
     if(gCount % 1 == 0) {
@@ -479,7 +479,7 @@ void printStatus(void*){
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
-    	rt_printf("sequence_length_input is: %d \n", sequence_length_input);
+    	//rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       
       
     	rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
@@ -504,6 +504,12 @@ void printStatus(void*){
 
     	
     	// Sequence derived results 
+    	
+    	
+    	
+    	
+    	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
+    	
     	rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
 
 		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
@@ -742,7 +748,7 @@ uint8_t ReadBit (int number, int b ){
 void OnStep(){
 	
 	
-  Bela_scheduleAuxiliaryTask(gPrintStatus);	
+
 
   
 
@@ -788,6 +794,8 @@ void OnStep(){
     GateLow();
      //rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
    }
+   
+   Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
    //rt_printf("==== End of OnStep: %d \n", step_count);
       
@@ -892,7 +900,7 @@ void AdvanceSequenceChronology(){
 
   //rt_printf("Hello from AdvanceSequenceChronology ");
 
-    //Serial.println(String("current_sequence_length_in_steps_raw is: ") + current_sequence_length_in_steps_raw  );
+
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
 
@@ -1397,15 +1405,13 @@ void ChangeSequence(void*){
 	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
     unsigned int sequence_pattern_upper_limit = 1023; 
 	
-	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
+	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
     //rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
     
 
 
-	uint8_t sequence_length_lower_limit = 1;
-	uint8_t sequence_length_upper_limit = 8;
 
-    sequence_length_input = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, sequence_length_lower_limit, sequence_length_upper_limit))); //GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
+    current_sequence_length_in_steps = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
     
  
     //////////////////////////////////////////
@@ -1484,7 +1490,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 }
 
 
-
+/*
 //////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
 // This is called from the main loop() function on every Midi Clock message.
 // It contains things that we want to check / happen every tick..
@@ -1820,7 +1826,7 @@ binary_sequence_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
   } // End of SequenceSettings
 ////////////////////////////////////////////////
 
-
+*/
 
 ////
 
@@ -2054,31 +2060,31 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-      // Pass everyting through
-      analogWrite(context, n, ch, analogRead(context, n, ch));
-
-	  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
-	  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
-	  }	
-
-
-      // Get the sequence_pattern_input_raw
-      if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
-      	// note this is getting all the frames // 0.5 + rand()/RAND_MAX + 
-        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
-        
-        
-        //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
-        
-        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
-        
-        
-        //sequence_pattern_input = static_cast<double>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
-    	//rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
-        
-        
-      }
-      
+	      // Pass everyting through
+	      analogWrite(context, n, ch, analogRead(context, n, ch));
+	
+		  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
+		  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
+		  }	
+	
+	
+	      // Get the sequence_pattern_input_raw
+	      if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
+	      	// note this is getting all the frames 
+	        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+	        
+	        
+	        //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
+	        
+	        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
+	        
+	        
+	        //sequence_pattern_input = static_cast<double>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
+	    	//rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
+	        
+	        
+	      }
+	      
       // Next LFO Freq and LFO Ramp input
       
       
