@@ -27,6 +27,11 @@
 #include <stdlib.h>
 #include <cmath>
 
+#include <libraries/ADSR/ADSR.h>
+
+
+
+
 
 #include <chrono>
 
@@ -424,6 +429,46 @@ float gSecondsElapsed = 0;
 int gCount = 0;
 
 int temp_count = 0;
+
+
+
+// for ADSR
+
+ADSR envelope; // ADSR envelope
+
+float gAttack = 0.1; // Envelope attack (seconds)
+float gDecay = 0.25; // Envelope decay (seconds)
+float gRelease = 0.5; // Envelope release (seconds)
+float gSustain = 1.0; // Envelope sustain level
+
+float gFrequency = 320.0; // Oscillator frequency (Hz)
+//float gPhase; // Oscillator phase
+//float gInverseSampleRate;
+
+// Oscillator type
+enum osc_type
+{
+	sine,		// 0
+	triangle,	// 1
+	square,		// 2
+	sawtooth,	// 3
+	numOscTypes
+};
+
+
+
+
+
+
+
+
+
+/// end for ADSR
+
+
+
+
+
 
 // void pass_string_2(const std::string&){
 // 	 if(gCount % 100000 == 0) {
