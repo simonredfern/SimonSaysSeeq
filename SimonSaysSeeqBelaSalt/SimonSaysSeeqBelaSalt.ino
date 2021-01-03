@@ -2106,9 +2106,13 @@ void render(BelaContext *context, void *userData)
         
         	// Only set new state if target is changed
         	if (target_gate_out_state != gate_out_state_set){
+        		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
 	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
 	        	gate_out_state_set = target_gate_out_state;
         	}
+        	
+        	// Do similar for another PIN for if (step_count == FIRST_STEP)
+        	
 
 
             // If detect a rising clock edge
