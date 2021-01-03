@@ -131,7 +131,7 @@ void print_binary(unsigned int number)
 
 
 // Set the analog channels to read from
-const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
+//const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
 
@@ -150,22 +150,27 @@ const int SEQUENCE_OUT_PIN = 0;
 
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
-// CV I/O 1-8	analog channel 0-7
-const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0;
+// CV I/O 1-8	ANALOG channel 0-7
+const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 
 
-const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; //  who knows if this number is good
+const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; // CV 2 input
 
+
+const int SEQUENCE_LFO_FREQ_INPUT_PIN = 2; // CV 3 input
+
+
+const int SEQUENCE_LFO_RAMP_INPUT_PIN = 3; // CV 4 input
 
 ////////////////////////////////////////////////
 
 
-const uint8_t BRIGHT_0 = 0;
-const uint8_t BRIGHT_1 = 10;
-const uint8_t BRIGHT_2 = 20;
-const uint8_t BRIGHT_3 = 75;
-const uint8_t BRIGHT_4 = 100;
-const uint8_t BRIGHT_5 = 255;
+// const uint8_t BRIGHT_0 = 0;
+// const uint8_t BRIGHT_1 = 10;
+// const uint8_t BRIGHT_2 = 20;
+// const uint8_t BRIGHT_3 = 75;
+// const uint8_t BRIGHT_4 = 100;
+// const uint8_t BRIGHT_5 = 255;
 
 // Use zero based index for sequencer. i.e. step_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
@@ -481,9 +486,14 @@ void printStatus(void*){
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
     	//rt_printf("sequence_length_input is: %d \n", sequence_length_input);
       
-      
-    	rt_printf("lfo_a_frequency_input is: %d \n", lfo_a_frequency_input);
-    	rt_printf("lfo_b_frequency_input is: %d \n", lfo_b_frequency_input);
+
+
+    	rt_printf("lfo_a_frequency_input_raw is: %f \n", lfo_a_frequency_input_raw);
+    	rt_printf("lfo_a_frequency_input is: %f \n", lfo_a_frequency_input);
+
+
+    	rt_printf("lfo_b_frequency_input_raw is: %f \n", lfo_b_frequency_input_raw);
+    	rt_printf("lfo_b_frequency_input is: %f \n", lfo_b_frequency_input);
 
 
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
@@ -2084,6 +2094,18 @@ void render(BelaContext *context, void *userData)
 	        
 	        
 	      }
+	      
+	      if (ch == SEQUENCE_LFO_FREQ_INPUT_PIN){
+		  	lfo_a_frequency_input_raw = analogRead(context, n, SEQUENCE_LFO_FREQ_INPUT_PIN);
+		  }
+		  
+		  if (ch == SEQUENCE_LFO_RAMP_INPUT_PIN){
+		  	lfo_b_frequency_input_raw = analogRead(context, n, SEQUENCE_LFO_RAMP_INPUT_PIN);
+		  }
+	      
+	      
+	      
+	      
 	      
       // Next LFO Freq and LFO Ramp input
       
