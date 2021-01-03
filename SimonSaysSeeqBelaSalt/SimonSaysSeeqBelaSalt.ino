@@ -253,7 +253,7 @@ bool do_tick = true;
 
 
 bool target_gate_out_state = false;
-bool set_gate_out_state = false;
+bool gate_out_state_set = false;
 
 // Used to control when/how we change sequence length 
 uint8_t new_sequence_length_in_ticks; 
@@ -458,7 +458,7 @@ void printStatus(void*){
     // We don't want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 4 == 0) {
+    if(gCount % 1 == 0) {
       //rt_printf("================ \n");
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -516,6 +516,9 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 
 		// Sequence state
+		
+		rt_printf("step_count: %d \n", step_count);
+
 
 		
     	rt_printf("sequence_is_running is: %d \n", sequence_is_running);
@@ -523,8 +526,15 @@ void printStatus(void*){
 
       
     	// Sequence Outputs 
-      
+
     	rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
+		rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
+
+
+
+
+
+
 
 
 
@@ -2089,9 +2099,9 @@ void render(BelaContext *context, void *userData)
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
         
         	// Only set new state if target is changed
-        	if (target_gate_out_state != set_gate_out_state){
+        	if (target_gate_out_state != gate_out_state_set){
 	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
-	        	set_gate_out_state = target_gate_out_state;
+	        	gate_out_state_set = target_gate_out_state;
         	}
 
 
