@@ -799,7 +799,7 @@ void OnStep(){
 void OnNotStep(){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  //GateLow();
+  GateLow();
   
 }
 
