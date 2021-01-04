@@ -265,7 +265,7 @@ unsigned int last_binary_sequence_result; // So we can detect changes
 
 bool do_tick = true;
 
-
+bool do_envelope_on = false;
 bool target_gate_out_state = false;
 bool gate_out_state_set = false;
 
@@ -732,6 +732,9 @@ void GateHigh(){
   
   
   target_gate_out_state = true;
+  envelope.gate(true);
+  
+  do_envelope_on = true; // need this?
   
 
 }
@@ -740,6 +743,10 @@ void GateLow(){
   //rt_printf("Gate LOW");
   
   target_gate_out_state = false;
+  envelope.gate(false);
+  
+  
+  do_envelope_on = false; // need this?
   
 
 }
@@ -2185,12 +2192,12 @@ void render(BelaContext *context, void *userData)
 	    	
 	      }
 	      
-	      
+	      if (ch == SEQUENCE_CV_OUTPUT_PIN){
+	      	float amp = 1 * envelope.process();
+	      	analogWrite(context, n, ch, amp);
+	      }
 	      
 
-      
-      
-      
 		}
 	}
 	
