@@ -116,9 +116,11 @@ int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
 
+int gTriggerButtonPin = 0; // Digital pin to which gate button should be connected
+int gTriggerButtonLastStatus = 0; // Last status of gate button
 
-
-
+int gModeButtonPin = 1; // Digital pin to which oscillator selection button should be connected
+int gModeButtonLastStatus = 0; // Last status of oscillator selection button
 
 
 // recursive function to print binary representation of a positive integer
@@ -2056,6 +2058,24 @@ bool setup(BelaContext *context, void *userData){
         //        return false;
         
         
+
+
+
+
+
+        // Set ADSR parameters
+        envelope.setAttackRate(gAttack * context->audioSampleRate);
+        envelope.setDecayRate(gDecay * context->audioSampleRate);
+        envelope.setReleaseRate(gRelease * context->audioSampleRate);
+        envelope.setSustainLevel(gSustain);
+
+        // Set buttons pins as inputs
+        pinMode(context, 0, gTriggerButtonPin, INPUT);
+        pinMode(context, 0, gModeButtonPin, INPUT);
+
+
+
+
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
                 return false;
         
