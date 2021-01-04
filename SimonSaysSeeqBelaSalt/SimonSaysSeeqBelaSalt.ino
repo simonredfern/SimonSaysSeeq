@@ -157,15 +157,17 @@ const int SEQUENCE_OUT_PIN = 0;
 
 // CV I/O 1-8	ANALOG channel 0-7
 const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
-
-
 const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; // CV 2 input
-
-
 const int SEQUENCE_LFO_FREQ_INPUT_PIN = 2; // CV 3 input
-
-
 const int SEQUENCE_LFO_RAMP_INPUT_PIN = 3; // CV 4 input
+
+
+
+const int SEQUENCE_GATE_OUTPUT_PIN = 0; // CV 1 output
+const int SEQUENCE_ALT_GATE_OUTPUT_PIN = 1; // CV 2 input
+const int SEQUENCE_CV_OUTPUT_PIN = 2; // CV 1 output
+const int SEQUENCE_ALT_CV_OUTPUT_PIN = 3; // CV 2 input
+
 
 ////////////////////////////////////////////////
 
@@ -2115,9 +2117,10 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-	      // Pass everyting through
-	      analogWrite(context, n, ch, analogRead(context, n, ch));
+
 	
+	
+	      // INPUTS 		
 		  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
 		  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
 		  }	
@@ -2150,9 +2153,21 @@ void render(BelaContext *context, void *userData)
 	      
 	      
 	      
+	      // OUTPUTS
+	      if (ch == SEQUENCE_GATE_OUTPUT_PIN){
+	      	
+	      	if (target_gate_out_state == HIGH){
+	      		analogWrite(context, n, ch, 1);
+	      	} else {
+	      		analogWrite(context, n, ch, 0);
+	      	}
+	      	
+	    	
+	      }
 	      
 	      
-      // Next LFO Freq and LFO Ramp input
+	      
+
       
       
       
