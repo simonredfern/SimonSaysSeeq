@@ -2153,13 +2153,13 @@ void render(BelaContext *context, void *userData)
 	      
 	      
 	      
-	      // OUTPUTS
+	      // OUTPUTS (0)
 	      if (ch == SEQUENCE_GATE_OUTPUT_PIN){
 	      	
 	      	if (target_gate_out_state == HIGH){
-	      		analogWrite(context, n, ch, 1);
+	      		analogWrite(context, n, ch, 1.0);
 	      	} else {
-	      		analogWrite(context, n, ch, 0);
+	      		analogWrite(context, n, ch, -1.0);
 	      	}
 	      	
 	    	
