@@ -167,8 +167,8 @@ const int SEQUENCE_LFO_RAMP_INPUT_PIN = 3; // CV 4 input
 
 const int SEQUENCE_GATE_OUTPUT_PIN = 0; // CV 1 output
 const int SEQUENCE_ALT_GATE_OUTPUT_PIN = 1; // CV 2 input
-const int SEQUENCE_CV_OUTPUT_PIN = 2; // CV 1 output
-const int SEQUENCE_ALT_CV_OUTPUT_PIN = 3; // CV 2 input
+const int SEQUENCE_CV_OUTPUT_PIN = 2; // CV 3 output
+const int SEQUENCE_ALT_CV_OUTPUT_PIN = 3; // CV 4 input
 
 
 ////////////////////////////////////////////////
@@ -440,7 +440,7 @@ int temp_count = 0;
 
 ADSR envelope; // ADSR envelope
 
-float gAttack = 0.1; // Envelope attack (seconds)
+float gAttack = 0.0001; // Envelope attack (seconds)
 float gDecay = 0.25; // Envelope decay (seconds)
 float gRelease = 0.5; // Envelope release (seconds)
 float gSustain = 1.0; // Envelope sustain level
@@ -2193,7 +2193,8 @@ void render(BelaContext *context, void *userData)
 	      }
 	      
 	      if (ch == SEQUENCE_CV_OUTPUT_PIN){
-	      	float amp = 1 * envelope.process();
+	      	float amp = 1.0 * envelope.process();
+	      	rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, amp);
 	      }
 	      
