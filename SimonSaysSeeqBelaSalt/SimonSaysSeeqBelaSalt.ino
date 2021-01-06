@@ -113,8 +113,11 @@ milliseconds ms = duration_cast< milliseconds >(
 
 
 
+
+
 #include <math.h> //sinf
 #include <time.h> //time
+#include <libraries/Oscillator/Oscillator.h>
 #include <libraries/OscillatorBank/OscillatorBank.h>
 const float kMinimumFrequency = 20.0f;
 const float kMaximumFrequency = 8000.0f;
@@ -136,6 +139,8 @@ int gNumOscillators = 2; // was 500
 int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
 OscillatorBank osc;
+
+Oscillator oscillator_1;
 
 
 int gAudioChannelNum; // number of audio channels to iterate over
@@ -243,6 +248,7 @@ unsigned int sequence_pattern_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
 float lfo_a_frequency_input_raw;
+float frequency_1;
 unsigned int lfo_a_frequency_input = 20;
 unsigned int lfo_a_frequency_input_last;
 unsigned int lfo_a_frequency_input_at_button_change;
@@ -464,6 +470,8 @@ float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // envelope_1 release (seconds)
 
+float envelope_1_amplitude = 0;
+
 
 
 float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
@@ -572,7 +580,8 @@ void printStatus(void*){
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
 
     	rt_printf("lfo_b_frequency_input_raw is: %f \n", lfo_b_frequency_input_raw);
-    	rt_printf("lfo_b_frequency_input is: %f \n", lfo_b_frequency_input);
+    	
+    	rt_printf("frequency_1 is: %f \n", frequency_1);
 
 
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
@@ -1575,7 +1584,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
         envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
         
 
-
+		oscillator_1.setFrequency(frequency_1);
     
 	
 }
@@ -1994,6 +2003,11 @@ bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
 	
+	oscillator_1.setup(context->audioSampleRate);
+	
+	frequency_1 = 440; 
+	oscillator_1.setFrequency(frequency_1);
+	
 
  
  	// If the amout of audio and analog input and output channels is not the same
@@ -2145,13 +2159,25 @@ void render(BelaContext *context, void *userData)
 	// Use this global variable as a timing device
 	// Set other time points from this frame_timer
 	frame_timer = context->audioFramesElapsed;
+	
+	
 
 
     // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
 			// Pass input to output
-			audioWrite(context, n, ch, audioRead(context, n, ch));
+			
+			envelope_1_amplitude  = 1.0 * envelope_1.process();
+			float out = oscillator_1.process() * envelope_1_amplitude;
+			
+			// todo create separate vars for oscillator_1_output
+			
+			if (ch == 0){
+				audioWrite(context, n, ch, out);
+			} else { // ch 1
+				audioWrite(context, n, ch, audioRead(context, n, ch));
+			}
 			
 			if (ch == 0) {
 				audio_left_input_raw = audioRead(context, n, ch);
@@ -2197,6 +2223,8 @@ void render(BelaContext *context, void *userData)
 	      
 	      if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	
+	      	frequency_1 = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 5, 440);
+	      	
 	      	envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
 	      	envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
 	      	
@@ -2226,9 +2254,19 @@ void render(BelaContext *context, void *userData)
 	      }
 	      
 	      if (ch == SEQUENCE_CV_OUTPUT_PIN){
-	      	float amp = 1.0 * envelope_1.process();
+
+			envelope_1_amplitude  = 1.0 * envelope_1.process();
+
 	      	//rt_printf("amp is: %f", amp);
-	      	analogWrite(context, n, ch, amp);
+	      	analogWrite(context, n, ch, envelope_1_amplitude);
+	      }
+	      
+	      if (ch == SEQUENCE_ALT_CV_OUTPUT_PIN){
+
+			envelope_1_amplitude  = 1.0 * envelope_1.process();
+
+	      	//rt_printf("amp is: %f", amp);
+	      	analogWrite(context, n, ch, envelope_1_amplitude);
 	      }
 	      
 
