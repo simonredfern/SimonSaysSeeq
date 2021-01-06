@@ -1,7 +1,23 @@
-/*
-SIMON SAYS SEQ is released under the AGPL and (c) Simon Redfern 2020, 2021 
+ /*
 
-Of course large chunks use Bela, see below: 
+                                   .-'''-.                                                                                                                     
+                                  '   _    \                                                                                                        .-''-.     
+           .--. __  __   ___    /   /` '.   \    _..._                                                         __.....__           __.....__       //'` `\|    
+           |__||  |/  `.'   `. .   |     \  '  .'     '.                    .-.          .-                .-''         '.     .-''         '.    '/'    '|    
+           .--.|   .-.  .-.   '|   '      |  '.   .-.   .                    \ \        / /               /     .-''"'-.  `.  /     .-''"'-.  `. |'      '|    
+           |  ||  |  |  |  |  |\    \     / / |  '   '  |               __    \ \      / /               /     /________\   \/     /________\   \||     /||    
+       _   |  ||  |  |  |  |  | `.   ` ..' /  |  |   |  |       _    .:--.'.   \ \    / /   _         _  |                  ||                  | \'. .'/||    
+     .' |  |  ||  |  |  |  |  |    '-...-'`   |  |   |  |     .' |  / |   \ |   \ \  / /  .' |      .' | \    .-------------'\    .-------------'  `--'` ||    
+    .   | /|  ||  |  |  |  |  |               |  |   |  |    .   | /`" __ | |    \ `  /  .   | /   .   | /\    '-.____...---. \    '-.____...---.        ||    
+  .'.'| |//|__||__|  |__|  |__|               |  |   |  |  .'.'| |// .'.''| |     \  / .'.'| |// .'.'| |// `.             .'   `.             .'         || /> 
+.'.'.-'  /                                    |  |   |  |.'.'.-'  / / /   | |_    / /.'.'.-'  /.'.'.-'  /    `''-...... -'       `''-...... -'           ||//  
+.'   \_.'                                     |  |   |  |.'   \_.'  \ \._,\ '/|`-' / .'   \_.' .'   \_.'                                                 |'/   
+                                              '--'   '--'            `--'  `"  '..'                                                                      |/    
+
+SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021 
+
+This file uses Bela, see below:
+
 */
 
 
@@ -80,6 +96,8 @@ uint64_t elapsed_since_last_clock_rising_edge = 0;
 int clock_patience = 112000;
 
 
+
+int audio_sample_rate;
 
 // Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
 using namespace std::chrono;
@@ -168,8 +186,8 @@ const int SEQUENCE_OUT_PIN = 0;
 // CV I/O 1-8	ANALOG channel 0-7
 const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; // CV 2 input
-const int SEQUENCE_LFO_FREQ_INPUT_PIN = 2; // CV 3 input
-const int SEQUENCE_LFO_RAMP_INPUT_PIN = 3; // CV 4 input
+const int OSC_FREQUENCY_INPUT_PIN = 2; // CV 3 input
+const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
 
@@ -273,7 +291,7 @@ unsigned int last_binary_sequence_result; // So we can detect changes
 
 bool do_tick = true;
 
-bool do_envelope_on = false;
+bool do_envelope_1_on = false;
 bool target_gate_out_state = false;
 bool gate_out_state_set = false;
 
@@ -425,14 +443,7 @@ uint8_t StepCountSanity(uint8_t step_count_){
 
 
 
-/* Seems not used
-uint8_t IncrementStepCount(){
-  step_count = StepCountSanity(step_count + 1);
 
-  rt_printf("IncrementStepCount. current_sequence_length_in_steps is: %d step_count is now: %d ", current_sequence_length_in_steps, step_count);
-  return StepCountSanity(step_count);
-}
-*/
 
 
 
@@ -446,12 +457,22 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR envelope; // ADSR envelope
+ADSR envelope_1; // ADSR envelope_1
 
-float gAttack = 0.0001; // Envelope attack (seconds)
-float gDecay = 0.25; // Envelope decay (seconds)
-float gRelease = 0.5; // Envelope release (seconds)
-float gSustain = 1.0; // Envelope sustain level
+float envelope_1_attack = 0.0001; // envelope_1 attack (seconds)
+float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
+float envelope_1_sustain = 0.9; // envelope_1 sustain level
+float envelope_1_release = 0.5; // envelope_1 release (seconds)
+
+
+
+float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
+float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
+float envelope_2_sustain = 0.9; // envelope_2 sustain level
+float envelope_2_release = 0.5; // envelope_2 release (seconds)
+
+
+
 
 float gFrequency = 320.0; // Oscillator frequency (Hz)
 //float gPhase; // Oscillator phase
@@ -545,9 +566,10 @@ void printStatus(void*){
       
 
 
-    	rt_printf("lfo_a_frequency_input_raw is: %f \n", lfo_a_frequency_input_raw);
-    	rt_printf("lfo_a_frequency_input is: %f \n", lfo_a_frequency_input);
 
+    	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
+    	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
+    	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
 
     	rt_printf("lfo_b_frequency_input_raw is: %f \n", lfo_b_frequency_input_raw);
     	rt_printf("lfo_b_frequency_input is: %f \n", lfo_b_frequency_input);
@@ -591,6 +613,12 @@ void printStatus(void*){
 		// Sequence state
 		
 		rt_printf("step_count: %d \n", step_count);
+		
+		if (step_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP \n");
+    	} else {
+    		rt_printf("other step \n");
+    	}
 
 
 		
@@ -740,9 +768,9 @@ void GateHigh(){
   
   
   target_gate_out_state = true;
-  envelope.gate(true);
+  envelope_1.gate(true);
   
-  do_envelope_on = true; // need this?
+
   
 
 }
@@ -751,10 +779,11 @@ void GateLow(){
   //rt_printf("Gate LOW");
   
   target_gate_out_state = false;
-  envelope.gate(false);
+  
+  envelope_1.gate(false);
   
   
-  do_envelope_on = false; // need this?
+
   
 
 }
@@ -775,34 +804,12 @@ bool RampIsPositive(){
 
 // Kind of syncs the CV 
 void SyncAndResetCv(){
-  //Serial.println(String("CV Pulse On") );
-   
+	
+  rt_printf("------SyncAndResetCv-----\n");	
   
   
-  // TODO set bela oscilator
-  //cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
+  //envelope_1.gate(true);
   
-    // Used to modulate CV. This signal is multiplied by cv_waveform 
-
-  // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
-  
-  if (RampIsPositive()){
-    if (cv_waveform_b_amplitude == 1) {
-      cv_waveform_b_amplitude = 0;
-      rt_printf("SyncAndResetCv : 0");
-      
-      // TODO BELA SetWaveformBObjectAmplitude ();
-    }
-
-  } else {
-    if (cv_waveform_b_amplitude == 0) {
-      cv_waveform_b_amplitude = 1;
-
-       rt_printf("SyncAndResetCv : 1");
-      
-      // TODO BELA SetWaveformBObjectAmplitude ();
-    }
-  }
 }
 
 
@@ -843,9 +850,10 @@ void OnStep(){
   
 
     if (step_count == FIRST_STEP) {
+    	rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
       SyncAndResetCv();
     } else {
-      // TODO BELA ChangeCvWaveformBAmplitude();
+      rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
     }
   
   
@@ -1557,6 +1565,15 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    //Serial.print("\t");
    //Serial.print(the_sequence, BIN);
    //Serial.println();
+   
+   
+   // TODO only do this if the value changes?
+   
+        envelope_1.setAttackRate(envelope_1_attack * audio_sample_rate);
+        envelope_1.setDecayRate(envelope_1_decay * audio_sample_rate);
+        envelope_1.setSustainLevel(envelope_1_sustain);
+        envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
+        
 
 
     
@@ -2074,15 +2091,15 @@ bool setup(BelaContext *context, void *userData){
         
         
 
-
+        audio_sample_rate = context->audioSampleRate;
 
 
 
         // Set ADSR parameters
-        envelope.setAttackRate(gAttack * context->audioSampleRate);
-        envelope.setDecayRate(gDecay * context->audioSampleRate);
-        envelope.setReleaseRate(gRelease * context->audioSampleRate);
-        envelope.setSustainLevel(gSustain);
+        envelope_1.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        envelope_1.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        envelope_1.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_1.setSustainLevel(envelope_1_sustain);
 
         // Set buttons pins as inputs
         pinMode(context, 0, gTriggerButtonPin, INPUT);
@@ -2178,12 +2195,20 @@ void render(BelaContext *context, void *userData)
 	        
 	      }
 	      
-	      if (ch == SEQUENCE_LFO_FREQ_INPUT_PIN){
-		  	lfo_a_frequency_input_raw = analogRead(context, n, SEQUENCE_LFO_FREQ_INPUT_PIN);
+	      if (ch == OSC_FREQUENCY_INPUT_PIN){
+	      	
+	      	envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
+	      	envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
+	      	
+		  	 // want range 0 to 3 seconds
+		  	//envelope_2_attack = analogRead(context, n, OSC_FREQUENCY_INPUT_PIN);
 		  }
 		  
-		  if (ch == SEQUENCE_LFO_RAMP_INPUT_PIN){
-		  	lfo_b_frequency_input_raw = analogRead(context, n, SEQUENCE_LFO_RAMP_INPUT_PIN);
+		  if (ch == ADSR_RELEASE_INPUT_PIN){
+		  	
+		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.001, 3.0);
+		  	
+		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
 	      
 	      
@@ -2201,8 +2226,8 @@ void render(BelaContext *context, void *userData)
 	      }
 	      
 	      if (ch == SEQUENCE_CV_OUTPUT_PIN){
-	      	float amp = 1.0 * envelope.process();
-	      	rt_printf("amp is: %f", amp);
+	      	float amp = 1.0 * envelope_1.process();
+	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, amp);
 	      }
 	      
