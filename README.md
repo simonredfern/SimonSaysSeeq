@@ -1,13 +1,13 @@
 # SimonSaysSeeq
-Simon Says Gray Code Seeq is a simple and hopefully modeless gate sequencer with associated CV envelope generator (and midi looper) that is designed to drive pitch (or other modulation) most likely via a pitch quantizer.
+Simon Says Seeq is a simple and hopefully modeless gate sequencer with associated CV envelope generator (and midi looper) that is designed to drive pitch (or other modulation) most likely via a pitch quantizer.
 
-This software (in various forms) will hopefully run on various Teensy based hardware. Two are working so far.
+This software (in various forms) will hopefully run on various Teensy (and more recently Linux) based hardware. Two are working so far. Bela Salt version is very basic so far.
 
  
 Platform                  Status
 
 
-* 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music?)
+* 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music)
 
 * Betweener                 - Works but currently the tool chain is broken so I can't compile
 
@@ -16,6 +16,8 @@ Platform                  Status
 * O&C Hemisphere Suite      - Nowhere near working.
 
 * Ornament & Crime Plus     - Nowhere near working.
+
+* Bela Salt                 - Just starting to work. 
 
 ## Simon Says Gray Code Seeq on 1010Music Euroshield
 
