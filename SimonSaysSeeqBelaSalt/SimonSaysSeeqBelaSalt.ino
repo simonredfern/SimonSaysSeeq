@@ -140,9 +140,9 @@ int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
 OscillatorBank osc;
 
-Oscillator oscillator_1;
-Oscillator oscillator_2;
-Oscillator oscillator_3;
+Oscillator oscillator_1_audio;
+Oscillator oscillator_2_analog;
+
 
 int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
@@ -472,9 +472,9 @@ ADSR envelope_1; // ADSR envelope_1
 ADSR envelope_2;
 ADSR envelope_3;
 
-float envelope_1_amplitude = 0;
-float envelope_2_amplitude = 0;
-float envelope_3_amplitude = 0;
+float audio_envelope_1_amplitude = 0;
+float analog_envelope_2_amplitude = 0;
+float analog_envelope_3_amplitude = 0;
 
 
 float envelope_1_attack = 0.0001; // envelope_1 attack (seconds)
@@ -1596,13 +1596,23 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
         envelope_1.setSustainLevel(envelope_1_sustain);
         envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
         
+        envelope_2.setAttackRate(envelope_1_attack * audio_sample_rate);
+        envelope_2.setDecayRate(envelope_1_decay * audio_sample_rate);
+        envelope_2.setReleaseRate(envelope_1_release * audio_sample_rate);
+        envelope_2.setSustainLevel(envelope_1_sustain);
+
+        envelope_3.setAttackRate(envelope_1_attack * audio_sample_rate);
+        envelope_3.setDecayRate(envelope_1_decay * audio_sample_rate);
+        envelope_3.setReleaseRate(envelope_1_release * audio_sample_rate);
+        envelope_3.setSustainLevel(envelope_1_sustain);
+        
 
 	    frequency_2 = frequency_1 * 8.0;
 	    frequency_3 = frequency_1 * 16.0;
 
-		oscillator_1.setFrequency(frequency_1);
-    	oscillator_1.setFrequency(frequency_2);
-    	oscillator_1.setFrequency(frequency_3);
+		oscillator_1_audio.setFrequency(frequency_1);
+    	oscillator_1_audio.setFrequency(frequency_2);
+    	oscillator_1_audio.setFrequency(frequency_3);
 	
 }
 
@@ -2020,10 +2030,10 @@ bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
 	
-	oscillator_1.setup(context->audioSampleRate);
+	oscillator_1_audio.setup(context->audioSampleRate);
 	
 	frequency_1 = 110; 
-	oscillator_1.setFrequency(frequency_1);
+	oscillator_1_audio.setFrequency(frequency_1);
 	
 
  
@@ -2131,6 +2141,19 @@ bool setup(BelaContext *context, void *userData){
         envelope_1.setDecayRate(envelope_1_decay * context->audioSampleRate);
         envelope_1.setReleaseRate(envelope_1_release * context->audioSampleRate);
         envelope_1.setSustainLevel(envelope_1_sustain);
+        
+        
+        envelope_2.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        envelope_2.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        envelope_2.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_2.setSustainLevel(envelope_1_sustain);
+
+        envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        envelope_3.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        envelope_3.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_3.setSustainLevel(envelope_1_sustain);
+
+
 
         // Set buttons pins as inputs
         pinMode(context, 0, gTriggerButtonPin, INPUT);
@@ -2182,16 +2205,22 @@ void render(BelaContext *context, void *userData)
 
     // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
+		
+		audio_envelope_1_amplitude  = 1.0 * envelope_1.process();
+		float audio_osc_1_out = oscillator_1_audio.process() * audio_envelope_1_amplitude;
+		
+		
+		
 		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
 			// Pass input to output
 			
-			envelope_1_amplitude  = 1.0 * envelope_1.process();
-			float osc_3_out = oscillator_3.process() * envelope_1_amplitude;
 			
-			// todo create separate vars for oscillator_1_output
+			
+			
+			// todo create separate vars for oscillator_1_audio_output
 			
 			if (ch == 0){
-				audioWrite(context, n, ch, osc_3_out);
+				audioWrite(context, n, ch, audio_osc_1_out);
 			} else { // ch 1
 				audioWrite(context, n, ch, audioRead(context, n, ch));
 			}
@@ -2210,6 +2239,26 @@ void render(BelaContext *context, void *userData)
 
 // ANALOG LOOP
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
+
+		// Process analog oscillator	
+		float analog_osc_2_result = oscillator_2_analog.process();
+		
+		// Process analog envelope
+		analog_envelope_2_amplitude  = envelope_2.process();  
+		
+		// Get an inverse envelope
+		analog_envelope_3_amplitude  = 1 - analog_envelope_2_amplitude; // Inverse
+		
+		// Modulated output
+		float analog_out_2 = analog_osc_2_result * analog_envelope_2_amplitude;
+		
+		// Another modulated output
+		float analog_out_3 = analog_osc_2_result * analog_envelope_3_amplitude;
+		
+		// Additive output
+		float analog_out_4 = ( analog_osc_2_result + analog_envelope_3_amplitude ) / 2.0;
+		
+		
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
 	      // INPUTS 		
@@ -2257,7 +2306,7 @@ void render(BelaContext *context, void *userData)
 	      
 	      
 	      // OUTPUTS
-	      // SEQ GATE OUT (0)
+	      // CV 1 (SEQ GATE OUT)
 	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
 	      	
 	      	if (target_gate_out_state == HIGH){
@@ -2269,37 +2318,28 @@ void render(BelaContext *context, void *userData)
 	    	
 	      }
 
-	      // CV Envelope
+	      // CV 2
 	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
 
-			envelope_1_amplitude  = 1.0 * envelope_1.process();
 
 	      	//rt_printf("amp is: %f", amp);
-	      	analogWrite(context, n, ch, envelope_1_amplitude);
+	      	analogWrite(context, n, ch, analog_out_2);
 	      }
 
 
-	      
-	      // CV Envelope
+	      // CV 3
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
 
-			envelope_2_amplitude  = 1.0 * envelope_2.process();
-
 	      	//rt_printf("amp is: %f", amp);
-	      	analogWrite(context, n, ch, envelope_2_amplitude);
+	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
-	      // CV Envelope * LFO
+	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
-
-			envelope_3_amplitude  = 1.0 * envelope_3.process();
-			
-			
-			float osc_3_out = oscillator_3.process() * envelope_3_amplitude;
 
 
 	      	//rt_printf("amp is: %f", amp);
-	      	analogWrite(context, n, ch, osc_3_out);
+	      	analogWrite(context, n, ch, analog_out_4);
 	      }
 	      
 
