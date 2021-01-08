@@ -469,21 +469,28 @@ int temp_count = 0;
 // for ADSR
 
 ADSR envelope_1; // ADSR envelope_1
+ADSR envelope_2;
+ADSR envelope_3;
+
+float envelope_1_amplitude = 0;
+float envelope_2_amplitude = 0;
+float envelope_3_amplitude = 0;
+
 
 float envelope_1_attack = 0.0001; // envelope_1 attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // envelope_1 release (seconds)
 
-float envelope_1_amplitude = 0;
-
-
-
 float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
 float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
 float envelope_2_sustain = 0.9; // envelope_2 sustain level
 float envelope_2_release = 0.5; // envelope_2 release (seconds)
 
+float envelope_3_attack = 0.0001; // envelope_2 attack (seconds)
+float envelope_3_decay = 0.25; // envelope_2 decay (seconds)
+float envelope_3_sustain = 0.9; // envelope_2 sustain level
+float envelope_3_release = 0.5; // envelope_2 release (seconds)
 
 
 
@@ -1590,8 +1597,8 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
         envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
         
 
-	    frequency_2 = frequency_1 * 2.0;
-	    frequency_3 = frequency_1 * 4.0;
+	    frequency_2 = frequency_1 * 8.0;
+	    frequency_3 = frequency_1 * 16.0;
 
 		oscillator_1.setFrequency(frequency_1);
     	oscillator_1.setFrequency(frequency_2);
@@ -2261,23 +2268,34 @@ void render(BelaContext *context, void *userData)
 	      	
 	    	
 	      }
-	      
+
 	      // CV Envelope
-	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
+	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
 
 			envelope_1_amplitude  = 1.0 * envelope_1.process();
 
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, envelope_1_amplitude);
 	      }
+
+
+	      
+	      // CV Envelope
+	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
+
+			envelope_2_amplitude  = 1.0 * envelope_2.process();
+
+	      	//rt_printf("amp is: %f", amp);
+	      	analogWrite(context, n, ch, envelope_2_amplitude);
+	      }
 	      
 	      // CV Envelope * LFO
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
 
-			envelope_1_amplitude  = 1.0 * envelope_1.process();
+			envelope_3_amplitude  = 1.0 * envelope_3.process();
 			
 			
-			float osc_3_out = oscillator_3.process() * envelope_1_amplitude;
+			float osc_3_out = oscillator_3.process() * envelope_3_amplitude;
 
 
 	      	//rt_printf("amp is: %f", amp);
