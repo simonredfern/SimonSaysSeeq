@@ -98,6 +98,7 @@ int clock_patience = 112000;
 
 
 int audio_sample_rate;
+int analog_sample_rate;
 
 // Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
 using namespace std::chrono;
@@ -469,7 +470,7 @@ int temp_count = 0;
 // for ADSR
 
 ADSR envelope_1; // ADSR envelope_1
-ADSR envelope_2;
+ADSR envelope_2_analog;
 ADSR envelope_3;
 
 float audio_envelope_1_amplitude = 0;
@@ -817,7 +818,7 @@ void GateHigh(){
   
   target_gate_out_state = true;
   envelope_1.gate(true);
-  envelope_2.gate(true);
+  envelope_2_analog.gate(true);
   
 
   
@@ -830,7 +831,7 @@ void GateLow(){
   target_gate_out_state = false;
   
   envelope_1.gate(false);
-  envelope_2.gate(false);
+  envelope_2_analog.gate(false);
   
   
 
@@ -1638,8 +1639,8 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 	    frequency_2 = frequency_1 * 8.0;
 	    frequency_3 = frequency_1 * 16.0;
 
-		oscillator_1_audio.setFrequency(frequency_1);
-    	oscillator_2_analog.setFrequency(frequency_2);
+		oscillator_1_audio.setFrequency(frequency_3); // higher freq
+    	oscillator_2_analog.setFrequency(frequency_1); // lower freq
 
 	
 }
@@ -2162,7 +2163,7 @@ bool setup(BelaContext *context, void *userData){
         
 
         audio_sample_rate = context->audioSampleRate;
-
+        analog_sample_rate = context->analogSampleRate;
 
 
         // Set ADSR parameters
@@ -2172,10 +2173,10 @@ bool setup(BelaContext *context, void *userData){
         envelope_1.setSustainLevel(envelope_1_sustain);
         
         
-        envelope_2.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        envelope_2.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        envelope_2.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        envelope_2.setSustainLevel(envelope_1_sustain);
+        envelope_2_analog.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        envelope_2_analog.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        envelope_2_analog.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_2_analog.setSustainLevel(envelope_1_sustain);
 
         // envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
         // envelope_3.setDecayRate(envelope_1_decay * context->audioSampleRate);
@@ -2273,7 +2274,7 @@ void render(BelaContext *context, void *userData)
 		analog_osc_2_result = oscillator_2_analog.process();
 		
 		// Process analog envelope
-		analog_envelope_2_amplitude  = envelope_2.process();  
+		analog_envelope_2_amplitude  = envelope_2_analog.process();  
 		
 		// Get an inverse envelope
 		analog_envelope_3_amplitude  = 1 - analog_envelope_2_amplitude; // Inverse
@@ -2318,8 +2319,8 @@ void render(BelaContext *context, void *userData)
 	      	frequency_1 = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 1, 110);
  
 	      	
-	      	envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
-	      	envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
+	      	//envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
+	      	//envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
 	      	
 		  	 // want range 0 to 3 seconds
 		  	//envelope_2_attack = analogRead(context, n, OSC_FREQUENCY_INPUT_PIN);
