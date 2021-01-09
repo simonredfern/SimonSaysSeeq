@@ -487,6 +487,11 @@ float analog_out_2;
 float analog_out_3;
 float analog_out_4;
 
+
+float audio_osc_1_result;
+float analog_osc_2_result;
+float analog_osc_3_result;
+
 // float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
 // float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
 // float envelope_2_sustain = 0.9; // envelope_2 sustain level
@@ -606,6 +611,10 @@ void printStatus(void*){
     	rt_printf("frequency_1 is: %f \n", frequency_1);
 		rt_printf("frequency_2 is: %f \n", frequency_2);
 		rt_printf("frequency_3 is: %f \n", frequency_3);
+		
+		rt_printf("audio_osc_1_result is: %f \n", audio_osc_1_result);
+		rt_printf("analog_osc_2_result is: %f \n", analog_osc_2_result);
+		
 		
 		
 		rt_printf("analog_out_1 is: %f \n", analog_out_1);
@@ -2227,7 +2236,7 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 		audio_envelope_1_amplitude  = 1.0 * envelope_1.process();
-		float audio_osc_1_out = oscillator_1_audio.process() * audio_envelope_1_amplitude;
+		audio_osc_1_result = oscillator_1_audio.process() * audio_envelope_1_amplitude;
 		
 		
 		
@@ -2240,7 +2249,7 @@ void render(BelaContext *context, void *userData)
 			// todo create separate vars for oscillator_1_audio_output
 			
 			if (ch == 0){
-				audioWrite(context, n, ch, audio_osc_1_out);
+				audioWrite(context, n, ch, audio_osc_1_result);
 			} else { // ch 1
 				audioWrite(context, n, ch, audioRead(context, n, ch));
 			}
@@ -2261,7 +2270,7 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 
 		// Process analog oscillator	
-		float analog_osc_2_result = oscillator_2_analog.process();
+		analog_osc_2_result = oscillator_2_analog.process();
 		
 		// Process analog envelope
 		analog_envelope_2_amplitude  = envelope_2.process();  
@@ -2328,13 +2337,12 @@ void render(BelaContext *context, void *userData)
 	      // OUTPUTS
 	      // CV 1 (SEQ GATE OUT)
 	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
-	      	
 	      	if (target_gate_out_state == HIGH){
-	      		analogWrite(context, n, ch, 1.0);
+	      		analog_out_1 = 1.0;
 	      	} else {
-	      		analogWrite(context, n, ch, -1.0);
+	      		analog_out_1 = -1.0;	
 	      	}
-	      	
+	      	analogWrite(context, n, ch, analog_out_1);
 	    	
 	      }
 
