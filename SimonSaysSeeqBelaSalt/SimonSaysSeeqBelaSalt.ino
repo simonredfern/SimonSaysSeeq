@@ -482,15 +482,20 @@ float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // envelope_1 release (seconds)
 
-float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
-float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
-float envelope_2_sustain = 0.9; // envelope_2 sustain level
-float envelope_2_release = 0.5; // envelope_2 release (seconds)
+float analog_out_1; // not used
+float analog_out_2;
+float analog_out_3;
+float analog_out_4;
 
-float envelope_3_attack = 0.0001; // envelope_2 attack (seconds)
-float envelope_3_decay = 0.25; // envelope_2 decay (seconds)
-float envelope_3_sustain = 0.9; // envelope_2 sustain level
-float envelope_3_release = 0.5; // envelope_2 release (seconds)
+// float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
+// float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
+// float envelope_2_sustain = 0.9; // envelope_2 sustain level
+// float envelope_2_release = 0.5; // envelope_2 release (seconds)
+
+// float envelope_3_attack = 0.0001; // envelope_2 attack (seconds)
+// float envelope_3_decay = 0.25; // envelope_2 decay (seconds)
+// float envelope_3_sustain = 0.9; // envelope_2 sustain level
+// float envelope_3_release = 0.5; // envelope_2 release (seconds)
 
 
 
@@ -590,12 +595,24 @@ void printStatus(void*){
     	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
+    	
+    	rt_printf("audio_envelope_1_amplitude is: %f \n", audio_envelope_1_amplitude);
+    	rt_printf("analog_envelope_2_amplitude is: %f \n", analog_envelope_2_amplitude);
+    	rt_printf("analog_envelope_3_amplitude is: %f \n", analog_envelope_3_amplitude);
+    	
 
     	rt_printf("lfo_b_frequency_input_raw is: %f \n", lfo_b_frequency_input_raw);
     	
     	rt_printf("frequency_1 is: %f \n", frequency_1);
 		rt_printf("frequency_2 is: %f \n", frequency_2);
 		rt_printf("frequency_3 is: %f \n", frequency_3);
+		
+		
+		rt_printf("analog_out_1 is: %f \n", analog_out_1);
+		rt_printf("analog_out_2 is: %f \n", analog_out_2);
+		rt_printf("analog_out_3 is: %f \n", analog_out_3);
+		rt_printf("analog_out_4 is: %f \n", analog_out_4);
+		
 
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
 		rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
@@ -791,6 +808,7 @@ void GateHigh(){
   
   target_gate_out_state = true;
   envelope_1.gate(true);
+  envelope_2.gate(true);
   
 
   
@@ -803,6 +821,7 @@ void GateLow(){
   target_gate_out_state = false;
   
   envelope_1.gate(false);
+  envelope_2.gate(false);
   
   
 
@@ -1596,23 +1615,23 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
         envelope_1.setSustainLevel(envelope_1_sustain);
         envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
         
-        envelope_2.setAttackRate(envelope_1_attack * audio_sample_rate);
-        envelope_2.setDecayRate(envelope_1_decay * audio_sample_rate);
-        envelope_2.setReleaseRate(envelope_1_release * audio_sample_rate);
-        envelope_2.setSustainLevel(envelope_1_sustain);
+        // envelope_2.setAttackRate(envelope_1_attack * audio_sample_rate);
+        // envelope_2.setDecayRate(envelope_1_decay * audio_sample_rate);
+        // envelope_2.setReleaseRate(envelope_1_release * audio_sample_rate);
+        // envelope_2.setSustainLevel(envelope_1_sustain);
 
-        envelope_3.setAttackRate(envelope_1_attack * audio_sample_rate);
-        envelope_3.setDecayRate(envelope_1_decay * audio_sample_rate);
-        envelope_3.setReleaseRate(envelope_1_release * audio_sample_rate);
-        envelope_3.setSustainLevel(envelope_1_sustain);
+        // envelope_3.setAttackRate(envelope_1_attack * audio_sample_rate);
+        // envelope_3.setDecayRate(envelope_1_decay * audio_sample_rate);
+        // envelope_3.setReleaseRate(envelope_1_release * audio_sample_rate);
+        // envelope_3.setSustainLevel(envelope_1_sustain);
         
 
 	    frequency_2 = frequency_1 * 8.0;
 	    frequency_3 = frequency_1 * 16.0;
 
 		oscillator_1_audio.setFrequency(frequency_1);
-    	oscillator_1_audio.setFrequency(frequency_2);
-    	oscillator_1_audio.setFrequency(frequency_3);
+    	oscillator_2_analog.setFrequency(frequency_2);
+
 	
 }
 
@@ -2031,6 +2050,7 @@ bool setup(BelaContext *context, void *userData){
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
 	
 	oscillator_1_audio.setup(context->audioSampleRate);
+	oscillator_2_analog.setup(context->analogSampleRate);
 	
 	frequency_1 = 110; 
 	oscillator_1_audio.setFrequency(frequency_1);
@@ -2148,10 +2168,10 @@ bool setup(BelaContext *context, void *userData){
         envelope_2.setReleaseRate(envelope_1_release * context->audioSampleRate);
         envelope_2.setSustainLevel(envelope_1_sustain);
 
-        envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        envelope_3.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        envelope_3.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        envelope_3.setSustainLevel(envelope_1_sustain);
+        // envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        // envelope_3.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        // envelope_3.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        // envelope_3.setSustainLevel(envelope_1_sustain);
 
 
 
@@ -2250,13 +2270,13 @@ void render(BelaContext *context, void *userData)
 		analog_envelope_3_amplitude  = 1 - analog_envelope_2_amplitude; // Inverse
 		
 		// Modulated output
-		float analog_out_2 = analog_osc_2_result * analog_envelope_2_amplitude;
+		analog_out_2 = analog_osc_2_result * analog_envelope_2_amplitude;
 		
 		// Another modulated output
-		float analog_out_3 = analog_osc_2_result * analog_envelope_3_amplitude;
+		analog_out_3 = analog_osc_2_result * analog_envelope_3_amplitude;
 		
 		// Additive output
-		float analog_out_4 = ( analog_osc_2_result + analog_envelope_3_amplitude ) / 2.0;
+		analog_out_4 = ( analog_osc_2_result + analog_envelope_3_amplitude ) / 2.0;
 		
 		
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
