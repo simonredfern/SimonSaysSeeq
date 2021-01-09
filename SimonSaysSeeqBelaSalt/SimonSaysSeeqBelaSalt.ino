@@ -469,7 +469,7 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR envelope_1; // ADSR envelope_1
+ADSR envelope_1_audio; // ADSR envelope_1
 ADSR envelope_2_analog;
 ADSR envelope_3;
 
@@ -478,7 +478,7 @@ float analog_envelope_2_amplitude = 0;
 float analog_envelope_3_amplitude = 0;
 
 
-float envelope_1_attack = 0.0001; // envelope_1 attack (seconds)
+float envelope_1_attack = 0.0001; // envelope_1_audio attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // envelope_1 release (seconds)
@@ -817,7 +817,7 @@ void GateHigh(){
   
   
   target_gate_out_state = true;
-  envelope_1.gate(true);
+  envelope_1_audio.gate(true);
   envelope_2_analog.gate(true);
   
 
@@ -830,7 +830,7 @@ void GateLow(){
   
   target_gate_out_state = false;
   
-  envelope_1.gate(false);
+  envelope_1_audio.gate(false);
   envelope_2_analog.gate(false);
   
   
@@ -1620,15 +1620,15 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    
    // TODO only do this if the value changes?
    
-        envelope_1.setAttackRate(envelope_1_attack * audio_sample_rate);
-        envelope_1.setDecayRate(envelope_1_decay * audio_sample_rate);
-        envelope_1.setSustainLevel(envelope_1_sustain);
-        envelope_1.setReleaseRate(envelope_1_release * audio_sample_rate);
+        envelope_1_audio.setAttackRate(envelope_1_attack * audio_sample_rate);
+        envelope_1_audio.setDecayRate(envelope_1_decay * audio_sample_rate);
+        envelope_1_audio.setSustainLevel(envelope_1_sustain);
+        envelope_1_audio.setReleaseRate(envelope_1_release * audio_sample_rate);
         
-        // envelope_2.setAttackRate(envelope_1_attack * audio_sample_rate);
-        // envelope_2.setDecayRate(envelope_1_decay * audio_sample_rate);
-        // envelope_2.setReleaseRate(envelope_1_release * audio_sample_rate);
-        // envelope_2.setSustainLevel(envelope_1_sustain);
+        envelope_2_analog.setAttackRate(envelope_1_attack * analog_sample_rate);
+        envelope_2_analog.setDecayRate(envelope_1_decay * analog_sample_rate);
+        envelope_2_analog.setReleaseRate(envelope_1_release * analog_sample_rate);
+        envelope_2_analog.setSustainLevel(envelope_1_sustain);
 
         // envelope_3.setAttackRate(envelope_1_attack * audio_sample_rate);
         // envelope_3.setDecayRate(envelope_1_decay * audio_sample_rate);
@@ -2167,15 +2167,15 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set ADSR parameters
-        envelope_1.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        envelope_1.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        envelope_1.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        envelope_1.setSustainLevel(envelope_1_sustain);
+        envelope_1_audio.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        envelope_1_audio.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        envelope_1_audio.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_1_audio.setSustainLevel(envelope_1_sustain);
         
         
-        envelope_2_analog.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        envelope_2_analog.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        envelope_2_analog.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        envelope_2_analog.setAttackRate(envelope_1_attack * context->analogSampleRate);
+        envelope_2_analog.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        envelope_2_analog.setReleaseRate(envelope_1_release * context->analogSampleRate);
         envelope_2_analog.setSustainLevel(envelope_1_sustain);
 
         // envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
@@ -2236,7 +2236,7 @@ void render(BelaContext *context, void *userData)
     // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
-		audio_envelope_1_amplitude  = 1.0 * envelope_1.process();
+		audio_envelope_1_amplitude  = 1.0 * envelope_1_audio.process();
 		audio_osc_1_result = oscillator_1_audio.process() * audio_envelope_1_amplitude;
 		
 		
@@ -2328,7 +2328,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
 		  	
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.001, 3.0);
+		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
 		  	
 		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
