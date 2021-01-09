@@ -434,6 +434,7 @@ void SetTotalTickCount(int value){
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP; 
+  oscillator_1_analog.setPhase(0.0);
   //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
 }
 
@@ -469,7 +470,7 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR envelope_1_audio; // ADSR envelope_1
+ADSR envelope_1_audio; 
 ADSR envelope_2_analog;
 ADSR envelope_3;
 
@@ -582,36 +583,36 @@ void printStatus(void*){
 		
 		
 		// Analog / Digital Clock In.
+		/*
   		rt_printf("last_clock_rising_edge is: %llu \n", last_clock_rising_edge);
 		rt_printf("last_clock_falling_edge is: %llu \n", last_clock_falling_edge);
 		rt_printf("clock_width is: %d \n", clock_width);
 		rt_printf("clock_patience is: %d \n", clock_patience);
-
+		*/
+		
 		// Other Inputs
-
+		/*
     	rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
     	//rt_printf("sequence_length_input is: %d \n", sequence_length_input);
-      
+    	*/
 
 
-
+		/*
     	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
+    	*/
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
+    	/*
     	rt_printf("audio_envelope_1_amplitude is: %f \n", audio_envelope_1_amplitude);
     	rt_printf("analog_envelope_2_amplitude is: %f \n", analog_envelope_2_amplitude);
     	rt_printf("analog_envelope_3_amplitude is: %f \n", analog_envelope_3_amplitude);
-    	
+    	*/
 
-    	rt_printf("lfo_b_frequency_input_raw is: %f \n", lfo_b_frequency_input_raw);
-    	
-    	rt_printf("osc_1_frequency is: %f \n", osc_1_frequency);
-		rt_printf("frequency_2 is: %f \n", frequency_2);
-		rt_printf("osc_2_frequency is: %f \n", osc_2_frequency);
+
 		
 		rt_printf("audio_osc_1_result is: %f \n", audio_osc_1_result);
 		rt_printf("osc_2_result_analog is: %f \n", osc_2_result_analog);
@@ -623,19 +624,18 @@ void printStatus(void*){
 		rt_printf("analog_out_3 is: %f \n", analog_out_3);
 		rt_printf("analog_out_4 is: %f \n", analog_out_4);
 		
-
+		/*
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
 		rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
+		*/
 
 		// Clock derived values
-
+		/*
     	rt_printf("analog_clock_in_state is: %d \n", analog_clock_in_state);
-
     	rt_printf("current_digital_clock_in_state is: %d \n", current_digital_clock_in_state);
     	rt_printf("new_digital_clock_in_state is: %d \n", new_digital_clock_in_state);
-
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
-    	
+    	*/
 
     	// rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
     	// rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
@@ -643,17 +643,13 @@ void printStatus(void*){
     	
     	// Sequence derived results 
     	
-    	
-    	
-    	
     	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
     	
-    	rt_printf("binary_sequence_result is: %d \n", binary_sequence_result);
-
+		/*
 		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
 		print_binary(gray_code_sequence);
 		rt_printf("%c \n", 'B');
-
+		*/
 
     	rt_printf("the_sequence is: %d \n", the_sequence);
     	print_binary(the_sequence);
@@ -2319,7 +2315,7 @@ void render(BelaContext *context, void *userData)
 	      
 	      if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	
-	      	osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.1, 20);
+	      	osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 3);
  
 	      	
 	      	//envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
@@ -2331,7 +2327,8 @@ void render(BelaContext *context, void *userData)
 		  
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
 		  	
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
+		  	// TODO use an oscillator here in stead.
+		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 10.0);
 		  	
 		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
