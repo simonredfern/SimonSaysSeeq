@@ -1,22 +1,18 @@
  /*
 
-                                   .-'''-.                                                                                                                     
-                                  '   _    \                                                                                                        .-''-.     
-           .--. __  __   ___    /   /` '.   \    _..._                                                         __.....__           __.....__       //'` `\|    
-           |__||  |/  `.'   `. .   |     \  '  .'     '.                    .-.          .-                .-''         '.     .-''         '.    '/'    '|    
-           .--.|   .-.  .-.   '|   '      |  '.   .-.   .                    \ \        / /               /     .-''"'-.  `.  /     .-''"'-.  `. |'      '|    
-           |  ||  |  |  |  |  |\    \     / / |  '   '  |               __    \ \      / /               /     /________\   \/     /________\   \||     /||    
-       _   |  ||  |  |  |  |  | `.   ` ..' /  |  |   |  |       _    .:--.'.   \ \    / /   _         _  |                  ||                  | \'. .'/||    
-     .' |  |  ||  |  |  |  |  |    '-...-'`   |  |   |  |     .' |  / |   \ |   \ \  / /  .' |      .' | \    .-------------'\    .-------------'  `--'` ||    
-    .   | /|  ||  |  |  |  |  |               |  |   |  |    .   | /`" __ | |    \ `  /  .   | /   .   | /\    '-.____...---. \    '-.____...---.        ||    
-  .'.'| |//|__||__|  |__|  |__|               |  |   |  |  .'.'| |// .'.''| |     \  / .'.'| |// .'.'| |// `.             .'   `.             .'         || /> 
-.'.'.-'  /                                    |  |   |  |.'.'.-'  / / /   | |_    / /.'.'.-'  /.'.'.-'  /    `''-...... -'       `''-...... -'           ||//  
-.'   \_.'                                     |  |   |  |.'   \_.'  \ \._,\ '/|`-' / .'   \_.' .'   \_.'                                                 |'/   
-                                              '--'   '--'            `--'  `"  '..'                                                                      |/    
+  _________.__                        _________                     _________                    
+ /   _____/|__| _____   ____   ____  /   _____/____  ___.__. ______/   _____/ ____   ____  ______
+ \_____  \ |  |/     \ /  _ \ /    \ \_____  \\__  \<   |  |/  ___/\_____  \_/ __ \_/ __ \/ ____/
+ /        \|  |  Y Y  (  <_> )   |  \/        \/ __ \\___  |\___ \ /        \  ___/\  ___< <_|  |
+/_______  /|__|__|_|  /\____/|___|  /_______  (____  / ____/____  >_______  /\___  >\___  >__   |
+        \/          \/            \/        \/     \/\/         \/        \/     \/     \/   |__|
 
-SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021 
 
-This file uses Bela, see below:
+SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
+
+Version: 2021-01-10 or so.
+
+This file uses Bela libraries and example code, see below:
 
 */
 
@@ -2267,13 +2263,7 @@ void render(BelaContext *context, void *userData)
 	// Use this global variable as a timing device
 	// Set other time points from this frame_timer
 	frame_timer = context->audioFramesElapsed;
-	
-	//// Bela Delay example
-	
-	
-	
-	
-	//// End Bela delay example // 
+
 
 
     // AUDIO LOOP
@@ -2285,7 +2275,7 @@ void render(BelaContext *context, void *userData)
 		// Begin Bela delay example
 		
 		
- float out_l = 0;
+		float out_l = 0;
         float out_r = 0;
         
         // Read audio inputs
@@ -2362,12 +2352,13 @@ void render(BelaContext *context, void *userData)
 			
 			
 			// todo create separate vars for oscillator_2_audio_output
-			
-			if (ch == 0){
-				audioWrite(context, n, ch, audio_osc_1_result);
-			} else { // ch 1
-				audioWrite(context, n, ch, audioRead(context, n, ch));
-			}
+
+			// Disable whilst trying delay things				
+			// if (ch == 0){
+			// 	audioWrite(context, n, ch, audio_osc_1_result);
+			// } else { // ch 1
+			// 	audioWrite(context, n, ch, audioRead(context, n, ch));
+			// }
 			
 			if (ch == 0) {
 				audio_left_input_raw = audioRead(context, n, ch);
