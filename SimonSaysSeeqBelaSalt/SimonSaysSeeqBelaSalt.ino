@@ -98,7 +98,7 @@ float detected_bpm = 120.0;
 
 int clock_patience = 50000;
 
-float average_clock_spacing = 0;
+float average_clock_spacing_in_frames = 0;
 
 int audio_sample_rate;
 int analog_sample_rate;
@@ -597,7 +597,7 @@ void printStatus(void*){
 		rt_printf("frame_timer is: %llu \n", frame_timer);
 		
 		
-    	rt_printf("average_clock_spacing is: %f \n", average_clock_spacing);
+    	rt_printf("average_clock_spacing_in_frames is: %f \n", average_clock_spacing_in_frames);
     
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
 
@@ -2559,10 +2559,10 @@ void render(BelaContext *context, void *userData)
 
               
               // Use last 3 rising edges to determine wavelength of the clock
-              average_clock_spacing =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
+              average_clock_spacing_in_frames =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
 
-	            // TODO measure the last few rising edges and set 
-              detected_bpm = average_clock_spacing * audio_sample_rate;
+	            // TODO measure the last few rising edges and set // 44100.0
+              detected_bpm = 60 * (average_clock_spacing_in_frames / audio_sample_rate); // hmm not quite right yet..
 
 
               
