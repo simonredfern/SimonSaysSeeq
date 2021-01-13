@@ -84,12 +84,19 @@ uint64_t frame_timer = 0;
 uint64_t last_clock_falling_edge = 0; 
 
 uint64_t last_clock_rising_edge = 0;
+
+
+ uint64_t previous_rising_edge = 0;
+ uint64_t previous_previous_rising_edge = 0; 
  
 int clock_width = 0;
 
 uint64_t elapsed_since_last_clock_rising_edge = 0;
 
-int clock_patience = 112000;
+unsigned int detected_bpm = 120;
+
+
+int clock_patience = 50000;
 
 
 
@@ -150,6 +157,18 @@ int gTriggerButtonLastStatus = 0; // Last status of gate button
 
 int gModeButtonPin = 1; // Digital pin to which oscillator selection button should be connected
 int gModeButtonLastStatus = 0; // Last status of oscillator selection button
+
+
+// LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
+int LED_1_PIN = 2;
+int	LED_2_PIN = 4;
+int LED_3_PIN = 8;
+int	LED_4_PIN = 9;
+int	LED_PWM_PIN = 7;
+
+// - set the LED pin as an INPUT: LED off
+// - set the LED pin as an OUTPUT, value 0: LED ON, red
+// - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
 // recursive function to print binary representation of a positive integer
@@ -576,6 +595,12 @@ void printStatus(void*){
 		// Global frame timing
 
 		rt_printf("frame_timer is: %llu \n", frame_timer);
+    
+    
+    rt_printf("detected_bpm is: %f \n", detected_bpm);
+
+
+    
 		
 		
 		// Analog / Digital Clock In.
@@ -2224,6 +2249,13 @@ bool setup(BelaContext *context, void *userData){
         pinMode(context, 0, gModeButtonPin, INPUT);
 
 
+        // The two LEDS on Salt
+        pinMode(context, 0, LED_1_PIN, OUTPUT);
+        pinMode(context, 0, LED_2_PIN, OUTPUT);
+
+
+
+
 
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
@@ -2499,6 +2531,16 @@ void render(BelaContext *context, void *userData)
 	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
 	        	gate_out_state_set = target_gate_out_state;
         	}
+
+
+          // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
+          if (gate_out_state_set == HIGH){
+            digitalWriteOnce(context, m, LED_1_PIN, HIGH);
+            
+          } else {
+            digitalWriteOnce(context, m, LED_1_PIN, LOW);
+
+          }
         	
         	// Do similar for another PIN for if (step_count == FIRST_STEP)
         	
@@ -2508,7 +2550,19 @@ void render(BelaContext *context, void *userData)
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               
               current_digital_clock_in_state = HIGH;
+
+              previous_previous_rising_edge = previous_rising_edge; 
+              previous_rising_edge = last_clock_rising_edge;
               last_clock_rising_edge = frame_timer;
+
+              
+              // Use last 3 rising edges to determine wavelength of the clock
+              float clock_spacing =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
+
+	            // TODO measure the last few rising edges and set 
+              detected_bpm = clock_spacing * audio_sample_rate;
+
+
               
               if (sequence_is_running == LOW){
                 StartSequencer();
@@ -2550,7 +2604,7 @@ void render(BelaContext *context, void *userData)
 				}
 			}
 		  
-	
+
 	
 		// Temp code until we have clock
 	   //temp_count++;
