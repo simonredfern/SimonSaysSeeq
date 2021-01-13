@@ -93,12 +93,12 @@ int clock_width = 0;
 
 uint64_t elapsed_since_last_clock_rising_edge = 0;
 
-unsigned int detected_bpm = 120;
+float detected_bpm = 120.0;
 
 
 int clock_patience = 50000;
 
-
+float average_clock_spacing = 0;
 
 int audio_sample_rate;
 int analog_sample_rate;
@@ -595,9 +595,11 @@ void printStatus(void*){
 		// Global frame timing
 
 		rt_printf("frame_timer is: %llu \n", frame_timer);
+		
+		
+    	rt_printf("average_clock_spacing is: %f \n", average_clock_spacing);
     
-    
-    rt_printf("detected_bpm is: %f \n", detected_bpm);
+    	rt_printf("detected_bpm is: %f \n", detected_bpm);
 
 
     
@@ -873,7 +875,7 @@ bool RampIsPositive(){
 // Kind of syncs the CV 
 void SyncAndResetCv(){
 	
-  rt_printf("------SyncAndResetCv-----\n");	
+  //rt_printf("------SyncAndResetCv-----\n");	
   
   
   //envelope_1.gate(true);
@@ -2535,10 +2537,10 @@ void render(BelaContext *context, void *userData)
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
           if (gate_out_state_set == HIGH){
-            digitalWriteOnce(context, m, LED_1_PIN, HIGH);
+            digitalWriteOnce(context, m, LED_1_PIN, LOW);
             
           } else {
-            digitalWriteOnce(context, m, LED_1_PIN, LOW);
+            digitalWriteOnce(context, m, LED_1_PIN, HIGH);
 
           }
         	
@@ -2557,10 +2559,10 @@ void render(BelaContext *context, void *userData)
 
               
               // Use last 3 rising edges to determine wavelength of the clock
-              float clock_spacing =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
+              average_clock_spacing =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
 
 	            // TODO measure the last few rising edges and set 
-              detected_bpm = clock_spacing * audio_sample_rate;
+              detected_bpm = average_clock_spacing * audio_sample_rate;
 
 
               
