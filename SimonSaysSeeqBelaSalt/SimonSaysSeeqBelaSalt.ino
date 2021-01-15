@@ -83,22 +83,22 @@ uint64_t frame_timer = 0;
 
 uint64_t last_clock_falling_edge = 0; 
 
-uint64_t last_clock_rising_edge = 0;
+uint64_t last_tick_frame = 0;
 
 
- uint64_t previous_rising_edge = 0;
- uint64_t previous_previous_rising_edge = 0; 
+ uint64_t previous_tick_frame = 0;
+ uint64_t previous_previous_tick_frame = 0; 
  
 int clock_width = 0;
 
-uint64_t elapsed_since_last_clock_rising_edge = 0;
+uint64_t elapsed_since_last_tick_frame = 0;
 
 float detected_bpm = 120.0;
 
 
 int clock_patience = 50000;
 
-float average_clock_spacing_in_frames = 0;
+float frames_per_24_ticks = 0;
 
 int audio_sample_rate;
 int analog_sample_rate;
@@ -597,7 +597,7 @@ void printStatus(void*){
 		rt_printf("frame_timer is: %llu \n", frame_timer);
 		
 		
-    	rt_printf("average_clock_spacing_in_frames is: %f \n", average_clock_spacing_in_frames);
+    	rt_printf("frames_per_24_ticks is: %f \n", frames_per_24_ticks);
     
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
 
@@ -607,7 +607,7 @@ void printStatus(void*){
 		
 		// Analog / Digital Clock In.
 		/*
-  		rt_printf("last_clock_rising_edge is: %llu \n", last_clock_rising_edge);
+  		rt_printf("last_tick_frame is: %llu \n", last_tick_frame);
 		rt_printf("last_clock_falling_edge is: %llu \n", last_clock_falling_edge);
 		rt_printf("clock_width is: %d \n", clock_width);
 		rt_printf("clock_patience is: %d \n", clock_patience);
@@ -1137,6 +1137,33 @@ void OnTick(){
 
  //rt_printf("Hello from OnTick \n");
 
+
+  if (loop_timing.tick_count_since_start % 24 == 0){
+
+    // BPM Detection
+
+    // 1 Tick (clock pulse) = f Audio Frames
+    // 1 Tick = f / 44100 (Audio Sample Rate) seconds
+    // There are 44100/f Ticks per seconds
+    // There are 44100 * 60 /f Ticks per minute
+    // There are 44100 * 60 / (f * 24) Beats per minute 
+    // For example 44100 * 60 / (920 * 24) = 120 BPM 
+
+    // Instead of averaging over a few clock cycles and dividing by 24 
+    // (ticks per quarter note which is midi standard and used by Arturia Beat Step Pro etc.)
+
+    //previous_previous_tick_frame = previous_tick_frame; 
+    previous_tick_frame = last_tick_frame;
+    last_tick_frame = frame_timer;
+
+              
+    // Use last 3 rising edges to determine wavelength of the clock
+    frames_per_24_ticks =  last_tick_frame - previous_tick_frame;
+
+    detected_bpm = audio_sample_rate * 60 / frames_per_24_ticks;
+
+  }
+ 
 
   // Decide if we have a "step"
   if (loop_timing.tick_count_in_sequence % 6 == 0){
@@ -2553,16 +2580,7 @@ void render(BelaContext *context, void *userData)
               
               current_digital_clock_in_state = HIGH;
 
-              previous_previous_rising_edge = previous_rising_edge; 
-              previous_rising_edge = last_clock_rising_edge;
-              last_clock_rising_edge = frame_timer;
-
-              
-              // Use last 3 rising edges to determine wavelength of the clock
-              average_clock_spacing_in_frames =  ((last_clock_rising_edge - previous_rising_edge) + (previous_rising_edge - previous_previous_rising_edge))/2.0;
-
-	            // TODO measure the last few rising edges and set // 44100.0
-              detected_bpm = 60 * (average_clock_spacing_in_frames / audio_sample_rate); // hmm not quite right yet..
+     
 
 
               
@@ -2581,7 +2599,7 @@ void render(BelaContext *context, void *userData)
             	
             	
 				// the pulse width of our clock (half actually)
-            	clock_width = last_clock_falling_edge - last_clock_rising_edge;
+            	clock_width = last_clock_falling_edge - last_tick_frame;
             	//rt_printf("clock_width is: %llu \n", clock_width);
             	
             	// currently a constant 
@@ -2596,12 +2614,12 @@ void render(BelaContext *context, void *userData)
 		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
 		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 		if (midi_clock_detected == LOW){
-    		elapsed_since_last_clock_rising_edge = frame_timer - last_clock_rising_edge;
-			//rt_printf("elapsed_since_last_clock_rising_edge is: %d ", elapsed_since_last_clock_rising_edge);	
+    		elapsed_since_last_tick_frame = frame_timer - last_tick_frame;
+			//rt_printf("elapsed_since_last_tick_frame is: %d ", elapsed_since_last_tick_frame);	
 		
-			if (elapsed_since_last_clock_rising_edge > clock_patience){
+			if (elapsed_since_last_tick_frame > clock_patience){
 		  		if (sequence_is_running == HIGH) {
-		    		rt_printf("Stopping sequencer because elapsed_since_last_clock_rising_edge: %llu is greater than clock_patience: %llu \n", elapsed_since_last_clock_rising_edge, clock_patience);
+		    		rt_printf("Stopping sequencer because elapsed_since_last_tick_frame: %llu is greater than clock_patience: %llu \n", elapsed_since_last_tick_frame, clock_patience);
 			    	StopSequencer();
 				}
 			}
@@ -2645,7 +2663,7 @@ WORKS
               //Serial.println(String("Went HIGH "));
                
               OnTick(context);
-              last_clock_rising_edge = milliseconds();
+              last_tick_frame = milliseconds();
               
             } 
     
@@ -2745,7 +2763,7 @@ WORKS
               
               
               do_tick = true;
-              last_clock_rising_edge = milliseconds();
+              last_tick_frame = milliseconds();
               
             } 
     
