@@ -84,10 +84,12 @@ uint64_t frame_timer = 0;
 uint64_t last_clock_falling_edge = 0; 
 
 uint64_t last_tick_frame = 0;
+uint64_t previous_tick_frame = 0;
 
+uint64_t last_sequence_reset_frame = 0;
+uint64_t previous_sequence_reset_frame = 0;
 
- uint64_t previous_tick_frame = 0;
- uint64_t previous_previous_tick_frame = 0; 
+uint64_t frames_per_sequence = 0;
  
 int clock_width = 0;
 
@@ -450,6 +452,13 @@ void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP; 
   oscillator_1_analog.setPhase(0.0);
+
+
+  previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
+  last_sequence_reset_frame = frame_timer; // Now
+  // We'll be able to use this, to set delay in frames
+  frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
+
   //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
 }
 
@@ -592,16 +601,12 @@ void printStatus(void*){
       //rt_printf("================ \n");
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
-		// Global frame timing
+		  // Global frame timing
 
 		rt_printf("frame_timer is: %llu \n", frame_timer);
-		
-		
     	rt_printf("frames_per_24_ticks is: %f \n", frames_per_24_ticks);
-    
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
-
-
+    	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
 		
 		
@@ -1137,7 +1142,7 @@ void OnTick(){
 
  //rt_printf("Hello from OnTick \n");
 
-
+  /////////////////
   // BPM Detection
   if (loop_timing.tick_count_since_start % 24 == 0){
     // 1 Tick (clock pulse) = f Audio Frames
@@ -1149,13 +1154,10 @@ void OnTick(){
 
     // Instead of averaging over a few clock cycles and dividing by 24, count frames per 24 ticks 
     // (ticks per quarter note which is midi standard and used by Arturia Beat Step Pro etc.)
-    previous_tick_frame = last_tick_frame;
-    last_tick_frame = frame_timer;
-
+    previous_tick_frame = last_tick_frame; // 24 frames ago
+    last_tick_frame = frame_timer; // Now
     frames_per_24_ticks = last_tick_frame - previous_tick_frame;
-
     detected_bpm = audio_sample_rate * 60 / frames_per_24_ticks;
-
   }
  
 
@@ -2319,9 +2321,8 @@ void render(BelaContext *context, void *userData)
 		audio_envelope_1_amplitude  = 1.0 * envelope_1_audio.process();
 		audio_osc_1_result = oscillator_2_audio.process() * audio_envelope_1_amplitude;
 		
-		// Begin Bela delay example
-		
-		
+        ////////////////////////////////
+		    // Begin Bela delay example code
 		    float out_l = 0;
         float out_r = 0;
         
@@ -2381,12 +2382,8 @@ void render(BelaContext *context, void *userData)
         // Write the sample into the output buffer -- done!
         audioWrite(context, n, 0, out_l);
         audioWrite(context, n, 1, out_r);
-
-
-		
-		
-		// End Bela delay example
-		
+		    // End Bela delay example code
+		    //////////////////////////////
 		
 		
 		
