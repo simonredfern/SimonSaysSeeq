@@ -1138,10 +1138,8 @@ void OnTick(){
  //rt_printf("Hello from OnTick \n");
 
 
+  // BPM Detection
   if (loop_timing.tick_count_since_start % 24 == 0){
-
-    // BPM Detection
-
     // 1 Tick (clock pulse) = f Audio Frames
     // 1 Tick = f / 44100 (Audio Sample Rate) seconds
     // There are 44100/f Ticks per seconds
@@ -1149,16 +1147,12 @@ void OnTick(){
     // There are 44100 * 60 / (f * 24) Beats per minute 
     // For example 44100 * 60 / (920 * 24) = 120 BPM 
 
-    // Instead of averaging over a few clock cycles and dividing by 24 
+    // Instead of averaging over a few clock cycles and dividing by 24, count frames per 24 ticks 
     // (ticks per quarter note which is midi standard and used by Arturia Beat Step Pro etc.)
-
-    //previous_previous_tick_frame = previous_tick_frame; 
     previous_tick_frame = last_tick_frame;
     last_tick_frame = frame_timer;
 
-              
-    // Use last 3 rising edges to determine wavelength of the clock
-    frames_per_24_ticks =  last_tick_frame - previous_tick_frame;
+    frames_per_24_ticks = last_tick_frame - previous_tick_frame;
 
     detected_bpm = audio_sample_rate * 60 / frames_per_24_ticks;
 
@@ -2310,24 +2304,16 @@ bool setup(BelaContext *context, void *userData){
 
 void render(BelaContext *context, void *userData)
 {
-	
-	
-//	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-  
-	    
-
-
-    ///////////////////////////////////////////
-   // Look for Analogue Clock (24 PPQ)
+  ///////////////////////////////////////////
+  // Look for Analogue Clock (24 PPQ)
 
 	// Use this global variable as a timing device
 	// Set other time points from this frame_timer
 	frame_timer = context->audioFramesElapsed;
 
 
-
-    // AUDIO LOOP
+  // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 		audio_envelope_1_amplitude  = 1.0 * envelope_1_audio.process();
@@ -2336,7 +2322,7 @@ void render(BelaContext *context, void *userData)
 		// Begin Bela delay example
 		
 		
-		float out_l = 0;
+		    float out_l = 0;
         float out_r = 0;
         
         // Read audio inputs
