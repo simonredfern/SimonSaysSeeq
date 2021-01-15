@@ -619,13 +619,16 @@ void printStatus(void*){
 		*/
 		
 		// Other Inputs
-		/*
     	rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
-    	//rt_printf("sequence_length_input is: %d \n", sequence_length_input);
-    	*/
+		
+		
+        // Sequence derived results 		
+    	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
+    	rt_printf("new_sequence_length_in_ticks is: %d \n", new_sequence_length_in_ticks);
+    	
 
 
 		/*
@@ -669,9 +672,7 @@ void printStatus(void*){
     	// rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
     	
-    	// Sequence derived results 
-    	
-    	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
+
     	
 		/*
 		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
