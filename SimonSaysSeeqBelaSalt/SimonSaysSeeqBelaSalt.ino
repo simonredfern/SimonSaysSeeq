@@ -94,7 +94,7 @@ uint64_t frames_per_sequence = 0;
 
 uint64_t last_tick_frame = 0;
  
-int clock_width = 0;
+//int clock_width = 0;
 
 uint64_t elapsed_frames_since_last_tick = 0;
 
@@ -107,21 +107,6 @@ uint64_t frames_per_24_ticks = 0;
 
 int audio_sample_rate;
 int analog_sample_rate;
-
-// Return now as milliseconds https://en.cppreference.com/w/cpp/chrono/duration/duration_cast
-using namespace std::chrono;
-milliseconds ms = duration_cast< milliseconds >(
-    system_clock::now().time_since_epoch()
-);
-
-
- 
-
-
-
-
-
-
 
 
 #include <math.h> //sinf
@@ -337,7 +322,7 @@ uint8_t ticks_after_step;
 // Actually we like the glitches - it makes the sequencer more interesting
 
 
-double	wait_time_ms;
+//double	wait_time_ms;
 
 
 uint8_t NO_JITTER_REDUCTION = 0;
@@ -561,40 +546,6 @@ enum osc_type
 
 
 
-
-// void pass_string_2(const std::string&){
-// 	 if(gCount % 100000 == 0) {
-// 			rt_printf("%s",s); 
-	
-// 			rt_printf("Debug Print gCount %d \n",gCount);
-// 	 }	
-// }
-
-
-
-void pass_string(char s[])	 
-{  
-	 if(gCount % 100000 == 0) {
-			rt_printf("%s",s); 
-	 }
-} 
-
-
-
-void debugPrint(char a, char b, char c, int x, int y, int z ){
-	
-    if(gCount % 100000 == 0) {
-    	//rt_printf("OK \n");
-    	
-    //	rt_printf("Debug Print %s%s%s : %s %s %s",a,b,c,x,y,z);
-		rt_printf("Debug Print gCount %d \n",gCount);	
-	}
-	
-
-
-} 
-
-
 void printStatus(void*){
 
     // Might not want to print every time else we overload the CPU
@@ -741,33 +692,6 @@ void printStatus(void*){
 
 
 
-///////      
-/*
-  // can't open a url with this lib it seems libcurl is tricky to link.
-
-    char url[1000] = "https://apisandbox.openbankproject.com/obp/v4.0.0/adapter";
-
-    std::fstream fs;
-    fs.open(url); 
-
-// Thanks to: https://gehrcke.de/2011/06/reading-files-in-c-using-ifstream-dealing-correctly-with-badbit-failbit-eofbit-and-perror/
-
-std::string line;
-std::string error_opening;
-std::ifstream f (url);
-if (!f.is_open())
-	std::cerr << "Could not open file...\n";
-	std::cerr << url << std::endl;
-	std::cerr << strerror(errno) << std::endl;
-	
-while(getline(f, line)) {
-    rt_printf("-%c", &line);
-    }
-    
-if (f.bad())
-    rt_printf("error reading ");
-    fs.close();
-*/	
     	
     	
     }
@@ -1695,352 +1619,6 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 }
 
 
-/*
-//////// SequenceSettings (Everytime we get a midi clock pulse) ////////////////////////////
-// This is called from the main loop() function on every Midi Clock message.
-// It contains things that we want to check / happen every tick..
-void SequenceSettings(){
-  // Note we set tick_count_in_sequence to 0 following stop and start midi messages.
-  // The midi clock standard sends 24 ticks per crochet. (quarter note).
-
- //int called_on_step = 0; // not currently used
-
-
-  ////////////////////////////////////////////////////////////////
-  // Read button state
-  //int button_1_state = 1; // TODO digitalRead(euroshield_button_pin); // Pressed = LOW, Normal = HIGH
-  //rt_printf("button_1_state is: ") + button_1_state);
-
-
-  // state-change-3
-  
-  //int button_1_has_changed = 0; // TODO Button1HasChanged(button_1_state);
-  //rt_printf("button_1_has_changed is: ") + button_1_has_changed);
-
-
-
-
-  ////////////////////////////////////////////
-  // Get the Pot positions. 
-  // We will later assign the values dependant on the push button state
-  //upper_input_raw = analogRead(upper_pot_pin);
-  
-
-
-  //lower_input_raw = analogRead(lower_pot_pin);
-  //rt_printf("*****lower_input_raw *** is: %s ", lower_input_raw  );
-
-
-//  if ((button_1_state == HIGH) & IsCrossing(sequence_pattern_input, upper_input_raw, FUZZINESS_AMOUNT)) {
-   // sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 1023.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
-   // rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
-    
-  //} else {
-  //  rt_printf("NO new value for sequence_pattern_input . Sticking at: %s", sequence_pattern_input  );
-  //}
-  
-  //if ((button_1_state == LOW) & IsCrossing(sequence_length_input, upper_input_raw, FUZZINESS_AMOUNT)) {   
-   // sequence_length_input = GetValue(upper_input_raw, sequence_length_input, jitter_reduction);
-    //rt_printf("**** NEW value for sequence_length_input is: %s ", sequence_length_input  );
-  //} else {
-  //  rt_printf("NO new value for sequence_length_input . Sticking at: %s ", sequence_length_input  );
-  //}
-  
-  //if ((button_1_state == HIGH) & IsCrossing(lfo_a_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {    
-    lfo_a_frequency_input = GetValue(lower_input_raw, lfo_a_frequency_input, jitter_reduction);
-    //rt_printf("**** NEW value for lfo_a_frequency_input is: %s ", lfo_a_frequency_input  );  
-  //} else {
-   // rt_printf("NO new value for lfo_a_frequency_input . Sticking at: %s", lfo_a_frequency_input  );
-  //}
-  
-  
-  //if ((button_1_state == LOW) & IsCrossing(lfo_b_frequency_input, lower_input_raw, FUZZINESS_AMOUNT)) {   
-    lfo_b_frequency_input = GetValue(lower_input_raw, lfo_b_frequency_input, jitter_reduction);
-    //rt_printf("**** NEW value for lfo_b_frequency_input is: %s", lfo_b_frequency_input  );
-  //} else {
-   // rt_printf("NO new value for lfo_b_frequency_input . Sticking at: %s", lfo_b_frequency_input  );
- // }
-
-
-//rt_printf("**** sequence_pattern_input is now: ") + sequence_pattern_input  ); 
-//rt_printf("**** sequence_length_input is now: ") + sequence_length_input  ); 
-//rt_printf("**** lfo_a_frequency_input is now: ") + lfo_a_frequency_input  );
-//rt_printf("**** lfo_b_frequency_input is now: ") + lfo_b_frequency_input  ); 
-
-
-
-  
-
-        right_peak_level = 1.0; // TODO peak_R.read() * 1.0;
-        //rt_printf("right_peak_level: ") + right_peak_level );  
-
-
-     external_modulator_object_level = right_peak_level;
-
-// TODO!    external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
-
-
-//////////////////////////////////////////////
-
-//amp_1_object.gain(1.0);
-
-
-
-//////////////////////////////////////////
-// Assign values to change the sequencer.
-///////////////////////////////////
-
-   // 8 bit sequence - 8 Least Significant Bits
-   last_binary_sequence_result = binary_sequence_result;
-
- //  binary_sequence = (sequence_pattern_input & sequence_bits_8_through_1) + 1;
-
-   // If we have 8 bits, use the range up to 255
-
-   
-   uint8_t binary_sequence_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
-   // TODO Could probably use a smaller type 
-   unsigned int binary_sequence_upper_limit; 
-
-
-//binary_sequence_upper_limit = pow(current_sequence_length_in_steps, 2);
-
-// REMEMBER, current_sequence_length_in_steps is ONE indexed (from 1 up to 16) 
-// For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
-// i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^current_sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, current_sequence_length_in_steps) - 1; 
-
-   //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
-    
-
-
-  // Button is in Normal state (not pressed) (HIGH) (button_1_state == HIGH)
-   // ***UPPER Pot HIGH Button*** //////////
-  // Generally the lowest value from the pot we get is 2 or 3 
-  // setting-1
-  binary_sequence_result = fscale( 1, 1023, binary_sequence_lower_limit, binary_sequence_upper_limit, sequence_pattern_input, 0);
-
-   
-
-
-   if (binary_sequence_result != last_binary_sequence_result){
-    //rt_printf("binary_sequence has changed **"));
-   }
-
-
-   //rt_printf("binary_sequence_result is: ") + binary_sequence_result  );
-   //Serial.print("\t");
-   //Serial.print(binary_sequence_result, BIN);
-   //Serial.println();
-
-   gray_code_sequence = Binary2Gray(binary_sequence_result);
-   //rt_printf("gray_code_sequence is: ") + gray_code_sequence  );
-   //Serial.print("\t");
-   //Serial.print(gray_code_sequence, BIN);
-   //Serial.println();
-
-
-
-    the_sequence = gray_code_sequence;
-
-    the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-    the_sequence = ~ the_sequence; // Invert
-
-   
-    // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence_result == 1){
-      the_sequence = 1;
-    }
-
-
-    
-    
-
-   //rt_printf("the_sequence is: %s ", the_sequence  );
-   //Serial.print("\t");
-   //Serial.print(the_sequence, BIN);
-   //Serial.println();
-
-
-   
-  //rt_printf("right_peak_level is: ") + right_peak_level  );
-
- 
-
-// Sequence length raw
-// ***UPPER pot LOW value***
- current_sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, sequence_length_input, 0);   ;
- // rt_printf("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  );
-   
-   //((sequence_length_input & current_sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   
-
-  // Highlight the first step 
-  if (step_count == FIRST_STEP) {
-
-    // If the sequence length is 8 (very predictable), make it shine!
-    if (current_sequence_length_in_steps == 8){
-      Led2Level(BRIGHT_5);
-      //Led4Digital(true);
-    } else {
-      Led2Level(BRIGHT_2);
-      //Led2Level(fscale( FIRST_STEP, current_sequence_length_in_steps, 0, BRIGHT_1, current_sequence_length_in_steps, 0));
-      //Led4Digital(false);
-    }
-  
-  } else {
-      // Else off.
-      Led2Level(BRIGHT_0);
-
-  }
-
-// continuous indication of length
-    if (current_sequence_length_in_steps == 16){
-      Led3Level(BRIGHT_2);     
-    } else if (current_sequence_length_in_steps == 8){
-      Led3Level(BRIGHT_5);
-    } else if (current_sequence_length_in_steps == 4){
-      Led3Level(BRIGHT_4);
-    } else {
-      Led3Level(BRIGHT_0);
-    }
-
-
-  // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, current_sequence_length_in_steps, -1.5));   
-   
-   // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-   //jitter_reduction = (sequence_length_input & jitter_reduction_bits_5_4_3_2_1) >> 0;
-   //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
-
-   
-   //jitter_reduction = fscale( 0, 255, 0, 4, left_peak_level, 0);
-   //rt_printf("jitter_reduction is: ") + jitter_reduction  );
-   //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
-
-
-// analog_clock_in_level check TODO is this correct?
- 
-   float amp_1_gain = fscale( 0, 1, 0, 1, analog_clock_in_level, 0);
-   //rt_printf("amp_1_gain is: ") + amp_1_gain  );
-// TODO what is this really setting ?
-  // amp_1_object.gain(amp_1_gain); // setting-
-   //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
-
-
-   ////////////////////////////////////// 
-   // CV stuff
-   // ***LOWER Pot HIGH Button***
-   // cv_waveform_a_frequency_raw =  (lfo_a_frequency_input & cv_waveform_a_frequency_raw_bits_8_through_1) >> 0 ; 
-   
-   cv_waveform_a_frequency_raw =  lfo_a_frequency_input; 
-   
-   //rt_printf("cv_waveform_a_frequency_raw is: ") + cv_waveform_a_frequency_raw  );
-   // LFO up to 20Hz
-   cv_waveform_a_frequency = fscale( 3, 1023, 0.001, 10, cv_waveform_a_frequency_raw, -1.5);
-   // rt_printf("cv_waveform_a_frequency is: ") + cv_waveform_a_frequency  );
-   ////////////////////////
-
-   // ***LOWER Pot LOW Button*** (Multiplex on lfo_b_frequency_input)
-   // cv_waveform_b_frequency_raw = ((lfo_b_frequency_input & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
-   cv_waveform_b_frequency_raw = lfo_b_frequency_input;
-   //rt_printf("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
-   ///////////////////////
-
-  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
-  if (cv_waveform_b_frequency_raw > CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - 20){
-    reset_cv_lfo_at_FIRST_STEP = true;
-    //rt_printf("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
-  }
-
-
-   // We want a value that goes from high to low as we turn the pot to the right.
-   // So reverse the number range by subtracting from the maximum value.
-   //int cv_waveform_b_amplitude_delta_raw = CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - cv_waveform_b_frequency_raw;
-   
-  // int cv_waveform_b_amplitude_delta_raw =  cv_waveform_b_frequency_raw;
-   
-   //rt_printf("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
-   
-   // setting-b-amp-delta
-   //cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -10, 10, cv_waveform_b_frequency_raw, 1.5) / 100;
-   
-   cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.0, 0.3, cv_waveform_b_frequency_raw);
-   
-
-   
-   //rt_printf("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
-
-   // Lower Pot LOW Button (Multiplex on lfo_b_frequency_input)
-   //cv_waveform_a_amplitude_raw = (lfo_b_frequency_input & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
-   //rt_printf("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
-   //cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
-   //rt_printf("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
-
-   cv_waveform_a_amplitude = 0.99;
-
-   // Put this and above on the inputs.
-
-   // TODO Add offset?
-   // Lower Pot LOW Button
-   //   cv_offset_raw = (lfo_b_frequency_input & bits_2_1);
-   //   rt_printf("cv_offset_raw is: ") + cv_offset_raw  );
-   //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
-   //   rt_printf("cv_offset is: ") + cv_offset  );
-
- 
-    // Used for CV
-    // TODO SET SOME BELA OSC HERE
-    //cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
-    //cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
-    //cv_waveform_a_object.offset(0);
-
-
-
-
-    // MONITOR GATE 
-    
-    // TODO DRIVE LED OF GATE
-    
-    // if (gate_monitor.available())
-    // {
-    //     float gate_peak = gate_monitor.read();
-    //     //rt_printf("gate_monitor gate_peak ") + gate_peak  );
-    //     Led1Level(fscale( 0.0, 1.0, 0, 255, gate_peak, 0));
-    // } else {
-    //   //rt_printf("gate_monitor not available ")   );
-    // }
-    
-    
-    // TODO DRIVE LED OF CV
-    // MONITOR CV
-    /// This is connected to cv_waveform and reads the level. We use that to drive the led.
-    // if (cv_monitor.available())
-    // {
-    //     float cv_peak = cv_monitor.read();
-    //     //rt_printf("gate_monitor cv_peak ") + cv_peak  );
-    //     Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
-    // } else {
-    //   //rt_printf("gate_monitor not available ")   );
-    // }
-
-
-  //return called_on_step;
- 
-  } // End of SequenceSettings
-////////////////////////////////////////////////
-
-*/
-
-////
-
-
-
-
-
-
-
 
 void InitMidiSequence(){
 
@@ -2072,21 +1650,6 @@ void InitMidiSequence(){
 
 rt_printf("InitMidiSequence Done");
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2266,11 +1829,6 @@ bool setup(BelaContext *context, void *userData){
         envelope_2_analog.setDecayRate(envelope_1_decay * context->analogSampleRate);
         envelope_2_analog.setReleaseRate(envelope_1_release * context->analogSampleRate);
         envelope_2_analog.setSustainLevel(envelope_1_sustain);
-
-        // envelope_3.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        // envelope_3.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        // envelope_3.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        // envelope_3.setSustainLevel(envelope_1_sustain);
 
 
 
