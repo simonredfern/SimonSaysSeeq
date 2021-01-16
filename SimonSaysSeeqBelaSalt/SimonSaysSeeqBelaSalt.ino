@@ -197,8 +197,9 @@ const int SEQUENCE_OUT_PIN = 0;
 
 // CV I/O 1-8	ANALOG channel 0-7
 const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
-const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 1; // CV 2 input
-const int OSC_FREQUENCY_INPUT_PIN = 2; // CV 3 input
+const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
+
+const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
