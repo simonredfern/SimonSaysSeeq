@@ -98,7 +98,7 @@ uint64_t elapsed_since_last_tick_frame = 0;
 float detected_bpm = 120.0;
 
 
-int clock_patience = 50000;
+int clock_patience = 500000;
 
 float frames_per_24_ticks = 0;
 
