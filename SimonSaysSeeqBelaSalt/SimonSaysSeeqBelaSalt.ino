@@ -83,24 +83,27 @@ uint64_t frame_timer = 0;
 
 uint64_t last_clock_falling_edge = 0; 
 
-uint64_t last_tick_frame = 0;
-uint64_t previous_tick_frame = 0;
+uint64_t last_quarter_note_frame = 0;
+uint64_t previous_quarter_note_frame = 0;
 
 uint64_t last_sequence_reset_frame = 0;
 uint64_t previous_sequence_reset_frame = 0;
 
 uint64_t frames_per_sequence = 0;
+
+
+uint64_t last_tick_frame = 0;
  
 int clock_width = 0;
 
-uint64_t elapsed_since_last_tick_frame = 0;
+uint64_t elapsed_frames_since_last_tick = 0;
 
 float detected_bpm = 120.0;
 
 
 int clock_patience = 500000;
 
-float frames_per_24_ticks = 0;
+uint64_t frames_per_24_ticks = 0;
 
 int audio_sample_rate;
 int analog_sample_rate;
@@ -604,19 +607,19 @@ void printStatus(void*){
 		  // Global frame timing
 
 		rt_printf("frame_timer is: %llu \n", frame_timer);
-    	rt_printf("frames_per_24_ticks is: %f \n", frames_per_24_ticks);
+    	rt_printf("frames_per_24_ticks is: %llu \n", frames_per_24_ticks);
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
     	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
 		
 		
 		// Analog / Digital Clock In.
-		/*
-  		rt_printf("last_tick_frame is: %llu \n", last_tick_frame);
+		
+  		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 		rt_printf("last_clock_falling_edge is: %llu \n", last_clock_falling_edge);
 		rt_printf("clock_width is: %d \n", clock_width);
 		rt_printf("clock_patience is: %d \n", clock_patience);
-		*/
+		
 		
 		// Other Inputs
     	rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
@@ -1143,6 +1146,8 @@ void OnTick(){
 
  //rt_printf("Hello from OnTick \n");
 
+  last_tick_frame = frame_timer;	
+
   /////////////////
   // BPM Detection
   if (loop_timing.tick_count_since_start % 24 == 0){
@@ -1155,9 +1160,9 @@ void OnTick(){
 
     // Instead of averaging over a few clock cycles and dividing by 24, count frames per 24 ticks 
     // (ticks per quarter note which is midi standard and used by Arturia Beat Step Pro etc.)
-    previous_tick_frame = last_tick_frame; // 24 frames ago
-    last_tick_frame = frame_timer; // Now
-    frames_per_24_ticks = last_tick_frame - previous_tick_frame;
+    previous_quarter_note_frame = last_quarter_note_frame; // 24 frames ago
+    last_quarter_note_frame = frame_timer; // Now
+    frames_per_24_ticks = last_quarter_note_frame - previous_quarter_note_frame;
     detected_bpm = audio_sample_rate * 60 / frames_per_24_ticks;
   }
  
@@ -2579,11 +2584,12 @@ void render(BelaContext *context, void *userData)
             // If detect a Falling clock edge
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
-              last_clock_falling_edge = frame_timer;
+              
+              //last_clock_falling_edge = frame_timer;
             	
             	
 				// the pulse width of our clock (half actually)
-            	clock_width = last_clock_falling_edge - last_tick_frame;
+            	//clock_width = last_clock_falling_edge - last_quarter_note_frame;
             	//rt_printf("clock_width is: %llu \n", clock_width);
             	
             	// currently a constant 
@@ -2598,12 +2604,15 @@ void render(BelaContext *context, void *userData)
 		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
 		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 		if (midi_clock_detected == LOW){
-    		elapsed_since_last_tick_frame = frame_timer - last_tick_frame;
-			//rt_printf("elapsed_since_last_tick_frame is: %d ", elapsed_since_last_tick_frame);	
+    		elapsed_frames_since_last_tick = frame_timer - last_tick_frame;
+			//rt_printf("elapsed_frames_since_last_tick is: %d ", elapsed_frames_since_last_tick);	
 		
-			if (elapsed_since_last_tick_frame > clock_patience){
+		
+		    // clock patience is a quarter note
+		    // We wait for a quarter note before stopping the sequencer (based on the last quarter note time in frames)
+			if (elapsed_frames_since_last_tick > frames_per_24_ticks){
 		  		if (sequence_is_running == HIGH) {
-		    		rt_printf("Stopping sequencer because elapsed_since_last_tick_frame: %llu is greater than clock_patience: %llu \n", elapsed_since_last_tick_frame, clock_patience);
+		    		rt_printf("Stopping sequencer because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks: %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
 			    	StopSequencer();
 				}
 			}
@@ -2647,7 +2656,7 @@ WORKS
               //Serial.println(String("Went HIGH "));
                
               OnTick(context);
-              last_tick_frame = milliseconds();
+              last_quarter_note_frame = milliseconds();
               
             } 
     
@@ -2747,7 +2756,7 @@ WORKS
               
               
               do_tick = true;
-              last_tick_frame = milliseconds();
+              last_quarter_note_frame = milliseconds();
               
             } 
     
