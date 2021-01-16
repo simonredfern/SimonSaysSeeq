@@ -101,7 +101,7 @@ uint64_t elapsed_frames_since_last_tick = 0;
 float detected_bpm = 120.0;
 
 
-int clock_patience = 500000;
+
 
 uint64_t frames_per_24_ticks = 0;
 
@@ -616,9 +616,8 @@ void printStatus(void*){
 		// Analog / Digital Clock In.
 		
   		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
-		rt_printf("last_clock_falling_edge is: %llu \n", last_clock_falling_edge);
-		rt_printf("clock_width is: %d \n", clock_width);
-		rt_printf("clock_patience is: %d \n", clock_patience);
+
+
 		
 		
 		// Other Inputs
