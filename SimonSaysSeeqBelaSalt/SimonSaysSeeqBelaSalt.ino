@@ -1,4 +1,4 @@
- /*
+  /*
 
   _________.__                        _________                     _________                    
  /   _____/|__| _____   ____   ____  /   _____/____  ___.__. ______/   _____/ ____   ____  ______
@@ -101,6 +101,8 @@ uint64_t last_tick_frame = 0;
 uint64_t elapsed_frames_since_last_tick = 0;
 
 float detected_bpm = 120.0;
+
+float env3_amp = 0.7f;
 
 
 
@@ -258,9 +260,9 @@ unsigned int sequence_pattern_input_at_button_change;
 
 //bool lower_pot_high_engaged = true;
 float lfo_a_frequency_input_raw;
-float osc_1_frequency;
+float lfo_osc_1_frequency;
 float frequency_2;
-float osc_2_frequency;
+float audio_osc_2_frequency;
 
 
 unsigned int lfo_a_frequency_input = 20;
@@ -532,9 +534,9 @@ void ResetSequenceCounters(){
   oscillator_1_analog.setPhase(0.0);
   
   
-  sequence_triggered_envelope_3.gate(false);
-  sequence_triggered_envelope_3.gate(true);
 
+  sequence_triggered_envelope_3.gate(true);
+  //sequence_triggered_envelope_3.gate(false);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
   last_sequence_reset_frame = frame_timer; // Now
@@ -792,6 +794,8 @@ void GateLow(){
   
   envelope_1_audio.gate(false);
   step_triggered_envelope_2.gate(false);
+  
+  sequence_triggered_envelope_3.gate(false); // always reset it here but not trigger it
   
   
 
@@ -1617,11 +1621,11 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
         
 
 	    
-	    osc_2_frequency = osc_1_frequency * 8.0;
+	    audio_osc_2_frequency = lfo_osc_1_frequency * 8.0;
 
 
-    	oscillator_1_analog.setFrequency(osc_1_frequency); // lower freq
-		oscillator_2_audio.setFrequency(osc_2_frequency); // higher freq
+    	oscillator_1_analog.setFrequency(lfo_osc_1_frequency); // lower freq
+		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 
 
 	
@@ -2003,7 +2007,10 @@ void render(BelaContext *context, void *userData)
 		analog_envelope_2_amplitude  = step_triggered_envelope_2.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
-		analog_sequence_triggered_envelope_3_amplitude  = sequence_triggered_envelope_3.process(); // Inverse
+		analog_sequence_triggered_envelope_3_amplitude  = env3_amp * sequence_triggered_envelope_3.process();
+		
+
+		
 		
 		// Modulated output
 		analog_out_2 = osc_2_result_analog * analog_envelope_2_amplitude; 
@@ -2044,7 +2051,7 @@ void render(BelaContext *context, void *userData)
 	      
 	      if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	
-	      	osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 3);
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 20);
  
 	      	
 	      	//envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
@@ -2057,7 +2064,7 @@ void render(BelaContext *context, void *userData)
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
 		  	
 		  	// TODO use an oscillator here in stead.
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 10.0);
+		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
 		  	
 		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
