@@ -1511,7 +1511,8 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 ////
 
-
+// Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
+int gDelayInSamples = 22050;
 
 void ChangeSequence(void*){
 	
@@ -1626,6 +1627,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
     	oscillator_1_analog.setFrequency(lfo_osc_1_frequency); // lower freq
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
+		
+		
+		gDelayInSamples = frames_per_24_ticks; // frames_per_sequence;
 
 
 	
@@ -1678,7 +1682,12 @@ void MaybeOnTick(){
 
 // from Bela delay example:
 
-#define DELAY_BUFFER_SIZE 44100
+//#define DELAY_BUFFER_SIZE 44100
+
+// enough for 16 step sequence at 30 bpm
+#define DELAY_BUFFER_SIZE 400000
+
+
 
 // Buffer holding previous samples per channel
 float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
@@ -1691,8 +1700,7 @@ float gDelayAmount = 1.0;
 float gDelayFeedbackAmount = 0.999;
 // Level of pre-delay input
 float gDelayAmountPre = 0.75;
-// Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
-int gDelayInSamples = 22050;
+
 
 // Butterworth coefficients for low-pass filter @ 8000Hz
 float gDel_a0 = 0.1772443606634904;
