@@ -12,7 +12,7 @@ SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
 Version: 2021-01-10 or so.
 
-This file uses Bela libraries and example code, see below:
+This file uses BELA libraries and example code, see below:
 
 */
 
@@ -1707,8 +1707,12 @@ void MaybeOnTick(){
 
 //#define DELAY_BUFFER_SIZE 44100
 
-// enough for 16 step sequence at 30 bpm
-#define DELAY_BUFFER_SIZE 400000
+// 400000 enough for 16 step sequence at 30 bpm
+// Then a maximum multiplier of 16
+
+// 400000 * 16 
+
+#define DELAY_BUFFER_SIZE 6400000
 
 
 
@@ -2162,7 +2166,7 @@ void render(BelaContext *context, void *userData)
         	
         	// Left button newly pressed get smaller
         	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
-        		delay_time_multiplier = delay_time_multiplier / 2.0;
+        		delay_time_multiplier = delay_time_multiplier / 1.5;
         	}
         	
         	
@@ -2171,7 +2175,7 @@ void render(BelaContext *context, void *userData)
         	
         	 // Right button newly pressed get bigger
         	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
-        		delay_time_multiplier = delay_time_multiplier * 2.0;
+        		delay_time_multiplier = delay_time_multiplier * 1.5;
         	}
         	
         	
