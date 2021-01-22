@@ -149,11 +149,17 @@ int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
 
-int LEFT_BUTTON_PIN = 0; // 
-int left_button_last_status = 0; //
+//T1 in digital channel 15
+//T2/SWITCH2 in digital channel 14
+//T3/SWITCH3 in digital channel 1
+//T4/SWITCH4 in digital channel 3
 
-int RIGHT_BUTTON_PIN = 1; // 
-int right_button_last_status = 0; // 
+
+int LEFT_BUTTON_PIN = 15; // No idea if this is correct 
+int new_left_button_state = 0; 
+
+int RIGHT_BUTTON_PIN = 14; // No idea if this is correct  
+int new_right_button_state = 0; 
 
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
@@ -591,6 +597,12 @@ void printStatus(void*){
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+		
+		
+		rt_printf("new_left_button_state is: %d \n", new_left_button_state);
+		rt_printf("new_right_button_state is: %d \n", new_right_button_state);
+		
+		
 		
 		
         // Sequence derived results 		
@@ -2134,6 +2146,9 @@ void render(BelaContext *context, void *userData)
 	    
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
+        	
+        	new_left_button_state = digitalRead(context, m, LEFT_BUTTON_PIN);
+        	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
         
         	// Only set new state if target is changed
         	if (target_gate_out_state != gate_out_state_set){
