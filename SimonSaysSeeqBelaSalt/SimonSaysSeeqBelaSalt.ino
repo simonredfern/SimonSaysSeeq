@@ -112,6 +112,9 @@ uint64_t frames_per_24_ticks = 0;
 int audio_sample_rate;
 int analog_sample_rate;
 
+// Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
+int gDelayInSamples = 22050;
+
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -146,11 +149,11 @@ int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
 
-int gTriggerButtonPin = 0; // Digital pin to which gate button should be connected
-int gTriggerButtonLastStatus = 0; // Last status of gate button
+int LEFT_BUTTON_PIN = 0; // 
+int left_button_last_status = 0; //
 
-int gModeButtonPin = 1; // Digital pin to which oscillator selection button should be connected
-int gModeButtonLastStatus = 0; // Last status of oscillator selection button
+int RIGHT_BUTTON_PIN = 1; // 
+int right_button_last_status = 0; // 
 
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
@@ -573,7 +576,8 @@ void printStatus(void*){
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
     	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
-		
+		// Delay
+		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
 		
 		// Analog / Digital Clock In.
 		
@@ -1511,8 +1515,7 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 ////
 
-// Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
-int gDelayInSamples = 22050;
+
 
 void ChangeSequence(void*){
 	
@@ -1629,7 +1632,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
-		gDelayInSamples = frames_per_24_ticks; // frames_per_sequence;
+		gDelayInSamples = rint( frames_per_24_ticks * 1.0); // frames_per_sequence;
 
 
 	
@@ -1859,8 +1862,8 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set buttons pins as inputs
-        pinMode(context, 0, gTriggerButtonPin, INPUT);
-        pinMode(context, 0, gModeButtonPin, INPUT);
+        pinMode(context, 0, LEFT_BUTTON_PIN, INPUT);
+        pinMode(context, 0, RIGHT_BUTTON_PIN, INPUT);
 
 
         // The two LEDS on Salt
