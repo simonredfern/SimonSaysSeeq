@@ -148,17 +148,17 @@ Oscillator oscillator_1_analog;
 int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
 
-
+//SWITCH1 in digital channel 6	(LEFT BUTTON)
 //T1 in digital channel 15
-//T2/SWITCH2 in digital channel 14
-//T3/SWITCH3 in digital channel 1
-//T4/SWITCH4 in digital channel 3
+//T2/SWITCH2 in digital channel 14 (RIGHT BUTTON)
+//T3/SWITCH3 in digital channel 1 (maybe this is for Salt+)
+//T4/SWITCH4 in digital channel 3 (maybe this is for Salt+?)
 
 
-int LEFT_BUTTON_PIN = 15; // No idea if this is correct 
+int LEFT_BUTTON_PIN = 6; 
 int new_left_button_state = 0; 
 
-int RIGHT_BUTTON_PIN = 14; // No idea if this is correct  
+int RIGHT_BUTTON_PIN = 14;
 int new_right_button_state = 0; 
 
 
