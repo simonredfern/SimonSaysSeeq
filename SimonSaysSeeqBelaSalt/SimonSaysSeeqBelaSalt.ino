@@ -120,6 +120,11 @@ int gDelayInSamples = 22050;
 #include <time.h> //time
 #include <libraries/Oscillator/Oscillator.h>
 #include <libraries/OscillatorBank/OscillatorBank.h>
+
+
+#define DELAY_BUFFER_SIZE 6400000
+
+
 const float kMinimumFrequency = 20.0f;
 const float kMaximumFrequency = 8000.0f;
 int gSampleCount;               // Sample counter for indicating when to update frequencies
@@ -164,7 +169,22 @@ int RIGHT_BUTTON_PIN = 14;
 int new_right_button_state = 0; 
 int old_right_button_state = 0; 
 
-float delay_time_addition = 1.0;
+/////////////////
+
+
+int old_both_buttons_pressed_state = 0;
+int new_both_buttons_pressed_state = 0;
+int both_buttons_pressed_counter = 0;
+int both_buttons_pressed_even = 0;
+int do_both_buttons_action_a = 0;
+int do_both_buttons_action_b = 0;
+
+int do_left_button_action = 0;
+int do_right_button_action = 0;
+
+//////////////////
+
+float delay_time_delta = 1.0;
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
 int LED_1_PIN = 2;
@@ -606,10 +626,15 @@ void printStatus(void*){
 		rt_printf("new_left_button_state is: %d \n", new_left_button_state);
 		rt_printf("new_right_button_state is: %d \n", new_right_button_state);
 		
-		rt_printf("delay_time_addition is: %f \n", delay_time_addition);
+		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
 		
 		
-		
+		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
+		rt_printf("new_both_buttons_pressed_state is: %d \n", new_both_buttons_pressed_state);
+		rt_printf("both_buttons_pressed_counter is: %d \n", both_buttons_pressed_counter);
+		rt_printf("both_buttons_pressed_even is: %d \n", both_buttons_pressed_even);
+		rt_printf("do_both_buttons_action_a is: %d \n", do_both_buttons_action_a);
+		rt_printf("do_both_buttons_action_b is: %d \n", do_both_buttons_action_b);
 		
 		
 		
@@ -1653,13 +1678,50 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		
-		//gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_addition);
+		//gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_delta);
 		
-		gDelayInSamples = rint( frames_per_24_ticks + delay_time_addition); // ;
+		if (do_both_buttons_action_a == 1){
+			// the whole buffer
+			gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
+			do_both_buttons_action_a = 0;
+			
+			
+		} else if (do_both_buttons_action_b == 1){
+			// like a reset 
+			gDelayInSamples = frames_per_24_ticks;
+			do_both_buttons_action_b = 0;
+			
+		} 
+		/*
+		else if (do_left_button_action == 1) {
+			
+	      	delay_time_delta = frames_per_24_ticks;
 
+			
+			if ((gDelayInSamples - delay_time_delta) <= 0){
+				// Skip
+			} else 
+				gDelayInSamples = rint(gDelayInSamples - delay_time_delta);
+			}			
+			
 
-	
-}
+			do_left_button_action = 0;
+			
+		} else if (do_right_button_action == 1) {
+			
+	      	delay_time_delta = frames_per_24_ticks;
+
+			
+			if ((gDelayInSamples + delay_time_delta) >= DELAY_BUFFER_SIZE){
+				// Skip
+			} else 
+				gDelayInSamples = rint(gDelayInSamples + delay_time_delta); // ;
+			}
+			do_right_button_action = 0;
+		}
+
+	*/
+} // end of function
 
 
 
@@ -1715,7 +1777,7 @@ void MaybeOnTick(){
 
 // 400000 * 16 
 
-#define DELAY_BUFFER_SIZE 6400000
+
 
 
 
@@ -2171,30 +2233,63 @@ void render(BelaContext *context, void *userData)
         	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
 
         	// TODO if both buttons are 1 toggle between long delay and min + clear the sample
-        	// If 
         	
         	
-        	// Left button newly pressed get smaller
-        	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
+        	
+        	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
+        	
+        	if ((new_left_button_state == 1 && new_right_button_state == 1) && old_both_buttons_pressed_state == 0) {
+        		both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
+        		new_both_buttons_pressed_state = 1;
         		
-        		// if delay_time_addition == frames_per_24_ticks subtract a smaller amount
-        		delay_time_addition = delay_time_addition - frames_per_24_ticks;
-        		if (delay_time_addition <= 0){
-        			delay_time_addition = 0;
+        		if ((both_buttons_pressed_counter % 2) == 0){
+        			both_buttons_pressed_even = 1;
+    
+        			do_both_buttons_action_a = 1;
+        			do_both_buttons_action_b = 0;
+        		} else {
+        		    both_buttons_pressed_even = 0;
+        		    do_both_buttons_action_a = 0;
+        		    do_both_buttons_action_b = 1;
+        		    
         		}
-        	}
+        		
+        		
+        		// Reset the buttons becuase we don't want a one button action as well
+        		new_left_button_state = 0;
+        		new_right_button_state = 0;
+        		
+        	} else {
+        		new_both_buttons_pressed_state = 0;	
+ 
+        	
+	        	// Left button newly pressed get smaller
+	        	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
+	        		
+	        		// Left Button action
+	        		do_left_button_action = 1;
+	        		
+	        		// if delay_time_delta == frames_per_24_ticks subtract a smaller amount
+	        		delay_time_delta = delay_time_delta - frames_per_24_ticks;
+	        		if (delay_time_delta <= 0){
+	        			delay_time_delta = 0;
+	        		}
+	        	}
+	        	
+	        	
+	        	 // Right button newly pressed get bigger
+	        	 
+	        	 // Right Button Action
+	        	 
+	        	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
+	        		
+	        		do_right_button_action = 1;
+	        		
+	  
+	        	}
         	
         	
-        	 // Right button newly pressed get bigger
-        	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
-        		delay_time_addition = delay_time_addition + frames_per_24_ticks;
-        		if (delay_time_addition >= (DELAY_BUFFER_SIZE - frames_per_sequence)){
-        			delay_time_addition = delay_time_addition - frames_per_sequence;
-        		}
-        	}
-        	
-        	
-        	
+        	}// End both buttons pressed check
         	
         	
         
