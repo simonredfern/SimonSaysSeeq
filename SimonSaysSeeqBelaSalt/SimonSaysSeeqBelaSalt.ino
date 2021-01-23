@@ -2166,18 +2166,24 @@ void render(BelaContext *context, void *userData)
         	
         	old_left_button_state = new_left_button_state;
         	new_left_button_state = digitalRead(context, m, LEFT_BUTTON_PIN);
+
+        	old_right_button_state = new_right_button_state;
+        	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
+
+        	// TODO if both buttons are 1 toggle between long delay and min + clear the sample
+        	// If 
+        	
         	
         	// Left button newly pressed get smaller
         	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
+        		
+        		// if delay_time_addition == frames_per_24_ticks subtract a smaller amount
         		delay_time_addition = delay_time_addition - frames_per_24_ticks;
         		if (delay_time_addition <= 0){
         			delay_time_addition = 0;
         		}
         	}
         	
-        	
-        	old_right_button_state = new_right_button_state;
-        	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
         	
         	 // Right button newly pressed get bigger
         	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
