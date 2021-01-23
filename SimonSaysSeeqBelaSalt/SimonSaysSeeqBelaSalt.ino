@@ -164,7 +164,7 @@ int RIGHT_BUTTON_PIN = 14;
 int new_right_button_state = 0; 
 int old_right_button_state = 0; 
 
-float delay_time_multiplier = 1.0;
+float delay_time_addition = 1.0;
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
 int LED_1_PIN = 2;
@@ -606,7 +606,7 @@ void printStatus(void*){
 		rt_printf("new_left_button_state is: %d \n", new_left_button_state);
 		rt_printf("new_right_button_state is: %d \n", new_right_button_state);
 		
-		rt_printf("delay_time_multiplier is: %f \n", delay_time_multiplier);
+		rt_printf("delay_time_addition is: %f \n", delay_time_addition);
 		
 		
 		
@@ -1652,7 +1652,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
-		gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_multiplier); // frames_per_sequence;
+		
+		//gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_addition);
+		
+		gDelayInSamples = rint( frames_per_24_ticks + delay_time_addition); // ;
 
 
 	
@@ -2166,7 +2169,10 @@ void render(BelaContext *context, void *userData)
         	
         	// Left button newly pressed get smaller
         	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
-        		delay_time_multiplier = delay_time_multiplier / 1.5;
+        		delay_time_addition = delay_time_addition - frames_per_24_ticks;
+        		if (delay_time_addition <= 0){
+        			delay_time_addition = 0;
+        		}
         	}
         	
         	
@@ -2175,7 +2181,10 @@ void render(BelaContext *context, void *userData)
         	
         	 // Right button newly pressed get bigger
         	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
-        		delay_time_multiplier = delay_time_multiplier * 1.5;
+        		delay_time_addition = delay_time_addition + frames_per_24_ticks;
+        		if (delay_time_addition >= (DELAY_BUFFER_SIZE - frames_per_sequence)){
+        			delay_time_addition = delay_time_addition - frames_per_sequence;
+        		}
         	}
         	
         	
