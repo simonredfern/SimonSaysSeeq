@@ -1,16 +1,16 @@
   /*
 
-  _________.__                        _________                     _________                    
- /   _____/|__| _____   ____   ____  /   _____/____  ___.__. ______/   _____/ ____   ____  ______
- \_____  \ |  |/     \ /  _ \ /    \ \_____  \\__  \<   |  |/  ___/\_____  \_/ __ \_/ __ \/ ____/
- /        \|  |  Y Y  (  <_> )   |  \/        \/ __ \\___  |\___ \ /        \  ___/\  ___< <_|  |
-/_______  /|__|__|_|  /\____/|___|  /_______  (____  / ____/____  >_______  /\___  >\___  >__   |
-        \/          \/            \/        \/     \/\/         \/        \/     \/     \/   |__|
-
+ ____  _  _      ____  _      ____  ____ ___  _ ____  ____  _____ _____ ____ 
+/ ___\/ \/ \__/|/  _ \/ \  /|/ ___\/  _ \\  \/// ___\/ ___\/  __//  __//  _ \
+|    \| || |\/||| / \|| |\ |||    \| / \| \  / |    \|    \|  \  |  \  | / \|
+\___ || || |  ||| \_/|| | \||\___ || |-|| / /  \___ |\___ ||  /_ |  /_ | \_\|
+\____/\_/\_/  \|\____/\_/  \|\____/\_/ \|/_/   \____/\____/\____\\____\\____\
 
 SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
-Version: 2021-01-10 or so.
+Version: 2021-01-23 or so.
+
+This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
 This file uses BELA libraries and example code, see below:
 
@@ -609,6 +609,8 @@ void printStatus(void*){
 		// Delay
 		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
 		
+		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
+		
 		// Analog / Digital Clock In.
 		
   		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
@@ -626,7 +628,7 @@ void printStatus(void*){
 		rt_printf("new_left_button_state is: %d \n", new_left_button_state);
 		rt_printf("new_right_button_state is: %d \n", new_right_button_state);
 		
-		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
+
 		
 		
 		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
@@ -1683,44 +1685,42 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		if (do_both_buttons_action_a == 1){
 			// the whole buffer
 			gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
+			// Reset the delta
+			delay_time_delta = frames_per_24_ticks;
 			do_both_buttons_action_a = 0;
 			
 			
 		} else if (do_both_buttons_action_b == 1){
 			// like a reset 
 			gDelayInSamples = frames_per_24_ticks;
+			delay_time_delta = frames_per_24_ticks;
 			do_both_buttons_action_b = 0;
 			
-		} 
-		/*
-		else if (do_left_button_action == 1) {
+		} else if (do_left_button_action == 1) {
 			
-	      	delay_time_delta = frames_per_24_ticks;
-
+	      	delay_time_delta = frames_per_24_ticks / 3.0f; // to get some odd timings
 			
 			if ((gDelayInSamples - delay_time_delta) <= 0){
 				// Skip
-			} else 
+			} else { 
 				gDelayInSamples = rint(gDelayInSamples - delay_time_delta);
 			}			
 			
-
 			do_left_button_action = 0;
 			
 		} else if (do_right_button_action == 1) {
 			
 	      	delay_time_delta = frames_per_24_ticks;
-
 			
 			if ((gDelayInSamples + delay_time_delta) >= DELAY_BUFFER_SIZE){
 				// Skip
-			} else 
+			} else {
 				gDelayInSamples = rint(gDelayInSamples + delay_time_delta); // ;
 			}
 			do_right_button_action = 0;
 		}
 
-	*/
+	
 } // end of function
 
 
@@ -2232,10 +2232,6 @@ void render(BelaContext *context, void *userData)
         	old_right_button_state = new_right_button_state;
         	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
 
-        	// TODO if both buttons are 1 toggle between long delay and min + clear the sample
-        	
-        	
-        	
         	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
         	
         	if ((new_left_button_state == 1 && new_right_button_state == 1) && old_both_buttons_pressed_state == 0) {
@@ -2251,9 +2247,7 @@ void render(BelaContext *context, void *userData)
         		    both_buttons_pressed_even = 0;
         		    do_both_buttons_action_a = 0;
         		    do_both_buttons_action_b = 1;
-        		    
         		}
-        		
         		
         		// Reset the buttons becuase we don't want a one button action as well
         		new_left_button_state = 0;
@@ -2265,27 +2259,12 @@ void render(BelaContext *context, void *userData)
         	
 	        	// Left button newly pressed get smaller
 	        	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
-	        		
-	        		// Left Button action
 	        		do_left_button_action = 1;
-	        		
-	        		// if delay_time_delta == frames_per_24_ticks subtract a smaller amount
-	        		delay_time_delta = delay_time_delta - frames_per_24_ticks;
-	        		if (delay_time_delta <= 0){
-	        			delay_time_delta = 0;
-	        		}
 	        	}
 	        	
-	        	
-	        	 // Right button newly pressed get bigger
-	        	 
-	        	 // Right Button Action
-	        	 
+	        	 // Right button newly pressed 
 	        	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
-	        		
 	        		do_right_button_action = 1;
-	        		
-	  
 	        	}
         	
         	
