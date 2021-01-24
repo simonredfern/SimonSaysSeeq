@@ -11,7 +11,7 @@ Platform                  Status
 
 * Betweener                 - Works but currently the tool chain is broken so I can't compile
 
-* Bela Salt                 - Just starting to work. 
+* Bela Salt                 - Works and Work in Progress! 
 
 ## Simon Says Gray Code Seeq on 1010Music Euroshield
 
