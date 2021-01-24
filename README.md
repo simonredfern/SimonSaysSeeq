@@ -13,6 +13,8 @@ Platform                  Status
 
 * Bela Salt                 - Works and Work in Progress! 
 
+See the README.md in each sub folder for more details
+
 
 
 
