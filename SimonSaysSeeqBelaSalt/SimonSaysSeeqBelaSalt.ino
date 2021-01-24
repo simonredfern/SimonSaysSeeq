@@ -12,7 +12,9 @@ Version: 2021-01-23 or so.
 
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
-This file uses BELA libraries and example code, see below:
+This file uses BELA libraries and example code, see below.
+
+An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
@@ -36,6 +38,8 @@ The Bela software is distributed under the GNU Lesser General Public License
 */
 
 // TO Understand render see the example in Fundamentals: minimal/render.cpp
+
+// In general, see https://www.youtube.com/watch?v=XJ2fFqGexCM
 
 
 // So Bela can get to the internet via a Mac with ethernet over USB
