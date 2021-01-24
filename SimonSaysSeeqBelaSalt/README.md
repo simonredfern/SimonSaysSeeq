@@ -1,3 +1,3 @@
 SimonSaysSeeq on Bela Salt is Work In Progress!
 
-See the following diagram
+![SimonSaysSeeq on Bela Salt](https://github.com/simonredfern/SimonSaysSeeq/blob/master/SimonSaysSeeqBelaSalt/SimonSaysSeeq_on_Bela_Salt.png)
