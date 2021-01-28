@@ -117,10 +117,11 @@ int audio_sample_rate;
 int analog_sample_rate;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
-int gDelayInSamples = 22050;
+int delay_in_samples = 22050;
+int delay_in_samples_with_offset = 22050;
 
 // Amount of feedback
-float gDelayFeedbackAmount = 0.999; //0.999
+float delay_feedback_amount = 0.999; //0.999
 
 
 #include <math.h> //sinf
@@ -206,7 +207,7 @@ int do_button_4_action = 0;
 
 //////////////////
 
-float delay_time_delta = 1.0f;
+int delay_time_delta = 1;
 
 float feedback_delta = 1.0f;
 
@@ -264,7 +265,7 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int DELAY_DELTA_MODIFIER_PIN = 4; // CV 5 (SALT+)
+const int delay_time_offset_PIN = 4; // CV 5 (SALT+)
 
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
@@ -353,7 +354,7 @@ float audio_left_input_raw;
 float audio_right_input_raw;
 
 
-unsigned int delay_delta_modifier = 0;
+unsigned int delay_time_offset = 0;
 
 
 
@@ -638,9 +639,16 @@ void printStatus(void*){
     	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
 		// Delay Time
-		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
-		rt_printf("delay_delta_modifier is: %d \n", delay_delta_modifier);
-		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
+		
+		rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
+		rt_printf("delay_time_delta is: %d \n", delay_time_delta);
+		rt_printf("delay_time_offset is: %d \n", delay_time_offset);
+		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
+		
+		rt_printf("delay_in_samples_with_offset is: %d \n", delay_in_samples_with_offset);
+		
+		
+		
 		
 		
 		
@@ -649,7 +657,7 @@ void printStatus(void*){
 
 	    
 	  
-		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
+		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
 		
 		
 		
@@ -1730,27 +1738,27 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		
-		//gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_delta);
+		//delay_in_samples = rint( frames_per_24_ticks * 1.0 * delay_time_delta);
 		
 		/*
 		if (do_both_buttons_action_a == 1){
 			// the whole buffer
-			//gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
+			//delay_in_samples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
 			// Reset the delta
 			//delay_time_delta = frames_per_24_ticks;
 			
 			
-			gDelayFeedbackAmount = 0.77;
+			delay_feedback_amount = 0.77;
 			
 			do_both_buttons_action_a = 0;
 			
 			
 		} else if (do_both_buttons_action_b == 1){
 			// like a reset 
-			//gDelayInSamples = frames_per_24_ticks;
+			//delay_in_samples = frames_per_24_ticks;
 			//delay_time_delta = frames_per_24_ticks;
 			
-			gDelayFeedbackAmount = 0.999;
+			delay_feedback_amount = 0.999;
 			
 			do_both_buttons_action_b = 0;
 			
@@ -1762,9 +1770,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		delay_time_delta = frames_per_24_ticks;
 		
 		/*
-		if (gDelayInSamples <= audio_sample_rate) {
+		if (delay_in_samples <= audio_sample_rate) {
 			delay_time_delta = frames_per_24_ticks / 3.0f;
-		} else if (gDelayInSamples <= audio_sample_rate * 2.0) {
+		} else if (delay_in_samples <= audio_sample_rate * 2.0) {
 			delay_time_delta = frames_per_24_ticks / 5.0f;
 		} else  {
 			delay_time_delta = frames_per_24_ticks / 7.0f;
@@ -1772,45 +1780,44 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		*/
 
 		
-		if (gDelayFeedbackAmount < 0.8f){
-			feedback_delta = gDelayFeedbackAmount / 10.0f;
-		} else if  (gDelayFeedbackAmount < 0.90f){
-		    feedback_delta = gDelayFeedbackAmount / 20.0f;
-		} else if  (gDelayFeedbackAmount < 0.95f){
-			feedback_delta = gDelayFeedbackAmount / 25.0f;
-		} else if  (gDelayFeedbackAmount < 0.99f){
-			feedback_delta = gDelayFeedbackAmount / 30.0f;
-		} else if  (gDelayFeedbackAmount < 1.1f){
-			feedback_delta = gDelayFeedbackAmount / 40.0f;
-		} else if  (gDelayFeedbackAmount < 1.2f){
-			feedback_delta = gDelayFeedbackAmount / 50.0f;
-		} else if  (gDelayFeedbackAmount < 1.3f){
-			feedback_delta = gDelayFeedbackAmount / 60.0f;
-		} else if  (gDelayFeedbackAmount < 1.4f){
-			feedback_delta = gDelayFeedbackAmount / 80.0f;
+		if (delay_feedback_amount < 0.8f){
+			feedback_delta = delay_feedback_amount / 10.0f;
+		} else if  (delay_feedback_amount < 0.90f){
+		    feedback_delta = delay_feedback_amount / 20.0f;
+		} else if  (delay_feedback_amount < 0.95f){
+			feedback_delta = delay_feedback_amount / 25.0f;
+		} else if  (delay_feedback_amount < 0.99f){
+			feedback_delta = delay_feedback_amount / 30.0f;
+		} else if  (delay_feedback_amount < 1.1f){
+			feedback_delta = delay_feedback_amount / 40.0f;
+		} else if  (delay_feedback_amount < 1.2f){
+			feedback_delta = delay_feedback_amount / 50.0f;
+		} else if  (delay_feedback_amount < 1.3f){
+			feedback_delta = delay_feedback_amount / 60.0f;
+		} else if  (delay_feedback_amount < 1.4f){
+			feedback_delta = delay_feedback_amount / 80.0f;
 		} else {
-			feedback_delta = gDelayFeedbackAmount / 100.0f;
+			feedback_delta = delay_feedback_amount / 100.0f;
 		}
 		
 		
 		
 		
-				// Always add the modifier (which might be zero)
-	    
-	    if ((gDelayInSamples + delay_delta_modifier) >= DELAY_BUFFER_SIZE){
-	    	// Skip
+		// Add the modifier (which might be zero) as long as we won't exceed the buffer
+	    if ((delay_in_samples + delay_time_offset) >= DELAY_BUFFER_SIZE){
+	    	delay_in_samples_with_offset = DELAY_BUFFER_SIZE;
 	    } else {
-	      gDelayInSamples = gDelayInSamples + delay_delta_modifier;
+	      delay_in_samples_with_offset = delay_in_samples + delay_time_offset;
 	    }
 		
 		if (do_button_1_action == 1) {
 			
 	      	//delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
 			
-			if ((gDelayInSamples - delay_time_delta) <= 0){
+			if ((delay_in_samples - delay_time_delta) <= 0){
 				// Skip
 			} else { 
-				gDelayInSamples = rint(gDelayInSamples - delay_time_delta);
+				delay_in_samples = delay_in_samples - delay_time_delta;
 			}			
 			
 			do_button_1_action = 0;
@@ -1819,21 +1826,21 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 	      	//delay_time_delta = frames_per_24_ticks;
 			
-			if ((gDelayInSamples + delay_time_delta) >= DELAY_BUFFER_SIZE){
+			if ((delay_in_samples + delay_time_delta) >= DELAY_BUFFER_SIZE){
 				// Skip
 			} else {
-				gDelayInSamples = rint(gDelayInSamples + delay_time_delta); // ;
+				delay_in_samples = delay_in_samples + delay_time_delta;
 			}
 			do_button_2_action = 0;
 		} else if (do_button_3_action == 1) {
 			
 			// Decrease Delay feedback
-			gDelayFeedbackAmount = gDelayFeedbackAmount - feedback_delta;
+			delay_feedback_amount = delay_feedback_amount - feedback_delta;
 			do_button_3_action = 0;
 		} else if (do_button_4_action == 1) {
 			
 			// Increase Delay Feedback 
-			gDelayFeedbackAmount = gDelayFeedbackAmount + feedback_delta;
+			delay_feedback_amount = delay_feedback_amount + feedback_delta;
 			do_button_4_action = 0;
 		}
 
@@ -2137,8 +2144,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr-gDelayInSamples+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayFeedbackAmount);
-        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr-gDelayInSamples+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayFeedbackAmount);
+        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
+        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
@@ -2175,9 +2182,9 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_l[gDelayBufWritePtr] = del_input_l;
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
-        // Get the delayed sample (by reading `gDelayInSamples` many samples behind our current write pointer) and add it to our output sample
-        out_l += gDelayBuffer_l[(gDelayBufWritePtr-gDelayInSamples+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
-        out_r += gDelayBuffer_r[(gDelayBufWritePtr-gDelayInSamples+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        // Get the delayed sample (by reading `delay_in_samples` many samples behind our current write pointer) and add it to our output sample
+        out_l += gDelayBuffer_l[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        out_r += gDelayBuffer_r[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
         // Write the sample into the output buffer -- done!
         audioWrite(context, n, 0, out_l);
@@ -2289,8 +2296,8 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == DELAY_DELTA_MODIFIER_PIN){
-		  	delay_delta_modifier = rint(map(analogRead(context, n, DELAY_DELTA_MODIFIER_PIN), 0, 1, 0, frames_per_24_ticks));
+		  if (ch == delay_time_offset_PIN){
+		  	delay_time_offset = rint(map(analogRead(context, n, delay_time_offset_PIN), 0, 1, 0, frames_per_24_ticks));
 		  }
 		  
 		  
