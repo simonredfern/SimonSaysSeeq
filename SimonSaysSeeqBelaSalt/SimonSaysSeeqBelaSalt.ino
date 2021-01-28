@@ -264,6 +264,8 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
+const int DELAY_DELTA_MODIFIER_PIN = 4; // CV 5 (SALT+)
+
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
 const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 input
@@ -349,6 +351,11 @@ float external_modulator_object_level;
 
 float audio_left_input_raw;
 float audio_right_input_raw;
+
+
+unsigned int delay_delta_modifier = 0;
+
+
 
 ////////////////////////////////////////////////////
 
@@ -631,13 +638,18 @@ void printStatus(void*){
     	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
 		// Delay Time
-		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
 		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
+		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
+		
 		
 		
 	    // Delay Feedback
+	    rt_printf("feedback_delta is: %f \n", feedback_delta);
+	    rt_printf("delay_delta_modifier is: %d \n", delay_delta_modifier);
+	    
+	  
 		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
-		rt_printf("feedback_delta is: %f \n", feedback_delta);
+		
 		
 		
 		
@@ -1745,6 +1757,18 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		*/
 		
 		
+		
+		delay_time_delta = frames_per_24_ticks + delay_delta_modifier;
+		
+		/*
+		if (gDelayInSamples <= audio_sample_rate) {
+			delay_time_delta = frames_per_24_ticks / 3.0f;
+		} else if (gDelayInSamples <= audio_sample_rate * 2.0) {
+			delay_time_delta = frames_per_24_ticks / 5.0f;
+		} else  {
+			delay_time_delta = frames_per_24_ticks / 7.0f;
+		} 
+		*/
 
 		
 		if (gDelayFeedbackAmount < 0.8f){
@@ -1770,7 +1794,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		if (do_button_1_action == 1) {
 			
-	      	delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
+	      	//delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
 			
 			if ((gDelayInSamples - delay_time_delta) <= 0){
 				// Skip
@@ -1782,7 +1806,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 		} else if (do_button_2_action == 1) {
 			
-	      	delay_time_delta = frames_per_24_ticks;
+	      	//delay_time_delta = frames_per_24_ticks;
 			
 			if ((gDelayInSamples + delay_time_delta) >= DELAY_BUFFER_SIZE){
 				// Skip
@@ -2252,6 +2276,16 @@ void render(BelaContext *context, void *userData)
 		  	
 		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
+		  
+		  
+		  if (ch == DELAY_DELTA_MODIFIER_PIN){
+		  	delay_delta_modifier = map(analogRead(context, n, DELAY_DELTA_MODIFIER_PIN), 0, 1, 0.01, 5.0);
+		  }
+		  
+		  
+		  
+		  
+		  
 	      
 	      
 	      
