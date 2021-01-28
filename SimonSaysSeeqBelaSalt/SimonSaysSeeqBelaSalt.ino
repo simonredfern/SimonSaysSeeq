@@ -206,7 +206,9 @@ int do_button_4_action = 0;
 
 //////////////////
 
-float delay_time_delta = 1.0;
+float delay_time_delta = 1.0f;
+
+float feedback_delta = 1.0f;
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
 int LED_1_PIN = 2;
@@ -628,10 +630,17 @@ void printStatus(void*){
     	rt_printf("detected_bpm is: %f \n", detected_bpm);
     	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
-		// Delay
+		// Delay Time
 		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
-		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
 		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
+		
+		
+	    // Delay Feedback
+		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
+		rt_printf("feedback_delta is: %f \n", feedback_delta);
+		
+		
+		
 		
 		// Analog / Digital Clock In.
 		
@@ -1735,6 +1744,30 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		} else 
 		*/
 		
+		
+
+		
+		if (gDelayFeedbackAmount < 0.8f){
+			feedback_delta = gDelayFeedbackAmount / 10.0f;
+		} else if  (gDelayFeedbackAmount < 0.90f){
+		    feedback_delta = gDelayFeedbackAmount / 20.0f;
+		} else if  (gDelayFeedbackAmount < 0.95f){
+			feedback_delta = gDelayFeedbackAmount / 25.0f;
+		} else if  (gDelayFeedbackAmount < 0.99f){
+			feedback_delta = gDelayFeedbackAmount / 30.0f;
+		} else if  (gDelayFeedbackAmount < 1.1f){
+			feedback_delta = gDelayFeedbackAmount / 40.0f;
+		} else if  (gDelayFeedbackAmount < 1.2f){
+			feedback_delta = gDelayFeedbackAmount / 50.0f;
+		} else if  (gDelayFeedbackAmount < 1.3f){
+			feedback_delta = gDelayFeedbackAmount / 60.0f;
+		} else if  (gDelayFeedbackAmount < 1.4f){
+			feedback_delta = gDelayFeedbackAmount / 80.0f;
+		} else {
+			feedback_delta = gDelayFeedbackAmount / 100.0f;
+		}
+		
+		
 		if (do_button_1_action == 1) {
 			
 	      	delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
@@ -1758,10 +1791,14 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			}
 			do_button_2_action = 0;
 		} else if (do_button_3_action == 1) {
-			gDelayFeedbackAmount = gDelayFeedbackAmount - (gDelayFeedbackAmount/3.0f);
+			
+			// Decrease Delay feedback
+			gDelayFeedbackAmount = gDelayFeedbackAmount - feedback_delta;
 			do_button_3_action = 0;
 		} else if (do_button_4_action == 1) {
-			gDelayFeedbackAmount = gDelayFeedbackAmount + (gDelayFeedbackAmount/3.0f);
+			
+			// Increase Delay Feedback 
+			gDelayFeedbackAmount = gDelayFeedbackAmount + feedback_delta;
 			do_button_4_action = 0;
 		}
 
