@@ -639,13 +639,14 @@ void printStatus(void*){
     
 		// Delay Time
 		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
+		rt_printf("delay_delta_modifier is: %d \n", delay_delta_modifier);
 		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
 		
 		
 		
 	    // Delay Feedback
 	    rt_printf("feedback_delta is: %f \n", feedback_delta);
-	    rt_printf("delay_delta_modifier is: %d \n", delay_delta_modifier);
+
 	    
 	  
 		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
@@ -1758,7 +1759,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		
-		delay_time_delta = frames_per_24_ticks + delay_delta_modifier;
+		delay_time_delta = frames_per_24_ticks;
 		
 		/*
 		if (gDelayInSamples <= audio_sample_rate) {
@@ -1791,6 +1792,16 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			feedback_delta = gDelayFeedbackAmount / 100.0f;
 		}
 		
+		
+		
+		
+				// Always add the modifier (which might be zero)
+	    
+	    if ((gDelayInSamples + delay_delta_modifier) >= DELAY_BUFFER_SIZE){
+	    	// Skip
+	    } else {
+	      gDelayInSamples = gDelayInSamples + delay_delta_modifier;
+	    }
 		
 		if (do_button_1_action == 1) {
 			
@@ -2279,7 +2290,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		  if (ch == DELAY_DELTA_MODIFIER_PIN){
-		  	delay_delta_modifier = map(analogRead(context, n, DELAY_DELTA_MODIFIER_PIN), 0, 1, 0.01, 5.0);
+		  	delay_delta_modifier = rint(map(analogRead(context, n, DELAY_DELTA_MODIFIER_PIN), 0, 1, 0, frames_per_24_ticks));
 		  }
 		  
 		  
