@@ -1758,10 +1758,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			}
 			do_button_2_action = 0;
 		} else if (do_button_3_action == 1) {
-			gDelayFeedbackAmount = gDelayFeedbackAmount - gDelayFeedbackAmount/3;
+			gDelayFeedbackAmount = gDelayFeedbackAmount - (gDelayFeedbackAmount/3.0f);
 			do_button_3_action = 0;
 		} else if (do_button_4_action == 1) {
-			gDelayFeedbackAmount = gDelayFeedbackAmount + gDelayFeedbackAmount/3;
+			gDelayFeedbackAmount = gDelayFeedbackAmount + (gDelayFeedbackAmount/3.0f);
 			do_button_4_action = 0;
 		}
 
@@ -2321,6 +2321,16 @@ void render(BelaContext *context, void *userData)
 	        	 // Right button newly pressed 
 	        	if ((new_button_2_state != old_button_2_state) && new_button_2_state == 1){
 	        		do_button_2_action = 1;
+	        	}
+        	
+        	
+        		if ((new_button_3_state != old_button_3_state) && new_button_3_state == 1){
+	        		do_button_3_action = 1;
+	        	}
+	        	
+	        	 // Right button newly pressed 
+	        	if ((new_button_4_state != old_button_4_state) && new_button_4_state == 1){
+	        		do_button_4_action = 1;
 	        	}
         	
         	
