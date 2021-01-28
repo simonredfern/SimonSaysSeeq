@@ -119,6 +119,9 @@ int analog_sample_rate;
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
 int gDelayInSamples = 22050;
 
+// Amount of feedback
+float gDelayFeedbackAmount = 0.900; //0.999
+
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -612,7 +615,7 @@ void printStatus(void*){
     
 		// Delay
 		rt_printf("gDelayInSamples is: %d \n", gDelayInSamples);
-		
+		rt_printf("gDelayFeedbackAmount is: %f \n", gDelayFeedbackAmount);
 		rt_printf("delay_time_delta is: %f \n", delay_time_delta);
 		
 		// Analog / Digital Clock In.
@@ -1688,21 +1691,28 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		if (do_both_buttons_action_a == 1){
 			// the whole buffer
-			gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
+			//gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
 			// Reset the delta
-			delay_time_delta = frames_per_24_ticks;
+			//delay_time_delta = frames_per_24_ticks;
+			
+			
+			gDelayFeedbackAmount = 0.77;
+			
 			do_both_buttons_action_a = 0;
 			
 			
 		} else if (do_both_buttons_action_b == 1){
 			// like a reset 
-			gDelayInSamples = frames_per_24_ticks;
-			delay_time_delta = frames_per_24_ticks;
+			//gDelayInSamples = frames_per_24_ticks;
+			//delay_time_delta = frames_per_24_ticks;
+			
+			gDelayFeedbackAmount = 0.999;
+			
 			do_both_buttons_action_b = 0;
 			
 		} else if (do_left_button_action == 1) {
 			
-	      	delay_time_delta = frames_per_24_ticks / 3.0f; // to get some odd timings
+	      	delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
 			
 			if ((gDelayInSamples - delay_time_delta) <= 0){
 				// Skip
@@ -1792,8 +1802,7 @@ float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
 int gDelayBufWritePtr = 0;
 // Amount of delay
 float gDelayAmount = 1.0;
-// Amount of feedback
-float gDelayFeedbackAmount = 0.999;
+
 // Level of pre-delay input
 float gDelayAmountPre = 0.75;
 
