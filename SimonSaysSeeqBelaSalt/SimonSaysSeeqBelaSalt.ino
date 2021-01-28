@@ -167,14 +167,14 @@ int gAnalogChannelNum; // number of analog channels to iterate over
 //T4/SWITCH4 in digital channel 3 (maybe this is for Salt+?)
 
 
-int LEFT_BUTTON_PIN = 6; 
-int new_left_button_state = 0; 
-int old_left_button_state = 0; 
+int button_1_PIN = 6; 
+int new_button_1_state = 0; 
+int old_button_1_state = 0; 
 
 
-int RIGHT_BUTTON_PIN = 14;
-int new_right_button_state = 0; 
-int old_right_button_state = 0; 
+int button_2_PIN = 14;
+int new_button_2_state = 0; 
+int old_button_2_state = 0; 
 
 /////////////////
 
@@ -186,8 +186,8 @@ int both_buttons_pressed_even = 0;
 int do_both_buttons_action_a = 0;
 int do_both_buttons_action_b = 0;
 
-int do_left_button_action = 0;
-int do_right_button_action = 0;
+int do_button_1_action = 0;
+int do_button_2_action = 0;
 
 //////////////////
 
@@ -632,8 +632,8 @@ void printStatus(void*){
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 		
 		
-		rt_printf("new_left_button_state is: %d \n", new_left_button_state);
-		rt_printf("new_right_button_state is: %d \n", new_right_button_state);
+		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
+		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
 		
 
 		
@@ -1710,7 +1710,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 			do_both_buttons_action_b = 0;
 			
-		} else if (do_left_button_action == 1) {
+		} else if (do_button_1_action == 1) {
 			
 	      	delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
 			
@@ -1720,9 +1720,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 				gDelayInSamples = rint(gDelayInSamples - delay_time_delta);
 			}			
 			
-			do_left_button_action = 0;
+			do_button_1_action = 0;
 			
-		} else if (do_right_button_action == 1) {
+		} else if (do_button_2_action == 1) {
 			
 	      	delay_time_delta = frames_per_24_ticks;
 			
@@ -1731,7 +1731,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			} else {
 				gDelayInSamples = rint(gDelayInSamples + delay_time_delta); // ;
 			}
-			do_right_button_action = 0;
+			do_button_2_action = 0;
 		}
 
 	
@@ -1964,8 +1964,8 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set buttons pins as inputs
-        pinMode(context, 0, LEFT_BUTTON_PIN, INPUT);
-        pinMode(context, 0, RIGHT_BUTTON_PIN, INPUT);
+        pinMode(context, 0, button_1_PIN, INPUT);
+        pinMode(context, 0, button_2_PIN, INPUT);
 
 
         // The two LEDS on Salt
@@ -2239,15 +2239,15 @@ void render(BelaContext *context, void *userData)
         	
         	
         	
-        	old_left_button_state = new_left_button_state;
-        	new_left_button_state = digitalRead(context, m, LEFT_BUTTON_PIN);
+        	old_button_1_state = new_button_1_state;
+        	new_button_1_state = digitalRead(context, m, button_1_PIN);
 
-        	old_right_button_state = new_right_button_state;
-        	new_right_button_state = digitalRead(context, m, RIGHT_BUTTON_PIN);
+        	old_button_2_state = new_button_2_state;
+        	new_button_2_state = digitalRead(context, m, button_2_PIN);
 
         	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
         	
-        	if ((new_left_button_state == 1 && new_right_button_state == 1) && old_both_buttons_pressed_state == 0) {
+        	if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
         		both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
         		new_both_buttons_pressed_state = 1;
         		
@@ -2263,21 +2263,21 @@ void render(BelaContext *context, void *userData)
         		}
         		
         		// Reset the buttons becuase we don't want a one button action as well
-        		new_left_button_state = 0;
-        		new_right_button_state = 0;
+        		new_button_1_state = 0;
+        		new_button_2_state = 0;
         		
         	} else {
         		new_both_buttons_pressed_state = 0;	
  
         	
 	        	// Left button newly pressed get smaller
-	        	if ((new_left_button_state != old_left_button_state) && new_left_button_state == 1){
-	        		do_left_button_action = 1;
+	        	if ((new_button_1_state != old_button_1_state) && new_button_1_state == 1){
+	        		do_button_1_action = 1;
 	        	}
 	        	
 	        	 // Right button newly pressed 
-	        	if ((new_right_button_state != old_right_button_state) && new_right_button_state == 1){
-	        		do_right_button_action = 1;
+	        	if ((new_button_2_state != old_button_2_state) && new_button_2_state == 1){
+	        		do_button_2_action = 1;
 	        	}
         	
         	
