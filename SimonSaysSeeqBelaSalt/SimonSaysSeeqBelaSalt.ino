@@ -265,7 +265,7 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int delay_time_offset_PIN = 4; // CV 5 (SALT+)
+const int DELAY_TIME_OFFSET_PIN = 4; // CV 5 (SALT+)
 
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
@@ -354,7 +354,10 @@ float audio_left_input_raw;
 float audio_right_input_raw;
 
 
-unsigned int delay_time_offset = 0;
+unsigned int delay_time_offset_frames = 0;
+
+unsigned int delay_time_offset_factor = 1;
+
 
 
 
@@ -642,8 +645,11 @@ void printStatus(void*){
 		
 		rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
 		rt_printf("delay_time_delta is: %d \n", delay_time_delta);
-		rt_printf("delay_time_offset is: %d \n", delay_time_offset);
+		
 		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
+		
+		rt_printf("delay_time_offset_factor is: %d \n", delay_time_offset_factor);
+		rt_printf("delay_time_offset_frames is: %d \n", delay_time_offset_frames);
 		
 		rt_printf("delay_in_samples_with_offset is: %d \n", delay_in_samples_with_offset);
 		
@@ -1804,10 +1810,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		// Add the modifier (which might be zero) as long as we won't exceed the buffer
-	    if ((delay_in_samples + delay_time_offset) >= DELAY_BUFFER_SIZE){
+	    if ((delay_in_samples + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
 	    	delay_in_samples_with_offset = DELAY_BUFFER_SIZE;
 	    } else {
-	      delay_in_samples_with_offset = delay_in_samples + delay_time_offset;
+	      delay_in_samples_with_offset = delay_in_samples + delay_time_offset_frames;
 	    }
 		
 		if (do_button_1_action == 1) {
@@ -2296,8 +2302,28 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == delay_time_offset_PIN){
-		  	delay_time_offset = rint(map(analogRead(context, n, delay_time_offset_PIN), 0, 1, 0, frames_per_24_ticks));
+		  if (ch == DELAY_TIME_OFFSET_PIN){
+		  	float la = map(analogRead(context, n, DELAY_TIME_OFFSET_PIN), 0, 1, 0, 1);
+		  	
+		  	// We want a stable value for delay_time_offset else we get glitches
+		  	
+		  	if (la <= 0.1){
+		  		delay_time_offset_factor = 1; 
+		  	} else if (la <= 0.2){
+		  		delay_time_offset_factor = 2;
+		  	} else if (la <= 0.4){
+		  		delay_time_offset_factor = 3;
+		  	} else if (la <= 0.6){
+		  		delay_time_offset_factor = 7;
+		  	} else if (la <= 0.8){
+		  		delay_time_offset_factor = 9;
+		  	} else {
+		  		delay_time_offset_factor = 100;
+		  	}
+		  	
+		  	
+		  	delay_time_offset_frames = rint(frames_per_24_ticks / delay_time_offset_factor);
+		  	
 		  }
 		  
 		  
