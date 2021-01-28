@@ -8,7 +8,7 @@
 
 SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
-Version: 2021-01-23 or so.
+Version: 2021-01-28 or so.
 
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
@@ -120,7 +120,7 @@ int analog_sample_rate;
 int gDelayInSamples = 22050;
 
 // Amount of feedback
-float gDelayFeedbackAmount = 0.900; //0.999
+float gDelayFeedbackAmount = 0.999; //0.999
 
 
 #include <math.h> //sinf
@@ -176,6 +176,19 @@ int button_2_PIN = 14;
 int new_button_2_state = 0; 
 int old_button_2_state = 0; 
 
+// Salt + ?
+
+int button_3_PIN = 1; 
+int new_button_3_state = 0; 
+int old_button_3_state = 0; 
+
+
+int button_4_PIN = 3;
+int new_button_4_state = 0; 
+int old_button_4_state = 0; 
+
+
+
 /////////////////
 
 
@@ -188,6 +201,8 @@ int do_both_buttons_action_b = 0;
 
 int do_button_1_action = 0;
 int do_button_2_action = 0;
+int do_button_3_action = 0;
+int do_button_4_action = 0;
 
 //////////////////
 
@@ -634,17 +649,23 @@ void printStatus(void*){
 		
 		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
 		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
+		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
+		rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
-
+		rt_printf("do_button_1_action is: %d \n", do_button_1_action);
+		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
+		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
+		rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
-		
+	
+		/*
 		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
 		rt_printf("new_both_buttons_pressed_state is: %d \n", new_both_buttons_pressed_state);
 		rt_printf("both_buttons_pressed_counter is: %d \n", both_buttons_pressed_counter);
 		rt_printf("both_buttons_pressed_even is: %d \n", both_buttons_pressed_even);
 		rt_printf("do_both_buttons_action_a is: %d \n", do_both_buttons_action_a);
 		rt_printf("do_both_buttons_action_b is: %d \n", do_both_buttons_action_b);
-		
+		*/
 		
 		
         // Sequence derived results 		
@@ -1689,6 +1710,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		//gDelayInSamples = rint( frames_per_24_ticks * 1.0 * delay_time_delta);
 		
+		/*
 		if (do_both_buttons_action_a == 1){
 			// the whole buffer
 			//gDelayInSamples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
@@ -1710,7 +1732,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 			do_both_buttons_action_b = 0;
 			
-		} else if (do_button_1_action == 1) {
+		} else 
+		*/
+		
+		if (do_button_1_action == 1) {
 			
 	      	delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
 			
@@ -1732,7 +1757,16 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 				gDelayInSamples = rint(gDelayInSamples + delay_time_delta); // ;
 			}
 			do_button_2_action = 0;
+		} else if (do_button_3_action == 1) {
+			gDelayFeedbackAmount = gDelayFeedbackAmount - gDelayFeedbackAmount/3;
+			do_button_3_action = 0;
+		} else if (do_button_4_action == 1) {
+			gDelayFeedbackAmount = gDelayFeedbackAmount + gDelayFeedbackAmount/3;
+			do_button_4_action = 0;
 		}
+
+
+
 
 	
 } // end of function
@@ -2244,6 +2278,15 @@ void render(BelaContext *context, void *userData)
 
         	old_button_2_state = new_button_2_state;
         	new_button_2_state = digitalRead(context, m, button_2_PIN);
+
+        	old_button_3_state = new_button_3_state;
+        	new_button_3_state = digitalRead(context, m, button_3_PIN);
+
+        	old_button_4_state = new_button_4_state;
+        	new_button_4_state = digitalRead(context, m, button_4_PIN);
+
+
+
 
         	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
         	
