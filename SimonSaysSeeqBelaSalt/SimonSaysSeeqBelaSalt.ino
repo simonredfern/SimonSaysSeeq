@@ -1314,10 +1314,11 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
     	
 
 		//rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
-		midi_clock_detected = 1;
 		
+		// UNRELIABLE AT THE MOMENT
 		
-		OnTick();
+		//midi_clock_detected = 1;
+		//OnTick();
 
 	} else {
 		
