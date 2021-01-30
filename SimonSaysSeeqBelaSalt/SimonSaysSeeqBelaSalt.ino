@@ -630,7 +630,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 100 == 0) {
+    if(gCount % 1 == 0) {
       //rt_printf("================ \n");
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -1052,8 +1052,10 @@ Midi midi;
 
 // or lsusb -t via ssh 
 
-const char* gMidiPort0 = "hw:0,0";
+//const char* gMidiPort0 = "hw:0,0";
 
+
+const char* gMidiPort0 = "hw:1,0,0";
 
 float gFreq;
 float gPhaseIncrement = 0;
@@ -1074,10 +1076,16 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-
+// See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
   // rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+
+			// midi_byte_t statusByte = 0xB0; // control change on channel 0
+			// midi_byte_t controller = 30; // controller number 30
+			// midi_byte_t value = state * 127; // value : 0 or 127
+			// midi_byte_t bytes[3] = {statusByte, controller, value};
+			// midi.writeOutput(bytes, 3); // send a control change message
 
 
 
@@ -1089,7 +1097,12 @@ void PlayMidi(){
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
              // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
-             // TODO SEND BELA MIDI MIDI.sendNoteOn(n, channel_a_midi_note_events[StepCountSanity(step_count)][n][1].velocity, 1);
+  
+			uint8_t channel = 1;
+
+             midi.writeNoteOn (channel, n, channel_a_midi_note_events[StepCountSanity(step_count)][n][1].velocity);
+             
+           
            }
     } 
 
@@ -1097,12 +1110,17 @@ void PlayMidi(){
     if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
            // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-          // TODO SEND BELA MIDI  MIDI.sendNoteOff(n, 0, 1);
+           
+           uint8_t channel = 1;
+           
+           midi.writeNoteOff(channel, n, 0);
+           
+           
        }
     }
-} // End midi note loop
+  } // End midi note loop
 
-}
+} // End Play Midi
 
 
 
@@ -1257,7 +1275,7 @@ void OnTick(){
 // Nice reference: http://www.giordanobenicchi.it/midi-tech/midispec.htm
 
 
-
+// See Midi.h in the Libraries section of the Bela IDE
 void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
@@ -1268,7 +1286,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			uint8_t note = message.getDataByte(0);
 			uint8_t velocity = message.getDataByte(1);
 			uint8_t channel = message.getChannel();
-			rt_printf("note ON: %d type: %d  \n", note, kmmNoteOn);
+			//rt_printf("note ON: %d type: %d  \n", note, kmmNoteOn);
 			
 			// Write any note ON into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_ON, note, velocity, channel);
@@ -1279,7 +1297,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			uint8_t note = message.getDataByte(0);
 			uint8_t velocity = 0;
 			uint8_t channel = message.getChannel();
-			rt_printf("note OFF: %d  \n", note);
+			//rt_printf("note OFF: %d  \n", note);
 			
 			// Write any note OFF into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
