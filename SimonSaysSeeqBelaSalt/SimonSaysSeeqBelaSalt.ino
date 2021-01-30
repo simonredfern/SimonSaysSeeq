@@ -1079,7 +1079,7 @@ int gAudioFramesPerAnalogFrame = 0;
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
-  // rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+  //rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
 			// midi_byte_t statusByte = 0xB0; // control change on channel 0
 			// midi_byte_t controller = 30; // controller number 30
@@ -1090,13 +1090,13 @@ void PlayMidi(){
 
 
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
-             // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
   
 			uint8_t channel = 1;
 
