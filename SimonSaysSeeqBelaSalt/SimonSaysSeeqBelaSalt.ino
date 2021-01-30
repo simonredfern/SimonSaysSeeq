@@ -630,7 +630,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1 == 0) {
+    if(gCount % 100 == 0) {
       //rt_printf("================ \n");
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -980,10 +980,10 @@ void OnStep(){
   
 
     if (step_count == FIRST_STEP) {
-    	rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
+    	// rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
       SyncAndResetCv();
     } else {
-      rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
+      //rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
     }
   
   
@@ -1049,6 +1049,8 @@ Midi midi;
 
 
 // To find midi ports Bela can see, type "amidi -l" in the Bela command line.
+
+// or lsusb -t via ssh 
 
 const char* gMidiPort0 = "hw:0,0";
 
@@ -1283,7 +1285,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
 			
 		}
-	} else if(message.getType() == MIDI_STATUS_OF_CLOCK) {
+	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
 			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock (kmmSystem ?)
 		int type = message.getType();
 		int byte0 = message.getDataByte(0);
@@ -1296,14 +1298,14 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		
 		OnTick();
 
-	}
-	
-	
-   // float data = message.getDataByte(1) / 127.0f;
-
-	bool shouldPrint = false;
-	if(shouldPrint){
-		message.prettyPrint();
+	} else {
+		
+			uint8_t note = message.getDataByte(0);
+			uint8_t velocity = message.getDataByte(1);
+			uint8_t channel = message.getChannel();
+			rt_printf("Got some other midi message at: %d and %d \n", note, velocity);
+			
+			
 	}
 }
 
