@@ -85,6 +85,20 @@ UdpClient myUdpClient;
 
 Scope scope;
 
+
+//////////////////////////////
+// Bela wrapping of ALSA Linux Midi library see midi.h in this IDE or http://docs.bela.io/classMidi.html
+// Use a class compliant USB Midi device
+Midi midi;
+
+// To find midi ports Bela can see, type "amidi -l" in the Bela command line.
+// Also  lsusb -t via ssh 
+//const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
+const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
+
+
+
+
 uint64_t frame_timer = 0;
 
 uint64_t last_clock_falling_edge = 0; 
@@ -849,7 +863,10 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         // A mechanism to clear notes from memory by playing them quietly.
         if (velocity < 7 ){
            // Send Note OFF
-           // TODO BELA MIDI.sendNoteOff(note, 0, 1);
+
+           midi.writeNoteOff(channel, note, 0);
+           
+           
            
            // Disable the note on all steps
            //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
@@ -1041,21 +1058,7 @@ void OnNotStep(){
 
 
 
-//////////////////////////////
-// Bela Specific
-Midi midi;
 
-//const char* gMidiPort0 = "hw:1,0,0";
-
-
-// To find midi ports Bela can see, type "amidi -l" in the Bela command line.
-
-// or lsusb -t via ssh 
-
-//const char* gMidiPort0 = "hw:0,0";
-
-
-const char* gMidiPort0 = "hw:1,0,0";
 
 float gFreq;
 float gPhaseIncrement = 0;
