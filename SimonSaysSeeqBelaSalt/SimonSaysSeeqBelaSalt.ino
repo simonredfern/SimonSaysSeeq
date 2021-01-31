@@ -279,7 +279,7 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int DELAY_TIME_OFFSET_PIN = 4; // CV 5 (SALT+)
+const int DELAY_TIME_MULTIPLE_PIN = 4; // CV 5 (SALT+)
 
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
@@ -372,6 +372,7 @@ unsigned int delay_time_offset_frames = 0;
 
 unsigned int delay_time_offset_factor = 1;
 
+unsigned int delay_time_multiple_input = 1;
 
 
 
@@ -645,7 +646,7 @@ void printStatus(void*){
     gCount++;
 	
     if(gCount % 1 == 0) {
-      //rt_printf("================ \n");
+      
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
 		  // Global frame timing
@@ -662,25 +663,22 @@ void printStatus(void*){
 		
 		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
 		
+		
+		rt_printf("delay_time_multiple_input is: %d \n", delay_time_multiple_input);
+		
 		rt_printf("delay_time_offset_factor is: %d \n", delay_time_offset_factor);
 		rt_printf("delay_time_offset_frames is: %d \n", delay_time_offset_frames);
 		
 		rt_printf("delay_in_samples_with_offset is: %d \n", delay_in_samples_with_offset);
 		
 		
-		
-		
-		
+	
 		
 	    // Delay Feedback
 	    rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
-	  
 		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
-		
-		
-		
 		
 		
 		// Analog / Digital Clock In.
@@ -718,17 +716,19 @@ void printStatus(void*){
 		*/
 		
 		
-        // Sequence derived results 		
+        // Sequence derived results 
+        /*
     	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
     	rt_printf("new_sequence_length_in_ticks is: %d \n", new_sequence_length_in_ticks);
-    	
+    	*/
 
 
 		/*
     	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
     	*/
-    	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
+    	
+    	//rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	/*
     	rt_printf("audio_envelope_1_amplitude is: %f \n", audio_envelope_1_amplitude);
@@ -737,16 +737,17 @@ void printStatus(void*){
     	*/
 
 
-		
+		/*
 		rt_printf("audio_osc_1_result is: %f \n", audio_osc_1_result);
 		rt_printf("osc_2_result_analog is: %f \n", osc_2_result_analog);
+		*/
 		
-		
-		
+		/*
 		rt_printf("analog_out_1 is: %f \n", analog_out_1);
 		rt_printf("analog_out_2 is: %f \n", analog_out_2);
 		rt_printf("analog_out_3 is: %f \n", analog_out_3);
 		rt_printf("analog_out_4 is: %f \n", analog_out_4);
+		*/
 		
 		/*
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
@@ -761,8 +762,8 @@ void printStatus(void*){
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
     	*/
 
-    	// rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-    	// rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+    	//rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
+    	//rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
 
     	
 
@@ -886,7 +887,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
           channel_a_midi_note_events[step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[step_count][note][1].is_active = 1;
-          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
+          //rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
 
         } 
       
@@ -997,7 +998,7 @@ void OnStep(){
   
 
     if (step_count == FIRST_STEP) {
-    	// rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
+    	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
       SyncAndResetCv();
     } else {
       //rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
@@ -1099,7 +1100,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
-             rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
+             //rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
   
 			uint8_t channel = 1;
 
@@ -1112,7 +1113,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
-           // rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+           //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            
            uint8_t channel = 1;
            
@@ -1708,7 +1709,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 
    if (binary_sequence_result != last_binary_sequence_result){
-    // rt_printf("binary_sequence has changed **");
+    //rt_printf("binary_sequence has changed **");
    }
 
 
@@ -1798,6 +1799,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		delay_time_delta = frames_per_24_ticks;
+		
+		
+		// TODO add offset from buttons.
+		delay_in_samples = (frames_per_24_ticks * delay_time_multiple_input);
 		
 		/*
 		if (delay_in_samples <= audio_sample_rate) {
@@ -1906,7 +1911,7 @@ void InitMidiSequence(){
 
   for (uint8_t n = 0; n <= 127; n++) {
      channel_a_ghost_events[n].is_active = 0;
-     rt_printf("Init Step with ghost Note: %s is_active false", n );
+     //rt_printf("Init Step with ghost Note: %s is_active false", n );
   } 
   
 
@@ -2042,7 +2047,7 @@ bool setup(BelaContext *context, void *userData){
         }
         srandom(time(NULL));
         
-        rt_printf("Creating an oscilator in Setup. \n");
+        //rt_printf("Creating an oscilator in Setup. \n");
         
         osc.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
         // Fill in the wavetable with one period of your waveform
@@ -2326,27 +2331,32 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == DELAY_TIME_OFFSET_PIN){
-		  	float la = map(analogRead(context, n, DELAY_TIME_OFFSET_PIN), 0, 1, 0, 1);
+		  if (ch == DELAY_TIME_MULTIPLE_PIN){
+		  	delay_time_multiple_input = map(analogRead(context, n, DELAY_TIME_MULTIPLE_PIN), 0, 1, 0, 255);
+		  	
+		  	
+		  
+		  	
+		  	
 		  	
 		  	// We want a stable value for delay_time_offset else we get glitches
 		  	
-		  	if (la <= 0.1){
-		  		delay_time_offset_factor = 1; 
-		  	} else if (la <= 0.2){
-		  		delay_time_offset_factor = 2;
-		  	} else if (la <= 0.4){
-		  		delay_time_offset_factor = 3;
-		  	} else if (la <= 0.6){
-		  		delay_time_offset_factor = 7;
-		  	} else if (la <= 0.8){
-		  		delay_time_offset_factor = 9;
-		  	} else {
-		  		delay_time_offset_factor = 100;
-		  	}
+		  	// if (la <= 0.1){
+		  	// 	delay_time_offset_factor = 1; 
+		  	// } else if (la <= 0.2){
+		  	// 	delay_time_offset_factor = 2;
+		  	// } else if (la <= 0.4){
+		  	// 	delay_time_offset_factor = 3;
+		  	// } else if (la <= 0.6){
+		  	// 	delay_time_offset_factor = 7;
+		  	// } else if (la <= 0.8){
+		  	// 	delay_time_offset_factor = 9;
+		  	// } else {
+		  	// 	delay_time_offset_factor = 100;
+		  	// }
 		  	
 		  	
-		  	delay_time_offset_frames = rint(frames_per_24_ticks / delay_time_offset_factor);
+		  	// delay_time_offset_frames = rint(frames_per_24_ticks / delay_time_offset_factor);
 		  	
 		  }
 		  
