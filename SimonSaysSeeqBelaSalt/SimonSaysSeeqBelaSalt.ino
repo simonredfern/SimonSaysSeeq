@@ -131,7 +131,7 @@ int audio_sample_rate;
 int analog_sample_rate;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
-int delay_in_samples = 22050;
+int course_delay_frames = 22050;
 int total_delay_frames_with_offset = 22050;
 
 // Amount of feedback
@@ -221,8 +221,8 @@ int do_button_4_action = 0;
 
 //////////////////
 
-int delay_time_delta = 1;
-int total_delay_offset = 0;
+int fine_delay_frames_delta = 1;
+int fine_delay_frames = 0;
 
 float feedback_delta = 1.0f;
 
@@ -311,7 +311,7 @@ uint8_t current_sequence_length_in_steps = 8;
 
 ///////////////////////
 
-const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
+//const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
 
 
 const uint8_t MIDI_NOTE_ON = 1;
@@ -662,11 +662,11 @@ void printStatus(void*){
 
 
 		rt_printf("delay_time_multiple_input is: %d \n", delay_time_multiple_input);		
-		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
-		rt_printf("delay_time_delta is: %d \n", delay_time_delta);
+		rt_printf("course_delay_frames is: %d \n", course_delay_frames);
+		rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
 		
 		
-		rt_printf("total_delay_offset is: %d \n", total_delay_offset);
+		rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
 		
 		
 		
@@ -1765,9 +1765,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		/*
 		if (do_both_buttons_action_a == 1){
 			// the whole buffer
-			//delay_in_samples = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
+			//course_delay_frames = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
 			// Reset the delta
-			//delay_time_delta = frames_per_24_ticks;
+			//fine_delay_frames_delta = frames_per_24_ticks;
 			
 			
 			delay_feedback_amount = 0.77;
@@ -1777,8 +1777,8 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 		} else if (do_both_buttons_action_b == 1){
 			// like a reset 
-			//delay_in_samples = frames_per_24_ticks;
-			//delay_time_delta = frames_per_24_ticks;
+			//course_delay_frames = frames_per_24_ticks;
+			//fine_delay_frames_delta = frames_per_24_ticks;
 			
 			delay_feedback_amount = 0.999;
 			
@@ -1792,12 +1792,12 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 		
 		/*
-		if (delay_in_samples <= audio_sample_rate) {
-			delay_time_delta = frames_per_24_ticks / 3.0f;
-		} else if (delay_in_samples <= audio_sample_rate * 2.0) {
-			delay_time_delta = frames_per_24_ticks / 5.0f;
+		if (course_delay_frames <= audio_sample_rate) {
+			fine_delay_frames_delta = frames_per_24_ticks / 3.0f;
+		} else if (course_delay_frames <= audio_sample_rate * 2.0) {
+			fine_delay_frames_delta = frames_per_24_ticks / 5.0f;
 		} else  {
-			delay_time_delta = frames_per_24_ticks / 7.0f;
+			fine_delay_frames_delta = frames_per_24_ticks / 7.0f;
 		} 
 		*/
 
@@ -1805,50 +1805,48 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		// Add the modifier (which might be zero) as long as we won't exceed the buffer
-	    // if ((delay_in_samples + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
+	    // if ((course_delay_frames + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
 	    // 	total_delay_frames_with_offset = DELAY_BUFFER_SIZE;
 	    // } else {
-	    //   total_delay_frames_with_offset = delay_in_samples + delay_time_offset_frames;
+	    //   total_delay_frames_with_offset = course_delay_frames + delay_time_offset_frames;
 	    // }
 
 
-		// TODO add offset from buttons.
-		delay_in_samples = (frames_per_24_ticks * delay_time_multiple_input);	    
-	    
-		delay_time_delta = rint(frames_per_24_ticks / 24.0);
-		
-		
-		if ((do_button_1_action == 1) || (do_button_2_action == 1) ) {
-			
-			if (do_button_1_action == 1) {
-				
-				if ((delay_in_samples - total_delay_offset - delay_time_delta) <= 0){
-					// Skip
-				} else { 
-					total_delay_offset = delay_in_samples - delay_time_delta;
-				}			
-				
-				do_button_1_action = 0;
-				
-			} else if (do_button_2_action == 1) {
-				
-				if ((delay_in_samples + total_delay_offset + delay_time_delta) >= DELAY_BUFFER_SIZE){
-					// Skip
-				} else {
-					total_delay_offset = delay_in_samples + delay_time_delta;
-				}
-				
-				do_button_2_action = 0;
-			} 			
-		} else {
-	    	total_delay_frames_with_offset = delay_in_samples;		
-		}
-	
 
 		
+		// The course delay amount we dial in with the pot
+		course_delay_frames = (frames_per_24_ticks * delay_time_multiple_input);	    
+	    
+		// The amount we increment / decrement the delay using buttons 2 and 1
+		fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);		
+		
+
+			
+		if (do_button_1_action == 1) {
+			
+			if ((course_delay_frames - fine_delay_frames - fine_delay_frames_delta) <= 0){
+				// Skip
+			} else { 
+				fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
+			}			
+			
+			do_button_1_action = 0;
+			
+		} else if (do_button_2_action == 1) {
+			
+			if ((course_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
+				// Skip
+			} else {
+				fine_delay_frames = fine_delay_frames + fine_delay_frames_delta;
+			}
+			
+			do_button_2_action = 0;
+		} 
+			
+		total_delay_frames_with_offset = course_delay_frames + fine_delay_frames;
+
 		
 		if (do_button_3_action == 1) {
-			
 			// Decrease Delay feedback
 			delay_feedback_amount = delay_feedback_amount - feedback_delta;
 			do_button_3_action = 0;
@@ -2218,7 +2216,7 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_l[gDelayBufWritePtr] = del_input_l;
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
-        // Get the delayed sample (by reading `delay_in_samples` many samples behind our current write pointer) and add it to our output sample
+        // Get the delayed sample (by reading `course_delay_frames` many samples behind our current write pointer) and add it to our output sample
         out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
