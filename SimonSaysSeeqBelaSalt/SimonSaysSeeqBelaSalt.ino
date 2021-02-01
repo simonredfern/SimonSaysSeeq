@@ -96,7 +96,9 @@ Midi midi;
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
 
-const unsigned int MAX_COURSE_DELAY_TIME_INPUT = 126;
+
+// Let our delay have 50 different course settings (so the pot doesn't jitter)
+const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 uint64_t frame_timer = 0;
 
@@ -130,7 +132,7 @@ int audio_sample_rate;
 int analog_sample_rate;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
-int course_delay_frames = 22050;
+int coarse_delay_frames = 22050;
 int total_delay_frames = 22050;
 
 // Amount of feedback
@@ -223,7 +225,7 @@ int do_button_4_action = 0;
 int fine_delay_frames_delta = 1;
 int fine_delay_frames = 0;
 
-float feedback_delta = 1.0f;
+//float feedback_delta = 1.0f;
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
 int LED_1_PIN = 2;
@@ -279,7 +281,11 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int COURSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
+const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
+const int DELAY_FEEDBACK_INPUT_PIN = 5; // CV 6 (SALT+)
+
+
+
 
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
@@ -370,7 +376,7 @@ float audio_right_input_raw;
 
 
 
-unsigned int course_delay_input = 1;
+unsigned int coarse_delay_input = 1;
 
 
 
@@ -660,8 +666,8 @@ void printStatus(void*){
 
 
 
-		rt_printf("course_delay_input is: %d \n", course_delay_input);		
-		rt_printf("course_delay_frames is: %d \n", course_delay_frames);
+		rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
+		rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
 		rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
 		
 		
@@ -673,7 +679,7 @@ void printStatus(void*){
 		
 		
 		// Delay Feedback
-		rt_printf("feedback_delta is: %f \n", feedback_delta);
+		//rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
 		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
@@ -1757,11 +1763,11 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		// We want to Delay Course Dial to span the DELAY_BUFFER_SIZE in jumps of frames_per_24_ticks
-		float delay_course_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COURSE_DELAY_TIME_INPUT);
+		float delay_coarse_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COARSE_DELAY_TIME_INPUT);
 		
 		
 		// The course delay amount we dial in with the pot
-		course_delay_frames = rint(frames_per_24_ticks * course_delay_input * delay_course_dial_factor);	    
+		coarse_delay_frames = rint(frames_per_24_ticks * coarse_delay_input * delay_coarse_dial_factor);	    
 	    
 		// The amount we increment / decrement the delay using buttons 2 and 1
 		fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);		
@@ -1782,7 +1788,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		// Larger	
 		} else if (do_button_2_action == 1) {
 			
-			if ((course_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
+			if ((coarse_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
 				// Skip
 			} else {
 				fine_delay_frames = fine_delay_frames + fine_delay_frames_delta;
@@ -1791,7 +1797,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			do_button_2_action = 0;
 		} 
 			
-		total_delay_frames = course_delay_frames + fine_delay_frames;
+		total_delay_frames = coarse_delay_frames + fine_delay_frames;
 
 		// Sanity Checks
 	    if (total_delay_frames > DELAY_BUFFER_SIZE){
@@ -1805,41 +1811,6 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 
 
-		
-		// Delay Feedback
-		if (do_button_3_action == 1) {
-			// Decrease Delay feedback
-			delay_feedback_amount = delay_feedback_amount - feedback_delta;
-			do_button_3_action = 0;
-		} else if (do_button_4_action == 1) {
-			
-			// Increase Delay Feedback 
-			delay_feedback_amount = delay_feedback_amount + feedback_delta;
-			do_button_4_action = 0;
-		}
-
-		
-		if (delay_feedback_amount < 0.8f){
-			feedback_delta = delay_feedback_amount / 10.0f;
-		} else if  (delay_feedback_amount < 0.90f){
-		    feedback_delta = delay_feedback_amount / 20.0f;
-		} else if  (delay_feedback_amount < 0.95f){
-			feedback_delta = delay_feedback_amount / 25.0f;
-		} else if  (delay_feedback_amount < 0.99f){
-			feedback_delta = delay_feedback_amount / 30.0f;
-		} else if  (delay_feedback_amount < 1.1f){
-			feedback_delta = delay_feedback_amount / 40.0f;
-		} else if  (delay_feedback_amount < 1.2f){
-			feedback_delta = delay_feedback_amount / 50.0f;
-		} else if  (delay_feedback_amount < 1.3f){
-			feedback_delta = delay_feedback_amount / 60.0f;
-		} else if  (delay_feedback_amount < 1.4f){
-			feedback_delta = delay_feedback_amount / 80.0f;
-		} else {
-			feedback_delta = delay_feedback_amount / 100.0f;
-		}
-		
-		
 
 
 	
@@ -2177,7 +2148,7 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_l[gDelayBufWritePtr] = del_input_l;
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
-        // Get the delayed sample (by reading `course_delay_frames` many samples behind our current write pointer) and add it to our output sample
+        // Get the delayed sample (by reading `coarse_delay_frames` many samples behind our current write pointer) and add it to our output sample
         out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
@@ -2293,10 +2264,22 @@ void render(BelaContext *context, void *userData)
 		  
 		 
 		  
-		  if (ch == COURSE_DELAY_TIME_INPUT_PIN){
-		  	course_delay_input = map(analogRead(context, n, COURSE_DELAY_TIME_INPUT_PIN), 0, 1, 0, MAX_COURSE_DELAY_TIME_INPUT);
+		  if (ch == COARSE_DELAY_TIME_INPUT_PIN){
+		  	coarse_delay_input = map(analogRead(context, n, COARSE_DELAY_TIME_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  	
 		  }
+		  
+		  // > 0.999 leads to distorsion
+		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
+		  	delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 1.8);
+		  	
+		  }
+		  
+		  
+		  
+		  
+		  
+		  
 		  
 	      
 	      // OUTPUTS
