@@ -132,7 +132,7 @@ int analog_sample_rate;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
 int delay_in_samples = 22050;
-int delay_in_samples_with_offset = 22050;
+int total_delay_frames_with_offset = 22050;
 
 // Amount of feedback
 float delay_feedback_amount = 0.999; //0.999
@@ -222,6 +222,7 @@ int do_button_4_action = 0;
 //////////////////
 
 int delay_time_delta = 1;
+int total_delay_offset = 0;
 
 float feedback_delta = 1.0f;
 
@@ -368,9 +369,7 @@ float audio_left_input_raw;
 float audio_right_input_raw;
 
 
-unsigned int delay_time_offset_frames = 0;
 
-unsigned int delay_time_offset_factor = 1;
 
 unsigned int delay_time_multiple_input = 1;
 
@@ -659,23 +658,27 @@ void printStatus(void*){
 		// Delay Time
 		
 		rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
+
+
+
+		rt_printf("delay_time_multiple_input is: %d \n", delay_time_multiple_input);		
+		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
 		rt_printf("delay_time_delta is: %d \n", delay_time_delta);
 		
-		rt_printf("delay_in_samples is: %d \n", delay_in_samples);
+		
+		rt_printf("total_delay_offset is: %d \n", total_delay_offset);
 		
 		
-		rt_printf("delay_time_multiple_input is: %d \n", delay_time_multiple_input);
 		
-		rt_printf("delay_time_offset_factor is: %d \n", delay_time_offset_factor);
-		rt_printf("delay_time_offset_frames is: %d \n", delay_time_offset_frames);
-		
-		rt_printf("delay_in_samples_with_offset is: %d \n", delay_in_samples_with_offset);
+		rt_printf("total_delay_frames_with_offset is: %d \n", total_delay_frames_with_offset);		
 		
 		
-	
+		//rt_printf("delay_time_offset_factor is: %d \n", delay_time_offset_factor);
+		//rt_printf("delay_time_offset_frames is: %d \n", delay_time_offset_frames);
 		
-	    // Delay Feedback
-	    rt_printf("feedback_delta is: %f \n", feedback_delta);
+		
+	  // Delay Feedback
+	  rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
 		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
@@ -683,13 +686,13 @@ void printStatus(void*){
 		
 		// Analog / Digital Clock In.
 		
-  		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
+  	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
 
 		
 		
 		// Other Inputs
-    	rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
+    //rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
@@ -700,6 +703,7 @@ void printStatus(void*){
 		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
 		rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
+
 		rt_printf("do_button_1_action is: %d \n", do_button_1_action);
 		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
 		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
@@ -774,8 +778,8 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 		*/
 
-    	rt_printf("the_sequence is: %d \n", the_sequence);
-    	print_binary(the_sequence);
+    rt_printf("the_sequence is: %d \n", the_sequence);
+    print_binary(the_sequence);
 		rt_printf("%c \n", 'B');
 
 		// Sequence state
@@ -784,27 +788,15 @@ void printStatus(void*){
 		
 		if (step_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP \n");
-    	} else {
+    } else {
     		rt_printf("other step \n");
-    	}
+    }
 
+    rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
-		
-    	rt_printf("sequence_is_running is: %d \n", sequence_is_running);
-
-
-      
-    	// Sequence Outputs 
-
-    	rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
+    // Sequence Outputs 
+    rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
 		rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
-
-
-
-
-
-
-
 
 
       //std::string message = "$simon!";
@@ -1768,8 +1760,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
-		
-		//delay_in_samples = rint( frames_per_24_ticks * 1.0 * delay_time_delta);
+
 		
 		/*
 		if (do_both_buttons_action_a == 1){
@@ -1798,11 +1789,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		
 		
-		delay_time_delta = frames_per_24_ticks;
-		
-		
-		// TODO add offset from buttons.
-		delay_in_samples = (frames_per_24_ticks * delay_time_multiple_input);
+
 		
 		/*
 		if (delay_in_samples <= audio_sample_rate) {
@@ -1813,6 +1800,64 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			delay_time_delta = frames_per_24_ticks / 7.0f;
 		} 
 		*/
+
+
+		
+		
+		// Add the modifier (which might be zero) as long as we won't exceed the buffer
+	    // if ((delay_in_samples + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
+	    // 	total_delay_frames_with_offset = DELAY_BUFFER_SIZE;
+	    // } else {
+	    //   total_delay_frames_with_offset = delay_in_samples + delay_time_offset_frames;
+	    // }
+
+
+		// TODO add offset from buttons.
+		delay_in_samples = (frames_per_24_ticks * delay_time_multiple_input);	    
+	    
+		delay_time_delta = rint(frames_per_24_ticks / 24.0);
+		
+		
+		if ((do_button_1_action == 1) || (do_button_2_action == 1) ) {
+			
+			if (do_button_1_action == 1) {
+				
+				if ((delay_in_samples - total_delay_offset - delay_time_delta) <= 0){
+					// Skip
+				} else { 
+					total_delay_offset = delay_in_samples - delay_time_delta;
+				}			
+				
+				do_button_1_action = 0;
+				
+			} else if (do_button_2_action == 1) {
+				
+				if ((delay_in_samples + total_delay_offset + delay_time_delta) >= DELAY_BUFFER_SIZE){
+					// Skip
+				} else {
+					total_delay_offset = delay_in_samples + delay_time_delta;
+				}
+				
+				do_button_2_action = 0;
+			} 			
+		} else {
+	    	total_delay_frames_with_offset = delay_in_samples;		
+		}
+	
+
+		
+		
+		if (do_button_3_action == 1) {
+			
+			// Decrease Delay feedback
+			delay_feedback_amount = delay_feedback_amount - feedback_delta;
+			do_button_3_action = 0;
+		} else if (do_button_4_action == 1) {
+			
+			// Increase Delay Feedback 
+			delay_feedback_amount = delay_feedback_amount + feedback_delta;
+			do_button_4_action = 0;
+		}
 
 		
 		if (delay_feedback_amount < 0.8f){
@@ -1836,50 +1881,6 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		}
 		
 		
-		
-		
-		// Add the modifier (which might be zero) as long as we won't exceed the buffer
-	    if ((delay_in_samples + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
-	    	delay_in_samples_with_offset = DELAY_BUFFER_SIZE;
-	    } else {
-	      delay_in_samples_with_offset = delay_in_samples + delay_time_offset_frames;
-	    }
-		
-		if (do_button_1_action == 1) {
-			
-	      	//delay_time_delta = rint(delay_time_delta / 3.0f); // to get some odd timings
-			
-			if ((delay_in_samples - delay_time_delta) <= 0){
-				// Skip
-			} else { 
-				delay_in_samples = delay_in_samples - delay_time_delta;
-			}			
-			
-			do_button_1_action = 0;
-			
-		} else if (do_button_2_action == 1) {
-			
-	      	//delay_time_delta = frames_per_24_ticks;
-			
-			if ((delay_in_samples + delay_time_delta) >= DELAY_BUFFER_SIZE){
-				// Skip
-			} else {
-				delay_in_samples = delay_in_samples + delay_time_delta;
-			}
-			do_button_2_action = 0;
-		} else if (do_button_3_action == 1) {
-			
-			// Decrease Delay feedback
-			delay_feedback_amount = delay_feedback_amount - feedback_delta;
-			do_button_3_action = 0;
-		} else if (do_button_4_action == 1) {
-			
-			// Increase Delay Feedback 
-			delay_feedback_amount = delay_feedback_amount + feedback_delta;
-			do_button_4_action = 0;
-		}
-
-
 
 
 	
@@ -2179,8 +2180,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
-        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
+        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
+        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
@@ -2218,8 +2219,8 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
         // Get the delayed sample (by reading `delay_in_samples` many samples behind our current write pointer) and add it to our output sample
-        out_l += gDelayBuffer_l[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
-        out_r += gDelayBuffer_r[(gDelayBufWritePtr - delay_in_samples_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
         // Write the sample into the output buffer -- done!
         audioWrite(context, n, 0, out_l);
@@ -2334,38 +2335,8 @@ void render(BelaContext *context, void *userData)
 		  if (ch == DELAY_TIME_MULTIPLE_PIN){
 		  	delay_time_multiple_input = map(analogRead(context, n, DELAY_TIME_MULTIPLE_PIN), 0, 1, 0, 255);
 		  	
-		  	
-		  
-		  	
-		  	
-		  	
-		  	// We want a stable value for delay_time_offset else we get glitches
-		  	
-		  	// if (la <= 0.1){
-		  	// 	delay_time_offset_factor = 1; 
-		  	// } else if (la <= 0.2){
-		  	// 	delay_time_offset_factor = 2;
-		  	// } else if (la <= 0.4){
-		  	// 	delay_time_offset_factor = 3;
-		  	// } else if (la <= 0.6){
-		  	// 	delay_time_offset_factor = 7;
-		  	// } else if (la <= 0.8){
-		  	// 	delay_time_offset_factor = 9;
-		  	// } else {
-		  	// 	delay_time_offset_factor = 100;
-		  	// }
-		  	
-		  	
-		  	// delay_time_offset_frames = rint(frames_per_24_ticks / delay_time_offset_factor);
-		  	
 		  }
 		  
-		  
-		  
-		  
-		  
-	      
-	      
 	      
 	      // OUTPUTS
 	      // CV 1 ** GATE ** 
@@ -2577,42 +2548,7 @@ void render(BelaContext *context, void *userData)
           
           
 
-/*
 
-WORKS
-      // We have something like 16 audio frames (block size) each time render runs.
-      // Loop Through them and see if we have a high level this time.
-	    for(unsigned int n = 0; n < context->analogFrames; n++) {
-
-	  // This function returns the value of an analog input, at the time indicated by frame. 
-			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			  analog_clock_in_level = analogRead(context, n, CLOCK_INPUT_ANALOG_IN_PIN);
-
-
-            // Rising clock edge? // state-change-1
-            if ((analog_clock_in_level > 0.5) && (analog_clock_in_state == LOW)){
-    
-              if (sequence_is_running == LOW){
-                StartSequencer();
-              }
-              
-              analog_clock_in_state = HIGH;
-              //Serial.println(String("Went HIGH "));
-               
-              OnTick(context);
-              last_quarter_note_frame = milliseconds();
-              
-            } 
-    
-            // Falling clock edge?
-            if ((analog_clock_in_level < 0.5) && (analog_clock_in_state == HIGH)){
-              analog_clock_in_state = LOW;
-              //Serial.println(String("Went LOW "));
-            } 
-			 
-      }
-
-*/
   
 
         } 
@@ -2625,104 +2561,6 @@ WORKS
 
    
    
-   //if (peak_L.available()){
-   
-  /* 
-   	for(unsigned int n = 0; n < context->audioFrames; n++) {
-   		
-   		// Increment a counter on every frame
-        gCount++;
-        //MaybeOnTick();
-   		
-		  if(gAudioFramesPerAnalogFrame && !(n % gAudioFramesPerAnalogFrame)) {
-
-
-        MaybeOnTick();
-
-			  // read analog inputs and update frequency and amplitude
-			  // Depending on the sampling rate of the analog inputs, this will
-			  // happen every audio frame (if it is 44100)
-			  // or every two audio frames (if it is 22050)
-			  //frequency = map(analogRead(context, n/gAudioFramesPerAnalogFrame, gSensorInputFrequency), 0, 1, 100, 1000);
-			  //amplitude = analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOG_IN_PIN);
-			
-
-			
-			
-			  // This function returns the value of an analog input, at the time indicated by frame. 
-			  // The returned value ranges from 0 to 1, corresponding to a voltage range of 0 to 4.096V.
-			  analog_clock_in_level = 0; // causes bug - analogRead(context, n/gAudioFramesPerAnalogFrame, CLOCK_INPUT_ANALOG_IN_PIN);
-			 
-			 
-			 //rt_printf("analog_clock_in_level is: %f \n", analog_clock_in_level);
-			
-		  }
-
-		// float out = amplitude * sinf(gPhase);
-
-		// for(unsigned int channel = 0; channel < context->audioOutChannels; channel++) {
-		// 	audioWrite(context, n, channel, out);
-		// }
-
-
-			
-			
-			
-			
-		        // 1.0; // peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
-        // rt_printf("**** analog_clock_in_level: ") + analog_clock_in_level) ;
-
-        //rt_printf("analog_clock_in_state: ") + analog_clock_in_state) ;
-
-         // ONLY if no MIDI clock, run the sequencer from the Analogue clock.
-        if (midi_clock_detected == LOW) {
-
-          //rt_printf(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
-          
-          // Only look for this clock if we don't have midi.
-
-            // Rising clock edge? // state-change-1
-            if ((analog_clock_in_level > 0.5) && (analog_clock_in_state == LOW)){
-    
-              if (sequence_is_running == LOW){
-              	// TODO
-              	 //rt_printf("would StartSequencer because: %f \n", analog_clock_in_level);
-              	
-                StartSequencer();
-              }
-              
-              analog_clock_in_state = HIGH;
-              
-              //rt_printf("Set analog_clock_in_state HIGH because: %f \n", analog_clock_in_level);
-              
-              //rt_printf("Went HIGH "));
-              
-              
-              
-              do_tick = true;
-              last_quarter_note_frame = milliseconds();
-              
-            } 
-    
-            // Falling clock edge?
-            if ((analog_clock_in_level < 0.5) && (analog_clock_in_state == HIGH)){
-              analog_clock_in_state = LOW;
-              
-              //rt_printf("I set analog_clock_in_state LOW because: %f \n", analog_clock_in_level);
-              
-              
-              //rt_printf("Went LOW "));
-            } 
-
-        } // 	
-			
-			
-	}
-
-}
-
-*/
-
 
 
    
