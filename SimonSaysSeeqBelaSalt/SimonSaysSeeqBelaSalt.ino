@@ -132,7 +132,7 @@ int analog_sample_rate;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
 int course_delay_frames = 22050;
-int total_delay_frames_with_offset = 22050;
+int total_delay_frames = 22050;
 
 // Amount of feedback
 float delay_feedback_amount = 0.999; //0.999
@@ -371,7 +371,7 @@ float audio_right_input_raw;
 
 
 
-unsigned int delay_time_multiple_input = 1;
+unsigned int course_delay_input = 1;
 
 
 
@@ -661,7 +661,7 @@ void printStatus(void*){
 
 
 
-		rt_printf("delay_time_multiple_input is: %d \n", delay_time_multiple_input);		
+		rt_printf("course_delay_input is: %d \n", course_delay_input);		
 		rt_printf("course_delay_frames is: %d \n", course_delay_frames);
 		rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
 		
@@ -670,31 +670,22 @@ void printStatus(void*){
 		
 		
 		
-		rt_printf("total_delay_frames_with_offset is: %d \n", total_delay_frames_with_offset);		
+		rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
 		
 		
-		//rt_printf("delay_time_offset_factor is: %d \n", delay_time_offset_factor);
-		//rt_printf("delay_time_offset_frames is: %d \n", delay_time_offset_frames);
-		
-		
-	  // Delay Feedback
-	  rt_printf("feedback_delta is: %f \n", feedback_delta);
+		// Delay Feedback
+		rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
 		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
 		
 		
 		// Analog / Digital Clock In.
-		
-  	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
+  		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
-
-		
-		
 		// Other Inputs
-    //rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
+    	//rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
-	  
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 		
 		
@@ -1806,32 +1797,34 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		
 		// Add the modifier (which might be zero) as long as we won't exceed the buffer
 	    // if ((course_delay_frames + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
-	    // 	total_delay_frames_with_offset = DELAY_BUFFER_SIZE;
+	    // 	total_delay_frames = DELAY_BUFFER_SIZE;
 	    // } else {
-	    //   total_delay_frames_with_offset = course_delay_frames + delay_time_offset_frames;
+	    //   total_delay_frames = course_delay_frames + delay_time_offset_frames;
 	    // }
 
 
 
 		
 		// The course delay amount we dial in with the pot
-		course_delay_frames = (frames_per_24_ticks * delay_time_multiple_input);	    
+		course_delay_frames = (frames_per_24_ticks * course_delay_input);	    
 	    
 		// The amount we increment / decrement the delay using buttons 2 and 1
 		fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);		
 		
 
-			
+		// Fine Delay Time
+		// Smaller	
 		if (do_button_1_action == 1) {
 			
-			if ((course_delay_frames - fine_delay_frames - fine_delay_frames_delta) <= 0){
+			if ((fine_delay_frames - fine_delay_frames_delta) < 0){
 				// Skip
 			} else { 
 				fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
 			}			
 			
 			do_button_1_action = 0;
-			
+		
+		// Larger	
 		} else if (do_button_2_action == 1) {
 			
 			if ((course_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
@@ -1843,9 +1836,10 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			do_button_2_action = 0;
 		} 
 			
-		total_delay_frames_with_offset = course_delay_frames + fine_delay_frames;
+		total_delay_frames = course_delay_frames + fine_delay_frames;
 
 		
+		// Delay Feedback
 		if (do_button_3_action == 1) {
 			// Decrease Delay feedback
 			delay_feedback_amount = delay_feedback_amount - feedback_delta;
@@ -2178,8 +2172,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
-        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
+        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
+        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
@@ -2217,8 +2211,8 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
         // Get the delayed sample (by reading `course_delay_frames` many samples behind our current write pointer) and add it to our output sample
-        out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
-        out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames_with_offset + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
+        out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
         // Write the sample into the output buffer -- done!
         audioWrite(context, n, 0, out_l);
@@ -2331,7 +2325,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		  if (ch == DELAY_TIME_MULTIPLE_PIN){
-		  	delay_time_multiple_input = map(analogRead(context, n, DELAY_TIME_MULTIPLE_PIN), 0, 1, 0, 255);
+		  	course_delay_input = map(analogRead(context, n, DELAY_TIME_MULTIPLE_PIN), 0, 1, 0, 255);
 		  	
 		  }
 		  
