@@ -96,8 +96,7 @@ Midi midi;
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
 
-
-
+const unsigned int MAX_COURSE_DELAY_TIME_INPUT = 126;
 
 uint64_t frame_timer = 0;
 
@@ -124,8 +123,8 @@ float env3_amp = 0.7f;
 
 
 
-
-uint64_t frames_per_24_ticks = 0;
+uint64_t INITIAL_FRAMES_PER_24_TICKS = 22064;
+uint64_t frames_per_24_ticks = 22064; // This must never be zero else we can divide by zero errors
 
 int audio_sample_rate;
 int analog_sample_rate;
@@ -280,7 +279,7 @@ const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int DELAY_TIME_MULTIPLE_PIN = 4; // CV 5 (SALT+)
+const int COURSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
 
 
 const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
@@ -1221,6 +1220,12 @@ void OnTick(){
     previous_quarter_note_frame = last_quarter_note_frame; // 24 frames ago
     last_quarter_note_frame = frame_timer; // Now
     frames_per_24_ticks = last_quarter_note_frame - previous_quarter_note_frame;
+    
+    // We never want a zero value 
+    if (frames_per_24_ticks == 0){
+    	frames_per_24_ticks = INITIAL_FRAMES_PER_24_TICKS;
+    }
+    
     detected_bpm = audio_sample_rate * 60 / frames_per_24_ticks;
   }
  
@@ -1751,62 +1756,12 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
-
+		// We want to Delay Course Dial to span the DELAY_BUFFER_SIZE in jumps of frames_per_24_ticks
+		float delay_course_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COURSE_DELAY_TIME_INPUT);
 		
-		/*
-		if (do_both_buttons_action_a == 1){
-			// the whole buffer
-			//course_delay_frames = DELAY_BUFFER_SIZE - frames_per_24_ticks - frames_per_24_ticks;
-			// Reset the delta
-			//fine_delay_frames_delta = frames_per_24_ticks;
-			
-			
-			delay_feedback_amount = 0.77;
-			
-			do_both_buttons_action_a = 0;
-			
-			
-		} else if (do_both_buttons_action_b == 1){
-			// like a reset 
-			//course_delay_frames = frames_per_24_ticks;
-			//fine_delay_frames_delta = frames_per_24_ticks;
-			
-			delay_feedback_amount = 0.999;
-			
-			do_both_buttons_action_b = 0;
-			
-		} else 
-		*/
-		
-		
-		
-
-		
-		/*
-		if (course_delay_frames <= audio_sample_rate) {
-			fine_delay_frames_delta = frames_per_24_ticks / 3.0f;
-		} else if (course_delay_frames <= audio_sample_rate * 2.0) {
-			fine_delay_frames_delta = frames_per_24_ticks / 5.0f;
-		} else  {
-			fine_delay_frames_delta = frames_per_24_ticks / 7.0f;
-		} 
-		*/
-
-
-		
-		
-		// Add the modifier (which might be zero) as long as we won't exceed the buffer
-	    // if ((course_delay_frames + delay_time_offset_frames) >= DELAY_BUFFER_SIZE){
-	    // 	total_delay_frames = DELAY_BUFFER_SIZE;
-	    // } else {
-	    //   total_delay_frames = course_delay_frames + delay_time_offset_frames;
-	    // }
-
-
-
 		
 		// The course delay amount we dial in with the pot
-		course_delay_frames = (frames_per_24_ticks * course_delay_input);	    
+		course_delay_frames = rint(frames_per_24_ticks * course_delay_input * delay_course_dial_factor);	    
 	    
 		// The amount we increment / decrement the delay using buttons 2 and 1
 		fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);		
@@ -1837,6 +1792,18 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		} 
 			
 		total_delay_frames = course_delay_frames + fine_delay_frames;
+
+		// Sanity Checks
+	    if (total_delay_frames > DELAY_BUFFER_SIZE){
+	    	total_delay_frames = DELAY_BUFFER_SIZE;
+		}
+		
+		if (total_delay_frames < 0){
+	    	total_delay_frames = 0;
+		}
+
+
+
 
 		
 		// Delay Feedback
@@ -2324,8 +2291,10 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == DELAY_TIME_MULTIPLE_PIN){
-		  	course_delay_input = map(analogRead(context, n, DELAY_TIME_MULTIPLE_PIN), 0, 1, 0, 255);
+		 
+		  
+		  if (ch == COURSE_DELAY_TIME_INPUT_PIN){
+		  	course_delay_input = map(analogRead(context, n, COURSE_DELAY_TIME_INPUT_PIN), 0, 1, 0, MAX_COURSE_DELAY_TIME_INPUT);
 		  	
 		  }
 		  
