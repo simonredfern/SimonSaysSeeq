@@ -1,36 +1,4 @@
-// How to Compile:
-// 1) Install Arduino version 1.8.13
-// 2) Then apply the Teensyduino, Version 1.53 dmg to the Arduino installation.
-// 3) Then put Audio 1.03 from 2015 // https://github.com/PaulStoffregen/Audio/releases/tag/v1.03 into Documents/libraries.
-// These are in Documents/libraries
-// Audio-1.03    
-// MIDIUSB     
-// readme.txt
-// Betweener   
-// MIDI_Library
-// Bounce2     
-// ResponsiveAnalogRead
-// 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
-// 5) Set Tools USB type to MIDI
-
-
-// Note: It can take 2-3 mins for the device to come back up after uploading!!
-
-//****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch.
-// To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
-// Also Turn off DODINMIDI in Betweener.h (see below)
-
-
-
-// We use : https://github.com/PaulStoffregen/Audio
-// See https://www.pjrc.com/teensy/gui/index.html
-
-// Betweener library https://github.com/jkrame1/Betweener/wiki/03_Library-Reference
-
-// Libraries seem to be in /Users/simonredfern/Documents/Arduino/libraries/
-
-
-// Sketchbook location is: /Users/simonredfern/Documents/Arduino
+// For important notes on Compiling / Running this sketch, please see the README.md in this folder.
 
 const float simon_says_seq_version = 0.24;
 
@@ -39,31 +7,6 @@ const float simon_says_seq_version = 0.24;
 #include <MIDI.h> // Note use of Serial1 / Serial2 below. Serial1 for Euroshield it seems but can't use that for Betweener
 
 
-// Note: We want to use https://github.com/FortySevenEffects/arduino_midi_library
-// However even with (a recent verion of) this library we get compile errors, so we comment out the offending MIDI over DIN in Betweener.cpp
-// NOTE In case of compile errors with Betweener and the MIDI library used,
-
-
-// Turn off DODINMIDI in Betweener.h thus:
-// # DODINMIDI
-
-
-// or modify Betweener.cpp thus:
-
-//#ifdef DODINMIDI
-//    Serial2.setRX(DINMIDIIN);
-//    Serial2.setTX(DINMIDIOUT);
-//    // Compile Error DINMIDI.begin(MIDI_CHANNEL_OMNI);  //monitor all input channels
-//#endif
-
-
-//#ifdef DODINMIDI
-//void Betweener::readDINMIDI(void){
-//        // Compile bug DINMIDI.read();
-//}
-//#endif
-
-/////////////////////////////////////////////////////////////////////////////////////////
 
 #include <Betweener.h>
 #include <Audio.h>
@@ -87,7 +30,7 @@ AudioSynthWaveformDc     gate_2_dc_waveform;
 
 //  carrier a ---  (no params)                 (gain = 0 to 32767.0)
 //                |---Multiply (amplitude modulation)---||---RMS Monitor(0.0-1.0)---|(Scale in code)|---(0-4095)WriteCV---|Output
-//  modulator a (dc ramp) ---                                   
+//  modulator a (dc ramp) ---
 //
 //
 
@@ -222,55 +165,55 @@ long bd_sequence_2;
 
 
 /*
- * 
- * python:
+
+   python:
 
 
-  ---X---X---X---X     
-python_bd_list = [
-0B0000000000000001, 
-0B0000000100000001,
-0B0001000100010001,
-0B0000000100010001,
-0B0001001100011001,
-0B0010000100101001,
-0B0001010110110001,
-0B0000100010010001,
-0B1000100100010001,
-0B0010000100001001,
-0B1001000100010001,
-0B1001100010010001,
-0B1001000010010011,
-0B1000100110011001,
-0B0011000100010001,
-0B0001000100010001]
+  ---X---X---X---X
+  python_bd_list = [
+  0B0000000000000001,
+  0B0000000100000001,
+  0B0001000100010001,
+  0B0000000100010001,
+  0B0001001100011001,
+  0B0010000100101001,
+  0B0001010110110001,
+  0B0000100010010001,
+  0B1000100100010001,
+  0B0010000100001001,
+  0B1001000100010001,
+  0B1001100010010001,
+  0B1001000010010011,
+  0B1000100110011001,
+  0B0011000100010001,
+  0B0001000100010001]
 
->>> for x in python_bd_list:
-...     print (str(x)+",")     
+  >>> for x in python_bd_list:
+  ...     print (str(x)+",")
 
 
 */
 
 
 long bd_seqs[] = { // can use the python interpreter above to get these. (can't use literals for long sizes)
-1,
-257,
-4369,
-273,
-4889,
-8489,
-5553,
-2193,
-35089,
-8457,
-37137,
-39057,
-37011,
-35225,
-12561,
-4369
-// 65535 // All 1's
-}; 
+  1,
+  257,
+  4369,
+  273,
+  4889,
+  8489,
+  5553,
+  2193,
+  35089,
+  8457,
+  37137,
+  39057,
+  37011,
+  35225,
+  12561,
+  4369
+  // 65535 // All 1's
+};
 
 
 // Sequence Length
@@ -441,7 +384,7 @@ void setup() {
   // Debugging hello
   //Serial.begin(57600);
   Serial.begin(115200);
-  //Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
+  Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
 
 
   int resolution = 10;
@@ -476,7 +419,7 @@ void setup() {
   // initialize the digital pin as an output.
   // pinMode(teensy_led_pin, OUTPUT);
 
-  uint8_t i;
+  //uint8_t i;
 
   pinMode(betweener_led_pin, OUTPUT);
 
@@ -578,7 +521,7 @@ void loop() {
   // to writeCVOut.
 
 
-  
+
   b.readAllInputs();
 
   if (b.trig1.risingEdge()) {
@@ -589,13 +532,13 @@ void loop() {
     last_clock_pulse = millis();
   }
 
-//  b.readTriggers();
-//  if (b.triggerRose(2)){
-//    Serial.println(String("Incoming Reset on trig2 ")   );
-//    do_reset_sequence_counters = true;
-//  } else {
-//    //Serial.println(String("NO Incoming Reset on trig2 ")   );
-//  }
+  //  b.readTriggers();
+  //  if (b.triggerRose(2)){
+  //    Serial.println(String("Incoming Reset on trig2 ")   );
+  //    do_reset_sequence_counters = true;
+  //  } else {
+  //    //Serial.println(String("NO Incoming Reset on trig2 ")   );
+  //  }
 
 
 
@@ -631,8 +574,8 @@ void loop() {
 
 
     // channel is 1-4 , value is 0 - 4095
-    
-    b.writeCVOut(4, cv_out_b_driver); 
+
+    b.writeCVOut(4, cv_out_b_driver);
     //Led4Level(fscale( 0.0, 1.0, 0, 255, result_b_rms_value, 0));
   } else {
     //Serial.println(String("result_b_rms_object not available ")   );
@@ -644,24 +587,24 @@ void loop() {
 
 
 
-//if (false){
-//  if (test_rms_object.available()){
-//          float test_rms = test_rms_object.read();
-//  
-//          // Also use this to drive the betweener ouput
-//
-//            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
-//            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
-//            //b.writeCVOut(1, test_rms_scaled);
-//            //b.writeCVOut(2, test_rms_scaled);
-//            //b.writeCVOut(3, test_rms_scaled);
-//            b.writeCVOut(4, test_rms_scaled);
-//
-//  
-//  } else {
-//    //Serial.println(String("test_rms_object is not available!!"));
-//  }
-//}
+  //if (false){
+  //  if (test_rms_object.available()){
+  //          float test_rms = test_rms_object.read();
+  //
+  //          // Also use this to drive the betweener ouput
+  //
+  //            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
+  //            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
+  //            //b.writeCVOut(1, test_rms_scaled);
+  //            //b.writeCVOut(2, test_rms_scaled);
+  //            //b.writeCVOut(3, test_rms_scaled);
+  //            b.writeCVOut(4, test_rms_scaled);
+  //
+  //
+  //  } else {
+  //    //Serial.println(String("test_rms_object is not available!!"));
+  //  }
+  //}
 
 
 
@@ -768,7 +711,7 @@ void ReadInputsAndUpdateSettings() {
   //b.readTriggers();
   b.readAllInputs();
 
-  // Note: we're using RAW inputs 
+  // Note: we're using RAW inputs
 
   // Pot1
   pot1_input_value = b.readKnobRaw(1); // Sequence
@@ -800,13 +743,13 @@ void ReadInputsAndUpdateSettings() {
 
 
 
-//  if (b.triggerHigh(2)){
-//    ResetSequenceCounters();
-//  } else {
-//  }
+  //  if (b.triggerHigh(2)){
+  //    ResetSequenceCounters();
+  //  } else {
+  //  }
 
 
-  if (b.triggerHigh(3)){
+  if (b.triggerHigh(3)) {
     mute_gate_a = true;
   } else {
     mute_gate_a = false;
@@ -814,7 +757,7 @@ void ReadInputsAndUpdateSettings() {
 
   //Serial.println(String("Mute GateA is: ") + mute_gate_a   );
 
-  if (b.triggerHigh(4)){
+  if (b.triggerHigh(4)) {
     mute_gate_b = true;
   } else {
     mute_gate_b = false;
@@ -826,7 +769,7 @@ void ReadInputsAndUpdateSettings() {
 
 
 
-  
+
 
   //////////////////////////////////////////
   // Assign values to change the sequencer.
@@ -852,13 +795,13 @@ void ReadInputsAndUpdateSettings() {
 
   // We want a value that goes from high to low as we turn the pot to the right.
   // So reverse the number range by subtracting from the maximum value.
-  
+
   //Serial.println(String("CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT is: ") + CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT  );
-  
+
   int cv_modulator_a_amplitude_delta_raw = CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT - cv_modulator_a_frequency_raw;
   //Serial.println(String("cv_modulator_a_amplitude_delta_raw is: ") + cv_modulator_a_amplitude_delta_raw  );
 
- 
+
   cv_modulator_a_amplitude_delta = fscale( 0, CV_MODULATOR_A_FREQUENCY_RAW_MAX_INPUT, 0.01, 0.4, cv_modulator_a_amplitude_delta_raw, -1.5);
   //Serial.println(String("cv_modulator_a_amplitude_delta is: ") + cv_modulator_a_amplitude_delta  );
 
@@ -868,11 +811,11 @@ void ReadInputsAndUpdateSettings() {
 
 
   // CV A
-  carrier_a_object.frequency(cv_carrier_a_frequency); 
+  carrier_a_object.frequency(cv_carrier_a_frequency);
   carrier_a_object.amplitude(1);
 
   // CV B
-  carrier_b_object.frequency(cv_carrier_b_frequency); 
+  carrier_b_object.frequency(cv_carrier_b_frequency);
   carrier_b_object.amplitude(1);
 
 
@@ -942,16 +885,16 @@ void OnStep() {
     Serial.println(String("*****************************************************************************************"));
   }
 
-//
-//  if (step_count != FIRST_STEP){
-//    if (do_reset_sequence_counters == true){
-//      do_reset_sequence_counters = false;
-//      
-//      ResetSequenceCounters();
-//      Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
-//      
-//    }
-//  }
+  //
+  //  if (step_count != FIRST_STEP){
+  //    if (do_reset_sequence_counters == true){
+  //      do_reset_sequence_counters = false;
+  //
+  //      ResetSequenceCounters();
+  //      Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
+  //
+  //    }
+  //  }
 
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
@@ -961,12 +904,12 @@ void OnStep() {
 
   // Go low
   GateALow();
-  
-  
+
+
   if (play_note) {
     //Serial.println(String("****************** play ")   );
 
-    if (not mute_gate_a){
+    if (not mute_gate_a) {
       GateAHigh();
     } else {
       //Serial.println(String("mute_gate_a is Muted"));
@@ -989,33 +932,33 @@ void OnStep() {
     //Serial.println(String("not play ")   );
   }
 
-///////////
-// Now, what about the second / bass drum sequence?
-// bd_sequence_2
+  ///////////
+  // Now, what about the second / bass drum sequence?
+  // bd_sequence_2
 
   uint8_t play_bd = bitRead(bd_sequence_2, step_count_sanity(step_count));
 
-// Go Low
-GateBLow();
+  // Go Low
+  GateBLow();
 
-if (play_bd) {
+  if (play_bd) {
     //Serial.println(String("****************** play BD ")   );
 
-    if (not mute_gate_b){
+    if (not mute_gate_b) {
       GateBHigh();
     } else {
       //Serial.println(String("mute_gate_b is Muted"));
     }
 
 
-    
-    
+
+
   } else {
     //GateBLow();
     //Serial.println(String("*********** not play BD ")   );
   }
 
-  
+
 }
 
 void OnNotStep() {
@@ -1031,7 +974,7 @@ void OnNotStep() {
 void GateAHigh() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
-  // This is to drive the LED (other things too?) 
+  // This is to drive the LED (other things too?)
   gate_dc_waveform.amplitude(0.99, 10);
 
   // The output
@@ -1044,8 +987,8 @@ void GateAHigh() {
 
 }
 
-void ResetCVB(){
-  
+void ResetCVB() {
+
   carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
 
   cv_modulator_b_amplitude = 0.99;
@@ -1058,7 +1001,7 @@ void ResetCVB(){
 void GateALow() {
   //Serial.println(String("Gate LOW") );
 
-  // For LED 
+  // For LED
   gate_dc_waveform.amplitude(0);
 
   // For output
@@ -1085,7 +1028,7 @@ void GateBLow() {
   // For what?
   gate_2_dc_waveform.amplitude(0);
 
-  // For output 
+  // For output
   b.writeCVOut(2, 0);
 
 
@@ -1094,10 +1037,10 @@ void GateBLow() {
 
 
 
-void ResetCVA(){
-    carrier_a_object.phase(90); // Sine wave has maximum at 90 degrees
+void ResetCVA() {
+  carrier_a_object.phase(90); // Sine wave has maximum at 90 degrees
 
-  // Used to modulate CV. 
+  // Used to modulate CV.
   // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
   if (cv_modulator_a_amplitude == 0) {
     cv_modulator_a_amplitude = 0.99;
@@ -1135,7 +1078,7 @@ void ChangeCvModulatorBAmplitude() {
 
   //Serial.println(String("cv_modulator_b_amplitude is: ") + cv_modulator_b_amplitude);
   modulator_b_object.amplitude(cv_modulator_b_amplitude, 10); // setting-b-amplitude
- 
+
 }
 
 
@@ -1149,7 +1092,7 @@ void CvStop() {
 
   cv_modulator_b_amplitude = 0;
   modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
-  
+
 }
 
 
@@ -1274,7 +1217,7 @@ void SetSequencePattern() {
 
 
   // find how many elements (possible 16 step musical sequences) we have in the bd sequence
-  int bd_seqs_max_i = sizeof(bd_seqs)/sizeof(long) - 1;
+  int bd_seqs_max_i = sizeof(bd_seqs) / sizeof(long) - 1;
 
   // Choose the active bass drum sequence
   int bd_seqs_i = fscale( min_pot_value, max_pot_value, 0, bd_seqs_max_i, pot1_input_value, 0);
@@ -1282,7 +1225,7 @@ void SetSequencePattern() {
   //Serial.println(String("bd_seqs_i is: ") + bd_seqs_i  );
 
 
-   bd_sequence_2 = bd_seqs[bd_seqs_i];
+  bd_sequence_2 = bd_seqs[bd_seqs_i];
 
 
   //Serial.println(String("bd_sequence_2 is: ") + bd_sequence_2  );
