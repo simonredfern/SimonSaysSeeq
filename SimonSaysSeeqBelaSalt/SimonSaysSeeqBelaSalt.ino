@@ -95,7 +95,7 @@ Midi midi;
 // Also  lsusb -t via ssh 
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
-
+//const char* gMidiPort0 = "hw:0,0,0"; // try me
 
 // Let our delay have 50 different course settings (so the pot doesn't jitter)
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;

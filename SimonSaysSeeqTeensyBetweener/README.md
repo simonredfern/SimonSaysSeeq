@@ -1,74 +1,87 @@
-# SimonSaysSeeq
-Simon Says Gray Code Seeq is a simple and hopefully modeless gate sequencer with associated CV envelope generator (and midi looper) that is designed to drive pitch (or other modulation) most likely via a pitch quantizer.
+# SimonSaysSeeq for the Betweener
 
-This software (in various forms) will hopefully run on various Teensy based hardware. Two are working so far.
+# Instructions for compiling (if you need to)
 
- 
-Platform                  Status
+The recommended place (according to Arduino https://www.arduino.cc/en/guide/libraries) to put libraries is in your own "Sketchbook Location" e.g. /your-home/Local/Documents/Arduino
+
+This document kind of assumes you are using the Teensyduino flavour of the Arduino IDE. Teensydunino probably comes with some libraries already installed e.g. Audio and Midi and possibly Bounce2.
+
+See / Set the sketchbook location using the Arduino / Teensyduino IDE -> Preferences -> Settings -> Sketchbook Locaiton.
+
+You can copy the contents of the (unusual) libraries e.g. Betweener and whatever that uses in libraries folder of this project to your sketchbook location. 
+
+Then *see the important note about DODINMIDI below* and then try and compile. Good luck!
 
 
-* 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music?)
-
-* Betweener                 - Works but currently the tool chain is broken so I can't compile
-
-* Ornament & Crime          - Nowhere near working.
-
-* O&C Hemisphere Suite      - Nowhere near working.
-
-* Ornament & Crime Plus     - Nowhere near working.
-
-## Simon Says Gray Code Seeq on 1010Music Euroshield
-
-[About Euroshield](https://1010music.com/euroshield-user-guide)
-
-### Upper Pot
-
-Change the gate sequence.
-
-[Gray Code](https://en.wikipedia.org/wiki/Gray_code) is used to provide a gradually changing set of bits (In a Gray Code only one bit or so changes as we count up).
-It's slightly modified so that:
-
-Fully clockwise is all ones (dense). Fully counter clockwise is sparse (one step is on).
-
-### Upper Pot whilst button is pressed 
-
-Change the sequence length.
-
-Fully clockwise : Length is 1.
-Fully counter clockwise : Length is 16.
-
-The resulting sequence drives Gate Out.
-
-### Lower Pot 
-
-Frequency of Waveform A
-
-### Lower Pot whilst button pressed
-
-Frequency of Waveform B *multiplexed* with Amplitude of Waveform A
-
-Waveform A is multiplied by Waveform B to produce CV Out.
-
-### Midi Looper 
-
-Connect your mini midi cables to the in and out.
-Play notes (on your midi keyboard / controller) to loop over the sequence length as set above.
-Play *quietly* to cancel notes.
-Press the foot pedal to clear the whole midi loop.
-
-### LEDs
-
-LED 1 (top): Gate Out. Pulses on the Sequence.
-
-LED 2: Pulses on first step. If length is 8 it's brighter.
-
-LED 3: Sequence lengths of 16, 8 and 4 are highlighted with different brightness.
-
-LED 4: Shows CV Out amplitude
+Note: To add other unusual libraries you'll do via zip files in the IDE: Goto Sketch -> Add Library -> Add .ZIP Library and choose the Betweener.zip file in the same folder as this file. This will probably create a data folder with the same file in it.
 
 
 
+// Note: We want to use https://github.com/FortySevenEffects/arduino_midi_library
+// However even with (a recent verion of) this library we get compile errors, so we comment out the offending MIDI over DIN in Betweener.cpp
+// NOTE In case of compile errors with Betweener and the MIDI library used,
 
+Important! 
+// Turn off DODINMIDI in Betweener.h thus:
+// # DODINMIDI
+
+
+// or modify Betweener.cpp thus:
+
+//#ifdef DODINMIDI
+//    Serial2.setRX(DINMIDIIN);
+//    Serial2.setTX(DINMIDIOUT);
+//    // Compile Error DINMIDI.begin(MIDI_CHANNEL_OMNI);  //monitor all input channels
+//#endif
+
+
+//#ifdef DODINMIDI
+//void Betweener::readDINMIDI(void){
+//        // Compile bug DINMIDI.read();
+//}
+//#endif
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// Note: It can take 2-3 mins for the device to come back up after uploading!!
+
+//****NOTE: Because the Betweener library uses USB midi, you must set up the Arduino IDE to expect USB MIDI even if you don’t use it in your sketch.
+// To do this, you simply go to the main menu bar in Arduino and select Tools->USB Type->[any that includes MIDI]. I usually select “Serial + MIDI”. If you do not see this option on the menu, make sure that you have selected “Teensy 3.1/3.2 from the Tools->Board menu.
+// Also Turn off DODINMIDI in Betweener.h (see below)
+
+
+
+// We use : https://github.com/PaulStoffregen/Audio
+// See https://www.pjrc.com/teensy/gui/index.html
+
+// Betweener library https://github.com/jkrame1/Betweener/wiki/03_Library-Reference
+
+// Libraries seem to be in /Users/simonredfern/Documents/Arduino/libraries/
+
+
+// Sketchbook location is: /Users/simonredfern/Documents/Arduino
+
+
+
+// 1) Install Arduino version 1.8.13
+// 2) Then apply the Teensyduino, Version 1.53 dmg to the Arduino installation.
+// 3) Then put Audio 1.03 from 2015 // https://github.com/PaulStoffregen/Audio/releases/tag/v1.03 into Documents/libraries.
+// These are in Documents/libraries
+// Audio-1.03
+// MIDIUSB
+// readme.txt
+// Betweener
+// MIDI_Library
+// Bounce2
+// ResponsiveAnalogRead
+// 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
+// 5) Set Tools USB type to MIDI 
+
+# Instructions for running
+
+Use the Tools -> Serial Monitor to view the debug messages.
 
 
 
