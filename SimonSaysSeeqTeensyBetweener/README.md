@@ -79,7 +79,9 @@ Important!
 // 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
 // 5) Set Tools USB type to MIDI 
 
+# Instructions for running
 
+Use the Tools -> Serial Monitor to view the debug messages.
 
 
 
