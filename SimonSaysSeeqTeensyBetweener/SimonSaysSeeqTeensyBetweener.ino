@@ -1,6 +1,6 @@
 // For important notes on Compiling / Running this sketch, please see the README.md in this folder.
 
-const float simon_says_seq_version = 0.24;
+const float simon_says_seq_version = 0.26;
 
 
 //////////////////////////////////////////////////////////
@@ -106,7 +106,7 @@ const uint8_t BRIGHT_5 = 255;
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
-const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 1; // ONE INDEXED
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
@@ -384,7 +384,7 @@ void setup() {
   // Debugging hello
   //Serial.begin(57600);
   Serial.begin(115200);
-  Serial.println(String("Hello from Simon-Says-Grey-Code-Seeq"));
+  Serial.println(String("Hello from SimonSaysSeeq Version: ") + simon_says_seq_version);
 
 
   int resolution = 10;
@@ -1167,13 +1167,19 @@ void SetSequencePattern() {
 
 
 
-  // REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16)
+  // REMEMBER, sequence_length_in_steps is ONE indexed (from MIN (e.g. 4) up to MAX (e.g. 16))
   // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
   // i.e. all bits on of a 3 step sequence is 111 = 7 decimal
   // or (2^sequence_length_in_steps) - 1
-  binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
-  //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+
+
+  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+
+  
+  binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
+
+  Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
 
   binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, pot1_input_value, 0);
 
@@ -1197,21 +1203,21 @@ void SetSequencePattern() {
 
   hybrid_sequence_1 = grey_sequence_1;
 
-  bitClear(hybrid_sequence_1, sequence_length_in_steps - 1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
+  //bitClear(hybrid_sequence_1, sequence_length_in_steps - 1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
-  hybrid_sequence_1 = ~ hybrid_sequence_1; // Invert
+  //hybrid_sequence_1 = ~ hybrid_sequence_1; // Invert
 
 
   // So pot fully counter clockwise is 1 on the first beat
-  if (binary_sequence_1 == 1) {
-    hybrid_sequence_1 = 1;
-  }
+//  if (binary_sequence_1 == 1) {
+//    hybrid_sequence_1 = 1;
+//  }
 
 
-  //   Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-  //   Serial.print("\t");
-  //   Serial.print(hybrid_sequence_1, BIN);
-  //   Serial.println();
+     Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+     Serial.print("\t");
+     Serial.print(hybrid_sequence_1, BIN);
+     Serial.println();
 
   // Now set the second or bass drum sequence
 
@@ -1243,13 +1249,16 @@ void SetSequenceLength() {
   // Serial.println(String("max_pot_value is: ") + max_pot_value  );
   //  Serial.println(String("pot2_input_value is: ") + pot2_input_value  );
 
+// HERE
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
-  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, 0, 15, pot2_input_value, 0);
+  sequence_length_in_steps = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, pot2_input_value, 0);
 
   //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+  //sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+
+ // sequence_length_in_steps = sequence_length_in_steps_raw;
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS) {
     sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS;
@@ -1261,8 +1270,10 @@ void SetSequenceLength() {
     Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
   }
 
+  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+
   new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
-  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+
   //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );
 }
 

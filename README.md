@@ -9,9 +9,9 @@ Platform                  Status
 
 * 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music)
 
-* Betweener                 - Works but currently the tool chain is broken so I can't compile
+* Betweener                 - Works
 
-* Bela Salt                 - Works and Work in Progress! 
+* Bela Salt                 - Works (Work in Progress) 
 
 See the README.md in each sub folder for more details
 
