@@ -16,6 +16,7 @@
 // This file is programmed to use a: https://1010music.com/euroshield-user-guide (unfortuanatly discontinued) 
 // Please see the README for more info. 
 
+const char hardware[16]= "Euroshield";
 
 const float simon_says_seq_version = 0.23; 
 
@@ -365,10 +366,22 @@ void setup() {
  InitMidiSequence();
 
 
+ 
+
+
    /////////////////////////////////////////////////////////
    // Say hello by flashing the LEDs, show we are ready to sequence. 
   uint8_t my_delay_time = 50;
   uint8_t my_no_of_times = 10;
+
+  // Get values at setup so isCrossing etc works later
+  upper_input_raw = analogRead(upper_pot_pin);
+  upper_pot_high_value = upper_input_raw;  
+  upper_pot_low_value = upper_input_raw; 
+
+  lower_input_raw = analogRead(lower_pot_pin);
+  lower_pot_high_value = lower_input_raw; 
+  lower_pot_low_value = lower_input_raw; 
   
   // Say Hello to the Teensy LED 
   Flash(my_delay_time, my_no_of_times, teensy_led_pin);
@@ -382,7 +395,7 @@ void setup() {
   ///////////////////////////////////////
   // Debugging hello
   Serial.begin(57600);
-  Serial.println(String("Simon Says Gray Code Seeq! Version: ") + simon_says_seq_version);
+  Serial.println(String("Simon Says Seeq! Version: V") +  simon_says_seq_version + String("-") + hardware);
   Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
   // https://en.cppreference.com/w/cpp/types/integer
