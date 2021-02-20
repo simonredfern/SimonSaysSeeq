@@ -314,6 +314,11 @@ uint8_t IncrementStepCount(){
 
 boolean midi_clock_detected = LOW;
 
+
+void printVersion(){
+    Serial.println(String("SimonSaysSeeq! Version: v") +  simon_says_seq_version + String("-") + hardware);
+}
+
 void setup() {
 
 
@@ -395,7 +400,8 @@ void setup() {
   ///////////////////////////////////////
   // Debugging hello
   Serial.begin(57600);
-  Serial.println(String("Simon Says Seeq! Version: V") +  simon_says_seq_version + String("-") + hardware);
+  printVersion();
+  
   Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
   // https://en.cppreference.com/w/cpp/types/integer
@@ -574,13 +580,15 @@ void InitSequencer(){
 }
 
 void StartSequencer(){
-  Serial.println(String("Start Sequencer "));
+  Serial.println(String("Starting Sequencer.."));
+  printVersion(); 
   InitSequencer();
   sequence_is_running = HIGH;
 }
 
 void StopSequencer(){
-  Serial.println(String("Stop Sequencer "));      
+  Serial.println(String("Stopping Sequencer.."));
+  printVersion();      
   InitSequencer();
   sequence_is_running = LOW;        
 }
