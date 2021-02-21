@@ -304,11 +304,15 @@ void SetTotalTickCount(int value){
   loop_timing.tick_count_since_start = value;
 }
 
-void ResetSequenceCounters(){
+void ResetToFirstStep(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP;
-  bar_count = FIRST_BAR; 
-  //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  if (bar_count == MAX_BAR){
+    bar_count = FIRST_BAR;
+  } else {
+    bar_count = IncrementBarCount(); 
+  }
+  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
 
@@ -628,7 +632,7 @@ void InitSequencer(){
   GateLow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
-  ResetSequenceCounters();
+  ResetToFirstStep();
 }
 
 void StartSequencer(){
@@ -707,39 +711,39 @@ int SequenceSettings(){
   // Get the Pot positions. 
   // We will later assign the values dependant on the push button state
   upper_input_raw = analogRead(upper_pot_pin);
-  Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
+  //Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
   lower_input_raw = analogRead(lower_pot_pin);
-  Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
+  //Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
 
 
   if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, FUZZINESS_AMOUNT)) {
     upper_pot_high_value = GetValue(upper_input_raw, upper_pot_high_value, jitter_reduction);
-    Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
+    //Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
     
   } else {
-    Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
+    //Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
   }
   
   if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, FUZZINESS_AMOUNT)) {   
     upper_pot_low_value = GetValue(upper_input_raw, upper_pot_low_value, jitter_reduction);
-    Serial.println(String("**** NEW value for upper_pot_low_value is: ") + upper_pot_low_value  );
+    //Serial.println(String("**** NEW value for upper_pot_low_value is: ") + upper_pot_low_value  );
   } else {
-    Serial.println(String("NO new value for upper_pot_low_value . Sticking at: ") + upper_pot_low_value  );
+    //Serial.println(String("NO new value for upper_pot_low_value . Sticking at: ") + upper_pot_low_value  );
   }
   
   if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, FUZZINESS_AMOUNT)) {    
     lower_pot_high_value = GetValue(lower_input_raw, lower_pot_high_value, jitter_reduction);
-    Serial.println(String("**** NEW value for lower_pot_high_value is: ") + lower_pot_high_value  );  
+    //Serial.println(String("**** NEW value for lower_pot_high_value is: ") + lower_pot_high_value  );  
   } else {
-    Serial.println(String("NO new value for lower_pot_high_value . Sticking at: ") + lower_pot_high_value  );
+    //Serial.println(String("NO new value for lower_pot_high_value . Sticking at: ") + lower_pot_high_value  );
   }
   
   
   if ((button_1_state == LOW) & IsCrossing(lower_pot_low_value, lower_input_raw, FUZZINESS_AMOUNT)) {   
     lower_pot_low_value = GetValue(lower_input_raw, lower_pot_low_value, jitter_reduction);
-    Serial.println(String("**** NEW value for lower_pot_low_value is: ") + lower_pot_low_value  );
+    //Serial.println(String("**** NEW value for lower_pot_low_value is: ") + lower_pot_low_value  );
   } else {
-    Serial.println(String("NO new value for lower_pot_low_value . Sticking at: ") + lower_pot_low_value  );
+    //Serial.println(String("NO new value for lower_pot_low_value . Sticking at: ") + lower_pot_low_value  );
   }
 
 
@@ -1364,7 +1368,7 @@ void AdvanceSequenceChronology(){
   || 
   loop_timing.tick_count_in_sequence >= 16 * 6
   ) { // Reset
-    ResetSequenceCounters();
+    ResetToFirstStep();
   } else {
     SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
   }
