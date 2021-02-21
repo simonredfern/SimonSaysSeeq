@@ -304,14 +304,23 @@ void SetTotalTickCount(int value){
   loop_timing.tick_count_since_start = value;
 }
 
+
+
+void Beginning(){
+  SetTickCountInSequence(0);
+  step_count = FIRST_STEP;
+  bar_count = FIRST_BAR;
+}
+
+
 void ResetToFirstStep(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP;
-  if (bar_count == MAX_BAR){
-    bar_count = FIRST_BAR;
-  } else {
-    bar_count = IncrementBarCount(); 
-  }
+
+  IncrementOrResetBarCount();
+  
+
+  
   //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
@@ -324,10 +333,16 @@ uint8_t IncrementStepCount(){
   return step_count_sanity(step_count);
 }
 
-uint8_t IncrementBarCount(){
-  bar_count = bar_count_sanity(bar_count + 1);
+uint8_t IncrementOrResetBarCount(){
 
-  Serial.println(String("IncrementBarCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" bar_count is now: ") + bar_count);
+  // Every time we call this function we advance or reset the bar
+  if (bar_count == MAX_BAR){
+    bar_count = FIRST_BAR;
+  } else {
+    bar_count = bar_count_sanity(bar_count + 1);
+  }
+  
+  Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
   return bar_count_sanity(bar_count);
 }
 
@@ -632,7 +647,7 @@ void InitSequencer(){
   GateLow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
-  ResetToFirstStep();
+  Beginning();
 }
 
 void StartSequencer(){
@@ -719,7 +734,6 @@ int SequenceSettings(){
   if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, FUZZINESS_AMOUNT)) {
     upper_pot_high_value = GetValue(upper_input_raw, upper_pot_high_value, jitter_reduction);
     //Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
-    
   } else {
     //Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
   }
@@ -846,12 +860,12 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 */
     
     
-
+/*
    Serial.println(String("the_sequence is: ") + the_sequence  );
    Serial.print("\t");
    Serial.print(the_sequence, BIN);
    Serial.println();
-
+*/
 
    
   //Serial.println(String("right_peak_level is: ") + right_peak_level  );
@@ -1313,7 +1327,7 @@ void AdvanceSequenceChronology(){
 
   sequence_length_in_steps = sequence_length_in_steps_raw;
 
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
     Serial.println(String("**** ERROR with sequence_length_in_steps it WAS: ") + sequence_length_in_steps  + String(" but setting it to: ") + MIN_SEQUENCE_LENGTH_IN_STEPS );
@@ -1380,7 +1394,7 @@ void AdvanceSequenceChronology(){
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+ Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
 
   
 }
