@@ -18,8 +18,7 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.24
-; 
+const float simon_says_seq_version = 0.25; 
 
 
 #include <Audio.h>
@@ -105,6 +104,11 @@ const uint8_t BRIGHT_5 = 255;
 // Use zero based index for sequencer. i.e. step_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
+
+// Use zero based index for bar.
+const uint8_t FIRST_BAR = 0;
+const uint8_t MAX_BAR = 3;
+
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
@@ -287,6 +291,7 @@ Timing loop_timing;
 uint8_t step_count;
 
 
+// Count of the bar / measure.
 uint8_t bar_count;
 
 // Helper functions that operate on global variables. Yae!  
@@ -301,7 +306,8 @@ void SetTotalTickCount(int value){
 
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
-  step_count = FIRST_STEP; 
+  step_count = FIRST_STEP;
+  bar_count = FIRST_BAR; 
   //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
@@ -314,6 +320,12 @@ uint8_t IncrementStepCount(){
   return step_count_sanity(step_count);
 }
 
+uint8_t IncrementBarCount(){
+  bar_count = bar_count_sanity(bar_count + 1);
+
+  Serial.println(String("IncrementBarCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" bar_count is now: ") + bar_count);
+  return bar_count_sanity(bar_count);
+}
 
 
 boolean midi_clock_detected = LOW;
@@ -326,6 +338,27 @@ boolean midi_clock_detected = LOW;
 void printVersion(){
     Serial.println(String("SimonSaysSeeq! Version: v") +  simon_says_seq_version + String("-") + hardware);
 }
+
+
+
+uint8_t bar_count_sanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
+  
+  if (bar_count_in > MAX_BAR){
+    Serial.println(String("**** ERROR bar_count_in > MAX_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = MAX_BAR;
+  } else if (bar_count_in < FIRST_BAR){
+    Serial.println(String("**** ERROR bar_count_in > FIRST_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = FIRST_BAR;
+  } else {
+    bar_count_fixed = bar_count_in;
+  }
+  return bar_count_fixed;
+}
+
+
+
+
 
 void setup() {
 
@@ -382,6 +415,7 @@ void setup() {
   // Initialise timing
   // Use zero based indexing for step_count so that modular operations (counting multiples of 4, 16 etc are easier)
   step_count = FIRST_STEP;
+  bar_count = FIRST_BAR;
   loop_timing.tick_count_in_sequence = 0;
   //
 
@@ -1467,6 +1501,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   }
   } 
 
+/////
 uint8_t step_count_sanity(uint8_t step_count_){
   uint8_t step_count_fixed;
   
@@ -1481,6 +1516,8 @@ uint8_t step_count_sanity(uint8_t step_count_){
   }
   return step_count_fixed;
 }
+//////
+
 
 
 
