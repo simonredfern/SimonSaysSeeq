@@ -18,7 +18,8 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.23; 
+const float simon_says_seq_version = 0.24
+; 
 
 
 #include <Audio.h>
@@ -105,7 +106,7 @@ const uint8_t BRIGHT_5 = 255;
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
-const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 1; // ONE INDEXED
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
@@ -285,6 +286,9 @@ Timing loop_timing;
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
 uint8_t step_count;
 
+
+uint8_t bar_count;
+
 // Helper functions that operate on global variables. Yae!  
 
 void SetTickCountInSequence(uint8_t value){
@@ -315,6 +319,10 @@ uint8_t IncrementStepCount(){
 boolean midi_clock_detected = LOW;
 
 
+ int  min_pot_value;
+ int max_pot_value;
+
+
 void printVersion(){
     Serial.println(String("SimonSaysSeeq! Version: v") +  simon_says_seq_version + String("-") + hardware);
 }
@@ -329,7 +337,17 @@ void setup() {
 
   // Can set to 10 (default?) or 12 bits. Higher resolutions will result in aproximation.
   // Resolution 
-  analogReadResolution(10);
+
+   int resolution = 10;
+  analogReadResolution(resolution);
+
+
+
+   min_pot_value = 0;
+  max_pot_value = pow(2, resolution) - 1;
+
+    Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
+
 
   ///////////////////////////////////////////
   // Pin configuration
@@ -741,7 +759,7 @@ int SequenceSettings(){
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1; 
 
    //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
@@ -776,6 +794,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
     the_sequence = gray_code_sequence;
 
+/* Make simpler
     bitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
 
     the_sequence = ~ the_sequence; // Invert
@@ -786,7 +805,7 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
       the_sequence = 1;
     }
 
-
+*/
     
     
 
@@ -803,7 +822,17 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
 
 // Sequence length raw
 // ***UPPER pot LOW value***
- sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   ;
+
+
+
+
+
+// sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   
+
+
+ sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
+
+ 
  // Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
    
    //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
@@ -1242,7 +1271,9 @@ void AdvanceSequenceChronology(){
 
     //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+  // sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
+
+  sequence_length_in_steps = sequence_length_in_steps_raw;
 
   Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
