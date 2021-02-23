@@ -215,7 +215,8 @@ class NoteInfo
 {
  public:
    uint8_t velocity = 0 ;
-   uint8_t tick_count_in_sequence = 0;
+   //uint8_t tick_count_in_sequence = 0; // will remove
+   uint8_t tick_count_since_step = 0; 
    uint8_t is_active = 0;
 };
 /////////
@@ -277,7 +278,7 @@ struct Timing
 {
     uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
     int tick_count_since_start = 0; // since the clock started running this time.
-    //uint8_t ticks_after_step = 0; // between 0 and 5 as there are 6 ticks in a step
+    uint8_t tick_count_since_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
@@ -294,6 +295,7 @@ uint8_t bar_count;
 
 void SetTickCountInSequence(uint8_t value){
   loop_timing.tick_count_in_sequence = value;
+  loop_timing.tick_count_since_step = value % 6;
 }
 
 void SetTotalTickCount(int value){
@@ -1076,7 +1078,7 @@ Serial.println(String("InitMidiSequence Done ")  );
 void PlayMidi(){
   // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
-
+// HERE
 
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
@@ -1084,7 +1086,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+           if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
              // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
              MIDI.sendNoteOn(n, channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
            }
@@ -1092,7 +1094,7 @@ void PlayMidi(){
 
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+       if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
@@ -1501,7 +1503,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           // We want the note on, so set it on.
           Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
+          channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
           channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
            Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
@@ -1514,7 +1516,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
             // Note Off
              Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
+             channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
              channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
              channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
              Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
