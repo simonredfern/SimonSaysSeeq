@@ -1,13 +1,8 @@
-// This file is licenced under the MIT license (https://opensource.org/licenses/MIT) except for the code at the end of the file.
-
-//Copyright 2020 Simon Redfern
-//
-//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-//
-//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-//
-//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+//////////////////
+// AGPL v3 Licence ///////
+// This file is licenced under the AGPL license (https://opensource.org/licenses/AGPL-3.0) except for the code at the end of the file.
+// Copyright 2020 Simon Redfern
+///////////////////////////////
 
 /////////////////////////////////
 // Simon Says Gray Code Seeq.
@@ -280,8 +275,9 @@ unsigned int cv_waveform_b_shape;
 
 struct Timing
 {
-    uint8_t tick_count_in_sequence = 0;  
-    int tick_count_since_start = 0; 
+    uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
+    int tick_count_since_start = 0; // since the clock started running this time.
+    //uint8_t ticks_after_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
@@ -1385,7 +1381,7 @@ void AdvanceSequenceChronology(){
   )
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
-  loop_timing.tick_count_in_sequence >= 16 * 6
+  loop_timing.tick_count_in_sequence >= 16 * 6 // Fix for multiple bars
   ) { // Reset
     ResetToFirstStep();
   } else {
@@ -1399,7 +1395,7 @@ void AdvanceSequenceChronology(){
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+ Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step + String(" tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence  ); 
 
   
 }
