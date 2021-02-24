@@ -13,7 +13,7 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.25; 
+const float simon_says_seq_version = 0.26; 
 
 
 #include <Audio.h>
