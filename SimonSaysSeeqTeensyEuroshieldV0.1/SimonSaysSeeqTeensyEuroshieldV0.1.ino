@@ -81,7 +81,7 @@ const uint8_t audio1OutPin = 22;
 const uint8_t euroshield_button_pin = 2;
 
 const uint8_t euroshield_led_pin_count = 4;
-const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 }; // { 3, 4, 5, 6 }; 
+const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 };  
 
 // This the the pin for the upper pot on the Euroshield
 const uint8_t upper_pot_pin = 20;
@@ -102,7 +102,7 @@ const uint8_t MAX_STEP = 15;
 
 // Use zero based index for bar.
 const uint8_t FIRST_BAR = 0;
-const uint8_t MAX_BAR = 3;
+const uint8_t MAX_BAR = 1; // Memory User!
 
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
@@ -110,17 +110,27 @@ const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
 
-const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
+const uint16_t CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
 
 
 const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
+
+// 2^2 = 4
+// 2^4 = 16
+// 2^8 = 256 (-1) uint8_t
+// 2^16 = 65536 (-1) uint16_t same as unsigned int
+// 2^32 = 4294967296
+// 2^64 = 18446744073709551616
+
+
+
 ////////////////////////////////////////////////////
 // Actual pot values
-unsigned int upper_input_raw; // TODO Make t type.
-unsigned int lower_input_raw;
+uint16_t upper_input_raw; // TODO Make t type.
+uint16_t lower_input_raw;
 
 
 // Create 4 virtual pots out of two pots and a button.
@@ -215,9 +225,8 @@ class NoteInfo
 {
  public:
    uint8_t velocity = 0 ;
-   //uint8_t tick_count_in_sequence = 0; // will remove
    uint8_t tick_count_since_step = 0; 
-   uint8_t is_active = 0;
+   boolean is_active = 0;
 };
 /////////
 
@@ -239,27 +248,10 @@ class GhostNote
 {
  public:
    uint8_t tick_count_in_sequence = 0;
-   uint8_t is_active = 0;
+   boolean is_active = 0;
 };
 
 GhostNote channel_a_ghost_events[128];
-
-////////////////////////////////////////
-// Bit Constants for bit wise operations 
-
-
- 
-uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
-
-uint8_t bits_2_1 = 2 + 1; // CV lfo shape
-// how long the CV pulse will last for in terms of ticks
-uint8_t cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1; 
-
-uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
-///////////////////////////////////////////////////////////////////    
-
-
-
 
 
 ///////////////////////////
@@ -277,7 +269,7 @@ unsigned int cv_waveform_b_shape;
 struct Timing
 {
     uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
-    int tick_count_since_start = 0; // since the clock started running this time.
+    uint32_t tick_count_since_start = 0; // since the clock started running this time.
     uint8_t tick_count_since_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
 
@@ -350,8 +342,8 @@ uint8_t IncrementOrResetBarCount(){
 boolean midi_clock_detected = LOW;
 
 
- int  min_pot_value;
- int max_pot_value;
+ unsigned int  min_pot_value;
+ unsigned int max_pot_value;
 
 
 void printVersion(){
@@ -782,9 +774,6 @@ int SequenceSettings(){
     external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
 
 
-//////////////////////////////////////////////
-
-//amp_1_object.gain(1.0);
 
 
 
@@ -795,7 +784,7 @@ int SequenceSettings(){
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence = binary_sequence;
 
- //  binary_sequence = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
+
 
    // If we have 8 bits, use the range up to 255
 
@@ -804,8 +793,6 @@ int SequenceSettings(){
    // TODO Could probably use a smaller type 
    unsigned int binary_sequence_upper_limit; 
 
-
-//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
 
 // REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
@@ -843,52 +830,15 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println();
 
 
-
     the_sequence = gray_code_sequence;
 
-/* Make simpler
-    bitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-    the_sequence = ~ the_sequence; // Invert
-
-   
-    // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence == 1){
-      the_sequence = 1;
-    }
-
-*/
-    
-    
-/*
-   Serial.println(String("the_sequence is: ") + the_sequence  );
-   Serial.print("\t");
-   Serial.print(the_sequence, BIN);
-   Serial.println();
-*/
-
-   
-  //Serial.println(String("right_peak_level is: ") + right_peak_level  );
-
- 
 
 // Sequence length raw
 // ***UPPER pot LOW value***
 
 
-
-
-
-// sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   
-
-
  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
 
- 
- // Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
-   
-   //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
@@ -956,7 +906,6 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    ////////////////////////
 
    // ***LOWER Pot LOW Button*** (Multiplex on lower_pot_low_value)
-   // cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    cv_waveform_b_frequency_raw = lower_pot_low_value;
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
@@ -976,39 +925,16 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    
    //Serial.println(String("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
    
-   // setting-b-amp-delta
-   //cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -10, 10, cv_waveform_b_frequency_raw, 1.5) / 100;
-   
    cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.0, 0.3, cv_waveform_b_frequency_raw);
-   
-
-   
+      
    //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-   // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
-   //cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
-   //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
-   //cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
-   //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
-
    cv_waveform_a_amplitude = 0.99;
-
-   // Put this and above on the inputs.
-
-   // TODO Add offset?
-   // Lower Pot LOW Button
-   //   cv_offset_raw = (lower_pot_low_value & bits_2_1);
-   //   Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
-   //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
-   //   Serial.println(String("cv_offset is: ") + cv_offset  );
-
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
     cv_waveform_a_object.offset(0);
-
-
 
 
     // MONITOR GATE    
@@ -1077,8 +1003,6 @@ Serial.println(String("InitMidiSequence Done ")  );
 
 void PlayMidi(){
   // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
-
-// HERE
 
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
@@ -1316,17 +1240,8 @@ bool Button1HasChanged(bool button_1_state){
 
 void AdvanceSequenceChronology(){
 
-
-
-  
   // This function advances or resets the sequence powered by the clock.
-
   // But first check / set the desired sequence length
-
-
-    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
-  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  // sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
   sequence_length_in_steps = sequence_length_in_steps_raw;
 
@@ -1349,8 +1264,6 @@ void AdvanceSequenceChronology(){
 
   // Always advance the ticks SINCE START
   SetTotalTickCount(loop_timing.tick_count_since_start += 1);
-
-
 
 
   // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
