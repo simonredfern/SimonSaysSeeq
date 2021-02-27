@@ -83,6 +83,9 @@ UdpClient myUdpClient;
 
 // ...
 
+
+const char version[16]= "v0.25-BelaSalt";
+
 Scope scope;
 
 
@@ -93,6 +96,17 @@ Midi midi;
 
 // To find midi ports Bela can see, type "amidi -l" in the Bela command line.
 // Also  lsusb -t via ssh 
+
+/*
+root@bela:~/bin# cat log_usb.sh
+#!/bin/bash
+echo Hello
+amidi -l
+lsusb -t
+*/
+
+
+
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
 //const char* gMidiPort0 = "hw:0,0,0"; // try me
@@ -308,6 +322,9 @@ const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 input
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
+const uint8_t FIRST_BAR = 0;
+const uint8_t MAX_BAR = 3; // Memory User!
+
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
@@ -447,7 +464,7 @@ class NoteInfo
 {
  public:
    uint8_t velocity = 0 ;
-   uint8_t tick_count_in_sequence = 0;
+   uint8_t tick_count_since_step = 0; 
    uint8_t is_active = 0;
 };
 /////////
@@ -460,7 +477,9 @@ class NoteInfo
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+//NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+
+NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
 
@@ -508,8 +527,9 @@ unsigned int cv_waveform_b_shape;
 
 struct Timing
 {
-    uint8_t tick_count_in_sequence = 0;  
-    int tick_count_since_start = 0; 
+    uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
+    uint32_t tick_count_since_start = 0; // since the clock started running this time.
+    uint8_t tick_count_since_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
@@ -518,14 +538,83 @@ Timing loop_timing;
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
 uint8_t step_count;
 
+// Count of the bar / measure.
+uint8_t bar_count;
+
 // Helper functions that operate on global variables. Yae!  
+
+uint8_t BarCountSanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
+  
+  if (bar_count_in > MAX_BAR){
+  	rt_printf("**** ERROR bar_count_in > MAX_BAR i.e. %d \n" , bar_count_in );
+    bar_count_fixed = MAX_BAR;
+  } else if (bar_count_in < FIRST_BAR){
+    rt_printf("**** ERROR bar_count_in < FIRST_BAR i.e. %d \n" , bar_count_in );
+    bar_count_fixed = FIRST_BAR;
+  } else {
+    bar_count_fixed = bar_count_in;
+  }
+  return bar_count_fixed;
+}
+
 
 void SetTickCountInSequence(uint8_t value){
   loop_timing.tick_count_in_sequence = value;
+  loop_timing.tick_count_since_step = value % 6;
 }
 
 void SetTotalTickCount(int value){
   loop_timing.tick_count_since_start = value;
+}
+
+void Beginning(){
+  SetTickCountInSequence(0);
+  step_count = FIRST_STEP;
+  bar_count = FIRST_BAR;
+}
+
+uint8_t IncrementOrResetBarCount(){
+
+  // Every time we call this function we advance or reset the bar
+  if (bar_count == MAX_BAR){
+    bar_count = FIRST_BAR;
+  } else {
+    bar_count = BarCountSanity(bar_count + 1);
+  }
+  
+  //Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
+  return BarCountSanity(bar_count);
+}
+
+void ResetToFirstStep(){
+  
+  // TODO check if we really need this or possible bug with bars
+  SetTickCountInSequence(0);
+  step_count = FIRST_STEP;
+
+  IncrementOrResetBarCount();
+  
+
+  
+  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+}
+
+
+
+
+
+uint8_t IncrementOrResetBarCount(){
+
+  // Every time we call this function we advance or reset the bar
+  if (bar_count == MAX_BAR){
+    bar_count = FIRST_BAR;
+  } else {
+    bar_count = BarCountSanity(bar_count + 1);
+  }
+  
+  Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
+  return BarCountSanity(bar_count);
 }
 
 
@@ -834,13 +923,16 @@ void printStatus(void*){
 void DisableNotes(uint8_t note){
              // Disable that note for all steps.
            uint8_t sc = 0;
+           uint8_t bc = 0;
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[sc][note][1].velocity = 0;
-              channel_a_midi_note_events[sc][note][1].is_active = 0;
-              channel_a_midi_note_events[sc][note][0].velocity = 0;
-              channel_a_midi_note_events[sc][note][0].is_active = 0;         
+              channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+              channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][0].is_active = 0;         
             }
+           }
 }
 
 
@@ -872,9 +964,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           // We want the note on, so set it on.
           //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
-          channel_a_midi_note_events[step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[step_count][note][1].is_active = 1;
+          channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
+          channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
           //rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
 
         } 
@@ -885,9 +977,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
             // Note Off
              //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
-             channel_a_midi_note_events[step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[step_count][note][0].is_active = 1;
+             channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
+             channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
              //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
 
         	rt_printf("Done setting MIDI note OFF for note %d when step is %d \n", note,  step_count );
@@ -1085,22 +1177,22 @@ void PlayMidi(){
     //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
              //rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
   
 			uint8_t channel = 1;
 
-             midi.writeNoteOn (channel, n, channel_a_midi_note_events[StepCountSanity(step_count)][n][1].velocity);
+             midi.writeNoteOn (channel, n, channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].velocity);
              
            
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
            //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            
            uint8_t channel = 1;
@@ -1116,6 +1208,9 @@ void PlayMidi(){
 
 
 
+
+
+/////////
 void AdvanceSequenceChronology(){
   
   // This function advances or resets the sequence powered by the clock.
@@ -1911,8 +2006,9 @@ float gDel_y2_r = 0;
 
 bool setup(BelaContext *context, void *userData){
 	
-	rt_printf("Hello from Setup: SimonSaysSeeq on Bela :-) \n");
+//	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 
+	rt_printf("Hello from Setup: SimonSaysSeeq on Bela  \n");
 
 	scope.setup(4, context->audioSampleRate);
 
