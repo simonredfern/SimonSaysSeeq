@@ -331,11 +331,11 @@ uint8_t IncrementOrResetBarCount(){
   if (bar_count == MAX_BAR){
     bar_count = FIRST_BAR;
   } else {
-    bar_count = bar_count_sanity(bar_count + 1);
+    bar_count = BarCountSanity(bar_count + 1);
   }
   
   Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
-  return bar_count_sanity(bar_count);
+  return BarCountSanity(bar_count);
 }
 
 
@@ -352,14 +352,14 @@ void printVersion(){
 
 
 
-uint8_t bar_count_sanity(uint8_t bar_count_in){
+uint8_t BarCountSanity(uint8_t bar_count_in){
   uint8_t bar_count_fixed;
   
   if (bar_count_in > MAX_BAR){
     Serial.println(String("**** ERROR bar_count_in > MAX_BAR i.e. ") + bar_count_in );
     bar_count_fixed = MAX_BAR;
   } else if (bar_count_in < FIRST_BAR){
-    Serial.println(String("**** ERROR bar_count_in > FIRST_BAR i.e. ") + bar_count_in );
+    Serial.println(String("**** ERROR bar_count_in < FIRST_BAR i.e. ") + bar_count_in );
     bar_count_fixed = FIRST_BAR;
   } else {
     bar_count_fixed = bar_count_in;
@@ -1008,17 +1008,17 @@ void PlayMidi(){
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
              // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
-             MIDI.sendNoteOn(n, channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
+             MIDI.sendNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[bar_count_sanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
