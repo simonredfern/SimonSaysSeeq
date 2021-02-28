@@ -604,18 +604,7 @@ void ResetToFirstStep(){
 
 
 
-uint8_t IncrementOrResetBarCount(){
 
-  // Every time we call this function we advance or reset the bar
-  if (bar_count == MAX_BAR){
-    bar_count = FIRST_BAR;
-  } else {
-    bar_count = BarCountSanity(bar_count + 1);
-  }
-  
-  Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
-  return BarCountSanity(bar_count);
-}
 
 
 
@@ -1179,7 +1168,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
              //rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
   
 			uint8_t channel = 1;
@@ -1192,7 +1181,7 @@ void PlayMidi(){
 
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            
            uint8_t channel = 1;
@@ -1917,33 +1906,34 @@ void InitMidiSequence(){
 
   rt_printf("InitMidiSequence Start ");
 
-  // Loop through steps
-  for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-    //rt_printf("Step ") + sc );
-  
-    // Loop through notes
-    for (uint8_t n = 0; n <= 127; n++) {
-      // Initialise and print Note on (1) and Off (2) contents of the array.
-      // WRITE MIDI MIDI_DATA
-     channel_a_midi_note_events[sc][n][1].is_active = 0;
-     channel_a_midi_note_events[sc][n][0].is_active = 0;
+  // Loop through bars
+  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
 
-      
+    // Loop through steps
+    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+      //Serial.println(String("Step ") + sc );
+    
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Initialise and print Note on (1) and Off (2) contents of the array.
+        // WRITE MIDI MIDI_DATA
+        channel_a_midi_note_events[bc][sc][n][1].is_active = 0;
+        channel_a_midi_note_events[bc][sc][n][0].is_active = 0;
+  
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
-    } 
+      } 
+    }
   }
-
-
-  for (uint8_t n = 0; n <= 127; n++) {
+  
+    for (uint8_t n = 0; n <= 127; n++) {
      channel_a_ghost_events[n].is_active = 0;
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   } 
   
 
-rt_printf("InitMidiSequence Done");
+	rt_printf("InitMidiSequence Done");
 }
-
 
 
 
