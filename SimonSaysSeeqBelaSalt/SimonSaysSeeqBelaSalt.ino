@@ -114,6 +114,10 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 // Let our delay have 50 different course settings (so the pot doesn't jitter)
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
+const uint8_t MAX_CLOCK_DIVIDE_INPUT = 128;
+
+const uint8_t MAX_PROGRESSION_INPUT = 4;
+
 uint64_t frame_timer = 0;
 
 uint64_t last_clock_falling_edge = 0; 
@@ -152,6 +156,9 @@ int total_delay_frames = 22050;
 // Amount of feedback
 float delay_feedback_amount = 0.999; //0.999
 
+
+uint8_t clock_divide_input = 1; // normal
+uint8_t progression_input = 1; // normal
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -297,6 +304,10 @@ const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
 const int DELAY_FEEDBACK_INPUT_PIN = 5; // CV 6 (SALT+)
+
+
+const uint8_t CLOCK_DIVIDE_INPUT_PIN = 6; // CV 7 (SALT+) (TODO check)
+const uint8_t PROGRESSION_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
 
@@ -1152,6 +1163,12 @@ float gInverseSampleRate;
 int gAudioFramesPerAnalogFrame = 0;
 
 
+
+void SetBarPlayFromBarCount(){
+
+
+
+}
 
 
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
@@ -2370,7 +2387,16 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
+		  if (ch == CLOCK_DIVIDE_INPUT_PIN){
+		  	clock_divide_input = map(analogRead(context, n, CLOCK_DIVIDE_INPUT_PIN), 0, 1, 0, MAX_CLOCK_DIVIDE_INPUT);
+		  	
+		  }
 		  
+		  // > 0.999 leads to distorsion
+		  if (ch == PROGRESSION_INPUT_PIN){
+		  	progression_input = map(analogRead(context, n, PROGRESSION_INPUT_PIN), 0, 1, 0, MAX_PROGRESSION_INPUT);
+		  	
+		  }
 		  
 		  
 		  
