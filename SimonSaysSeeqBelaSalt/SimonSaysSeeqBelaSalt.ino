@@ -536,10 +536,12 @@ struct Timing
 Timing loop_timing;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
-uint8_t step_count;
+uint8_t step_count; // write
+uint8_t step_play; // read
 
 // Count of the bar / measure.
-uint8_t bar_count;
+uint8_t bar_count; // for wrting
+uint8_t bar_play; // for reading
 
 // Helper functions that operate on global variables. Yae!  
 
@@ -572,7 +574,10 @@ void Beginning(){
   SetTickCountInSequence(0);
   step_count = FIRST_STEP;
   bar_count = FIRST_BAR;
+  step_play = FIRST_STEP;
+  bar_play = FIRST_BAR;
 }
+
 
 uint8_t IncrementOrResetBarCount(){
 
@@ -1337,6 +1342,9 @@ void OnTick(){
   
   
   // Play any suitable midi in the sequence (note, we read midi using a callback)
+
+// Here we could clock divide 
+
   PlayMidi();
    
   // Advance and Reset ticks and steps
