@@ -114,6 +114,7 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 // Let our delay have 50 different course settings (so the pot doesn't jitter)
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
+// Divde clock - maybe just for midi maybe for sequence too
 const uint8_t MAX_CLOCK_DIVIDE_INPUT = 128;
 
 const uint8_t MAX_PROGRESSION_INPUT = 4;
@@ -2388,13 +2389,13 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		  if (ch == CLOCK_DIVIDE_INPUT_PIN){
-		  	clock_divide_input = map(analogRead(context, n, CLOCK_DIVIDE_INPUT_PIN), 0, 1, 0, MAX_CLOCK_DIVIDE_INPUT);
+		  	clock_divide_input = floor(map(analogRead(context, n, CLOCK_DIVIDE_INPUT_PIN), 0, 1, 0, MAX_CLOCK_DIVIDE_INPUT));
 		  	
 		  }
 		  
 		  // > 0.999 leads to distorsion
 		  if (ch == PROGRESSION_INPUT_PIN){
-		  	progression_input = map(analogRead(context, n, PROGRESSION_INPUT_PIN), 0, 1, 0, MAX_PROGRESSION_INPUT);
+		  	progression_input = floor(map(analogRead(context, n, PROGRESSION_INPUT_PIN), 0, 1, 0, MAX_PROGRESSION_INPUT));
 		  	
 		  }
 		  
