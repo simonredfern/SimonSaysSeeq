@@ -1167,7 +1167,18 @@ int gAudioFramesPerAnalogFrame = 0;
 
 void SetBarPlayFromBarCount(){
 
+  if (progression_input == 0){
+    bar_play = bar_count;
 
+  } else if (progression_input == 1)  {
+      if (bar_count <= 1){
+          bar_play = bar_count;  
+      } else {
+        bar_play = 0;
+        }
+  } else {
+    bar_play = bar_count;
+  }
 
 }
 
