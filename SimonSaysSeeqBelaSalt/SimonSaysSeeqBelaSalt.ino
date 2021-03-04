@@ -788,7 +788,7 @@ void printStatus(void*){
 		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 		
-		
+		/*
 		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
 		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
 		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
@@ -799,7 +799,17 @@ void printStatus(void*){
 		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
 		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		rt_printf("do_button_4_action is: %d \n", do_button_4_action);
+		*/
+
+
+		rt_printf("progression_input is: %d \n", progression_input);
+		rt_printf("clock_divide_input is: %d \n", clock_divide_input);
 		
+
+
+
+
+
 	
 		/*
 		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
