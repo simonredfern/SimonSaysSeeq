@@ -304,10 +304,10 @@ const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
 const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
-const int DELAY_FEEDBACK_INPUT_PIN = 5; // CV 6 (SALT+)
+const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t CLOCK_DIVIDE_INPUT_PIN = 6; // CV 7 (SALT+) (TODO check)
+const uint8_t CLOCK_DIVIDE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
 const uint8_t PROGRESSION_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
@@ -335,7 +335,7 @@ const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
 const uint8_t FIRST_BAR = 0;
-const uint8_t MAX_BAR = 3; // Memory User!
+const uint8_t MAX_BAR = 7; // Memory User!
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
@@ -600,10 +600,12 @@ uint8_t IncrementOrResetBarCount(){
     bar_count = BarCountSanity(bar_count + 1);
   }
   
-  //Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
+  rt_printf("** IncrementOrResetBarCount bar_count is now: %d", bar_count);
   return BarCountSanity(bar_count);
 }
 
+/*
+// This is not referenced!
 void ResetToFirstStep(){
   
   // TODO check if we really need this or possible bug with bars
@@ -612,11 +614,9 @@ void ResetToFirstStep(){
 
   IncrementOrResetBarCount();
   
-
-  
   //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
-
+*/
 
 
 
@@ -712,6 +712,7 @@ enum osc_type
 
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
+  IncrementOrResetBarCount();
   step_count = FIRST_STEP; 
   oscillator_1_analog.setPhase(0.0);
   
@@ -802,8 +803,9 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("progression_input is: %d \n", progression_input);
 		rt_printf("clock_divide_input is: %d \n", clock_divide_input);
+		rt_printf("progression_input is: %d \n", progression_input);
+
 		
 
 
@@ -879,19 +881,23 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 		*/
 
-    rt_printf("the_sequence is: %d \n", the_sequence);
-    print_binary(the_sequence);
+    	rt_printf("the_sequence is: %d \n", the_sequence);
+    	print_binary(the_sequence);
 		rt_printf("%c \n", 'B');
 
 		// Sequence state
 		
+    	rt_printf("bar_count: %d \n", bar_count);
 		rt_printf("step_count: %d \n", step_count);
 		
+    	rt_printf("bar_play: %d \n", bar_play);
+		rt_printf("step_play: %d \n", step_play);
+
 		if (step_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP \n");
-    } else {
+    	} else {
     		rt_printf("other step \n");
-    }
+    	}
 
     rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
@@ -1175,7 +1181,7 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-void SetBarPlayFromBarCount(){
+void SetPlayFromCount(){
 
   if (progression_input == 0){
     bar_play = bar_count;
@@ -1185,10 +1191,12 @@ void SetBarPlayFromBarCount(){
           bar_play = bar_count;  
       } else {
         bar_play = 0;
-        }
+      }
   } else {
     bar_play = bar_count;
   }
+  
+  step_play = step_count;
 
 }
 
@@ -1210,22 +1218,22 @@ void PlayMidi(){
     //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+           if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
              //rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
   
 			uint8_t channel = 1;
 
-             midi.writeNoteOn (channel, n, channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][1].velocity);
+             midi.writeNoteOn (channel, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
              
            
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[BarCountSanity(bar_count)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+    if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            
            uint8_t channel = 1;
@@ -1323,7 +1331,9 @@ void AdvanceSequenceChronology(){
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+ //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  );
+ 
+ SetPlayFromCount();
 
   
 }
