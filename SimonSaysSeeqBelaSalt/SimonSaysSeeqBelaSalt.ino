@@ -600,7 +600,7 @@ uint8_t IncrementOrResetBarCount(){
     bar_count = BarCountSanity(bar_count + 1);
   }
   
-  rt_printf("** IncrementOrResetBarCount bar_count is now: %d", bar_count);
+  //rt_printf("** IncrementOrResetBarCount bar_count is now: %d \n", bar_count);
   return BarCountSanity(bar_count);
 }
 
@@ -745,7 +745,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1 == 0) {
+    if(gCount % 10 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -984,12 +984,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
     
         } else {
           // We want the note on, so set it on.
-          //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d ", note, step_count, velocity );
           // WRITE MIDI MIDI_DATA
           channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
           channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
-          //rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
+          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
 
         } 
       
