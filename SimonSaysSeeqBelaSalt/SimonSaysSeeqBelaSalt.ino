@@ -1716,6 +1716,59 @@ void clockShowLow(){
 }
 
 
+void AllNotesOff(){
+	  // All MIDI notes off.
+	    uint8_t channel = 0;
+  rt_printf("All MIDI notes OFF");
+  for (uint8_t n = 0; n <= 127; n++) {
+     midi.writeNoteOff(channel, n, 0);
+  }
+  
+}
+
+
+
+void InitMidiSequence(){
+
+  rt_printf("InitMidiSequence Start ");
+
+  // Loop through bars
+  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
+
+    // Loop through steps
+    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+      //Serial.println(String("Step ") + sc );
+    
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Initialise and print Note on (1) and Off (2) contents of the array.
+        // WRITE MIDI MIDI_DATA
+        channel_a_midi_note_events[bc][sc][n][1].is_active = 0;
+        channel_a_midi_note_events[bc][sc][n][0].is_active = 0;
+  
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
+      } 
+    }
+  }
+
+
+   
+  
+    for (uint8_t n = 0; n <= 127; n++) {
+     channel_a_ghost_events[n].is_active = 0;
+     //rt_printf("Init Step with ghost Note: %s is_active false", n );
+  }
+  
+
+
+  
+
+	rt_printf("InitMidiSequence Done");
+}
+
+
+
 
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer(){
@@ -1723,6 +1776,8 @@ void InitSequencer(){
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
+  InitMidiSequence();
+  AllNotesOff();
 }
 
 void StartSequencer(){
@@ -1974,38 +2029,6 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 
 
-void InitMidiSequence(){
-
-  rt_printf("InitMidiSequence Start ");
-
-  // Loop through bars
-  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
-
-    // Loop through steps
-    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-      //Serial.println(String("Step ") + sc );
-    
-      // Loop through notes
-      for (uint8_t n = 0; n <= 127; n++) {
-        // Initialise and print Note on (1) and Off (2) contents of the array.
-        // WRITE MIDI MIDI_DATA
-        channel_a_midi_note_events[bc][sc][n][1].is_active = 0;
-        channel_a_midi_note_events[bc][sc][n][0].is_active = 0;
-  
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
-      } 
-    }
-  }
-  
-    for (uint8_t n = 0; n <= 127; n++) {
-     channel_a_ghost_events[n].is_active = 0;
-     //rt_printf("Init Step with ghost Note: %s is_active false", n );
-  } 
-  
-
-	rt_printf("InitMidiSequence Done");
-}
 
 
 
