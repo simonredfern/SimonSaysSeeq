@@ -352,7 +352,7 @@ const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
-uint8_t midi_channel_a = 1;
+uint8_t midi_channel_a = 0; // This is zero indexed. 0 will send on midi channel 1!
 uint8_t last_note_on = 0;
 uint8_t last_note_off = 0;
 uint8_t last_note_disabled = 0;
@@ -1007,6 +1007,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
           
+          // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
+          if (sequence_is_running == 0){
+          	midi.writeNoteOn(midi_channel_a, note, velocity); // echo midi to the output
+          }
+          
+          
           last_note_on = note;
           
           rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
@@ -1025,9 +1031,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
 
 			 last_note_off = note;
-			 
-			 midi.writeNoteOff(midi_channel_a, note, 0);
-
+			
+			// Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
+			if (sequence_is_running == 0){ 
+				midi.writeNoteOff(midi_channel_a, note, 0);
+			}
         	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
   }
   } 
@@ -1246,12 +1254,7 @@ void PlayMidi(){
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
             	rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
-  
-				//uint8_t channel = 0; // zero indexed? so 0 gets converted to 1?
-
             	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
-             
-           
            }
     } 
 
@@ -1259,12 +1262,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-           
-           //uint8_t channel = 1;
-           
            midi.writeNoteOff(midi_channel_a, n, 0);
-           
-           
        }
     }
   } // End midi note loop
@@ -1442,34 +1440,34 @@ void OnTick(){
 void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
+	
+	// Read midi loop
 
 	uint8_t type_received = message.getType();
-	uint8_t note_received = message.getDataByte(0);
-	uint8_t velocity_received = message.getDataByte(1);
+	uint8_t note_received = message.getDataByte(0); // may have different meaning depending on the type
+	uint8_t velocity_received = message.getDataByte(1); // may have different meaning depending on the type
 	uint8_t channel_received = message.getChannel(); // we ignore the channel
 
 
 	rt_printf("Midi Message: type: %d, note: %d, velocity: %d, channel: %d  \n", type_received, note_received, velocity_received, channel_received);
 
-	rt_printf("Note: kmmNoteOn: %d, kmmNoteOff: %d \n", kmmNoteOn, kmmNoteOff);
+	//rt_printf("Note: kmmNoteOn: %d, kmmNoteOff: %d \n", kmmNoteOn, kmmNoteOff);
 
+	// Check for a NOTE ON
     // Some keyboards send velocity 0 for note off instead of sending 0 for type, so we must check for that.
 	if(type_received == kmmNoteOn && velocity_received > 0){
-		
 			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
-			
 			// Write any note ON into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_a);
-			
-		 
-	} else if(message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
+	// Check for a NOTE OFF	 
+	} else if (message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
 		
 			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
 			
 			// Write any note OFF into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_a);
 			
-	
+	// CLOCK but not currently working.
 	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
 			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock (kmmSystem ?)
 		// int type = message.getType();
@@ -1477,7 +1475,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		// int byte1 = message.getDataByte(1);
     	
     	
-    rt_printf("MAYBE CLOCK MIDI Message: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
+    	rt_printf("MAYBE CLOCK MIDI Message: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
     	
 
 		//rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
@@ -1487,11 +1485,9 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		//midi_clock_detected = 1;
 		//OnTick();
 
+	// OTHER 
 	} else {
-		
 			rt_printf("OTHER MIDI Message: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
-			
-			
 	}
 }
 
@@ -2687,13 +2683,6 @@ void render(BelaContext *context, void *userData)
 	   // 	OnTick();	
 	   // }
 	
-
-        // Only look for this clock if we don't have midi.
-   //     if (midi_clock_detected == LOW) {
-
-          //Serial.println(String(">>>>>NO<<<<<<< Midi Clock Detected midi_clock_detected is: ") + midi_clock_detected) ;
-          
-          
 
 
   
