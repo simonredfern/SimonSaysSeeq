@@ -351,6 +351,10 @@ uint8_t current_sequence_length_in_steps = 8;
 const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
+uint8_t last_note_on = 0;
+uint8_t last_note_off = 0;
+uint8_t last_note_disabled = 0;
+
 
 ////////////////////////////////////////////////////
 // Actual pot values
@@ -898,6 +902,12 @@ void printStatus(void*){
     	} else {
     		rt_printf("other step \n");
     	}
+    	
+
+    	rt_printf("Midi last_note_on: %d \n", last_note_on);
+    	rt_printf("Midi last_note_off: %d \n", last_note_off);
+    	rt_printf("Midi last_note_disabled: %d \n", last_note_disabled);
+    	
 
     rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
@@ -960,7 +970,7 @@ void DisableNotes(uint8_t note){
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
-  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_count is currently %d, step_count is currently %step_count", on_off, note, velocity, channel, bar_count, step_count);
   if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
@@ -969,11 +979,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
            midi.writeNoteOff(channel, note, 0);
            
-           
-           
            // Disable the note on all steps
            //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
            DisableNotes(note);
+           
+           last_note_disabled = note;
 
           // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
           // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
@@ -989,6 +999,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
           channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
+          
+          last_note_on = note;
+          
           rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
 
         } 
@@ -997,14 +1010,16 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           
             // Note Off
-             //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
+             
              // WRITE MIDI MIDI_DATA
              channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
              channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
              channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
-             //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
 
-        	rt_printf("Done setting MIDI note OFF for note %d when step is %d \n", note,  step_count );
+			 last_note_off = note;
+
+        	rt_printf("Done setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
   }
   } 
 
