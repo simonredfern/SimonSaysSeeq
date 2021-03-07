@@ -749,7 +749,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 10 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -970,7 +970,7 @@ void DisableNotes(uint8_t note){
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
-  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_count is currently %d, step_count is currently %step_count", on_off, note, velocity, channel, bar_count, step_count);
+  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_count is currently %d, step_count is currently %d", on_off, note, velocity, channel, bar_count, step_count);
   if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
@@ -1233,14 +1233,14 @@ void PlayMidi(){
     //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-             //rt_printf("step_count: %d : tick_count_in_sequence %d Found and will send Note ON for %d ", step_count, loop_timing.tick_count_in_sequence, n );
+           if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+            	rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d ", step_play, loop_timing.tick_count_since_step, n );
   
-			uint8_t channel = 1;
+				uint8_t channel = 0; // zero indexed? so 0 gets converted to 1?
 
-             midi.writeNoteOn (channel, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
+            	midi.writeNoteOn (channel, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
              
            
            }
