@@ -105,6 +105,12 @@ amidi -l
 lsusb -t
 */
 
+/*
+root@bela:~/bin/SimonSaysSeeq# amidi -l
+Dir Device    Name
+IO  hw:0,0    f_midi <-- This is the connection to your computer (device port on Bela)
+IO  hw:1,0,0  USB MIDI Interface MIDI 1 <-- This is the device connected to USB host port on the Bela
+*/
 
 
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
@@ -1032,7 +1038,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
 			 last_note_off = note;
 			
-			// Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
+			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
 			if (sequence_is_running == 0){ 
 				midi.writeNoteOff(midi_channel_a, note, 0);
 			}
