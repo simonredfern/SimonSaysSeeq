@@ -495,24 +495,27 @@ bool midi_clock_detected = LOW;
 bool sequence_is_running = LOW;
 
 
-void Flash(int noOfTimes){
+bool did_flash = false;
+int flash_frame_start;
+
+void Flash(){
 
  int i;
  
- // Use frame_timer instead
   
-  // blink a few times with a shorter delay each time.
-  for (i = 0; i < noOfTimes; i++) {
-  	target_led_1_state = LOW;
-  }	
+  if (did_flash == false) { 
+     flash_frame_start = frame_timer; 
   
-    for (i = 0; i < noOfTimes; i++) {
-  	target_led_1_state = HIGH;
-  }	
+    // keep on for a second
+	if (frame_timer - flash_frame_start < 44000) {
+		target_led_1_state = LOW;
+	} else {
+		target_led_1_state = HIGH;
+		did_flash = true;
+	}
   
-  for (i = 0; i < noOfTimes; i++) {
-  	target_led_1_state = LOW;
-  }	
+
+  }
   
   
   	
@@ -2325,9 +2328,7 @@ bool setup(BelaContext *context, void *userData){
         //myUdpClient.setup(50002, "18.195.30.76"); 
         
         
-        Flash(500);
-        Flash(500);
-        Flash(500);
+
         
         rt_printf("Bye from Setup \n");
 
@@ -2600,6 +2601,9 @@ void render(BelaContext *context, void *userData)
 	// DIGITAL LOOP 
 		// Looking at all frames in case the transition happens in these frames. However, as its a clock we could maybe look at only the first frame.
 	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
+	    	
+	    	// we call this often but it only acts once
+	    	Flash();
 	    
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
