@@ -112,6 +112,12 @@ IO  hw:0,0    f_midi <-- This is the connection to your computer (device port on
 IO  hw:1,0,0  USB MIDI Interface MIDI 1 <-- This is the device connected to USB host port on the Bela
 */
 
+// NOTE: It seems there is a timing / loading issue with the USB midi port...
+// In order for USB host midi port to work, either: 
+// 1) save two copies of this patch under loop_A and loop_B, set the settings to start with loop_* and after booting the Salt, press the left button on Salt for more than two seconds 
+// or 
+// 2) Save this patch via the IDE after the USB cables are plugged in.
+  
 
 //const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
@@ -445,6 +451,13 @@ bool do_envelope_1_on = false;
 bool target_gate_out_state = false;
 bool gate_out_state_set = false;
 
+
+bool target_led_1_state = false;
+bool target_led_2_state = false;
+bool target_led_3_state = false;
+bool target_led_4_state = false;
+
+
 // Used to control when/how we change sequence length 
 uint8_t new_sequence_length_in_ticks; 
 
@@ -480,6 +493,46 @@ bool analog_clock_in_state = LOW;
 
 bool midi_clock_detected = LOW;
 bool sequence_is_running = LOW;
+
+
+void Flash(int noOfTimes){
+
+ int i;
+ 
+ // Use frame_timer instead
+  
+  // blink a few times with a shorter delay each time.
+  for (i = 0; i < noOfTimes; i++) {
+  	target_led_1_state = LOW;
+  }	
+  
+    for (i = 0; i < noOfTimes; i++) {
+  	target_led_1_state = HIGH;
+  }	
+  
+  for (i = 0; i < noOfTimes; i++) {
+  	target_led_1_state = LOW;
+  }	
+  
+  
+  	
+    // digitalWrite(ledPin, LOW);
+    //delay(delayTime);
+    // digitalWrite(ledPin, HIGH);   // set the LED on
+    // delay(delayTime);// wait 
+    // digitalWrite(ledPin, LOW);    // set the LED off
+    // if (delayTime > 15){
+    //   delayTime = delayTime - 10;
+    // }
+  //}
+    
+}
+
+
+
+
+
+
 
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
@@ -1052,8 +1105,13 @@ void GateHigh(){
   
   
   target_gate_out_state = true;
+  target_led_1_state = true; 
+  
+  
   envelope_1_audio.gate(true);
   step_triggered_envelope_2.gate(true);
+  
+  
   
 
   
@@ -1064,6 +1122,7 @@ void GateLow(){
   //rt_printf("Gate LOW");
   
   target_gate_out_state = false;
+  target_led_1_state = false; 
   
   envelope_1_audio.gate(false);
   step_triggered_envelope_2.gate(false);
@@ -2265,6 +2324,11 @@ bool setup(BelaContext *context, void *userData){
         
         //myUdpClient.setup(50002, "18.195.30.76"); 
         
+        
+        Flash(500);
+        Flash(500);
+        Flash(500);
+        
         rt_printf("Bye from Setup \n");
 
         return true;
@@ -2616,13 +2680,18 @@ void render(BelaContext *context, void *userData)
 
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
-          if (gate_out_state_set == HIGH){
+          if (target_led_1_state == HIGH){
             digitalWriteOnce(context, m, LED_1_PIN, LOW);
             
           } else {
             digitalWriteOnce(context, m, LED_1_PIN, HIGH);
 
           }
+          
+          
+          
+          
+          
         	
         	// Do similar for another PIN for if (step_count == FIRST_STEP)
         	
