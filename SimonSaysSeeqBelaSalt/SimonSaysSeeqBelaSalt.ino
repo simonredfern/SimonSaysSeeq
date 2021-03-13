@@ -131,6 +131,7 @@ const uint8_t MAX_CLOCK_DIVIDE_INPUT = 128;
 
 const uint8_t MAX_PROGRESSION_INPUT = 4;
 
+// This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
 
 uint64_t last_clock_falling_edge = 0; 
@@ -494,28 +495,23 @@ bool analog_clock_in_state = LOW;
 bool midi_clock_detected = LOW;
 bool sequence_is_running = LOW;
 
- int flash_1 = -1;
+int flash_1 = -1;
 int flash_2 = -1;
 int flash_3 = -1;
 int flash_4 = -1;
 
 
 void Flash(){
-
- int i;
- int to = 88000;
-
-
- //for (i = 0; i < to; i++) { 
-
    if (flash_1 == -1){
-     flash_1 = frames;
+     rt_printf("setting flash_1.");
+     flash_1 = frame_timer;
      target_led_1_state = HIGH;
    }
 
    if (flash_1 >= 0){
-    if (flash_2 == -1 && frames - flash_1 > 22000){
-      flash_2 = frames;
+    if (flash_2 == -1 && frame_timer - flash_1 > 22000){
+      rt_printf("setting flash_2.");
+      flash_2 = frame_timer;
       target_led_1_state = LOW;
     }
   }
@@ -523,21 +519,6 @@ void Flash(){
   
   
   	
-    // digitalWrite(ledPin, LOW);
-    //delay(delayTime);
-    // digitalWrite(ledPin, HIGH);   // set the LED on
-    // delay(delayTime);// wait 
-    // digitalWrite(ledPin, LOW);    // set the LED off
-    // if (delayTime > 15){
-    //   delayTime = delayTime - 10;
-    // }
-  //}
-    
-}
-
-
-
-
 
 
 
