@@ -494,28 +494,32 @@ bool analog_clock_in_state = LOW;
 bool midi_clock_detected = LOW;
 bool sequence_is_running = LOW;
 
+ int flash_1 = -1;
+int flash_2 = -1;
+int flash_3 = -1;
+int flash_4 = -1;
 
-bool did_flash = false;
-int flash_frame_start;
 
 void Flash(){
 
  int i;
- 
-  
-  if (did_flash == false) { 
-     flash_frame_start = frame_timer; 
-  
-    // keep on for a second
-	if (frame_timer - flash_frame_start < 44000) {
-		target_led_1_state = LOW;
-	} else {
-		target_led_1_state = HIGH;
-		did_flash = true;
-	}
-  
+ int to = 88000;
 
+
+ //for (i = 0; i < to; i++) { 
+
+   if (flash_1 == -1){
+     flash_1 = frames;
+     target_led_1_state = HIGH;
+   }
+
+   if (flash_1 >= 0){
+    if (flash_2 == -1 && frames - flash_1 > 22000){
+      flash_2 = frames;
+      target_led_1_state = LOW;
+    }
   }
+}
   
   
   	
