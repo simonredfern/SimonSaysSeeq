@@ -495,32 +495,36 @@ bool analog_clock_in_state = LOW;
 bool midi_clock_detected = LOW;
 bool sequence_is_running = LOW;
 
-int flash_1 = -1;
-int flash_2 = -1;
-int flash_3 = -1;
-int flash_4 = -1;
+int last_flash_change = 0;
+float flash_interval = 44000;
 
 
-void Flash(){
-   if (flash_1 == -1){
-     rt_printf("setting flash_1.");
-     flash_1 = frame_timer;
-     target_led_1_state = HIGH;
-   }
 
-   if (flash_1 >= 0){
-    if (flash_2 == -1 && frame_timer - flash_1 > 22000){
-      rt_printf("setting flash_2.");
-      flash_2 = frame_timer;
-      target_led_1_state = LOW;
-    }
+void FlashHello(){
+// This gets called in the digital loop
+// Say hello when this patch starts up.
+
+// What ever happens, we don't want to change the led target state for two long. After 10 seconds we should be done.
+if(frame_timer < 440000) {
+	
+	// When we should next change state
+	int next_flash_change = last_flash_change + flash_interval;
+
+	// No point in flashing if the interval is too small
+	if (flash_interval > 100){
+		if (frame_timer >= next_flash_change){
+			target_led_1_state = ! target_led_1_state;
+			last_flash_change = frame_timer;
+			flash_interval = flash_interval / 1.5;
+			rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
+		} 
+	// Once we're done..
+	} else {
+		// In the end we want the led to be off (until something else changes the state)
+		target_led_1_state = false;
+	}
   }
 }
-  
-  
-  	
-
-
 
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
@@ -2587,8 +2591,8 @@ void render(BelaContext *context, void *userData)
 		// Looking at all frames in case the transition happens in these frames. However, as its a clock we could maybe look at only the first frame.
 	    for(unsigned int m = 0; m < context->digitalFrames; m++) {
 	    	
-	    	// we call this often but it only acts once
-	    	Flash();
+	    	// we call this often but it only acts at the start
+	    	FlashHello();
 	    
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
