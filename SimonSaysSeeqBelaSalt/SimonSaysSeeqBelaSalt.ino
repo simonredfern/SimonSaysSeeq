@@ -2091,6 +2091,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 			
 			
 			InitMidiSequence();
+			AllNotesOff();
 			
 			// if ((fine_delay_frames - fine_delay_frames_delta) < 0){
 			// 	// Skip
