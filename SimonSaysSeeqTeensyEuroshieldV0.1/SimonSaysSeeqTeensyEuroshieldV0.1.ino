@@ -1,13 +1,8 @@
-// This file is licenced under the MIT license (https://opensource.org/licenses/MIT) except for the code at the end of the file.
-
-//Copyright 2020 Simon Redfern
-//
-//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-//
-//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-//
-//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+//////////////////
+// AGPL v3 Licence ///////
+// This file is licenced under the AGPL license (https://opensource.org/licenses/AGPL-3.0) except for the code at the end of the file.
+// Copyright 2020 Simon Redfern
+///////////////////////////////
 
 /////////////////////////////////
 // Simon Says Gray Code Seeq.
@@ -16,8 +11,9 @@
 // This file is programmed to use a: https://1010music.com/euroshield-user-guide (unfortuanatly discontinued) 
 // Please see the README for more info. 
 
+const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.23; 
+const float simon_says_seq_version = 0.26; 
 
 
 #include <Audio.h>
@@ -85,7 +81,7 @@ const uint8_t audio1OutPin = 22;
 const uint8_t euroshield_button_pin = 2;
 
 const uint8_t euroshield_led_pin_count = 4;
-const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 }; // { 3, 4, 5, 6 }; 
+const uint8_t euroshieldLedPins[euroshield_led_pin_count] = { 6, 5, 4, 3 };  
 
 // This the the pin for the upper pot on the Euroshield
 const uint8_t upper_pot_pin = 20;
@@ -104,22 +100,37 @@ const uint8_t BRIGHT_5 = 255;
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
-const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 1; // ONE INDEXED
+// Use zero based index for bar.
+const uint8_t FIRST_BAR = 0;
+const uint8_t MAX_BAR = 1; // Memory User!
+
+
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
 
-const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
+const uint16_t CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
 
 
 const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
+
+// 2^2 = 4
+// 2^4 = 16
+// 2^8 = 256 (-1) uint8_t
+// 2^16 = 65536 (-1) uint16_t same as unsigned int
+// 2^32 = 4294967296
+// 2^64 = 18446744073709551616
+
+
+
 ////////////////////////////////////////////////////
 // Actual pot values
-unsigned int upper_input_raw; // TODO Make t type.
-unsigned int lower_input_raw;
+uint16_t upper_input_raw; // TODO Make t type.
+uint16_t lower_input_raw;
 
 
 // Create 4 virtual pots out of two pots and a button.
@@ -214,8 +225,8 @@ class NoteInfo
 {
  public:
    uint8_t velocity = 0 ;
-   uint8_t tick_count_in_sequence = 0;
-   uint8_t is_active = 0;
+   uint8_t tick_count_since_step = 0; 
+   boolean is_active = 0;
 };
 /////////
 
@@ -227,7 +238,7 @@ class NoteInfo
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
 
@@ -237,27 +248,10 @@ class GhostNote
 {
  public:
    uint8_t tick_count_in_sequence = 0;
-   uint8_t is_active = 0;
+   boolean is_active = 0;
 };
 
 GhostNote channel_a_ghost_events[128];
-
-////////////////////////////////////////
-// Bit Constants for bit wise operations 
-
-
- 
-uint8_t sequence_bits_8_through_1 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1;
-
-uint8_t bits_2_1 = 2 + 1; // CV lfo shape
-// how long the CV pulse will last for in terms of ticks
-uint8_t cv_waveform_b_frequency_bits_4_3_2_1 = 8 + 4 + 2 + 1; 
-
-uint8_t cv_waveform_a_amplitude_bits_8_7_6_5 = 128 + 64 + 32 + 16;
-///////////////////////////////////////////////////////////////////    
-
-
-
 
 
 ///////////////////////////
@@ -274,8 +268,9 @@ unsigned int cv_waveform_b_shape;
 
 struct Timing
 {
-    uint8_t tick_count_in_sequence = 0;  
-    int tick_count_since_start = 0; 
+    uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
+    uint32_t tick_count_since_start = 0; // since the clock started running this time.
+    uint8_t tick_count_since_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
@@ -284,20 +279,41 @@ Timing loop_timing;
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
 uint8_t step_count;
 
+
+// Count of the bar / measure.
+uint8_t bar_count;
+
 // Helper functions that operate on global variables. Yae!  
 
 void SetTickCountInSequence(uint8_t value){
   loop_timing.tick_count_in_sequence = value;
+  loop_timing.tick_count_since_step = value % 6;
 }
 
 void SetTotalTickCount(int value){
   loop_timing.tick_count_since_start = value;
 }
 
-void ResetSequenceCounters(){
+
+
+void Beginning(){
   SetTickCountInSequence(0);
-  step_count = FIRST_STEP; 
-  //Serial.println(String("ResetSequenceCounters Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  step_count = FIRST_STEP;
+  bar_count = FIRST_BAR;
+}
+
+
+void ResetToFirstStep(){
+  
+  // TODO check if we really need this or possible bug with bars
+  SetTickCountInSequence(0);
+  step_count = FIRST_STEP;
+
+  IncrementOrResetBarCount();
+  
+
+  
+  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
 }
 
 
@@ -309,9 +325,51 @@ uint8_t IncrementStepCount(){
   return step_count_sanity(step_count);
 }
 
+uint8_t IncrementOrResetBarCount(){
+
+  // Every time we call this function we advance or reset the bar
+  if (bar_count == MAX_BAR){
+    bar_count = FIRST_BAR;
+  } else {
+    bar_count = BarCountSanity(bar_count + 1);
+  }
+  
+  Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
+  return BarCountSanity(bar_count);
+}
 
 
 boolean midi_clock_detected = LOW;
+
+
+ unsigned int  min_pot_value;
+ unsigned int max_pot_value;
+
+
+void printVersion(){
+    Serial.println(String("SimonSaysSeeq! Version: v") +  simon_says_seq_version + String("-") + hardware);
+}
+
+
+
+uint8_t BarCountSanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
+  
+  if (bar_count_in > MAX_BAR){
+    Serial.println(String("**** ERROR bar_count_in > MAX_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = MAX_BAR;
+  } else if (bar_count_in < FIRST_BAR){
+    Serial.println(String("**** ERROR bar_count_in < FIRST_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = FIRST_BAR;
+  } else {
+    bar_count_fixed = bar_count_in;
+  }
+  return bar_count_fixed;
+}
+
+
+
+
 
 void setup() {
 
@@ -323,7 +381,17 @@ void setup() {
 
   // Can set to 10 (default?) or 12 bits. Higher resolutions will result in aproximation.
   // Resolution 
-  analogReadResolution(10);
+
+   int resolution = 10;
+  analogReadResolution(resolution);
+
+
+
+   min_pot_value = 0;
+  max_pot_value = pow(2, resolution) - 1;
+
+    Serial.println(String("resolution is : ") + resolution + String(" bits. The range is ") + min_pot_value + " to " + max_pot_value ) ;
+
 
   ///////////////////////////////////////////
   // Pin configuration
@@ -358,6 +426,7 @@ void setup() {
   // Initialise timing
   // Use zero based indexing for step_count so that modular operations (counting multiples of 4, 16 etc are easier)
   step_count = FIRST_STEP;
+  bar_count = FIRST_BAR;
   loop_timing.tick_count_in_sequence = 0;
   //
 
@@ -365,10 +434,22 @@ void setup() {
  InitMidiSequence();
 
 
+ 
+
+
    /////////////////////////////////////////////////////////
    // Say hello by flashing the LEDs, show we are ready to sequence. 
   uint8_t my_delay_time = 50;
   uint8_t my_no_of_times = 10;
+
+  // Get values at setup so isCrossing etc works later
+  upper_input_raw = analogRead(upper_pot_pin);
+  upper_pot_high_value = upper_input_raw;  
+  upper_pot_low_value = upper_input_raw; 
+
+  lower_input_raw = analogRead(lower_pot_pin);
+  lower_pot_high_value = lower_input_raw; 
+  lower_pot_low_value = lower_input_raw; 
   
   // Say Hello to the Teensy LED 
   Flash(my_delay_time, my_no_of_times, teensy_led_pin);
@@ -382,7 +463,8 @@ void setup() {
   ///////////////////////////////////////
   // Debugging hello
   Serial.begin(57600);
-  Serial.println(String("Simon Says Gray Code Seeq! Version: ") + simon_says_seq_version);
+  printVersion();
+  
   Serial.println(String("audioShield.inputSelect on: ") + AUDIO_INPUT_LINEIN ) ;
 
   // https://en.cppreference.com/w/cpp/types/integer
@@ -557,17 +639,19 @@ void InitSequencer(){
   GateLow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
-  ResetSequenceCounters();
+  Beginning();
 }
 
 void StartSequencer(){
-  Serial.println(String("Start Sequencer "));
+  Serial.println(String("Starting Sequencer.."));
+  printVersion(); 
   InitSequencer();
   sequence_is_running = HIGH;
 }
 
 void StopSequencer(){
-  Serial.println(String("Stop Sequencer "));      
+  Serial.println(String("Stopping Sequencer.."));
+  printVersion();      
   InitSequencer();
   sequence_is_running = LOW;        
 }
@@ -634,39 +718,38 @@ int SequenceSettings(){
   // Get the Pot positions. 
   // We will later assign the values dependant on the push button state
   upper_input_raw = analogRead(upper_pot_pin);
-  Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
+  //Serial.println(String("***** upper_input_raw *** is: ") + upper_input_raw  );
   lower_input_raw = analogRead(lower_pot_pin);
-  Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
+  //Serial.println(String("*****lower_input_raw *** is: ") + lower_input_raw  );
 
 
   if ((button_1_state == HIGH) & IsCrossing(upper_pot_high_value, upper_input_raw, FUZZINESS_AMOUNT)) {
     upper_pot_high_value = GetValue(upper_input_raw, upper_pot_high_value, jitter_reduction);
-    Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
-    
+    //Serial.println(String("**** NEW value for upper_pot_high_value is: ") + upper_pot_high_value  );
   } else {
-    Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
+    //Serial.println(String("NO new value for upper_pot_high_value . Sticking at: ") + upper_pot_high_value  );
   }
   
   if ((button_1_state == LOW) & IsCrossing(upper_pot_low_value, upper_input_raw, FUZZINESS_AMOUNT)) {   
     upper_pot_low_value = GetValue(upper_input_raw, upper_pot_low_value, jitter_reduction);
-    Serial.println(String("**** NEW value for upper_pot_low_value is: ") + upper_pot_low_value  );
+    //Serial.println(String("**** NEW value for upper_pot_low_value is: ") + upper_pot_low_value  );
   } else {
-    Serial.println(String("NO new value for upper_pot_low_value . Sticking at: ") + upper_pot_low_value  );
+    //Serial.println(String("NO new value for upper_pot_low_value . Sticking at: ") + upper_pot_low_value  );
   }
   
   if ((button_1_state == HIGH) & IsCrossing(lower_pot_high_value, lower_input_raw, FUZZINESS_AMOUNT)) {    
     lower_pot_high_value = GetValue(lower_input_raw, lower_pot_high_value, jitter_reduction);
-    Serial.println(String("**** NEW value for lower_pot_high_value is: ") + lower_pot_high_value  );  
+    //Serial.println(String("**** NEW value for lower_pot_high_value is: ") + lower_pot_high_value  );  
   } else {
-    Serial.println(String("NO new value for lower_pot_high_value . Sticking at: ") + lower_pot_high_value  );
+    //Serial.println(String("NO new value for lower_pot_high_value . Sticking at: ") + lower_pot_high_value  );
   }
   
   
   if ((button_1_state == LOW) & IsCrossing(lower_pot_low_value, lower_input_raw, FUZZINESS_AMOUNT)) {   
     lower_pot_low_value = GetValue(lower_input_raw, lower_pot_low_value, jitter_reduction);
-    Serial.println(String("**** NEW value for lower_pot_low_value is: ") + lower_pot_low_value  );
+    //Serial.println(String("**** NEW value for lower_pot_low_value is: ") + lower_pot_low_value  );
   } else {
-    Serial.println(String("NO new value for lower_pot_low_value . Sticking at: ") + lower_pot_low_value  );
+    //Serial.println(String("NO new value for lower_pot_low_value . Sticking at: ") + lower_pot_low_value  );
   }
 
 
@@ -691,9 +774,6 @@ int SequenceSettings(){
     external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
 
 
-//////////////////////////////////////////////
-
-//amp_1_object.gain(1.0);
 
 
 
@@ -704,7 +784,7 @@ int SequenceSettings(){
    // 8 bit sequence - 8 Least Significant Bits
    last_binary_sequence = binary_sequence;
 
- //  binary_sequence = (upper_pot_high_value & sequence_bits_8_through_1) + 1;
+
 
    // If we have 8 bits, use the range up to 255
 
@@ -714,13 +794,11 @@ int SequenceSettings(){
    unsigned int binary_sequence_upper_limit; 
 
 
-//binary_sequence_upper_limit = pow(sequence_length_in_steps, 2);
-
 // REMEMBER, sequence_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^sequence_length_in_steps) - 1
-binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1; 
+binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1; 
 
    //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
     
@@ -752,41 +830,15 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    //Serial.println();
 
 
-
     the_sequence = gray_code_sequence;
 
-    bitClear(the_sequence, sequence_length_in_steps -1); // sequence_length_in_steps is 1 based index. bitClear is zero based index.
-
-    the_sequence = ~ the_sequence; // Invert
-
-   
-    // So pot fully counter clockwise is 1 on the first beat 
-    if (binary_sequence == 1){
-      the_sequence = 1;
-    }
-
-
-    
-    
-
-   Serial.println(String("the_sequence is: ") + the_sequence  );
-   Serial.print("\t");
-   Serial.print(the_sequence, BIN);
-   Serial.println();
-
-
-   
-  //Serial.println(String("right_peak_level is: ") + right_peak_level  );
-
- 
 
 // Sequence length raw
 // ***UPPER pot LOW value***
- sequence_length_in_steps_raw = fscale( 15, 1023, 0, 15, upper_pot_low_value, 0);   ;
- // Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
-   
-   //((upper_pot_low_value & sequence_length_in_steps_bits_8_7_6) >> 5) + 1; // We want a range 1 - 8
-   
+
+
+ sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
+
 
   // Highlight the first step 
   if (step_count == FIRST_STEP) {
@@ -854,7 +906,6 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    ////////////////////////
 
    // ***LOWER Pot LOW Button*** (Multiplex on lower_pot_low_value)
-   // cv_waveform_b_frequency_raw = ((lower_pot_low_value & cv_waveform_b_frequency_bits_4_3_2_1) >> 0);
    cv_waveform_b_frequency_raw = lower_pot_low_value;
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
@@ -874,39 +925,16 @@ binary_sequence_upper_limit = pow(2, sequence_length_in_steps) - 1;
    
    //Serial.println(String("cv_waveform_b_amplitude_delta_raw is: ") + cv_waveform_b_amplitude_delta_raw  );
    
-   // setting-b-amp-delta
-   //cv_waveform_b_amplitude_delta = fscale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, -10, 10, cv_waveform_b_frequency_raw, 1.5) / 100;
-   
    cv_waveform_b_amplitude_delta = linearScale( 0, CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT, 0.0, 0.3, cv_waveform_b_frequency_raw);
-   
-
-   
+      
    //Serial.println(String("cv_waveform_b_amplitude_delta is: ") + cv_waveform_b_amplitude_delta  );
 
-   // Lower Pot LOW Button (Multiplex on lower_pot_low_value)
-   //cv_waveform_a_amplitude_raw = (lower_pot_low_value & cv_waveform_a_amplitude_bits_8_7_6_5) >> 4 ; 
-   //Serial.println(String("cv_waveform_a_amplitude_raw is: ") + cv_waveform_a_amplitude_raw  );  
-   //cv_waveform_a_amplitude = fscale( 0, 7, 0.1, 0.99, cv_waveform_a_amplitude_raw, -1.5);
-   //Serial.println(String("cv_waveform_a_amplitude is: ") + cv_waveform_a_amplitude  );
-
    cv_waveform_a_amplitude = 0.99;
-
-   // Put this and above on the inputs.
-
-   // TODO Add offset?
-   // Lower Pot LOW Button
-   //   cv_offset_raw = (lower_pot_low_value & bits_2_1);
-   //   Serial.println(String("cv_offset_raw is: ") + cv_offset_raw  );
-   //   cv_offset = fscale( 0, 3, 0, 1, cv_offset_raw, -1.5);
-   //   Serial.println(String("cv_offset is: ") + cv_offset  );
-
  
     // Used for CV
     cv_waveform_a_object.frequency(cv_waveform_a_frequency); // setting-a-freq
     cv_waveform_a_object.amplitude(cv_waveform_a_amplitude); // setting-a-amp
     cv_waveform_a_object.offset(0);
-
-
 
 
     // MONITOR GATE    
@@ -941,23 +969,26 @@ void InitMidiSequence(){
 
   Serial.println(String("InitMidiSequence Start ")  );
 
-  // Loop through steps
-  for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-    //Serial.println(String("Step ") + sc );
+  // Loop through bars
+  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
+
+    // Loop through steps
+    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+      //Serial.println(String("Step ") + sc );
+    
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Initialise and print Note on (1) and Off (2) contents of the array.
+        // WRITE MIDI MIDI_DATA
+        channel_a_midi_note_events[bc][sc][n][1].is_active = 0;
+        channel_a_midi_note_events[bc][sc][n][0].is_active = 0;
   
-    // Loop through notes
-    for (uint8_t n = 0; n <= 127; n++) {
-      // Initialise and print Note on (1) and Off (2) contents of the array.
-      // WRITE MIDI MIDI_DATA
-     channel_a_midi_note_events[sc][n][1].is_active = 0;
-     channel_a_midi_note_events[sc][n][0].is_active = 0;
-
-      
-      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
-      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
-    } 
+        
+        //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[bc][sc][n][1].is_active);
+        //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[bc][sc][n][0].is_active);
+      } 
+    }
   }
-
 
   for (uint8_t n = 0; n <= 127; n++) {
      channel_a_ghost_events[n].is_active = 0;
@@ -973,23 +1004,21 @@ Serial.println(String("InitMidiSequence Done ")  );
 void PlayMidi(){
   // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
-
-
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[step_count_sanity(step_count)][n][1].tick_count_in_sequence == loop_timing.tick_count_in_sequence){
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
              // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
-             MIDI.sendNoteOn(n, channel_a_midi_note_events[step_count_sanity(step_count)][n][1].velocity, 1);
+             MIDI.sendNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[step_count_sanity(step_count)][n][0].tick_count_in_sequence == loop_timing.tick_count_in_sequence){ 
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            // Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            MIDI.sendNoteOff(n, 0, 1);
        }
@@ -1211,19 +1240,12 @@ bool Button1HasChanged(bool button_1_state){
 
 void AdvanceSequenceChronology(){
 
-
-
-  
   // This function advances or resets the sequence powered by the clock.
-
   // But first check / set the desired sequence length
 
+  sequence_length_in_steps = sequence_length_in_steps_raw;
 
-    //Serial.println(String("sequence_length_in_steps_raw is: ") + sequence_length_in_steps_raw  );
-  // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
-
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
     Serial.println(String("**** ERROR with sequence_length_in_steps it WAS: ") + sequence_length_in_steps  + String(" but setting it to: ") + MIN_SEQUENCE_LENGTH_IN_STEPS );
@@ -1242,8 +1264,6 @@ void AdvanceSequenceChronology(){
 
   // Always advance the ticks SINCE START
   SetTotalTickCount(loop_timing.tick_count_since_start += 1);
-
-
 
 
   // Midi provides 24 PPQ (pulses per quarter note) (crotchet). 
@@ -1276,9 +1296,9 @@ void AdvanceSequenceChronology(){
   )
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
-  loop_timing.tick_count_in_sequence >= 16 * 6
+  loop_timing.tick_count_in_sequence >= 16 * 6 // Fix for multiple bars
   ) { // Reset
-    ResetSequenceCounters();
+    ResetToFirstStep();
   } else {
     SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
   }
@@ -1290,7 +1310,7 @@ void AdvanceSequenceChronology(){
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  ); 
+ Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step + String(" tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence  ); 
 
   
 }
@@ -1358,13 +1378,16 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
 void DisableNotes(uint8_t note){
              // Disable that note for all steps.
            uint8_t sc = 0;
+           uint8_t bc = 0;
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[sc][note][1].velocity = 0;
-              channel_a_midi_note_events[sc][note][1].is_active = 0;
-              channel_a_midi_note_events[sc][note][0].velocity = 0;
-              channel_a_midi_note_events[sc][note][0].is_active = 0;         
+              channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+              channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][0].is_active = 0;         
             }
+           }
 }
 
 
@@ -1391,12 +1414,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
     
         } else {
           // We want the note on, so set it on.
-          Serial.println(String("Setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[step_count][note][1].tick_count_in_sequence = loop_timing.tick_count_in_sequence; // Only one of these per step.
-          channel_a_midi_note_events[step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[step_count][note][1].is_active = 1;
-           Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
+          channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
+           Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
 
         } 
       
@@ -1404,17 +1427,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           
             // Note Off
-             Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+             Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[step_count][note][0].tick_count_in_sequence = loop_timing.tick_count_in_sequence;
-             channel_a_midi_note_events[step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[step_count][note][0].is_active = 1;
-             Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when step is ") + step_count );
+             channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
+             channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
+             Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
 
           
   }
   } 
 
+/////
 uint8_t step_count_sanity(uint8_t step_count_){
   uint8_t step_count_fixed;
   
@@ -1429,6 +1453,8 @@ uint8_t step_count_sanity(uint8_t step_count_){
   }
   return step_count_fixed;
 }
+//////
+
 
 
 

@@ -1249,7 +1249,7 @@ void SetSequenceLength() {
   // Serial.println(String("max_pot_value is: ") + max_pot_value  );
   //  Serial.println(String("pot2_input_value is: ") + pot2_input_value  );
 
-// HERE
+
 
   // NOTE Sometimes we might not get 0 out of a pot - or 1.0 so use the middle range
   sequence_length_in_steps = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, pot2_input_value, 0);
