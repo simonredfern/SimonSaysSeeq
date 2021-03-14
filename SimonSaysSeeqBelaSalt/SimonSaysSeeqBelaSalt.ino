@@ -127,9 +127,9 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MAX_CLOCK_DIVIDE_INPUT = 128;
+const uint8_t MAX_midi_control_a_input = 128;
 
-const uint8_t MAX_PROGRESSION_INPUT = 4;
+const uint8_t MAX_midi_control_b_input = 4;
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -171,8 +171,8 @@ int total_delay_frames = 22050;
 float delay_feedback_amount = 0.999; //0.999
 
 
-uint8_t clock_divide_input = 1; // normal
-uint8_t progression_input = 1; // normal
+uint8_t midi_control_a_input = 1; // normal
+uint8_t midi_control_b_input = 1; // normal
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -227,7 +227,7 @@ int button_2_PIN = 14;
 int new_button_2_state = 0; 
 int old_button_2_state = 0; 
 
-// Salt + ?
+// Salt +
 
 int button_3_PIN = 1; 
 int new_button_3_state = 0; 
@@ -320,8 +320,8 @@ const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
 const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t CLOCK_DIVIDE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
-const uint8_t PROGRESSION_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
+const uint8_t MIDI_CONTROL_A_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
+const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
 
@@ -860,8 +860,8 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("clock_divide_input is: %d \n", clock_divide_input);
-		rt_printf("progression_input is: %d \n", progression_input);
+		rt_printf("midi_control_a_input is: %d \n", midi_control_a_input);
+		rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
 		
 
@@ -1272,10 +1272,10 @@ int gAudioFramesPerAnalogFrame = 0;
 
 void SetPlayFromCount(){
 
-  if (progression_input == 0){
+  if (midi_control_b_input == 0){
     bar_play = bar_count;
 
-  } else if (progression_input == 1)  {
+  } else if (midi_control_b_input == 1)  {
       if (bar_count <= 1){
           bar_play = bar_count;  
       } else {
@@ -2088,17 +2088,8 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
-			
-			
 			InitMidiSequence();
 			AllNotesOff();
-			
-			// if ((fine_delay_frames - fine_delay_frames_delta) < 0){
-			// 	// Skip
-			// } else { 
-			// 	fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
-			// }			
-			
 			do_button_4_action = 0;
 		}
 
@@ -2539,15 +2530,13 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == CLOCK_DIVIDE_INPUT_PIN){
-		  	clock_divide_input = floor(map(analogRead(context, n, CLOCK_DIVIDE_INPUT_PIN), 0, 1, 0, MAX_CLOCK_DIVIDE_INPUT));
-		  	
+		  if (ch == MIDI_CONTROL_A_INPUT_PIN){
+		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, 0, MAX_midi_control_a_input));
 		  }
 		  
 		  // > 0.999 leads to distorsion
-		  if (ch == PROGRESSION_INPUT_PIN){
-		  	progression_input = floor(map(analogRead(context, n, PROGRESSION_INPUT_PIN), 0, 1, 0, MAX_PROGRESSION_INPUT));
-		  	
+		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
+		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, 0, MAX_midi_control_b_input));
 		  }
 		  
 		  
