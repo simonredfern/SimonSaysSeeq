@@ -127,9 +127,9 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MAX_midi_control_a_input = 128;
+const uint8_t MAX_MIDI_CONTROL_A_INPUT = 128;
 
-const uint8_t MAX_midi_control_b_input = 4;
+const uint8_t MAX_MIDI_CONTROL_B_INPUT = 128;
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -516,7 +516,7 @@ if(frame_timer < 440000) {
 			target_led_1_state = ! target_led_1_state;
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
-			rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
+			//rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
 		} 
 	// Once we're done..
 	} else {
@@ -802,7 +802,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1000 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -1310,7 +1310,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-            	rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
+            	//rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
             	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
            }
     } 
@@ -2531,12 +2531,12 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		  if (ch == MIDI_CONTROL_A_INPUT_PIN){
-		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, 0, MAX_midi_control_a_input));
+		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, 0, MAX_MIDI_CONTROL_A_INPUT));
 		  }
 		  
 		  // > 0.999 leads to distorsion
 		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
-		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, 0, MAX_midi_control_b_input));
+		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, 0, MAX_MIDI_CONTROL_B_INPUT));
 		  }
 		  
 		  
