@@ -2086,8 +2086,20 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		}
 
 
-
-
+		// Clear Midi sequence
+		if (do_button_4_action == 1) {
+			
+			
+			InitMidiSequence();
+			
+			// if ((fine_delay_frames - fine_delay_frames_delta) < 0){
+			// 	// Skip
+			// } else { 
+			// 	fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
+			// }			
+			
+			do_button_4_action = 0;
+		}
 
 
 	
@@ -2616,27 +2628,27 @@ void render(BelaContext *context, void *userData)
 
         	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
         	
-        	if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
-        		both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
-        		new_both_buttons_pressed_state = 1;
+        	// if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
+        	// 	both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
+        	// 	new_both_buttons_pressed_state = 1;
         		
-        		if ((both_buttons_pressed_counter % 2) == 0){
-        			both_buttons_pressed_even = 1;
+        	// 	if ((both_buttons_pressed_counter % 2) == 0){
+        	// 		both_buttons_pressed_even = 1;
     
-        			do_both_buttons_action_a = 1;
-        			do_both_buttons_action_b = 0;
-        		} else {
-        		    both_buttons_pressed_even = 0;
-        		    do_both_buttons_action_a = 0;
-        		    do_both_buttons_action_b = 1;
-        		}
+        	// 		do_both_buttons_action_a = 1;
+        	// 		do_both_buttons_action_b = 0;
+        	// 	} else {
+        	// 	    both_buttons_pressed_even = 0;
+        	// 	    do_both_buttons_action_a = 0;
+        	// 	    do_both_buttons_action_b = 1;
+        	// 	}
         		
-        		// Reset the buttons becuase we don't want a one button action as well
-        		new_button_1_state = 0;
-        		new_button_2_state = 0;
+        	// 	// Reset the buttons becuase we don't want a one button action as well
+        	// 	new_button_1_state = 0;
+        	// 	new_button_2_state = 0;
         		
-        	} else {
-        		new_both_buttons_pressed_state = 0;	
+        	// } else {
+        	// 	new_both_buttons_pressed_state = 0;	
  
         	
 	        	// Left button newly pressed get smaller
@@ -2660,7 +2672,7 @@ void render(BelaContext *context, void *userData)
 	        	}
         	
         	
-        	}// End both buttons pressed check
+        //	}// End both buttons pressed check
         	
         	
         
@@ -2673,6 +2685,7 @@ void render(BelaContext *context, void *userData)
 
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
+          // Also set by flash
           if (target_led_1_state == HIGH){
             digitalWriteOnce(context, m, LED_1_PIN, LOW);
             
@@ -2694,11 +2707,7 @@ void render(BelaContext *context, void *userData)
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               
               current_digital_clock_in_state = HIGH;
-
-     
-
-
-              
+   
               if (sequence_is_running == LOW){
                 StartSequencer();
               }
