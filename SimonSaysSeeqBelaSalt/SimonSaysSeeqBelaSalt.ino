@@ -1271,22 +1271,23 @@ float gInverseSampleRate;
 int gAudioFramesPerAnalogFrame = 0;
 
 
-// HERE
+
 void SetPlayFromCount(){
 	
 	
 // 	current_sequence_length_in_steps
 
 
-// something mod x is undefined for x == 0
-
+// If 0, use normal operation (mod 0 would give error)
 if (midi_control_a_input == 0){
 	bar_play = bar_count;	
 } else {
   bar_play = bar_count % midi_control_a_input; 
 }
- 
-if (midi_control_a_input == 0){
+
+
+// If 0, use normal operation (mod 0 would give error)
+if (midi_control_b_input == 0){
 	step_play = step_count;
 } else {
   step_play = step_count % midi_control_b_input;
