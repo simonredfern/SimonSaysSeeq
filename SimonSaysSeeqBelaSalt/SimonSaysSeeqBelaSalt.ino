@@ -127,9 +127,11 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MAX_MIDI_CONTROL_A_INPUT = 128;
+const uint8_t MIN_MIDI_CONTROL_A_INPUT = 0;
+const uint8_t MAX_MIDI_CONTROL_A_INPUT = 16;
 
-const uint8_t MAX_MIDI_CONTROL_B_INPUT = 128;
+const uint8_t MIN_MIDI_CONTROL_B_INPUT = 0;
+const uint8_t MAX_MIDI_CONTROL_B_INPUT = 16;
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -171,8 +173,8 @@ int total_delay_frames = 22050;
 float delay_feedback_amount = 0.999; //0.999
 
 
-uint8_t midi_control_a_input = 1; // normal
-uint8_t midi_control_b_input = 1; // normal
+uint8_t midi_control_a_input = 0; // normal
+uint8_t midi_control_b_input = 0; // normal
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -1269,23 +1271,26 @@ float gInverseSampleRate;
 int gAudioFramesPerAnalogFrame = 0;
 
 
-
+// HERE
 void SetPlayFromCount(){
+	
+	
+// 	current_sequence_length_in_steps
 
-  if (midi_control_b_input == 0){
-    bar_play = bar_count;
 
-  } else if (midi_control_b_input == 1)  {
-      if (bar_count <= 1){
-          bar_play = bar_count;  
-      } else {
-        bar_play = 0;
-      }
-  } else {
-    bar_play = bar_count;
-  }
-  
-  step_play = step_count;
+// something mod x is undefined for x == 0
+
+if (midi_control_a_input == 0){
+	bar_play = bar_count;	
+} else {
+  bar_play = bar_count % midi_control_a_input; 
+}
+ 
+if (midi_control_a_input == 0){
+	step_play = step_count;
+} else {
+  step_play = step_count % midi_control_b_input;
+}
 
 }
 
@@ -2531,12 +2536,12 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		  if (ch == MIDI_CONTROL_A_INPUT_PIN){
-		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, 0, MAX_MIDI_CONTROL_A_INPUT));
+		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_A_INPUT, MAX_MIDI_CONTROL_A_INPUT));
 		  }
 		  
 		  // > 0.999 leads to distorsion
 		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
-		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, 0, MAX_MIDI_CONTROL_B_INPUT));
+		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
 		  }
 		  
 		  
