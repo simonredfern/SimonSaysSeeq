@@ -127,9 +127,11 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MAX_CLOCK_DIVIDE_INPUT = 128;
+const uint8_t MIN_MIDI_CONTROL_A_INPUT = 0;
+const uint8_t MAX_MIDI_CONTROL_A_INPUT = 16;
 
-const uint8_t MAX_PROGRESSION_INPUT = 4;
+const uint8_t MIN_MIDI_CONTROL_B_INPUT = 0;
+const uint8_t MAX_MIDI_CONTROL_B_INPUT = 16;
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -171,8 +173,8 @@ int total_delay_frames = 22050;
 float delay_feedback_amount = 0.999; //0.999
 
 
-uint8_t clock_divide_input = 1; // normal
-uint8_t progression_input = 1; // normal
+uint8_t midi_control_a_input = 0; // normal
+uint8_t midi_control_b_input = 0; // normal
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -227,7 +229,7 @@ int button_2_PIN = 14;
 int new_button_2_state = 0; 
 int old_button_2_state = 0; 
 
-// Salt + ?
+// Salt +
 
 int button_3_PIN = 1; 
 int new_button_3_state = 0; 
@@ -320,8 +322,8 @@ const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
 const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t CLOCK_DIVIDE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
-const uint8_t PROGRESSION_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
+const uint8_t MIDI_CONTROL_A_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
+const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
 
@@ -516,7 +518,7 @@ if(frame_timer < 440000) {
 			target_led_1_state = ! target_led_1_state;
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
-			rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
+			//rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
 		} 
 	// Once we're done..
 	} else {
@@ -802,7 +804,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1000 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -860,8 +862,8 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("clock_divide_input is: %d \n", clock_divide_input);
-		rt_printf("progression_input is: %d \n", progression_input);
+		rt_printf("midi_control_a_input is: %d \n", midi_control_a_input);
+		rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
 		
 
@@ -1271,21 +1273,25 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 void SetPlayFromCount(){
+	
+	
+// 	current_sequence_length_in_steps
 
-  if (progression_input == 0){
-    bar_play = bar_count;
 
-  } else if (progression_input == 1)  {
-      if (bar_count <= 1){
-          bar_play = bar_count;  
-      } else {
-        bar_play = 0;
-      }
-  } else {
-    bar_play = bar_count;
-  }
-  
-  step_play = step_count;
+// If 0, use normal operation (mod 0 would give error)
+if (midi_control_a_input == 0){
+	bar_play = bar_count;	
+} else {
+  bar_play = bar_count % midi_control_a_input; 
+}
+
+
+// If 0, use normal operation (mod 0 would give error)
+if (midi_control_b_input == 0){
+	step_play = step_count;
+} else {
+  step_play = step_count % midi_control_b_input;
+}
 
 }
 
@@ -1310,7 +1316,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-            	rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
+            	//rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
             	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
            }
     } 
@@ -2086,8 +2092,12 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		}
 
 
-
-
+		// Clear Midi sequence
+		if (do_button_4_action == 1) {
+			InitMidiSequence();
+			AllNotesOff();
+			do_button_4_action = 0;
+		}
 
 
 	
@@ -2526,15 +2536,13 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == CLOCK_DIVIDE_INPUT_PIN){
-		  	clock_divide_input = floor(map(analogRead(context, n, CLOCK_DIVIDE_INPUT_PIN), 0, 1, 0, MAX_CLOCK_DIVIDE_INPUT));
-		  	
+		  if (ch == MIDI_CONTROL_A_INPUT_PIN){
+		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_A_INPUT, MAX_MIDI_CONTROL_A_INPUT));
 		  }
 		  
 		  // > 0.999 leads to distorsion
-		  if (ch == PROGRESSION_INPUT_PIN){
-		  	progression_input = floor(map(analogRead(context, n, PROGRESSION_INPUT_PIN), 0, 1, 0, MAX_PROGRESSION_INPUT));
-		  	
+		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
+		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
 		  }
 		  
 		  
@@ -2616,27 +2624,27 @@ void render(BelaContext *context, void *userData)
 
         	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
         	
-        	if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
-        		both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
-        		new_both_buttons_pressed_state = 1;
+        	// if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
+        	// 	both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
+        	// 	new_both_buttons_pressed_state = 1;
         		
-        		if ((both_buttons_pressed_counter % 2) == 0){
-        			both_buttons_pressed_even = 1;
+        	// 	if ((both_buttons_pressed_counter % 2) == 0){
+        	// 		both_buttons_pressed_even = 1;
     
-        			do_both_buttons_action_a = 1;
-        			do_both_buttons_action_b = 0;
-        		} else {
-        		    both_buttons_pressed_even = 0;
-        		    do_both_buttons_action_a = 0;
-        		    do_both_buttons_action_b = 1;
-        		}
+        	// 		do_both_buttons_action_a = 1;
+        	// 		do_both_buttons_action_b = 0;
+        	// 	} else {
+        	// 	    both_buttons_pressed_even = 0;
+        	// 	    do_both_buttons_action_a = 0;
+        	// 	    do_both_buttons_action_b = 1;
+        	// 	}
         		
-        		// Reset the buttons becuase we don't want a one button action as well
-        		new_button_1_state = 0;
-        		new_button_2_state = 0;
+        	// 	// Reset the buttons becuase we don't want a one button action as well
+        	// 	new_button_1_state = 0;
+        	// 	new_button_2_state = 0;
         		
-        	} else {
-        		new_both_buttons_pressed_state = 0;	
+        	// } else {
+        	// 	new_both_buttons_pressed_state = 0;	
  
         	
 	        	// Left button newly pressed get smaller
@@ -2660,7 +2668,7 @@ void render(BelaContext *context, void *userData)
 	        	}
         	
         	
-        	}// End both buttons pressed check
+        //	}// End both buttons pressed check
         	
         	
         
@@ -2673,6 +2681,7 @@ void render(BelaContext *context, void *userData)
 
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
+          // Also set by flash
           if (target_led_1_state == HIGH){
             digitalWriteOnce(context, m, LED_1_PIN, LOW);
             
@@ -2694,11 +2703,7 @@ void render(BelaContext *context, void *userData)
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               
               current_digital_clock_in_state = HIGH;
-
-     
-
-
-              
+   
               if (sequence_is_running == LOW){
                 StartSequencer();
               }
