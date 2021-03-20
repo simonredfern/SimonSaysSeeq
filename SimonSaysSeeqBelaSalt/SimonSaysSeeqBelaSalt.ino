@@ -373,6 +373,8 @@ uint8_t last_note_off = 0;
 uint8_t last_note_disabled = 0;
 
 
+bool init_midi_sequence_has_run = false;
+
 ////////////////////////////////////////////////////
 // Actual pot values
 unsigned int upper_input_raw; // TODO Make t type.
@@ -1801,6 +1803,8 @@ void AllNotesOff(){
 
 
 void InitMidiSequence(){
+	
+  if (init_midi_sequence_has_run == false){	
 
   rt_printf("InitMidiSequence Start \n");
 
@@ -1834,9 +1838,15 @@ void InitMidiSequence(){
   
 
 
-  
+    init_midi_sequence_has_run = true;
 
 	rt_printf("InitMidiSequence Done \n");
+	
+  } else {
+  	rt_printf("InitMidiSequence Skipped because already done \n");
+  }
+	
+	
 }
 
 
