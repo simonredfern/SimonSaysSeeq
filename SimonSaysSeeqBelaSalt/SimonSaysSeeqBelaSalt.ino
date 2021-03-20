@@ -1276,10 +1276,13 @@ int gAudioFramesPerAnalogFrame = 0;
 
 void SetPlayFromCount(){
 	
+bar_play = bar_count;
+step_play = step_count;
+
 	
 // 	current_sequence_length_in_steps
 
-
+/*
 // If 0, use normal operation (mod 0 would give error)
 if (midi_control_a_input == 0){
 	bar_play = bar_count;	
@@ -1294,6 +1297,8 @@ if (midi_control_b_input == 0){
 } else {
   step_play = step_count % midi_control_b_input;
 }
+
+*/
 
 }
 
