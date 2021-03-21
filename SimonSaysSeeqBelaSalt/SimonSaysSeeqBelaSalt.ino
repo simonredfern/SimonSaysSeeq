@@ -806,7 +806,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1 == 0) {
+    if(gCount % 1000 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -1807,9 +1807,9 @@ void AllNotesOff(){
 
 
 
-void InitMidiSequence(){
+void InitMidiSequence(bool force){
 	
-  if (init_midi_sequence_has_run == false){	
+  if (init_midi_sequence_has_run == false || force == true){	
 
   rt_printf("InitMidiSequence Start \n");
 
@@ -1863,7 +1863,7 @@ void InitSequencer(){
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
-  InitMidiSequence();
+  InitMidiSequence(false);
   AllNotesOff();
 }
 
@@ -2109,7 +2109,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
-			InitMidiSequence();
+			InitMidiSequence(true);
 			AllNotesOff();
 			do_button_4_action = 0;
 		}
