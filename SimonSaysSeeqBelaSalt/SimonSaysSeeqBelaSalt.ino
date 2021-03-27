@@ -558,8 +558,21 @@ class NoteInfo
 NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
-void SaveSequenceToFile(uint8_t note){
-             // Disable that note for all steps.
+void SaveSequenceToFile(){
+	
+	
+	rt_printf("Hello from SaveSequenceToFile \n");
+	
+	
+	#include <cstdlib>
+
+	const int dir= system("mkdir -p _sss_config");
+// if (dir< 0)
+// {
+//      return;
+// }
+	
+     
            uint8_t sc = 0;
            uint8_t bc = 0;
            uint8_t n = 0;
@@ -567,25 +580,19 @@ void SaveSequenceToFile(uint8_t note){
            
            std::string file_prefix;
            std::string file_name;
-           
-           
-               
+     
     		std::ofstream current_file;
 
-           
-           
-           
-           
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               for (n = 0; n <= 127; n++){	
             	// WRITE MIDI MIDI_DATA
-            	channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
-            	channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
-            	channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
-            	channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
+            	// channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+            	// channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+            	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+            	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
             	
-            	file_prefix = "sss_seq_bc_" + std::to_string(bc) + "_sc_" + std::to_string(sc);
+            	file_prefix = "_sss_config/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
             	
             	file_name = file_prefix +  "_note_on_vel";
             	
@@ -593,22 +600,13 @@ void SaveSequenceToFile(uint8_t note){
 				current_file.open (file_name, std::ios::out | std::ios::app | std::ios::binary);
 				// channel_a_midi_note_events[bc][sc][note][1].velocity 
 				
-				current_file << "Writing this to a file.\n";
+				current_file << "Simon"; // channel_a_midi_note_events[bc][sc][n][1].velocity; // "Writing this to a file.\n";
 				current_file.close();
-            	
-            	
             	
             	file_name = file_prefix + "_note_on_isa";
             	file_name = file_prefix + "_note_off_vel";
             	file_name = file_prefix + "_note_off_isa";
-            	
-            	
-            	
-        
-            	
- 
-            	
-            	
+   	
             	
               }
             }
@@ -2289,13 +2287,13 @@ WriteFile file2;
 
 bool setup(BelaContext *context, void *userData){
 	
+	
+	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
+	
 
+	SaveSequenceToFile();
 	
 	
-    
-    
-
-	// rt_printf("Hello from Setup: SimonSaysSeeq on Bela  \n");
 
 	scope.setup(4, context->audioSampleRate);
 
