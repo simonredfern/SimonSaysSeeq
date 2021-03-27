@@ -80,6 +80,8 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <iostream>
 #include <fstream>
 
+#include <cstdlib>
+
 #include <libraries/UdpClient/UdpClient.h>
 
 UdpClient myUdpClient;
@@ -564,7 +566,7 @@ void SaveSequenceToFile(){
 	rt_printf("Hello from SaveSequenceToFile \n");
 	
 	
-	#include <cstdlib>
+
 
 	const int dir= system("mkdir -p _sss_config");
 // if (dir< 0)
