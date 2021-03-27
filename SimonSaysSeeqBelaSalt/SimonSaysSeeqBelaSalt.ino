@@ -566,8 +566,8 @@ void SaveSequenceToFile(){
 	rt_printf("Hello from SaveSequenceToFile \n");
 	
     // Create directory. Note this directory will contain *hidden* files else the Bela IDE (node process) grinds to a halt. 
-	const int dir= system("mkdir -p _sss_config");
-     const int la= system("chmod 444 _sss_config");
+	const int dir= system("mkdir -p ._sss_config");
+     const int la= system("chmod 444 ._sss_config");
 	
      
            uint8_t sc = 0;
@@ -590,7 +590,7 @@ void SaveSequenceToFile(){
             	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
             	
               // Use . to hide the file so Bela doesn't get its knickers in a twist
-            	file_prefix = "_sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+            	file_prefix = "._sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
             	
             	file_name = file_prefix +  "_note_on_vel";
             	
