@@ -594,7 +594,8 @@ void SaveSequenceToFile(){
             	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
             	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
             	
-            	file_prefix = "_sss_config/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+              // Use . to hide the file so Bela doesn't get its knickers in a twist
+            	file_prefix = "_sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
             	
             	file_name = file_prefix +  "_note_on_vel";
             	
