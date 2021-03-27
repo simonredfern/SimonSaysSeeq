@@ -77,6 +77,9 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <chrono>
 
+#include <iostream>
+#include <fstream>
+
 #include <libraries/UdpClient/UdpClient.h>
 
 UdpClient myUdpClient;
@@ -2178,13 +2181,45 @@ float gDel_y2_r = 0;
 
 
 
+#include <libraries/WriteFile/WriteFile.h>
+WriteFile file1;
+WriteFile file2;
+
+
 /////////////////////////////////////////////////////////
 
 bool setup(BelaContext *context, void *userData){
 	
-//	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
+    rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
+    
+    // Note files go into /root/Bela/projects/SimonSaysSeeq2 (or the name of the file you use)
+    
+    
+    std::ofstream myfile;
+	//myfile.open ("./sss_midi.txt");
+	myfile.open ("sss_midi.bin", std::ios::out | std::ios::app | std::ios::binary);
+	myfile << "Writing this to a file.\n";
+	myfile.close();
+	
+	
+	
+	    file2.setup("simon_says_test_out.m"); //set the file name to write to
+        file2.setHeader("myvar=[\n"); //set one or more lines to be printed at the beginning of the file
+        file2.setFooter("];\n"); //set one or more lines to be printed at the end of the file
+        file2.setFormat("%.4f %.4f\n"); // set the format that you want to use for your output. Please use %f only (with modifiers)
+        file2.setFileType(kText);
+        file2.setEchoInterval(1); // only print to the console 1 line every other 10000
+        
+        file2.log(12345678);
+        //file2.log(version);
+        
+        Bela_requestStop();
+	
+	
+    
+    
 
-	rt_printf("Hello from Setup: SimonSaysSeeq on Bela  \n");
+	// rt_printf("Hello from Setup: SimonSaysSeeq on Bela  \n");
 
 	scope.setup(4, context->audioSampleRate);
 
