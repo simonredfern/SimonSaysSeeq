@@ -89,7 +89,7 @@ UdpClient myUdpClient;
 // ...
 
 
-const char version[16]= "v0.25-BelaSalt";
+const char version[16]= "v0.2-BelaSalt";
 
 Scope scope;
 
@@ -560,25 +560,34 @@ class NoteInfo
 NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
-void SaveSequenceToFile(){
+void SyncSequenceToFile(bool write_to_file){
 	
 	
-	rt_printf("Hello from SaveSequenceToFile \n");
+	rt_printf("Hello from SyncSequenceToFile \n");
 	
-    // Create directory. Note this directory will contain *hidden* files else the Bela IDE (node process) grinds to a halt. 
-	const int dir= system("mkdir -p ._sss_config");
-     const int la= system("chmod 444 ._sss_config");
+    // Create directory. 
+    // Note this directory MUST be *OUT* of the project path, else Node.JS process "node" (which runs the Bela IDE) will grind to a halt. (even if files are marked as hidden node will spend CPU time on them)
+ 
+	const int dir= system("mkdir -p /var/SimonSaysSeeqConfig");
 	
-     
            uint8_t sc = 0;
            uint8_t bc = 0;
            uint8_t n = 0;
-           //char file[32]= "v0.25-BelaSalt";
            
            std::string file_prefix;
            std::string file_name;
      
     		std::ofstream current_file;
+
+
+
+			  std::string line;
+			  
+
+			  
+			 std::string got;
+			  
+			  
 
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
@@ -590,34 +599,86 @@ void SaveSequenceToFile(){
             	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
             	
               // Use . to hide the file so Bela doesn't get its knickers in a twist
-            	file_prefix = "._sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+             //	file_prefix = "._sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+
+
+			file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+
             	
-            	file_name = file_prefix +  "_note_on_vel";
+            	file_name = file_prefix +  "_ON_vel";
+            
+            
+            if (write_to_file == true) {
             	
- 
-				current_file.open (file_name, std::ios::out | std::ios::app | std::ios::binary);
+            	
+            	rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
+            	
+				// Open for writing in truncate mode (we will replace the contents)
+				current_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 				// channel_a_midi_note_events[bc][sc][note][1].velocity 
 				
-				current_file << "Simon"; // channel_a_midi_note_events[bc][sc][n][1].velocity; // "Writing this to a file.\n";
+				//current_file <<  "2222\n"; // channel_a_midi_note_events[bc][sc][n][1].velocity; // "Writing this to a file.\n";
+				
+				
+				
+				current_file << channel_a_midi_note_events[bc][sc][n][1].velocity << std::endl;
 				current_file.close();
+				
+            } else {
             	
-            	file_name = file_prefix + "_note_on_isa";
-            	file_name = file_prefix + "_note_off_vel";
-            	file_name = file_prefix + "_note_off_isa";
+            	rt_printf("SyncSequenceToFile will READ sequence from Files \n");
+				
+				std::ifstream read_file(file_prefix +  "_ON_vel");
+				
+
+  
+  
+				  if (read_file.is_open())
+				  {
+				    while ( getline (read_file,line) )
+				    {
+				     // got << line << "\n";
+				      
+				      
+				      std::string str_dec = "1987520";
+				      
+				       std::string::size_type sz;   // alias of size_t
+				      long li_dec = std::stol (line,&sz);
+				      
+				      rt_printf("Got %d \n", li_dec); 
+				    }
+				    read_file.close();
+				  }
+				
+				  else {
+				  	rt_printf("Unable to open file \n"); 
+				  }		
+			
+            }// end read/write test
+				
+				
+				////////
+				//read_file >> 
+            	
+            //	file_name = file_prefix + "_note_on_isa";
+            //	file_name = file_prefix + "_note_off_vel";
+            //	file_name = file_prefix + "_note_off_isa";
    	
             	
               }
             }
            }
            
-    rt_printf("Bye from SaveSequenceToFile \n");       
+    rt_printf("Bye from SyncSequenceToFile \n");       
 }
 
+///////
 
 
 
 
 
+///////
 
 void SaveNoteInfos() {
 	
@@ -2291,7 +2352,7 @@ bool setup(BelaContext *context, void *userData){
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 	
 
-	SaveSequenceToFile();
+	SyncSequenceToFile(false);
 	
 	
 
@@ -2901,7 +2962,7 @@ void render(BelaContext *context, void *userData)
 
 void cleanup(BelaContext *context, void *userData)
 {
-
+	SyncSequenceToFile(true);
 }
 
 
