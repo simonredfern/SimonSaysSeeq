@@ -565,14 +565,9 @@ void SaveSequenceToFile(){
 	
 	rt_printf("Hello from SaveSequenceToFile \n");
 	
-	
-
-
+    // Create directory. Note this directory will contain *hidden* files else the Bela IDE (node process) grinds to a halt. 
 	const int dir= system("mkdir -p _sss_config");
-// if (dir< 0)
-// {
-//      return;
-// }
+     const int la= system("chmod 444 _sss_config");
 	
      
            uint8_t sc = 0;
