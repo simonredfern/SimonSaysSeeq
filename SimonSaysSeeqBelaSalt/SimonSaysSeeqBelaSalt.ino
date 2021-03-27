@@ -203,7 +203,7 @@ AuxiliaryTask gPrintStatus;
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
-// to passing a structure to userData in setup()
+// to passing a structure to userData in set up()
 int gNumOscillators = 2; // was 500
 int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
@@ -558,6 +558,105 @@ class NoteInfo
 NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
+void SaveSequenceToFile(uint8_t note){
+             // Disable that note for all steps.
+           uint8_t sc = 0;
+           uint8_t bc = 0;
+           uint8_t n = 0;
+           //char file[32]= "v0.25-BelaSalt";
+           
+           std::string file_prefix;
+           std::string file_name;
+           
+           
+               
+    		std::ofstream current_file;
+
+           
+           
+           
+           
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+              for (n = 0; n <= 127; n++){	
+            	// WRITE MIDI MIDI_DATA
+            	channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+            	channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+            	channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+            	channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
+            	
+            	file_prefix = "sss_seq_bc_" + std::to_string(bc) + "_sc_" + std::to_string(sc);
+            	
+            	file_name = file_prefix +  "_note_on_vel";
+            	
+ 
+				current_file.open (file_name, std::ios::out | std::ios::app | std::ios::binary);
+				// channel_a_midi_note_events[bc][sc][note][1].velocity 
+				
+				current_file << "Writing this to a file.\n";
+				current_file.close();
+            	
+            	
+            	
+            	file_name = file_prefix + "_note_on_isa";
+            	file_name = file_prefix + "_note_off_vel";
+            	file_name = file_prefix + "_note_off_isa";
+            	
+            	
+            	
+        
+            	
+ 
+            	
+            	
+            	
+              }
+            }
+           }
+}
+
+
+
+
+
+
+
+void SaveNoteInfos() {
+	
+	    rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
+    
+    // Note files go into /root/Bela/projects/SimonSaysSeeq2 (or the name of the file you use)
+    
+
+	
+	
+	
+	    // file2.setup("simon_says_test_out.m"); //set the file name to write to
+     //   file2.setHeader("myvar=[\n"); //set one or more lines to be printed at the beginning of the file
+     //   file2.setFooter("];\n"); //set one or more lines to be printed at the end of the file
+     //   file2.setFormat("%.4f %.4f\n"); // set the format that you want to use for your output. Please use %f only (with modifiers)
+     //   file2.setFileType(kBinary);
+     //   file2.setEchoInterval(1); // only print to the console 1 line every other 10000
+        
+        
+        
+        // channel_a_midi_note_events
+        
+        
+        //NoteInfo
+        //channel_a_midi_note_events
+        
+      
+        
+        //file2.log(1);
+        //file2.log(version);
+        
+        // Bela_requestStop();
+	
+	
+	
+	
+}
 
 
 
@@ -2190,30 +2289,7 @@ WriteFile file2;
 
 bool setup(BelaContext *context, void *userData){
 	
-    rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
-    
-    // Note files go into /root/Bela/projects/SimonSaysSeeq2 (or the name of the file you use)
-    
-    
-    std::ofstream myfile;
-	//myfile.open ("./sss_midi.txt");
-	myfile.open ("sss_midi.bin", std::ios::out | std::ios::app | std::ios::binary);
-	myfile << "Writing this to a file.\n";
-	myfile.close();
-	
-	
-	
-	    file2.setup("simon_says_test_out.m"); //set the file name to write to
-        file2.setHeader("myvar=[\n"); //set one or more lines to be printed at the beginning of the file
-        file2.setFooter("];\n"); //set one or more lines to be printed at the end of the file
-        file2.setFormat("%.4f %.4f\n"); // set the format that you want to use for your output. Please use %f only (with modifiers)
-        file2.setFileType(kText);
-        file2.setEchoInterval(1); // only print to the console 1 line every other 10000
-        
-        file2.log(12345678);
-        //file2.log(version);
-        
-        Bela_requestStop();
+
 	
 	
     
