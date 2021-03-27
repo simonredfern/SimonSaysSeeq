@@ -611,6 +611,8 @@ void SaveSequenceToFile(){
               }
             }
            }
+           
+    rt_printf("Bye from SaveSequenceToFile \n");       
 }
 
 
