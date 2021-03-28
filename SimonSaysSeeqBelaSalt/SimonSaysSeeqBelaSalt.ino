@@ -202,6 +202,8 @@ AuxiliaryTask gChangeSequenceTask;
 
 AuxiliaryTask gPrintStatus;
 
+AuxiliaryTask gAllNotesOff;
+
 AuxiliaryTask gWriteSequenceToFiles;
 
 
@@ -2033,7 +2035,7 @@ void clockShowLow(){
 }
 
 
-void AllNotesOff(){
+void AllNotesOff(void*){
   // All MIDI notes off.
   rt_printf("All MIDI notes OFF \n");
   for (uint8_t n = 0; n <= 127; n++) {
@@ -2101,7 +2103,7 @@ void InitSequencer(){
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
 
-  AllNotesOff();
+ 
 }
 
 void StartSequencer(){
@@ -2123,23 +2125,17 @@ void StopSequencer(){
   //rt_printf("Stop Sequencer at: %llx \n", frame_timer);   // works - hex
   rt_printf("Stop Sequencer at: %llu \n", frame_timer); // works - unsigned
   
-  
-  // std::cout << millisec_since_epoch_2;
-  
-  
+
   InitSequencer();
-  sequence_is_running = LOW;        
+  sequence_is_running = LOW;
+  
+  Bela_scheduleAuxiliaryTask(gAllNotesOff);
+
 }
 
-float analogRead(int pin){
-	// TODO
-	1;
-}
 
 
-// void DebugPrint(char m[]){
-//   rt_printf("%s", m);
-// } 
+
 
 
 int GetValue(int raw, int last, int jitter_reduction){
@@ -2348,7 +2344,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
 			InitMidiSequence(true);
-			AllNotesOff();
+			Bela_scheduleAuxiliaryTask(gAllNotesOff);
 			do_button_4_action = 0;
 		}
 
@@ -2580,9 +2576,17 @@ bool setup(BelaContext *context, void *userData){
         
         if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 80, "bela-print-status")) == 0)
                 return false;
+
+        if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 75, "bela-all-notes-off")) == 0)
+                return false;   
                 
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
                 return false;
+                
+     
+                
+                
+                
 
     
         
@@ -3066,7 +3070,7 @@ void cleanup(BelaContext *context, void *userData)
 {
 	// Write internal sequence to files
 	//WriteSequenceToFiles();
-	AllNotesOff();
+	Bela_scheduleAuxiliaryTask(gAllNotesOff);
 }
 
 
