@@ -3068,8 +3068,6 @@ void render(BelaContext *context, void *userData)
 
 void cleanup(BelaContext *context, void *userData)
 {
-	// Write internal sequence to files
-	//WriteSequenceToFiles();
 	Bela_scheduleAuxiliaryTask(gAllNotesOff);
 }
 
