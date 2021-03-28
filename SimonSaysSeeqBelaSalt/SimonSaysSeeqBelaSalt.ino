@@ -3002,6 +3002,16 @@ void render(BelaContext *context, void *userData)
 			    	StopSequencer();
 				}
 			}
+			
+			
+			if (elapsed_frames_since_last_tick > frames_per_24_ticks * 10){
+		  		if (sequence_is_running == LOW) {
+		    		rt_printf("Saving Sequence to Files because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks * 10 : %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
+			    	// TODO make this a low prioity task
+			    	WriteSequenceToFiles();
+				}
+			}
+			
 		  
 
 	
