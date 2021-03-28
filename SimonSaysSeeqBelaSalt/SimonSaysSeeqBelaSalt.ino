@@ -594,7 +594,13 @@ void SyncSequenceToFile(bool write_to_file){
     // Create directory. 
     // Note this directory MUST be *OUT* of the project path, else Node.JS process "node" (which runs the Bela IDE) will grind to a halt. (even if files are marked as hidden node will spend CPU time on them)
  
-	const int dir= system("mkdir -p /var/SimonSaysSeeqConfig");
+ 
+    if (write_to_file == true){
+		const int mkdir= system("mkdir -p /var/SimonSaysSeeqConfig");
+		// hm what if we get -bash: /bin/rm: Argument list too long ?
+		const int remove= system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
+    }
+	
 	
 	uint8_t sc = 0;
 	uint8_t bc = 0;
@@ -633,22 +639,29 @@ void SyncSequenceToFile(bool write_to_file){
 		        	// WRITE Sequence to Files
 		        	//rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
 		        	
-					// Open for writing in truncate mode (we will replace the contents)
-					output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
+
+					// Only write active notes. (we deleted all files above so should be ok. )
+					if (channel_a_midi_note_events[bc][sc][n][onoff].is_active == 1){
+						
+						// Open for writing in truncate mode (we will replace the contents)
+						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
+						
+						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_a_midi_note_events[bc][sc][n][onoff].is_active);
+						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_a_midi_note_events[bc][sc][n][onoff].velocity);
+						
+						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
 					
-					if (channel_a_midi_note_events[bc][sc][n][onoff].velocity != 0){
-						rt_printf("SyncSequenceToFile Write Non Zero value: %d \n", channel_a_midi_note_events[bc][sc][n][onoff].velocity);
-					}
-					
-					//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
-					
-					// Must cast the value to int else it won't be written to the file.
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].velocity  << std::endl;
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step  << std::endl;
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].is_active << std::endl;
+						// Must cast the value to int else it won't be written to the file.
+						output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].velocity  << std::endl;
+						output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step  << std::endl;
+						output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].is_active << std::endl;
 
 					
-					output_file.close();
+						output_file.close();
+						
+					}
+					
+
 					
 		        } else {
 		        	// READ Sequence from Files
