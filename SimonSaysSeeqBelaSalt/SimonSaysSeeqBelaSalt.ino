@@ -2016,11 +2016,10 @@ void clockShowLow(){
 
 
 void AllNotesOff(){
-	  // All MIDI notes off.
-	    uint8_t channel = 0;
+  // All MIDI notes off.
   rt_printf("All MIDI notes OFF \n");
   for (uint8_t n = 0; n <= 127; n++) {
-     midi.writeNoteOff(channel, n, 0);
+     midi.writeNoteOff(midi_channel_a, n, 0);
   }
   
 }
