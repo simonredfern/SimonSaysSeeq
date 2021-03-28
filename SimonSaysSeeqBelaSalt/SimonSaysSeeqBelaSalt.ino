@@ -89,7 +89,7 @@ UdpClient myUdpClient;
 // ...
 
 
-const char version[16]= "v0.2-BelaSalt";
+const char version[16]= "v0.27-BelaSalt";
 
 Scope scope;
 
@@ -547,6 +547,12 @@ class NoteInfo
 };
 /////////
 
+
+uint8_t test_velocity = 7 ;
+
+int test_int = 8 ;
+
+
 ////////
 // For each sequence step / midi note number  / on-or-off we store a NoteInfo (which defines a bit more info)
 // Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.)
@@ -559,6 +565,23 @@ class NoteInfo
 
 NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
+
+
+// uint8_t data[32];
+// // fill in the data...
+// write_to_file(data, sizeof(data));
+
+// void write_to_file(uint8_t *ptr, size_t len) {
+//     ofstream fp;
+//     fp.open("somefile.bin",ios::out | ios :: binary );
+//     fp.write((char*)ptr, len);
+// }
+
+
+// std::String converter(uint8_t *str){
+//     return std::String((char *)str);
+// }
+
 
 void SyncSequenceToFile(bool write_to_file){
 	
@@ -577,7 +600,7 @@ void SyncSequenceToFile(bool write_to_file){
            std::string file_prefix;
            std::string file_name;
      
-    		std::ofstream current_file;
+    		std::ofstream output_file;
 
 
 
@@ -598,63 +621,60 @@ void SyncSequenceToFile(bool write_to_file){
             	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
             	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
             	
-              // Use . to hide the file so Bela doesn't get its knickers in a twist
-             //	file_prefix = "._sss_config/._sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
-
-
-			file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
-
-            	
+          
+				file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
             	file_name = file_prefix +  "_ON_vel";
             
             
-            if (write_to_file == true) {
-            	
-            	
-            	rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
-            	
-				// Open for writing in truncate mode (we will replace the contents)
-				current_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
-				// channel_a_midi_note_events[bc][sc][note][1].velocity 
-				
-				//current_file <<  "2222\n"; // channel_a_midi_note_events[bc][sc][n][1].velocity; // "Writing this to a file.\n";
-				
-				
-				
-				current_file << channel_a_midi_note_events[bc][sc][n][1].velocity << std::endl;
-				current_file.close();
-				
-            } else {
-            	
-            	rt_printf("SyncSequenceToFile will READ sequence from Files \n");
-				
-				std::ifstream read_file(file_prefix +  "_ON_vel");
-				
+	            if (write_to_file == true) {
+	            	// WRITE Sequence to Files
+	            	rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
+	            	
+					// Open for writing in truncate mode (we will replace the contents)
+					output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
+					
+					rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
+					
+					//output_file << (int) test_velocity  << std::endl;
+					
+					// Must cast the value to int else it won't be written to the file.
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].velocity  << std::endl;
+					
+					output_file.close();
+					
+	            } else {
+	            	// READ Sequence from Files
+	            	rt_printf("SyncSequenceToFile will READ sequence from Files \n");
+					
+					std::ifstream read_file(file_name);
 
-  
-  
-				  if (read_file.is_open())
-				  {
-				    while ( getline (read_file,line) )
-				    {
-				     // got << line << "\n";
-				      
-				      
-				      std::string str_dec = "1987520";
-				      
-				       std::string::size_type sz;   // alias of size_t
-				      long li_dec = std::stol (line,&sz);
-				      
-				      rt_printf("Got %d \n", li_dec); 
-				    }
-				    read_file.close();
-				  }
+					  if (read_file.is_open()) {
+						
+						// only one line	
+						getline (read_file,line);	
+					
+					    std::string::size_type sz;   // alias of size_t
+					    
+					    long li_dec;  
+					    
+					      try {
+					      		// Convert the value to integer
+								li_dec = std::stol (line,&sz);
+							} catch(...) {
+								li_dec = 0;
+							}
+					      
+					      rt_printf("Got %d \n", li_dec);
+					      
+					      // Must cast int to uint8_t
+					      channel_a_midi_note_events[bc][sc][n][1].velocity = (uint8_t) li_dec;
+					      
+					    read_file.close();
+					  } else {
+					  	rt_printf("Unable to open file \n"); 
+					  }		
 				
-				  else {
-				  	rt_printf("Unable to open file \n"); 
-				  }		
-			
-            }// end read/write test
+	            }// end read/write test
 				
 				
 				////////
