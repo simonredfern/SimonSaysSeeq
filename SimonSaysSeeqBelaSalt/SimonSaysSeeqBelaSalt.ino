@@ -202,6 +202,8 @@ AuxiliaryTask gChangeSequenceTask;
 
 AuxiliaryTask gPrintStatus;
 
+AuxiliaryTask gWriteSequenceToFiles;
+
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
@@ -762,7 +764,7 @@ void SyncSequenceToFile(bool write_to_file){
 
 ///////
 
-void WriteSequenceToFiles(){
+void WriteSequenceToFiles(void*){
 	
 	//if (need_to_auto_save_sequence == true){
 		SyncSequenceToFile(true);
@@ -2578,6 +2580,9 @@ bool setup(BelaContext *context, void *userData){
         
         if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 80, "bela-print-status")) == 0)
                 return false;
+                
+        if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
+                return false;
 
     
         
@@ -3019,7 +3024,10 @@ void render(BelaContext *context, void *userData)
 			    	
 			    	if (need_to_auto_save_sequence == true){
 			    		rt_printf("Saving Sequence to Files because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks * 10 : %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
-						WriteSequenceToFiles();
+						//WriteSequenceToFiles();
+						
+						Bela_scheduleAuxiliaryTask(gWriteSequenceToFiles);
+						
 						need_to_auto_save_sequence = false;
 					}
 			    	
@@ -3057,7 +3065,7 @@ void render(BelaContext *context, void *userData)
 void cleanup(BelaContext *context, void *userData)
 {
 	// Write internal sequence to files
-	WriteSequenceToFiles();
+	//WriteSequenceToFiles();
 	AllNotesOff();
 }
 
