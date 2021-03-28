@@ -617,13 +617,7 @@ void SyncSequenceToFile(bool write_to_file){
    for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
 	    for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
 		      for (n = 0; n <= 127; n++){	
-		    	// WRITE MIDI MIDI_DATA
-		    	// channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
-		    	// channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
-		    	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
-		    	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
-		    	
-		  
+
 				file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
 		    	
 		    	
