@@ -612,7 +612,7 @@ void SyncSequenceToFile(bool write_to_file){
 			 
 	long long_integer_from_file;
 			  
-			  
+	std::string::size_type sz;   // alias of size_t			  
 
    for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
 	    for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
@@ -625,8 +625,10 @@ void SyncSequenceToFile(bool write_to_file){
 		    	
 		  
 				file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
-		    	file_name = file_prefix +  "_ON_vel";
-		    
+		    	
+		    	
+		    	///////////////////////////////////////////
+		    	file_name = file_prefix;
 		    
 		        if (write_to_file == true) {
 		        	// WRITE Sequence to Files
@@ -639,6 +641,10 @@ void SyncSequenceToFile(bool write_to_file){
 					
 					// Must cast the value to int else it won't be written to the file.
 					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].velocity  << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].is_active  << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][0].velocity  << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][0].is_active  << std::endl;
+					
 					
 					output_file.close();
 					
@@ -648,12 +654,9 @@ void SyncSequenceToFile(bool write_to_file){
 					std::ifstream read_file(file_name);
 		
 					  if (read_file.is_open()) {
-						
-						// only one line	
+						// only want one line	
 						getline (read_file, line);	
 					
-					    std::string::size_type sz;   // alias of size_t
-					    
 					    try {
 					      	// Convert the value to integer
 							long_integer_from_file = std::stol (line, &sz);
@@ -672,7 +675,7 @@ void SyncSequenceToFile(bool write_to_file){
 					  }		
 				
 		        } // end read/write test
-				
+				/////////////////////////////////////
 				
 		
 		    	
