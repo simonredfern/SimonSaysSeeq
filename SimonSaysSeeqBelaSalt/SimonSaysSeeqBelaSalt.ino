@@ -654,6 +654,7 @@ void SyncSequenceToFile(bool write_to_file){
 					std::ifstream read_file(file_name);
 		
 					  if (read_file.is_open()) {
+						
 						// only want one line	
 						getline (read_file, line);	
 					
@@ -668,7 +669,50 @@ void SyncSequenceToFile(bool write_to_file){
 					      
 					    // Must cast int to uint8_t
 					    channel_a_midi_note_events[bc][sc][n][1].velocity = (uint8_t) long_integer_from_file;
+					    
+					    
+					    //////////////////////////
+					    getline (read_file, line);
+					    try {
+					      	// Convert the value to integer
+							long_integer_from_file = std::stol (line, &sz);
+							rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
+						} catch(...) {
+							long_integer_from_file = 0;
+							rt_printf("No value found in file, setting long_integer_from_file to zero \n");
+						}
 					      
+					    // Must cast int to uint8_t
+					    channel_a_midi_note_events[bc][sc][n][1].is_active = (uint8_t) long_integer_from_file;
+					    
+					    
+					    //////////////////////////
+					    getline (read_file, line);
+					    try {
+					      	// Convert the value to integer
+							long_integer_from_file = std::stol (line, &sz);
+							rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
+						} catch(...) {
+							long_integer_from_file = 0;
+							rt_printf("No value found in file, setting long_integer_from_file to zero \n");
+						}
+						// Must cast int to uint8_t
+						channel_a_midi_note_events[bc][sc][n][0].velocity = (uint8_t) long_integer_from_file;
+					    
+					    //////////////////////////
+					    getline (read_file, line);
+					    try {
+					      	// Convert the value to integer
+							long_integer_from_file = std::stol (line, &sz);
+							rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
+						} catch(...) {
+							long_integer_from_file = 0;
+							rt_printf("No value found in file, setting long_integer_from_file to zero \n");
+						}
+						// Must cast int to uint8_t
+						channel_a_midi_note_events[bc][sc][n][0].is_active = (uint8_t) long_integer_from_file;
+					    
+			
 					    read_file.close();
 					  } else {
 					  	rt_printf("Unable to open file \n"); 
