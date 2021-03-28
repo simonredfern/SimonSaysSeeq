@@ -583,6 +583,9 @@ NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2];
 // }
 
 
+
+
+
 void SyncSequenceToFile(bool write_to_file){
 	
 	
@@ -596,6 +599,7 @@ void SyncSequenceToFile(bool write_to_file){
 	uint8_t sc = 0;
 	uint8_t bc = 0;
 	uint8_t n = 0;
+    uint8_t onoff = 0;
    
 	std::string file_prefix;
 	std::string file_name;
@@ -617,8 +621,9 @@ void SyncSequenceToFile(bool write_to_file){
    for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
 	    for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
 		      for (n = 0; n <= 127; n++){	
+				for (onoff = 0; onoff <= 1; onoff++){
 
-				file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
+				file_prefix = "/var/SimonSaysSeeqConfig/_NoteInfo_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
 		    	
 		    	
 		    	///////////////////////////////////////////
@@ -631,17 +636,20 @@ void SyncSequenceToFile(bool write_to_file){
 					// Open for writing in truncate mode (we will replace the contents)
 					output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 					
-					if (channel_a_midi_note_events[bc][sc][n][1].velocity != 0){
-						rt_printf("SyncSequenceToFile Write Non Zero value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
+					if (channel_a_midi_note_events[bc][sc][n][onoff].velocity != 0){
+						rt_printf("SyncSequenceToFile Write Non Zero value: %d \n", channel_a_midi_note_events[bc][sc][n][onoff].velocity);
 					}
 					
 					//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
 					
 					// Must cast the value to int else it won't be written to the file.
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].velocity  << std::endl;
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].is_active << std::endl;
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][0].velocity  << std::endl;
-					output_file << (int) channel_a_midi_note_events[bc][sc][n][0].is_active << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].velocity  << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step  << std::endl;
+					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].is_active << std::endl;
+					
+					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].velocity  << std::endl;
+					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].tick_count_since_step  << std::endl;
+					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].is_active << std::endl;
 					
 					
 					output_file.close();
@@ -653,7 +661,8 @@ void SyncSequenceToFile(bool write_to_file){
 		
 					  if (read_file.is_open()) {
 						
-						// only want one line	
+						// only want one line
+						// Velocity
 						getline (read_file, line);	
 					
 					    try {
@@ -668,16 +677,40 @@ void SyncSequenceToFile(bool write_to_file){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[bc][sc][n][1].velocity = (uint8_t) long_integer_from_file;
+					    channel_a_midi_note_events[bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_a_midi_note_events[bc][sc][n][1].velocity Did I? : %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
+								rt_printf("Should have set channel_a_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_a_midi_note_events[bc][sc][n][onoff].velocity);
+							}
+							
+						////////////
+						// Ticks after Step
+						getline (read_file, line);	
+					
+					    try {
+					      	// Convert the value to integer
+							long_integer_from_file = std::stol (line, &sz);
+							if (long_integer_from_file != 0){
+								rt_printf("Got Non Zero long_integer_from_file: %d \n", long_integer_from_file);
+							}
+						} catch(...) {
+							long_integer_from_file = 0;
+							rt_printf("Exception getting value from file so setting long_integer_from_file to zero \n");
+						}
+					      
+					    // Must cast int to uint8_t
+					    channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
+					    
+					    
+					    if (long_integer_from_file != 0){
+								rt_printf("Should have set channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step);
 							}
 					    
 					    
 					    
 					    //////////////////////////
+					    // Is Active
 					    getline (read_file, line);
 					    try {
 					      	// Convert the value to integer
@@ -689,34 +722,8 @@ void SyncSequenceToFile(bool write_to_file){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[bc][sc][n][1].is_active = (uint8_t) long_integer_from_file;
+					    channel_a_midi_note_events[bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
 					    
-					    
-					    //////////////////////////
-					    getline (read_file, line);
-					    try {
-					      	// Convert the value to integer
-							long_integer_from_file = std::stol (line, &sz);
-							//rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
-						} catch(...) {
-							long_integer_from_file = 0;
-							//rt_printf("No value found in file, setting long_integer_from_file to zero \n");
-						}
-						// Must cast int to uint8_t
-						channel_a_midi_note_events[bc][sc][n][0].velocity = (uint8_t) long_integer_from_file;
-					    
-					    //////////////////////////
-					    getline (read_file, line);
-					    try {
-					      	// Convert the value to integer
-							long_integer_from_file = std::stol (line, &sz);
-							//rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
-						} catch(...) {
-							long_integer_from_file = 0;
-							//rt_printf("No value found in file, setting long_integer_from_file to zero \n");
-						}
-						// Must cast int to uint8_t
-						channel_a_midi_note_events[bc][sc][n][0].is_active = (uint8_t) long_integer_from_file;
 					    
 			
 					    read_file.close();
@@ -733,7 +740,7 @@ void SyncSequenceToFile(bool write_to_file){
 		    //	file_name = file_prefix + "_note_off_vel";
 		    //	file_name = file_prefix + "_note_off_isa";
 		
-		    	
+				}
 		      }
 	    }
    }
@@ -743,7 +750,13 @@ void SyncSequenceToFile(bool write_to_file){
 
 ///////
 
+void WriteSequenceToFiles(){
+	SyncSequenceToFile(true);
+}
 
+void ReadSequenceFromFiles(){
+	SyncSequenceToFile(false);
+}
 
 
 
@@ -2071,7 +2084,8 @@ void InitMidiSequence(bool force){
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   }
   
-
+	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
+	ReadSequenceFromFiles();
 
     init_midi_sequence_has_run = true;
 
@@ -2421,7 +2435,7 @@ bool setup(BelaContext *context, void *userData){
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 	
 
-	SyncSequenceToFile(false);
+
 	
 	
 
@@ -3032,7 +3046,7 @@ void render(BelaContext *context, void *userData)
 void cleanup(BelaContext *context, void *userData)
 {
 	// Write internal sequence to files
-	SyncSequenceToFile(true);
+	WriteSequenceToFiles();
 }
 
 
