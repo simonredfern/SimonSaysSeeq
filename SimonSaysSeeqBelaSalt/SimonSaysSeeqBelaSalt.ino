@@ -380,6 +380,8 @@ uint8_t last_note_disabled = 0;
 
 bool init_midi_sequence_has_run = false;
 
+bool need_to_auto_save_sequence = false;
+
 ////////////////////////////////////////////////////
 // Actual pot values
 unsigned int upper_input_raw; // TODO Make t type.
@@ -737,7 +739,8 @@ void SyncSequenceToFile(bool write_to_file){
 			
 					    read_file.close();
 					  } else {
-					  	rt_printf("Unable to open file \n"); 
+					  	// This is a common occurance since we only create files for is_active notes, if we don't find a file the Note will stay in its inactive state.
+					  	// rt_printf("Unable to open file \n"); 
 					  }		
 				
 		        } // end read/write test
@@ -760,7 +763,11 @@ void SyncSequenceToFile(bool write_to_file){
 ///////
 
 void WriteSequenceToFiles(){
-	SyncSequenceToFile(true);
+	
+	//if (need_to_auto_save_sequence == true){
+		SyncSequenceToFile(true);
+	//	need_to_auto_save_sequence = false;
+	//}
 }
 
 void ReadSequenceFromFiles(){
@@ -2098,6 +2105,7 @@ void InitSequencer(){
 void StartSequencer(){
   InitSequencer();
   sequence_is_running = HIGH;
+  need_to_auto_save_sequence = true;
 }
 
 void StopSequencer(){
@@ -3006,9 +3014,15 @@ void render(BelaContext *context, void *userData)
 			
 			if (elapsed_frames_since_last_tick > frames_per_24_ticks * 10){
 		  		if (sequence_is_running == LOW) {
-		    		rt_printf("Saving Sequence to Files because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks * 10 : %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
-			    	// TODO make this a low prioity task
-			    	WriteSequenceToFiles();
+		    		// TODO make this a low prioity task
+
+			    	
+			    	if (need_to_auto_save_sequence == true){
+			    		rt_printf("Saving Sequence to Files because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks * 10 : %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
+						WriteSequenceToFiles();
+						need_to_auto_save_sequence = false;
+					}
+			    	
 				}
 			}
 			
