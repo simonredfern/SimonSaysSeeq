@@ -589,7 +589,7 @@ NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2];
 void SyncSequenceToFile(bool write_to_file){
 	
 	
-	rt_printf("Hello from SyncSequenceToFile \n");
+	rt_printf("Hello from SyncSequenceToFile write_to_file is %d \n", write_to_file);
 	
     // Create directory. 
     // Note this directory MUST be *OUT* of the project path, else Node.JS process "node" (which runs the Bela IDE) will grind to a halt. (even if files are marked as hidden node will spend CPU time on them)
@@ -762,16 +762,10 @@ void ReadSequenceFromFiles(){
 
 ///////
 
-void SaveNoteInfos() {
+//void SaveNoteInfos() {
 	
-	    rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
-    
-    // Note files go into /root/Bela/projects/SimonSaysSeeq2 (or the name of the file you use)
-    
+	// possible alternative approach using Bela WriteFile
 
-	
-	
-	
 	    // file2.setup("simon_says_test_out.m"); //set the file name to write to
      //   file2.setHeader("myvar=[\n"); //set one or more lines to be printed at the beginning of the file
      //   file2.setFooter("];\n"); //set one or more lines to be printed at the end of the file
@@ -779,25 +773,8 @@ void SaveNoteInfos() {
      //   file2.setFileType(kBinary);
      //   file2.setEchoInterval(1); // only print to the console 1 line every other 10000
         
-        
-        
-        // channel_a_midi_note_events
-        
-        
-        //NoteInfo
-        //channel_a_midi_note_events
-        
-      
-        
-        //file2.log(1);
-        //file2.log(version);
-        
-        // Bela_requestStop();
-	
-	
-	
-	
-}
+       
+//}
 
 
 
@@ -2084,8 +2061,7 @@ void InitMidiSequence(bool force){
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   }
   
-	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
-	ReadSequenceFromFiles();
+
 
     init_midi_sequence_has_run = true;
 
@@ -2107,7 +2083,7 @@ void InitSequencer(){
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
-  InitMidiSequence(false);
+
   AllNotesOff();
 }
 
@@ -2594,8 +2570,11 @@ bool setup(BelaContext *context, void *userData){
         
         //myUdpClient.setup(50002, "18.195.30.76"); 
         
+    // Create Midi Sequence in memory Structure
+    InitMidiSequence(false);
         
-
+	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
+	ReadSequenceFromFiles();
         
         rt_printf("Bye from Setup \n");
 
@@ -3047,6 +3026,7 @@ void cleanup(BelaContext *context, void *userData)
 {
 	// Write internal sequence to files
 	WriteSequenceToFiles();
+	AllNotesOff();
 }
 
 
