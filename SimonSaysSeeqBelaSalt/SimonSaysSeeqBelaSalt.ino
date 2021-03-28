@@ -593,101 +593,97 @@ void SyncSequenceToFile(bool write_to_file){
  
 	const int dir= system("mkdir -p /var/SimonSaysSeeqConfig");
 	
-           uint8_t sc = 0;
-           uint8_t bc = 0;
-           uint8_t n = 0;
-           
-           std::string file_prefix;
-           std::string file_name;
-     
-    		std::ofstream output_file;
+	uint8_t sc = 0;
+	uint8_t bc = 0;
+	uint8_t n = 0;
+   
+	std::string file_prefix;
+	std::string file_name;
+
+	std::ofstream output_file;
 
 
 
-			  std::string line;
+	std::string line;
 			  
 
 			  
-			 std::string got;
+	std::string got;
+			 
+	long long_integer_from_file;
 			  
 			  
 
-           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
-            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
-              for (n = 0; n <= 127; n++){	
-            	// WRITE MIDI MIDI_DATA
-            	// channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
-            	// channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
-            	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
-            	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
-            	
-          
+   for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
+	    for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+		      for (n = 0; n <= 127; n++){	
+		    	// WRITE MIDI MIDI_DATA
+		    	// channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+		    	// channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+		    	// channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+		    	// channel_a_midi_note_events[bc][sc][note][0].is_active = 0;
+		    	
+		  
 				file_prefix = "/var/SimonSaysSeeqConfig/_sss_midi_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n);
-            	file_name = file_prefix +  "_ON_vel";
-            
-            
-	            if (write_to_file == true) {
-	            	// WRITE Sequence to Files
-	            	rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
-	            	
+		    	file_name = file_prefix +  "_ON_vel";
+		    
+		    
+		        if (write_to_file == true) {
+		        	// WRITE Sequence to Files
+		        	rt_printf("SyncSequenceToFile will WRITE sequence to Files \n");
+		        	
 					// Open for writing in truncate mode (we will replace the contents)
 					output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 					
 					rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[bc][sc][n][1].velocity);
-					
-					//output_file << (int) test_velocity  << std::endl;
 					
 					// Must cast the value to int else it won't be written to the file.
 					output_file << (int) channel_a_midi_note_events[bc][sc][n][1].velocity  << std::endl;
 					
 					output_file.close();
 					
-	            } else {
-	            	// READ Sequence from Files
-	            	rt_printf("SyncSequenceToFile will READ sequence from Files \n");
-					
+		        } else {
+		        	// READ Sequence from Files
+		        	rt_printf("SyncSequenceToFile will READ sequence from Files \n");
 					std::ifstream read_file(file_name);
-
+		
 					  if (read_file.is_open()) {
 						
 						// only one line	
-						getline (read_file,line);	
+						getline (read_file, line);	
 					
 					    std::string::size_type sz;   // alias of size_t
 					    
-					    long li_dec;  
-					    
-					      try {
-					      		// Convert the value to integer
-								li_dec = std::stol (line,&sz);
-							} catch(...) {
-								li_dec = 0;
-							}
+					    try {
+					      	// Convert the value to integer
+							long_integer_from_file = std::stol (line, &sz);
+							rt_printf("Got long_integer_from_file: %d \n", long_integer_from_file);
+						} catch(...) {
+							long_integer_from_file = 0;
+							rt_printf("No value found in file, setting long_integer_from_file to zero \n");
+						}
 					      
-					      rt_printf("Got %d \n", li_dec);
-					      
-					      // Must cast int to uint8_t
-					      channel_a_midi_note_events[bc][sc][n][1].velocity = (uint8_t) li_dec;
+					    // Must cast int to uint8_t
+					    channel_a_midi_note_events[bc][sc][n][1].velocity = (uint8_t) long_integer_from_file;
 					      
 					    read_file.close();
 					  } else {
 					  	rt_printf("Unable to open file \n"); 
 					  }		
 				
-	            }// end read/write test
+		        } // end read/write test
 				
 				
-				////////
-				//read_file >> 
-            	
-            //	file_name = file_prefix + "_note_on_isa";
-            //	file_name = file_prefix + "_note_off_vel";
-            //	file_name = file_prefix + "_note_off_isa";
-   	
-            	
-              }
-            }
-           }
+		
+		    	
+		    //	file_name = file_prefix + "_note_on_isa";
+		    //	file_name = file_prefix + "_note_off_vel";
+		    //	file_name = file_prefix + "_note_off_isa";
+		
+		    	
+		      }
+	    }
+   }
            
     rt_printf("Bye from SyncSequenceToFile \n");       
 }
