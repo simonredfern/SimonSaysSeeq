@@ -646,11 +646,7 @@ void SyncSequenceToFile(bool write_to_file){
 					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].velocity  << std::endl;
 					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].tick_count_since_step  << std::endl;
 					output_file << (int) channel_a_midi_note_events[bc][sc][n][onoff].is_active << std::endl;
-					
-					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].velocity  << std::endl;
-					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].tick_count_since_step  << std::endl;
-					// output_file << (int) channel_a_midi_note_events[bc][sc][n][0].is_active << std::endl;
-					
+
 					
 					output_file.close();
 					
