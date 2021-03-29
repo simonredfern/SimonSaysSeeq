@@ -364,6 +364,7 @@ const uint8_t MAX_BAR = 7; // Memory User!
 const uint8_t MIN_LANE = 0;
 const uint8_t MAX_LANE = 7; // Memory User!
 
+uint8_t previous_lane = 0;
 uint8_t current_lane = 0;
 
 
@@ -644,6 +645,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 	    for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
 		      for (n = 0; n <= 127; n++){	
 				for (onoff = 0; onoff <= 1; onoff++){
+
+					rt_printf(".");
 
 				file_prefix = "/var/SimonSaysSeeqConfig/_NoteInfo_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
 		    	
@@ -2058,7 +2061,7 @@ void AllNotesOff(void*){
 }
 
 void SetLane(uint8_t lane_in){
-	Bela_scheduleAuxiliaryTask(gAllNotesOff);
+
 	if (lane_in > MAX_LANE){
 		current_lane = MAX_LANE;
 	} else if (lane_in < MIN_LANE){
@@ -2066,7 +2069,12 @@ void SetLane(uint8_t lane_in){
 	} else {
 		current_lane = lane_in;
 	}
-	Bela_scheduleAuxiliaryTask(gAllNotesOff);
+
+  if (previous_lane != current_lane){
+    // Don't want to call this too often.
+    Bela_scheduleAuxiliaryTask(gAllNotesOff);
+    previous_lane = current_lane;
+  }
 }
 
 
