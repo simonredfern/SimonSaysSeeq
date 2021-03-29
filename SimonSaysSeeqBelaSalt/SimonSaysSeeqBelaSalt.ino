@@ -331,7 +331,7 @@ const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
 const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t MIDI_CONTROL_A_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
+const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
 const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
@@ -1123,7 +1123,7 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("midi_control_a_input is: %d \n", midi_control_a_input);
+		rt_printf("current_lane is: %d \n", current_lane);
 		rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
 		
@@ -2833,8 +2833,9 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
-		  if (ch == MIDI_CONTROL_A_INPUT_PIN){
-		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_CONTROL_A_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_A_INPUT, MAX_MIDI_CONTROL_A_INPUT));
+		  if (ch == MIDI_LANE_INPUT_PIN){
+		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
+		  	SetLane(midi_control_a_input);
 		  }
 		  
 		  // > 0.999 leads to distorsion
