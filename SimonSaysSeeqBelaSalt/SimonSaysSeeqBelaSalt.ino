@@ -521,15 +521,7 @@ float flash_interval = 44000;
 
 
 
-void SetLane(uint8_t lane_in){
-	if (lane_in > MAX_LANE){
-		current_lane = MAX_LANE;
-	} else if (lane_in < MIN_LANE){
-		current_lane = MIN_LANE;
-	} else {
-		current_lane = lane_in;
-	}
-}
+
 
 void FlashHello(){
 // This gets called in the digital loop
@@ -2063,6 +2055,18 @@ void AllNotesOff(void*){
      midi.writeNoteOff(midi_channel_a, n, 0);
   }
   
+}
+
+void SetLane(uint8_t lane_in){
+	Bela_scheduleAuxiliaryTask(gAllNotesOff);
+	if (lane_in > MAX_LANE){
+		current_lane = MAX_LANE;
+	} else if (lane_in < MIN_LANE){
+		current_lane = MIN_LANE;
+	} else {
+		current_lane = lane_in;
+	}
+	Bela_scheduleAuxiliaryTask(gAllNotesOff);
 }
 
 
