@@ -158,6 +158,10 @@ uint64_t last_tick_frame = 0;
 
 uint64_t elapsed_frames_since_last_tick = 0;
 
+uint64_t elapsed_frames_since_all_notes_off = 0;
+uint64_t last_notes_off_frame = 0;
+
+
 float detected_bpm = 120.0;
 
 float env3_amp = 0.7f;
@@ -2052,11 +2056,18 @@ void clockShowLow(){
 
 
 void AllNotesOff(void*){
-  // All MIDI notes off.
-  rt_printf("All MIDI notes OFF \n");
-  for (uint8_t n = 0; n <= 127; n++) {
-     midi.writeNoteOff(midi_channel_a, n, 0);
-  }
+	
+	// Don't do this too often
+	if (frame_timer - last_notes_off_frame > 11000){
+		  // All MIDI notes off.
+		  rt_printf("All MIDI notes OFF \n");
+		  for (uint8_t n = 0; n <= 127; n++) {
+		     midi.writeNoteOff(midi_channel_a, n, 0);
+		  }
+		  last_notes_off_frame = frame_timer;
+	} else {
+		rt_printf("SKIPPING All MIDI notes OFF \n");
+	}
   
 }
 
@@ -2072,7 +2083,8 @@ void SetLane(uint8_t lane_in){
 
   if (previous_lane != current_lane){
     // Don't want to call this too often.
-    Bela_scheduleAuxiliaryTask(gAllNotesOff);
+    // Need to limit this in case we have CV input making current_lane change fast
+    //Bela_scheduleAuxiliaryTask(gAllNotesOff);
     previous_lane = current_lane;
   }
 }
