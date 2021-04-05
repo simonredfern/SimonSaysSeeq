@@ -1062,7 +1062,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1000 == 0) {
+    if(gCount % 10 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -1105,7 +1105,7 @@ void printStatus(void*){
 		//rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
 		//rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 		
-		/*
+		
 		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
 		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
 		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
@@ -1116,7 +1116,7 @@ void printStatus(void*){
 		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
 		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		rt_printf("do_button_4_action is: %d \n", do_button_4_action);
-		*/
+		
 
 
 	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
@@ -2382,6 +2382,15 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		}
 
 
+
+		// Clear Audio Buffer (Delay)
+		if (do_button_3_action == 1) {
+			InitAudioBuffer();
+			do_button_3_action = 0;
+		}
+
+
+
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
 			InitMidiSequence(true);
@@ -2417,14 +2426,17 @@ void MaybeOnTick(){
 // 400000 * 16 
 
 
-
-
-
+void InitAudioBuffer(){
 // Buffer holding previous samples per channel
 float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
 // Write pointer
 int gDelayBufWritePtr = 0;
+
+}
+
+
+
 // Amount of delay
 float gDelayAmount = 1.0;
 
@@ -2465,10 +2477,7 @@ bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 	
-
-
-	
-	
+  InitAudioBuffer();
 
 	scope.setup(4, context->audioSampleRate);
 
@@ -2728,6 +2737,8 @@ void render(BelaContext *context, void *userData)
         out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
         // Write the sample into the output buffer -- done!
+        // Apply "VCA" to the output.  
+
         audioWrite(context, n, 0, out_l * analog_adsr_b_level);
         audioWrite(context, n, 1, out_r * analog_adsr_b_level);
 		    // End Bela delay example code
