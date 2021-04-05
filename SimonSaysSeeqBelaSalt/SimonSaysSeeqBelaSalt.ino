@@ -220,7 +220,7 @@ void recalculate_frequencies(void*);
 OscillatorBank osc;
 
 Oscillator oscillator_2_audio;
-Oscillator oscillator_1_analog;
+Oscillator lfo_a_analog;
 
 
 int gAudioChannelNum; // number of audio channels to iterate over
@@ -976,16 +976,16 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR envelope_1_audio; 
-ADSR step_triggered_envelope_2;
-ADSR sequence_triggered_envelope_3;
+ADSR audio_envelope_a; 
+ADSR step_triggered_envelope_b;
+ADSR sequence_triggered_envelope_c;
 
-float audio_envelope_1_amplitude = 0;
+float audio_envelope_a_amplitude = 0;
 float analog_envelope_2_amplitude = 0;
-float analog_sequence_triggered_envelope_3_amplitude = 0;
+float analog_sequence_triggered_envelope_c_amplitude = 0;
 
 
-float envelope_1_attack = 0.0001; // envelope_1_audio attack (seconds)
+float envelope_1_attack = 0.0001; // audio_envelope_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // envelope_1 release (seconds)
@@ -997,7 +997,7 @@ float analog_out_4;
 
 
 float audio_osc_1_result;
-float osc_2_result_analog;
+float lfo_a_result_analog;
 float analog_osc_3_result;
 
 // float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
@@ -1005,10 +1005,10 @@ float analog_osc_3_result;
 // float envelope_2_sustain = 0.9; // envelope_2 sustain level
 // float envelope_2_release = 0.5; // envelope_2 release (seconds)
 
-// float sequence_triggered_envelope_3_attack = 0.0001; // envelope_2 attack (seconds)
-// float sequence_triggered_envelope_3_decay = 0.25; // envelope_2 decay (seconds)
-// float sequence_triggered_envelope_3_sustain = 0.9; // envelope_2 sustain level
-// float sequence_triggered_envelope_3_release = 0.5; // envelope_2 release (seconds)
+// float sequence_triggered_envelope_c_attack = 0.0001; // envelope_2 attack (seconds)
+// float sequence_triggered_envelope_c_decay = 0.25; // envelope_2 decay (seconds)
+// float sequence_triggered_envelope_c_sustain = 0.9; // envelope_2 sustain level
+// float sequence_triggered_envelope_c_release = 0.5; // envelope_2 release (seconds)
 
 
 
@@ -1033,12 +1033,12 @@ void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   IncrementOrResetBarCount();
   step_count = FIRST_STEP; 
-  oscillator_1_analog.setPhase(0.0);
+  lfo_a_analog.setPhase(0.0);
   
   
 
-  sequence_triggered_envelope_3.gate(true);
-  //sequence_triggered_envelope_3.gate(false);
+  sequence_triggered_envelope_c.gate(true);
+  //sequence_triggered_envelope_c.gate(false);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
   last_sequence_reset_frame = frame_timer; // Now
@@ -1157,15 +1157,15 @@ void printStatus(void*){
     	//rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	/*
-    	rt_printf("audio_envelope_1_amplitude is: %f \n", audio_envelope_1_amplitude);
+    	rt_printf("audio_envelope_a_amplitude is: %f \n", audio_envelope_a_amplitude);
     	rt_printf("analog_envelope_2_amplitude is: %f \n", analog_envelope_2_amplitude);
-    	rt_printf("analog_sequence_triggered_envelope_3_amplitude is: %f \n", analog_sequence_triggered_envelope_3_amplitude);
+    	rt_printf("analog_sequence_triggered_envelope_c_amplitude is: %f \n", analog_sequence_triggered_envelope_c_amplitude);
     	*/
 
 
 		/*
 		rt_printf("audio_osc_1_result is: %f \n", audio_osc_1_result);
-		rt_printf("osc_2_result_analog is: %f \n", osc_2_result_analog);
+		rt_printf("lfo_a_result_analog is: %f \n", lfo_a_result_analog);
 		*/
 		
 		/*
@@ -1364,8 +1364,8 @@ void GateHigh(){
   target_led_1_state = true; 
   
   
-  envelope_1_audio.gate(true);
-  step_triggered_envelope_2.gate(true);
+  audio_envelope_a.gate(true);
+  step_triggered_envelope_b.gate(true);
   
   
   
@@ -1380,10 +1380,10 @@ void GateLow(){
   target_gate_out_state = false;
   target_led_1_state = false; 
   
-  envelope_1_audio.gate(false);
-  step_triggered_envelope_2.gate(false);
+  audio_envelope_a.gate(false);
+  step_triggered_envelope_b.gate(false);
   
-  sequence_triggered_envelope_3.gate(false); // always reset it here but not trigger it
+  sequence_triggered_envelope_c.gate(false); // always reset it here but not trigger it
   
   
 
@@ -2319,27 +2319,27 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    
    // TODO only do this if the value changes?
    
-        envelope_1_audio.setAttackRate(envelope_1_attack * audio_sample_rate);
-        envelope_1_audio.setDecayRate(envelope_1_decay * audio_sample_rate);
-        envelope_1_audio.setSustainLevel(envelope_1_sustain);
-        envelope_1_audio.setReleaseRate(envelope_1_release * audio_sample_rate);
+        audio_envelope_a.setAttackRate(envelope_1_attack * audio_sample_rate);
+        audio_envelope_a.setDecayRate(envelope_1_decay * audio_sample_rate);
+        audio_envelope_a.setSustainLevel(envelope_1_sustain);
+        audio_envelope_a.setReleaseRate(envelope_1_release * audio_sample_rate);
         
-        step_triggered_envelope_2.setAttackRate(envelope_1_attack * analog_sample_rate);
-        step_triggered_envelope_2.setDecayRate(envelope_1_decay * analog_sample_rate);
-        step_triggered_envelope_2.setReleaseRate(envelope_1_release * analog_sample_rate);
-        step_triggered_envelope_2.setSustainLevel(envelope_1_sustain);
+        step_triggered_envelope_b.setAttackRate(envelope_1_attack * analog_sample_rate);
+        step_triggered_envelope_b.setDecayRate(envelope_1_decay * analog_sample_rate);
+        step_triggered_envelope_b.setReleaseRate(envelope_1_release * analog_sample_rate);
+        step_triggered_envelope_b.setSustainLevel(envelope_1_sustain);
 
-        sequence_triggered_envelope_3.setAttackRate(envelope_1_attack * audio_sample_rate);
-        sequence_triggered_envelope_3.setDecayRate(envelope_1_decay * audio_sample_rate);
-        sequence_triggered_envelope_3.setReleaseRate(envelope_1_release * audio_sample_rate);
-        sequence_triggered_envelope_3.setSustainLevel(envelope_1_sustain);
+        sequence_triggered_envelope_c.setAttackRate(envelope_1_attack * audio_sample_rate);
+        sequence_triggered_envelope_c.setDecayRate(envelope_1_decay * audio_sample_rate);
+        sequence_triggered_envelope_c.setReleaseRate(envelope_1_release * audio_sample_rate);
+        sequence_triggered_envelope_c.setSustainLevel(envelope_1_sustain);
         
 
 	    
 	    audio_osc_2_frequency = lfo_osc_1_frequency * 8.0;
 
 
-    	oscillator_1_analog.setFrequency(lfo_osc_1_frequency); // lower freq
+    	lfo_a_analog.setFrequency(lfo_osc_1_frequency); // lower freq
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
@@ -2480,7 +2480,7 @@ bool setup(BelaContext *context, void *userData){
 
 	scope.setup(4, context->audioSampleRate);
 
-	oscillator_1_analog.setup(context->analogSampleRate);	
+	lfo_a_analog.setup(context->analogSampleRate);	
 	oscillator_2_audio.setup(context->audioSampleRate);
 
 	
@@ -2588,22 +2588,22 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set ADSR parameters
-        envelope_1_audio.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        envelope_1_audio.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        envelope_1_audio.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        envelope_1_audio.setSustainLevel(envelope_1_sustain);
+        audio_envelope_a.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        audio_envelope_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        audio_envelope_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        audio_envelope_a.setSustainLevel(envelope_1_sustain);
         
         // This envelope triggers on each step
-        step_triggered_envelope_2.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        step_triggered_envelope_2.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        step_triggered_envelope_2.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        step_triggered_envelope_2.setSustainLevel(envelope_1_sustain);
+        step_triggered_envelope_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
+        step_triggered_envelope_b.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        step_triggered_envelope_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
+        step_triggered_envelope_b.setSustainLevel(envelope_1_sustain);
 
 
-        sequence_triggered_envelope_3.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        sequence_triggered_envelope_3.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        sequence_triggered_envelope_3.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        sequence_triggered_envelope_3.setSustainLevel(envelope_1_sustain);
+        sequence_triggered_envelope_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
+        sequence_triggered_envelope_c.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        sequence_triggered_envelope_c.setReleaseRate(envelope_1_release * context->analogSampleRate);
+        sequence_triggered_envelope_c.setSustainLevel(envelope_1_sustain);
 
 
         // Set buttons pins as inputs
@@ -2672,8 +2672,10 @@ void render(BelaContext *context, void *userData)
   // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
-		audio_envelope_1_amplitude  = 1.0 * envelope_1_audio.process();
-		audio_osc_1_result = oscillator_2_audio.process() * audio_envelope_1_amplitude;
+		audio_envelope_a_amplitude  = 1.0 * audio_envelope_a.process();
+		
+    
+    //audio_osc_1_result = oscillator_2_audio.process() * audio_envelope_a_amplitude;
 		
         ////////////////////////////////
 		    // Begin Bela delay example code
@@ -2748,25 +2750,25 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 
 		// Process analog oscillator	
-		osc_2_result_analog = oscillator_1_analog.process();
+		lfo_a_result_analog = lfo_a_analog.process();
 		
 		// Process step triggered analog envelope
-		analog_envelope_2_amplitude  = step_triggered_envelope_2.process();  
+		analog_envelope_2_amplitude  = step_triggered_envelope_b.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
-		analog_sequence_triggered_envelope_3_amplitude  = env3_amp * sequence_triggered_envelope_3.process();
+		analog_sequence_triggered_envelope_c_amplitude  = env3_amp * sequence_triggered_envelope_c.process();
 		
 
 		
 		
 		// Modulated output
-		analog_out_2 = osc_2_result_analog * analog_envelope_2_amplitude; 
+		analog_out_2 = lfo_a_result_analog * analog_envelope_2_amplitude; 
 		
 		// Plain envelope This is like a gate at the start of sequence plus release (so can use it as both a gate and an envelope)
-		analog_out_3 = analog_sequence_triggered_envelope_3_amplitude;
+		analog_out_3 = analog_sequence_triggered_envelope_c_amplitude;
 		
 		// Additive output
-		analog_out_4 = ( osc_2_result_analog + analog_envelope_2_amplitude ) / 2.0;
+		analog_out_4 = ( lfo_a_result_analog + analog_envelope_2_amplitude ) / 2.0;
 		
 		
 		
