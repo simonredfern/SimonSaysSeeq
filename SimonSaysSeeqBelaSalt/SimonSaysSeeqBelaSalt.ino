@@ -621,6 +621,8 @@ void SyncSequenceToFile(bool write_to_file){
     }
 	
 	
+ int count_of_file_operations = 0;
+
 	uint8_t ln = 0;
 	uint8_t sc = 0;
 	uint8_t bc = 0;
@@ -650,7 +652,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 		      for (n = 0; n <= 127; n++){	
 				for (onoff = 0; onoff <= 1; onoff++){
 
-					rt_printf(".");
+          // TODO optimize loading of files e.g. only load the files that exist
+					//rt_printf(".");
 
 				  file_name = "/var/SimonSaysSeeqConfig/_NoteInfo_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
 		    	
@@ -665,6 +668,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						
 						// Open for writing in truncate mode (we will replace the contents)
 						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
+
+            count_of_file_operations = count_of_file_operations + 1;
 						
 						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active);
 						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity);
@@ -686,7 +691,9 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 		        } else {
 		        	// READ Sequence from Files
 		        	// rt_printf("SyncSequenceToFile will READ sequence from Files \n");
-					std::ifstream read_file(file_name);
+					  std::ifstream read_file(file_name);
+
+            count_of_file_operations = count_of_file_operations + 1;
 		
 					  if (read_file.is_open()) {
 						
@@ -771,7 +778,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
    }
 }
            
-    rt_printf("\n Bye from SyncSequenceToFile \n");       
+    rt_printf("Bye from SyncSequenceToFile. There were %d file operations and write_to_file was %d \n", count_of_file_operations, write_to_file);       
 }
 
 ///////
