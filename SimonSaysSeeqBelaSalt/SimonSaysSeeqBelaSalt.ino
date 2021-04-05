@@ -369,7 +369,7 @@ const uint8_t MIN_LANE = 0;
 const uint8_t MAX_LANE = 7; // Memory User!
 
 uint8_t previous_lane = 0;
-uint8_t current_lane = 0;
+uint8_t current_midi_lane = 0;
 
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
@@ -1122,7 +1122,7 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("current_lane is: %d \n", current_lane);
+		rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 		rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
 		
@@ -1281,10 +1281,10 @@ void DisableNotes(uint8_t note){
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[current_lane][bc][sc][note][1].velocity = 0;
-              channel_a_midi_note_events[current_lane][bc][sc][note][1].is_active = 0;
-              channel_a_midi_note_events[current_lane][bc][sc][note][0].velocity = 0;
-              channel_a_midi_note_events[current_lane][bc][sc][note][0].is_active = 0;         
+              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
+              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
+              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
+              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
 }
@@ -1318,9 +1318,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           // We want the note on, so set it on.
           rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_count, velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[current_lane][bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
-          channel_a_midi_note_events[current_lane][bar_count][step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[current_lane][bar_count][step_count][note][1].is_active = 1;
+          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].velocity = velocity;
+          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].is_active = 1;
           
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
@@ -1341,9 +1341,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
              
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[current_lane][bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
-             channel_a_midi_note_events[current_lane][bar_count][step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[current_lane][bar_count][step_count][note][0].is_active = 1;
+             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].velocity = velocity;
+             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].is_active = 1;
 
 			 last_note_off = note;
 			
@@ -1580,17 +1580,17 @@ void PlayMidi(){
     //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI sequence
-    if (channel_a_midi_note_events[current_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
+    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[current_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+           if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
             	//rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[current_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
+            	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[current_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[current_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            midi.writeNoteOff(midi_channel_a, n, 0);
        }
@@ -2074,18 +2074,18 @@ void AllNotesOff(void*){
 void SetLane(uint8_t lane_in){
 
 	if (lane_in > MAX_LANE){
-		current_lane = MAX_LANE;
+		current_midi_lane = MAX_LANE;
 	} else if (lane_in < MIN_LANE){
-		current_lane = MIN_LANE;
+		current_midi_lane = MIN_LANE;
 	} else {
-		current_lane = lane_in;
+		current_midi_lane = lane_in;
 	}
 
-  if (previous_lane != current_lane){
+  if (previous_lane != current_midi_lane){
     // Don't want to call this too often.
-    // Need to limit this in case we have CV input making current_lane change fast
+    // Need to limit this in case we have CV input making current_midi_lane change fast
     //Bela_scheduleAuxiliaryTask(gAllNotesOff);
-    previous_lane = current_lane;
+    previous_lane = current_midi_lane;
   }
 }
 
@@ -2739,35 +2739,9 @@ void render(BelaContext *context, void *userData)
 		    // End Bela delay example code
 		    //////////////////////////////
 		
-		
-		
-		
-		
-		for(unsigned int ch = 0; ch < gAudioChannelNum; ch++){
-			// Pass input to output
-			
-			
-			
-			
-			// todo create separate vars for oscillator_2_audio_output
 
-			// Disable whilst trying delay things				
-			// if (ch == 0){
-			// 	audioWrite(context, n, ch, audio_osc_1_result);
-			// } else { // ch 1
-			// 	audioWrite(context, n, ch, audioRead(context, n, ch));
-			// }
-			
-			if (ch == 0) {
-				audio_left_input_raw = audioRead(context, n, ch);
-			}
-			
-			if (ch == 1) {
-				audio_right_input_raw = audioRead(context, n, ch);
-			}
-			
-			
-		}
+
+
 	}
 
 // ANALOG LOOP
