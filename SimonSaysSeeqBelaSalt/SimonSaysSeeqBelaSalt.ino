@@ -627,7 +627,7 @@ void SyncSequenceToFile(bool write_to_file){
 	uint8_t n = 0;
     uint8_t onoff = 0;
    
-	std::string file_prefix;
+
 	std::string file_name;
 
 	std::ofstream output_file;
@@ -652,11 +652,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 					rt_printf(".");
 
-				file_prefix = "/var/SimonSaysSeeqConfig/_NoteInfo_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
+				  file_name = "/var/SimonSaysSeeqConfig/_NoteInfo_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
 		    	
-		    	
-		    	///////////////////////////////////////////
-		    	file_name = file_prefix;
 		    
 		        if (write_to_file == true) {
 		        	// WRITE Sequence to Files
@@ -766,12 +763,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 				
 		        } // end read/write test
 				/////////////////////////////////////
-				
-		
-		    	
-		    //	file_name = file_prefix + "_note_on_isa";
-		    //	file_name = file_prefix + "_note_off_vel";
-		    //	file_name = file_prefix + "_note_off_isa";
+
 		
 				}
 		      }
@@ -779,7 +771,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
    }
 }
            
-    rt_printf("Bye from SyncSequenceToFile \n");       
+    rt_printf("\n Bye from SyncSequenceToFile \n");       
 }
 
 ///////
@@ -981,14 +973,14 @@ ADSR step_triggered_adsr_b;
 ADSR sequence_triggered_adsr_c;
 
 float audio_adsr_a_level = 0;
-float analog_envelope_b_level = 0;
+float analog_adsr_b_level = 0;
 float analog_sequence_triggered_adsr_c_level = 0;
 
 
 float envelope_1_attack = 0.0001; // audio_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
-float envelope_1_release = 0.5; // envelope_1 release (seconds)
+float envelope_1_release = 0.5; // initial value envelope_1 release (seconds)
 
 float analog_out_1;
 float analog_out_2;
@@ -1069,10 +1061,10 @@ void printStatus(void*){
 
 		  // Global frame timing
 
-		rt_printf("frame_timer is: %llu \n", frame_timer);
-    	rt_printf("frames_per_24_ticks is: %llu \n", frames_per_24_ticks);
-    	rt_printf("detected_bpm is: %f \n", detected_bpm);
-    	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
+		//rt_printf("frame_timer is: %llu \n", frame_timer);
+    //	rt_printf("frames_per_24_ticks is: %llu \n", frames_per_24_ticks);
+    // 	rt_printf("detected_bpm is: %f \n", detected_bpm);
+    //	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
 		// Delay Time
 		
@@ -1100,12 +1092,11 @@ void printStatus(void*){
 		
 		
 		// Analog / Digital Clock In.
-  		rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
+  	//	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
 		// Other Inputs
-    	//rt_printf("sequence_pattern_input_raw is: %f \n", sequence_pattern_input_raw);
-		rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
-		rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+		//rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
+		//rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
 		
 		/*
 		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
@@ -1121,13 +1112,8 @@ void printStatus(void*){
 		*/
 
 
-		rt_printf("current_midi_lane is: %d \n", current_midi_lane);
-		rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
-
-		
-
-
-
+	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
+	//	rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
 
 	
@@ -1153,13 +1139,13 @@ void printStatus(void*){
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
     	*/
     	
-    	//rt_printf("envelope_1_release is: %f \n", envelope_1_release);
+    	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
-    	/*
+    	
     	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
-    	rt_printf("analog_envelope_b_level is: %f \n", analog_envelope_b_level);
+    	rt_printf("analog_adsr_b_level is: %f \n", analog_adsr_b_level);
     	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
-    	*/
+    	
 
 
 		/*
@@ -1199,9 +1185,9 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 		*/
 
-    	rt_printf("the_sequence is: %d \n", the_sequence);
-    	print_binary(the_sequence);
-		rt_printf("%c \n", 'B');
+    //	rt_printf("the_sequence is: %d \n", the_sequence);
+    //	print_binary(the_sequence);
+		// rt_printf("%c \n", 'B');
 
 		// Sequence state
 		
@@ -1218,11 +1204,11 @@ void printStatus(void*){
     	}
     	
 
-    	rt_printf("Midi last_note_on: %d \n", last_note_on);
-    	rt_printf("Midi last_note_off: %d \n", last_note_off);
-    	rt_printf("Midi last_note_disabled: %d \n", last_note_disabled);
+    //	rt_printf("Midi last_note_on: %d \n", last_note_on);
+    // 	rt_printf("Midi last_note_off: %d \n", last_note_off);
+    //	rt_printf("Midi last_note_disabled: %d \n", last_note_disabled);
     	
-    	rt_printf("Midi midi_channel_a: %d \n", midi_channel_a);
+    //	rt_printf("Midi midi_channel_a: %d \n", midi_channel_a);
     	
     	
     
@@ -1231,8 +1217,8 @@ void printStatus(void*){
     rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
     // Sequence Outputs 
-    rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
-		rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
+    //rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
+		//rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
 
 
       //std::string message = "$simon!";
@@ -2730,13 +2716,13 @@ void render(BelaContext *context, void *userData)
         gDelayBuffer_l[gDelayBufWritePtr] = del_input_l;
         gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
         
-        // Get the delayed sample (by reading `coarse_delay_frames` many samples behind our current write pointer) and add it to our output sample
+        // Get the delayed sample (by reading `total_delay_frames` many samples behind our current write pointer) and add it to our output sample
         out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
         
         // Write the sample into the output buffer -- done!
-        audioWrite(context, n, 0, out_l * analog_envelope_b_level);
-        audioWrite(context, n, 1, out_r * analog_envelope_b_level);
+        audioWrite(context, n, 0, out_l * analog_adsr_b_level);
+        audioWrite(context, n, 1, out_r * analog_adsr_b_level);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
@@ -2752,7 +2738,7 @@ void render(BelaContext *context, void *userData)
 		lfo_a_result_analog = lfo_a_analog.process();
 		
 		// Process step triggered analog envelope
-		analog_envelope_b_level  = step_triggered_adsr_b.process();  
+		analog_adsr_b_level  = step_triggered_adsr_b.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
 		analog_sequence_triggered_adsr_c_level  = env3_amp * sequence_triggered_adsr_c.process();
@@ -2761,13 +2747,13 @@ void render(BelaContext *context, void *userData)
 		
 		
 		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_envelope_b_level; 
+		analog_out_2 = lfo_a_result_analog * analog_adsr_b_level; 
 		
 		// Plain envelope This is like a gate at the start of sequence plus release (so can use it as both a gate and an envelope)
 		analog_out_3 = analog_sequence_triggered_adsr_c_level;
 		
 		// Additive output
-		analog_out_4 = ( lfo_a_result_analog + analog_envelope_b_level ) / 2.0;
+		analog_out_4 = ( lfo_a_result_analog + analog_adsr_b_level ) / 2.0;
 		
 		
 		
@@ -2827,8 +2813,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  // > 0.999 leads to distorsion
 		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
-		  	delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 1.8);
-		  	
+		  	delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 0.999);
 		  }
 		  
 		  
