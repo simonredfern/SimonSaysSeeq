@@ -2379,7 +2379,9 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 		coarse_delay_frames = rint(frames_per_24_ticks * coarse_delay_input * delay_coarse_dial_factor);	    
 	    
 		// The amount we increment / decrement the delay using buttons 2 and 1
-		fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);		
+		//fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);	
+		
+		fine_delay_frames_delta = rint(frames_per_24_ticks / 48.0);	
 		
 
 		// Fine Delay Time
