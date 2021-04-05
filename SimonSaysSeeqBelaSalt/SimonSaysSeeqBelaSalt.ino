@@ -2208,7 +2208,36 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 
 
+float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
+float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+// Write pointer
+int gDelayBufWritePtr = 0;
 
+// Amount of delay
+float gDelayAmount = 1.0;
+
+// Level of pre-delay input
+float gDelayAmountPre = 0.75;
+
+
+// Butterworth coefficients for low-pass filter @ 8000Hz
+float gDel_a0 = 0.1772443606634904;
+float gDel_a1 = 0.3544887213269808;
+float gDel_a2 = 0.1772443606634904;
+float gDel_a3 = -0.5087156198145868;
+float gDel_a4 = 0.2176930624685485;
+
+// Previous two input and output values for each channel (required for applying the filter)
+float gDel_x1_l = 0;
+float gDel_x2_l = 0;
+float gDel_y1_l = 0;
+float gDel_y2_l = 0;
+float gDel_x1_r = 0;
+float gDel_x2_r = 0;
+float gDel_y1_r = 0;
+float gDel_y2_r = 0;
+
+///////// End of Bela Delay example
 
 
 
@@ -2217,7 +2246,14 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 
 ////
+void InitAudioBuffer(){
+	// Buffer holding previous samples per channel
+	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
+	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+	// Write pointer
+	gDelayBufWritePtr = 0;
 
+}
 
 
 void ChangeSequence(void*){
@@ -2426,48 +2462,24 @@ void MaybeOnTick(){
 // 400000 * 16 
 
 
-void InitAudioBuffer(){
-// Buffer holding previous samples per channel
-float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
-float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
-// Write pointer
-int gDelayBufWritePtr = 0;
-
-}
 
 
 
-// Amount of delay
-float gDelayAmount = 1.0;
-
-// Level of pre-delay input
-float gDelayAmountPre = 0.75;
-
-
-// Butterworth coefficients for low-pass filter @ 8000Hz
-float gDel_a0 = 0.1772443606634904;
-float gDel_a1 = 0.3544887213269808;
-float gDel_a2 = 0.1772443606634904;
-float gDel_a3 = -0.5087156198145868;
-float gDel_a4 = 0.2176930624685485;
-
-// Previous two input and output values for each channel (required for applying the filter)
-float gDel_x1_l = 0;
-float gDel_x2_l = 0;
-float gDel_y1_l = 0;
-float gDel_y2_l = 0;
-float gDel_x1_r = 0;
-float gDel_x2_r = 0;
-float gDel_y1_r = 0;
-float gDel_y2_r = 0;
-
-///////// End of Bela Delay example
 
 
 
 #include <libraries/WriteFile/WriteFile.h>
 WriteFile file1;
 WriteFile file2;
+
+
+
+
+
+
+
+
+
 
 
 /////////////////////////////////////////////////////////
