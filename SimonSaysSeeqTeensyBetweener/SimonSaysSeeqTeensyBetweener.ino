@@ -163,7 +163,7 @@ unsigned int last_binary_sequence_1; // So we can detect changes
 
 
 
-long bd_sequence_2;
+
 
 
 /*
@@ -953,33 +953,7 @@ void OnStep() {
     
   }
 
-/*
-  ///////////
-  // Now, what about the second / bass drum sequence?
-  // bd_sequence_2
 
-  uint8_t play_bd = bitRead(bd_sequence_2, step_count_sanity(step_count));
-
-  // Go Low
-  GateBLow();
-
-  if (play_bd) {
-    //Serial.println(String("****************** play BD ")   );
-
-    if (not mute_gate_b) {
-      GateBHigh();
-    } else {
-      //Serial.println(String("mute_gate_b is Muted"));
-    }
-
-
-
-
-  } else {
-    //GateBLow();
-    //Serial.println(String("*********** not play BD ")   );
-  }
-*/
 
 
 }
@@ -1240,26 +1214,6 @@ void SetSequencePattern() {
   //Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
   //Serial.print("\t");
   //Serial.print(hybrid_sequence_1, BIN);
-  //Serial.println();
-
-  // Now set the second or bass drum sequence
-  // Not using this
-
-  // find how many elements (possible 16 step musical sequences) we have in the bd sequence
-  int bd_seqs_max_i = sizeof(bd_seqs) / sizeof(long) - 1;
-
-  // Choose the active bass drum sequence
-  int bd_seqs_i = fscale( min_pot_value, max_pot_value, 0, bd_seqs_max_i, pot1_input_value, 0);
-
-  //Serial.println(String("bd_seqs_i is: ") + bd_seqs_i  );
-
-
-  bd_sequence_2 = bd_seqs[bd_seqs_i];
-
-
-  //Serial.println(String("bd_sequence_2 is: ") + bd_sequence_2  );
-  //Serial.print("\t");
-  //Serial.print(bd_sequence_2, BIN);
   //Serial.println();
 
 
