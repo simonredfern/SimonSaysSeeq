@@ -1,7 +1,7 @@
 // For important notes on Compiling / Running this sketch, please see the README.md in this folder.
 // For usage instructions also see the README.md in this folder
 
-const float simon_says_seq_version = 0.26;
+const float simon_says_seq_version = 0.27;
 
 
 //////////////////////////////////////////////////////////
@@ -566,7 +566,7 @@ void loop() {
   }
 
 
-  
+
   // This is Carrier * Modulator B output
   if (result_b_rms_object.available())
   {
@@ -910,8 +910,9 @@ void OnStep() {
 
   // Go low
   GateALow();
+  GateBLow();
 
-
+  // Play Note (GateA)
   if (play_note) {
     //Serial.println(String("****************** play ")   );
 
@@ -934,10 +935,23 @@ void OnStep() {
 
 
   } else {
-    //GateALow();
+    // Opposite (GateB)
+  
     //Serial.println(String("not play ")   );
+
+
+    if (not mute_gate_b) {
+      GateBHigh();
+    } else {
+      //Serial.println(String("mute_gate_b is Muted"));
+    }
+
+
+
+    
   }
 
+/*
   ///////////
   // Now, what about the second / bass drum sequence?
   // bd_sequence_2
@@ -963,6 +977,7 @@ void OnStep() {
     //GateBLow();
     //Serial.println(String("*********** not play BD ")   );
   }
+*/
 
 
 }
@@ -1182,7 +1197,7 @@ void SetSequencePattern() {
 
   Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
-  
+
   binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
   Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
@@ -1215,15 +1230,15 @@ void SetSequencePattern() {
 
 
   // So pot fully counter clockwise is 1 on the first beat
-//  if (binary_sequence_1 == 1) {
-//    hybrid_sequence_1 = 1;
-//  }
+  //  if (binary_sequence_1 == 1) {
+  //    hybrid_sequence_1 = 1;
+  //  }
 
 
-     Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-     Serial.print("\t");
-     Serial.print(hybrid_sequence_1, BIN);
-     Serial.println();
+  Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+  Serial.print("\t");
+  Serial.print(hybrid_sequence_1, BIN);
+  Serial.println();
 
   // Now set the second or bass drum sequence
 
@@ -1264,7 +1279,7 @@ void SetSequenceLength() {
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
   //sequence_length_in_steps = 16 - sequence_length_in_steps_raw;
 
- // sequence_length_in_steps = sequence_length_in_steps_raw;
+  // sequence_length_in_steps = sequence_length_in_steps_raw;
 
   if (sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS) {
     sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS;
