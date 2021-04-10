@@ -1,4 +1,5 @@
 // For important notes on Compiling / Running this sketch, please see the README.md in this folder.
+// For usage instructions also see the README.md in this folder
 
 const float simon_says_seq_version = 0.26;
 
@@ -48,10 +49,11 @@ AudioAnalyzeRMS          result_b_rms_object;
 
 //////////////
 // Modulate CV
-// Waveform a and b are multiplied together
+// Carier (LFO) and Modulator (Decaying Ramp) A multiplied together
 AudioConnection          patchCord6a(carrier_a_object, 0, multiply_a, 1);
 AudioConnection          patchCord7a(modulator_a_object, 0, multiply_a, 0);
 
+// Carier (LFO) and Modulator (Decaying Ramp) B multiplied together
 AudioConnection          patchCord6b(carrier_b_object, 0, multiply_b, 1);
 AudioConnection          patchCord7b(modulator_b_object, 0, multiply_b, 0);
 
@@ -545,6 +547,8 @@ void loop() {
 
   // DRIVE CV
   /// This is connected to cv_waveform and reads the level. We use that to drive CV out.
+
+  // This is Carrier * Modulator A output
   if (result_a_rms_object.available())
   {
     float result_a_rms_value = result_a_rms_object.read();
@@ -562,6 +566,8 @@ void loop() {
   }
 
 
+  
+  // This is Carrier * Modulator B output
   if (result_b_rms_object.available())
   {
     float result_b_rms_value = result_b_rms_object.read();
@@ -722,11 +728,11 @@ void ReadInputsAndUpdateSettings() {
   //Serial.println(String("pot2_input_value is: ") + pot2_input_value  );
 
   // Pot3
-  pot3_input_value = b.readKnobRaw(3);
+  pot3_input_value = b.readKnobRaw(3); // Frequency
   //Serial.println(String("pot3_input_value is: ") + pot3_input_value  );
 
   // Pot4
-  pot4_input_value = b.readKnobRaw(4);
+  pot4_input_value = b.readKnobRaw(4); // Env Release
   //Serial.println(String("pot4_input_value is: ") + pot4_input_value  );
 
   // Cv1
