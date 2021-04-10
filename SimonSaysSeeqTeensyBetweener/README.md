@@ -2,7 +2,7 @@
 
 # Instructions for use
 
-Knob 1 controlls the Grey Code influenced Gate Sequencer
+Knob 1 controls the Grey Code influenced Gate Sequencer
 
 Knob 2 controls the length of the Gate Sequence 
 
@@ -21,7 +21,7 @@ Trig 1 In is for Clock In
 
     - A lack of clock here will stop the sequencer
 
-Trig 2 in does nothing (Reset Sequence in Future?)
+Trig 2 In is to reset the whole Sequence to Step 1
 
 Trig 3 In is to Mute Gate A
 
@@ -30,7 +30,7 @@ Trig 4 In is to Mute Gate B
 
 CV 1 Out is Gate A
 
-CV 2 Out is currently undefined (opposite of Gate A in Future)
+CV 2 Out is Gate B (opposite of Gate A sequence)
 
 CV 3 Out is LFO (carrier) A * Decaying Env (Modulator) A 
 
