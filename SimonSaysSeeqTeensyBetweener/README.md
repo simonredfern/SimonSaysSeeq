@@ -1,5 +1,9 @@
 # SimonSaysSeeq for the Betweener
 
+
+![Simon Says Seeq on Betweener](https://user-images.githubusercontent.com/485218/114286689-4b412d80-9a61-11eb-9f70-2c36bbcb019d.jpg)
+
+
 # Instructions for use
 
 Knob 1 controls the Grey Code influenced Gate Sequencer
