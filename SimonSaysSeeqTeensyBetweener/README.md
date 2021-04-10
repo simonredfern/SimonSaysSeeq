@@ -34,7 +34,11 @@ CV 2 Out is currently undefined (opposite of Gate A in Future)
 
 CV 3 Out is LFO (carrier) A * Decaying Env (Modulator) A 
 
+    - This resets on the first step of the sequence if the modulator A has reached zero
+
 CV 4 Out is LFO (carrier) B * Decaying Env (Modulator) B
+
+    - This resets on every Gate B if the modulator B has reached zero
 
 
 

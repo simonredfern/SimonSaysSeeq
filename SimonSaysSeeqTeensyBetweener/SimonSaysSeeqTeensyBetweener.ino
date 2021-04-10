@@ -526,6 +526,17 @@ void loop() {
 
   b.readAllInputs();
 
+
+  if (b.trig2.risingEdge()) {
+    Serial.println(String("YES Incoming Reset on trig2 ")   );
+    do_reset_sequence_counters = true;
+  } else {
+    //Serial.println(String("NO Incoming Reset on trig2 ")   );
+    //do_reset_sequence_counters = false;
+  }
+
+
+
   if (b.trig1.risingEdge()) {
     if (sequence_is_running == LOW) {
       StartSequencer();
@@ -746,15 +757,6 @@ void ReadInputsAndUpdateSettings() {
 
 
 
-
-
-
-  //  if (b.triggerHigh(2)){
-  //    ResetSequenceCounters();
-  //  } else {
-  //  }
-
-
   if (b.triggerHigh(3)) {
     mute_gate_a = true;
   } else {
@@ -883,7 +885,7 @@ void InitMidiSequence() {
 /////////////////////////////////////////////////////////////
 void OnStep() {
 
-  Serial.println(String("OnStep step_count is: ") + FIRST_STEP + "/" + step_count);
+  Serial.println(String("OnStep zero indexed step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP);
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));
@@ -892,15 +894,13 @@ void OnStep() {
   }
 
   //
-  //  if (step_count != FIRST_STEP){
-  //    if (do_reset_sequence_counters == true){
-  //      do_reset_sequence_counters = false;
-  //
-  //      ResetSequenceCounters();
-  //      Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
-  //
-  //    }
-  //  }
+   // if (step_count != FIRST_STEP){
+      if (do_reset_sequence_counters == true){
+        ResetSequenceCounters();
+        do_reset_sequence_counters = false;
+        Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
+      }
+   // }
 
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
@@ -918,6 +918,7 @@ void OnStep() {
 
     if (not mute_gate_a) {
       GateAHigh();
+      //ResetCVA();
     } else {
       //Serial.println(String("mute_gate_a is Muted"));
     }
@@ -942,6 +943,7 @@ void OnStep() {
 
     if (not mute_gate_b) {
       GateBHigh();
+      ResetCVB();
     } else {
       //Serial.println(String("mute_gate_b is Muted"));
     }
@@ -1076,7 +1078,7 @@ void OnFirstStep() {
   //Serial.println(String("CV Pulse On") );
 
   ResetCVA();
-  ResetCVB();
+  //ResetCVB();
 
 }
 
@@ -1195,12 +1197,12 @@ void SetSequencePattern() {
 
 
 
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
 
   binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
-  Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
+  //Serial.println(String("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
 
   binary_sequence_1 = fscale( min_pot_value, max_pot_value, binary_sequence_lower_limit, binary_sequence_upper_limit, pot1_input_value, 0);
 
@@ -1235,13 +1237,13 @@ void SetSequencePattern() {
   //  }
 
 
-  Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
-  Serial.print("\t");
-  Serial.print(hybrid_sequence_1, BIN);
-  Serial.println();
+  //Serial.println(String("hybrid_sequence_1 is: ") + hybrid_sequence_1  );
+  //Serial.print("\t");
+  //Serial.print(hybrid_sequence_1, BIN);
+  //Serial.println();
 
   // Now set the second or bass drum sequence
-
+  // Not using this
 
   // find how many elements (possible 16 step musical sequences) we have in the bd sequence
   int bd_seqs_max_i = sizeof(bd_seqs) / sizeof(long) - 1;
@@ -1291,7 +1293,7 @@ void SetSequenceLength() {
     Serial.println(String("**** ERROR with sequence_length_in_steps but it is NOW: ") + sequence_length_in_steps  );
   }
 
-  Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
+  //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
   new_sequence_length_in_ticks = (sequence_length_in_steps) * 6;
 
