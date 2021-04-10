@@ -3,24 +3,37 @@
 # Instructions for use
 
 Knob 1 controlls the Grey Code influenced Gate Sequencer
+
 Knob 2 controls the length of the Gate Sequence 
+
     - If the length is short, Knob 1 will have more precision because the possible number of values is less for a shorter sequence.
+
 Knob 3 controls the LFO A Frequency and LFO B. 
+
     - LFO B freq = LFO A freq / 2 
+
 Knob 4 controls the decay of the Envelope
 
 
 Trig 1 In is for Clock In
+
     - A rising edge here also starts the sequencer
+
     - A lack of clock here will stop the sequencer
+
 Trig 2 in does nothing (Reset Sequence in Future?)
+
 Trig 3 In is to Mute Gate A
+
 Trig 4 In is to Mute Gate B
 
 
 CV 1 Out is Gate A
+
 CV 2 Out is currently undefined (opposite of Gate A in Future)
+
 CV 3 Out is LFO (carrier) A * Decaying Env (Modulator) A 
+
 CV 4 Out is LFO (carrier) B * Decaying Env (Modulator) B
 
 
