@@ -28,6 +28,16 @@ Trig 3 In is to Mute Gate A
 Trig 4 In is to Mute Gate B
 
 
+CV 1 In is currently unused (In future add value to the Knob 1?)
+
+CV 2 In is currently unused (In future add value to the Knob 2?)
+
+CV 3 In is currently unused (In future add value to the Knob 3?)
+
+CV 4 In is currently unused (In future add value to the Knob 4?)
+
+
+
 CV 1 Out is Gate A
 
 CV 2 Out is Gate B (opposite of Gate A sequence)
