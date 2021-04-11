@@ -587,13 +587,13 @@ boolean mute_gate_b = false;
 
   // Callback for USB Midi On
   void OnNoteOn(byte channel, byte note, byte velocity){
-    Serial.println(String("OnNoteOn") + note + String("velocity is ") + velocity );
+    //Serial.println(String("OnNoteOn") + note + String("velocity is ") + velocity );
     OnMidiNoteInEvent(1, note, velocity, channel);
   }
 
   // Callback for USB Midi Off
   void OnNoteOff(byte channel, byte note, byte velocity){
-    Serial.println(String("OnNoteOff") + note + String("velocity is ") + velocity );
+    //Serial.println(String("OnNoteOff") + note + String("velocity is ") + velocity );
     OnMidiNoteInEvent(0, note, velocity, channel);
   }
 
@@ -623,7 +623,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
            SendMidiNoteOff(note, 0, 1);
            
            // Disable the note on all steps
-           Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
+           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
            DisableNotes(note);
 
           // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
@@ -635,12 +635,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
     
         } else {
           // We want the note on, so set it on.
-          Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
           // WRITE MIDI MIDI_DATA
           channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
           channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
           channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
-           Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          //Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
 
         } 
       
@@ -648,12 +648,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           
             // Note Off
-             Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
+             //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
              // WRITE MIDI MIDI_DATA
              channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
              channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
              channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
-             Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
+             //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
 
           
   }
@@ -758,7 +758,7 @@ int note, velocity, channel;
 
 
   if (b.trig2.risingEdge()) {
-    Serial.println(String("YES Incoming Reset on trig2 ")   );
+    //Serial.println(String("YES Incoming Reset on trig2 ")   );
     do_reset_sequence_counters = true;
   } else {
     //Serial.println(String("NO Incoming Reset on trig2 ")   );
@@ -874,7 +874,7 @@ void OnTick() {
   // Called on Every MIDI or Analogue clock pulse
   // Drives sequencer settings and activity.
 
-  // Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);
+  //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);
 
 
   // Read inputs and update settings.
@@ -1162,30 +1162,16 @@ void OnStep() {
       //Serial.println(String("mute_gate_a is Muted"));
     }
 
-    // OnFirstStep();
-
-    // We might want to only start the CV pulse on the first step
-    //        if (reset_cv_lfo_at_FIRST_STEP == true){
-    //          if (step_count == FIRST_STEP) {
-    //            OnFirstStep();
-    //          }
-    //        } else {
-    //          OnFirstStep();
-    //        }
-
-
   } else {
     // Opposite (GateB)
   
-    
-
-
+ 
     if (not mute_gate_b) {
-      Serial.println(String("NOT play GateA but play GateB")   );
+      Serial.println(String("PLAY GateB (NOT play GateA)")   );
       GateBHigh();
       ResetCVB();
     } else {
-      Serial.println(String("mute_gate_b is Muted"));
+      Serial.println(String("GateB is MUTED"));
       
     }
 
