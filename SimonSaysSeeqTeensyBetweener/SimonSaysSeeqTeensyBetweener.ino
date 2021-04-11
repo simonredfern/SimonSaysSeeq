@@ -21,10 +21,10 @@ AudioAnalyzeRMS          test_rms_object;
 
 AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
-AudioSynthWaveformDc     gate_dc_waveform;
+AudioSynthWaveformDc     gate_a_dc_waveform;
 
 
-AudioSynthWaveformDc     gate_2_dc_waveform;
+AudioSynthWaveformDc     gate_b_dc_waveform;
 
 /////////////////////////////////////
 // How we generate CV
@@ -74,7 +74,7 @@ AudioAnalyzeRMS          gate_monitor_rms;
 //////////////////////////
 // GATE Output and Monitor
 
-AudioConnection          patchCord9(gate_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
+AudioConnection          patchCord9(gate_a_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
 
 
 AudioControlSGTL5000     audioShield;
@@ -1124,7 +1124,7 @@ void InitMidiSequence(){
 /////////////////////////////////////////////////////////////
 void OnStep() {
 
-  Serial.println(String("OnStep step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP); // zero indexed
+  //Serial.println(String("OnStep step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP); // zero indexed
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));
@@ -1132,14 +1132,13 @@ void OnStep() {
     Serial.println(String("*****************************************************************************************"));
   }
 
-  //
-   // if (step_count != FIRST_STEP){
+ 
       if (do_reset_sequence_counters == true){
         ResetSequenceCounters();
         do_reset_sequence_counters = false;
         Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
       }
-   // }
+
 
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
@@ -1156,6 +1155,7 @@ void OnStep() {
     //Serial.println(String("****************** play ")   );
 
     if (not mute_gate_a) {
+      Serial.println(String("PLAY GateA (NOT play GateB)")   );
       GateAHigh();
       //ResetCVA();
     } else {
@@ -1195,38 +1195,27 @@ void OnNotStep() {
   ChangeCvModulatorBAmplitude();
 }
 
+
+
+
+
+
+
 void GateAHigh() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // This is to drive the LED (other things too?)
-  gate_dc_waveform.amplitude(0.99, 10);
+  gate_a_dc_waveform.amplitude(0.99, 10);
 
   // The output
   b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
-
-
-  ////////////////
-
-
-
 }
-
-void ResetCVB() {
-
-  carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
-
-  cv_modulator_b_amplitude = 0.99;
-
-  //Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
-  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
-}
-
 
 void GateALow() {
   //Serial.println(String("Gate LOW") );
 
   // For LED
-  gate_dc_waveform.amplitude(0);
+  gate_a_dc_waveform.amplitude(0);
 
   // For output
   b.writeCVOut(1, 0);
@@ -1236,10 +1225,10 @@ void GateALow() {
 
 
 void GateBHigh() {
-  //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
+  Serial.println(String("Gate B HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
-  gate_2_dc_waveform.amplitude(0.99, 10);
+  //gate_b_dc_waveform.amplitude(0.99, 10);
 
   // For output
   b.writeCVOut(2, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
@@ -1247,10 +1236,11 @@ void GateBHigh() {
 }
 
 void GateBLow() {
-  //Serial.println(String("Gate LOW") );
+
+  Serial.println(String("Gate B LOW at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
-  gate_2_dc_waveform.amplitude(0);
+  //gate_b_dc_waveform.amplitude(0);
 
   // For output
   b.writeCVOut(2, 0);
@@ -1273,6 +1263,15 @@ void ResetCVA() {
 
 }
 
+
+void ResetCVB() {
+  carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
+
+  cv_modulator_b_amplitude = 0.99;
+
+  //Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
+  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
+}
 
 
 void OnFirstStep() {
