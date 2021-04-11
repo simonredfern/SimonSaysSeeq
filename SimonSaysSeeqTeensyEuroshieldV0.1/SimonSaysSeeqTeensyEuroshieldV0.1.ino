@@ -964,7 +964,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
   } // End of SequenceSettings
 ////////////////////////////////////////////////
 
-
+// (copy paste betweener-teensy)
 void InitMidiSequence(){
 
   Serial.println(String("InitMidiSequence Start ")  );
@@ -996,7 +996,7 @@ void InitMidiSequence(){
   } 
   
 
-Serial.println(String("InitMidiSequence Done ")  );
+  Serial.println(String("InitMidiSequence Done ")  );
 }
 
 
@@ -1374,7 +1374,7 @@ void Flash(int delayTime, int noOfTimes, int ledPin){
     
 }
 
-
+// copy paste betweener-teensy
 void DisableNotes(uint8_t note){
              // Disable that note for all steps.
            uint8_t sc = 0;
@@ -1390,7 +1390,7 @@ void DisableNotes(uint8_t note){
            }
 }
 
-
+// copy paste betweener-teensy
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
   //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
