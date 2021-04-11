@@ -603,10 +603,10 @@ int note, velocity, channel;
         velocity = MIDI.getData2();
         channel = MIDI.getChannel();
         if (velocity > 0) {
-          //Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+          Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
           OnMidiNoteInEvent(MIDI_NOTE_ON,note, velocity,channel);
         } else {
-          //Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
+          Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
           OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
         }
         break;
@@ -667,7 +667,9 @@ int note, velocity, channel;
         }        
     }
   } // End of MIDI message detected
-
+    else {
+  // Serial.println(String("No MIDI message found"));
+}
 
 
 
@@ -1036,7 +1038,7 @@ void InitMidiSequence(){
 /////////////////////////////////////////////////////////////
 void OnStep() {
 
-  Serial.println(String("OnStep zero indexed step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP);
+  Serial.println(String("OnStep step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP); // zero indexed
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));
