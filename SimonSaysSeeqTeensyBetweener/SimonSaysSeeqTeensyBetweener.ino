@@ -395,7 +395,51 @@ boolean midi_clock_detected = LOW;
 boolean do_reset_sequence_counters = false;
 
 
+// copy paste betweener-teensy
+uint8_t BarCountSanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
+  
+  if (bar_count_in > MAX_BAR){
+    Serial.println(String("**** ERROR bar_count_in > MAX_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = MAX_BAR;
+  } else if (bar_count_in < FIRST_BAR){
+    Serial.println(String("**** ERROR bar_count_in < FIRST_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = FIRST_BAR;
+  } else {
+    bar_count_fixed = bar_count_in;
+  }
+  return bar_count_fixed;
+}
 
+
+// copy paste betweener-teensy 
+void PlayMidi(){
+  // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+
+  for (uint8_t n = 0; n <= 127; n++) {
+    //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
+           // The note could be on one of 6 ticks in the sequence
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+             Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             //MIDI.sendNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
+             SendMidiNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
+           }
+    } 
+
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+           Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+           // MIDI.sendNoteOff(n, 0, 1);
+           SendMidiNoteOff(n, 0, 1);
+       }
+    }
+} // End midi note loop
+
+}
 
 
 void setup() {
@@ -541,16 +585,29 @@ boolean mute_gate_a = false;
 boolean mute_gate_b = false;
 
 
+  // Callback for USB Midi On
   void OnNoteOn(byte channel, byte note, byte velocity){
-    Serial.println(String("myNoteOn") + note + String("velocity is ") + velocity );
-
+    Serial.println(String("OnNoteOn") + note + String("velocity is ") + velocity );
     OnMidiNoteInEvent(1, note, velocity, channel);
-    
   }
+
+  // Callback for USB Midi Off
   void OnNoteOff(byte channel, byte note, byte velocity){
-    Serial.println(String("myNoteOff") + note + String("velocity is ") + velocity );
+    Serial.println(String("OnNoteOff") + note + String("velocity is ") + velocity );
     OnMidiNoteInEvent(0, note, velocity, channel);
   }
+
+  void SendMidiNoteOff (byte note, byte velocity, byte channel){
+    // DIN MIDI.sendNoteOff(note, velocity, channel);
+    // USB
+    usbMIDI.sendNoteOff(note, 0, channel);
+  }
+
+  void SendMidiNoteOn (byte note, byte velocity, byte channel){
+    usbMIDI.sendNoteOn(note, velocity, channel);
+  }
+
+  
 
 
 // copy paste betweener-teensy
@@ -562,7 +619,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         // A mechanism to clear notes from memory by playing them quietly.
         if (velocity < 7 ){
            // Send Note OFF
-           MIDI.sendNoteOff(note, 0, 1);
+           //MIDI.sendNoteOff(note, 0, 1);
+           SendMidiNoteOff(note, 0, 1);
            
            // Disable the note on all steps
            Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
@@ -613,6 +671,7 @@ void loop() {
 
 usbMIDI.read();
 
+/*
 int note, velocity, channel; 
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
     byte type = MIDI.getType();
@@ -690,7 +749,7 @@ int note, velocity, channel;
   // Serial.println(String("No MIDI message found"));
 }
 
-
+*/
 
 
 /////////////
@@ -715,15 +774,6 @@ int note, velocity, channel;
     OnTick();
     last_clock_pulse = millis();
   }
-
-  //  b.readTriggers();
-  //  if (b.triggerRose(2)){
-  //    Serial.println(String("Incoming Reset on trig2 ")   );
-  //    do_reset_sequence_counters = true;
-  //  } else {
-  //    //Serial.println(String("NO Incoming Reset on trig2 ")   );
-  //  }
-
 
 
 
@@ -768,32 +818,6 @@ int note, velocity, channel;
   } else {
     //Serial.println(String("result_b_rms_object not available ")   );
   }
-
-
-
-
-
-
-
-  //if (false){
-  //  if (test_rms_object.available()){
-  //          float test_rms = test_rms_object.read();
-  //
-  //          // Also use this to drive the betweener ouput
-  //
-  //            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
-  //            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
-  //            //b.writeCVOut(1, test_rms_scaled);
-  //            //b.writeCVOut(2, test_rms_scaled);
-  //            //b.writeCVOut(3, test_rms_scaled);
-  //            b.writeCVOut(4, test_rms_scaled);
-  //
-  //
-  //  } else {
-  //    //Serial.println(String("test_rms_object is not available!!"));
-  //  }
-  //}
-
 
 
 
@@ -877,9 +901,52 @@ void OnTick() {
 
   SetSequencePattern();
 
+
+  // Play any suitable midi in the sequence 
+  PlayMidi();
+
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
 }
+
+
+/////
+/*
+ * 
+ * 
+ * 
+
+// copy paste betweener-teensy - From Teensy
+void OnTick(){
+// Called on Every MIDI or Analogue clock pulse
+// Drives sequencer settings and activity.
+
+  // Read inputs and update settings.  
+  SequenceSettings();
+
+  // Decide if we have a "step"
+  if (loop_timing.tick_count_in_sequence % 6 == 0){
+    clockShowHigh();
+    //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStep();
+    /////////////////////////////////////////   
+  } else {
+    clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStep();
+    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+  // Play any suitable midi in the sequence 
+  PlayMidi();
+   
+  // Advance and Reset ticks and steps
+  AdvanceSequenceChronology();
+}
+
+*/
+////
 
 
 
@@ -1110,14 +1177,16 @@ void OnStep() {
   } else {
     // Opposite (GateB)
   
-    //Serial.println(String("not play ")   );
+    
 
 
     if (not mute_gate_b) {
+      Serial.println(String("NOT play GateA but play GateB")   );
       GateBHigh();
       ResetCVB();
     } else {
-      //Serial.println(String("mute_gate_b is Muted"));
+      Serial.println(String("mute_gate_b is Muted"));
+      
     }
 
 

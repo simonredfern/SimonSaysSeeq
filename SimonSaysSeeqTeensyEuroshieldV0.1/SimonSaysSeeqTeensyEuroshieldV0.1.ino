@@ -215,6 +215,7 @@ float cv_waveform_a_amplitude;
 
 //////////////////////
 // Midi clock and start / stop related
+// DIN MIDI (not USB)
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 
@@ -352,6 +353,7 @@ void printVersion(){
 
 
 
+// copy paste betweener-teensy
 uint8_t BarCountSanity(uint8_t bar_count_in){
   uint8_t bar_count_fixed;
   
@@ -1000,7 +1002,7 @@ void InitMidiSequence(){
 }
 
 
-
+// copy paste betweener-teensy 
 void PlayMidi(){
   // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
