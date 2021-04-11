@@ -490,7 +490,7 @@ void setup() {
 
 
   // Begin Midi
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+  //MIDI.begin(MIDI_CHANNEL_OMNI);
 
 
 
@@ -669,7 +669,7 @@ void loop() {
 
 /////////////
 
-usbMIDI.read();
+
 
 /*
 int note, velocity, channel; 
@@ -820,7 +820,7 @@ int note, velocity, channel;
   }
 
 
-
+  usbMIDI.read(); // Note: putting this early in this function caused problems with GateB?
 
   ///////////////////
 
@@ -1225,7 +1225,7 @@ void GateALow() {
 
 
 void GateBHigh() {
-  Serial.println(String("Gate B HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
+  //Serial.println(String("Gate B HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
   //gate_b_dc_waveform.amplitude(0.99, 10);
@@ -1237,7 +1237,7 @@ void GateBHigh() {
 
 void GateBLow() {
 
-  Serial.println(String("Gate B LOW at tick_count_since_start: ") + loop_timing.tick_count_since_start);
+  //Serial.println(String("Gate B LOW at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
   //gate_b_dc_waveform.amplitude(0);
