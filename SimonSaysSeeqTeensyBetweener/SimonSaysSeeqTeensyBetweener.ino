@@ -446,7 +446,14 @@ void setup() {
 
 
   // Begin Midi
-  //MIDI.begin(MIDI_CHANNEL_OMNI);
+  MIDI.begin(MIDI_CHANNEL_OMNI);
+
+
+
+  // MIDI Callbacks
+  usbMIDI.setHandleNoteOn(OnNoteOn) ;
+  usbMIDI.setHandleNoteOff(OnNoteOff);
+
 
 
 
@@ -534,6 +541,18 @@ boolean mute_gate_a = false;
 boolean mute_gate_b = false;
 
 
+  void OnNoteOn(byte channel, byte note, byte velocity){
+    Serial.println(String("myNoteOn") + note + String("velocity is ") + velocity );
+
+    OnMidiNoteInEvent(1, note, velocity, channel);
+    
+  }
+  void OnNoteOff(byte channel, byte note, byte velocity){
+    Serial.println(String("myNoteOff") + note + String("velocity is ") + velocity );
+    OnMidiNoteInEvent(0, note, velocity, channel);
+  }
+
+
 // copy paste betweener-teensy
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
@@ -592,7 +611,7 @@ void loop() {
 
 /////////////
 
-
+usbMIDI.read();
 
 int note, velocity, channel; 
   if (MIDI.read()) {                    // Is there a MIDI message incoming ?
