@@ -12,7 +12,7 @@ The gate / CV outputs were created to drive a pitch quantizers via attenuator/of
 
 ## Design Principles
 
-Modeless: A knob only controls one thing. *Holding* a button and turning a knob is just about "ok" for a different function, but pressing a button to create a different mode is not "ok". See the late [Larry Tesler's](https://en.wikipedia.org/wiki/Larry_Tesler) work on NOMODES.
+**Modeless**: A knob only controls one thing. *Holding* a button and turning a knob is just about "ok" for a different function, but pressing a button to create a different mode is not "ok". See the late [Larry Tesler's](https://en.wikipedia.org/wiki/Larry_Tesler) work on NOMODES.
 
 ## Platforms                  
 
