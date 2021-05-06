@@ -9,7 +9,7 @@ Platform                  Status
 
 * 1010Music Euroshield.     - Works (however this module is discontinued by 1010Music)
 
-* Betweener                 - Works
+* [Betweener](https://github.com/simonredfern/SimonSaysSeeq/tree/master/SimonSaysSeeqTeensyBetweener)                 - Works 
 
 * Bela Salt                 - Works (Work in Progress) 
 
