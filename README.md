@@ -14,7 +14,7 @@ The gate / CV outputs were created to drive a pitch quantizers via attenuator/of
 
 The software (in various forms) runs on Teensy based hardware and also Bela Salt (embedded Linux).
 
-The platform implementations support some different features e.g. Audio looping / VCA is only available on the Bela Salt so far.
+All the platforms have the Gray code sequencer and CV envelop outs. Some have midi looping and some have audio looping / VCA.
 
 * [1010Music Euroshield](https://github.com/simonredfern/SimonSaysSeeq/tree/master/SimonSaysSeeqTeensyEuroshieldV0.1) - (note this module is discontinued by 1010Music)
 
