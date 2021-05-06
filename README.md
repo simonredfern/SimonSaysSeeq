@@ -1,6 +1,8 @@
 # SimonSaysSeeq
 
-Simon Says Seeq is a **modeless** (one function per knob / button) **gate sequencer, associated CV envelope generator / VCA / audio delay and midi looper** that is designed to drive pitch (or other modulation) most likely via a pitch quantizer.
+Simon Says Seeq is a *modeless* (one function per knob / button) **[Gray code](https://en.wikipedia.org/wiki/Gray_code) gate sequencer, triggered CV envelope generator / audio delay / VCA and midi looper**.
+
+The gate / CV outputs were created to drive a pitch quantizers via attenuator/offsets and so create repeatable yet dynamic melodies.
 
 The software (in various forms) runs on Teensy based hardware and also Bela Salt (embedded Linux).
 
