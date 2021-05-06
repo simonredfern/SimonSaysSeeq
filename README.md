@@ -3,7 +3,7 @@ Simon Says Seeq is a modeless (one function per knob / button) gate sequencer, a
 
 The software (in various forms) runs on Teensy based hardware and also Bela Salt (embedded Linux).
 
-Each implementation has different functions e.g. audio looping / VCA is only available on the Bela Salt so far.
+The platform implementations support some different features e.g. Audio looping / VCA is only available on the Bela Salt so far.
  
 ## Platforms                  
 
