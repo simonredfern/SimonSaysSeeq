@@ -71,7 +71,9 @@ Then *see the important note about DODINMIDI below* and then try and compile. Go
 
 Note: To add other unusual libraries you'll do via zip files in the IDE: Goto Sketch -> Add Library -> Add .ZIP Library and choose the Betweener.zip file in the same folder as this file. This will probably create a data folder with the same file in it.
 
+Other Notes:
 
+```
 
 // Note: We want to use https://github.com/FortySevenEffects/arduino_midi_library
 // However even with (a recent verion of) this library we get compile errors, so we comment out the offending MIDI over DIN in Betweener.cpp
@@ -134,6 +136,8 @@ Important!
 // ResponsiveAnalogRead
 // 4) Set Tools Board to Teensy 3.2 (else it won't compile!)
 // 5) Set Tools USB type to MIDI 
+
+```
 
 # Instructions for running
 

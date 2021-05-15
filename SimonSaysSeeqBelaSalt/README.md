@@ -1,7 +1,5 @@
 # SimonSaysSeeq on Bela Salt 
 
-is Work In Progress!
-
 See this video for an intro into some features and how to modify source code: [SimonSaysSeeq on Bela Salt Twitch video](https://www.twitch.tv/videos/885185134)
 
 ![SimonSaysSeeq on Bela Salt](https://github.com/simonredfern/SimonSaysSeeq/blob/master/SimonSaysSeeqBelaSalt/SimonSaysSeeq_on_Bela_Salt_and_Salt%2B.png)
@@ -13,6 +11,7 @@ First create SimonSaysSeeq directory in /var/log becasue we'll log there.
 
 Then create the following file e.g. here /root/bin/SimonSaysSeeq/midi_usb_info.job:
 
+```
 #!/bin/bash
 LOG_FILE="/var/log/SimonSaysSeeq/usb_midi_info_log"
 echo Hello from midi_usb_info.job. >> $LOG_FILE
@@ -25,19 +24,27 @@ echo From lsusb -t >> $LOG_FILE
 lsusb -t >> $LOG_FILE
 echo Bye >> $LOG_FILE
 echo ================================== >> $LOG_FILE
+```
+
 
 Make it executable
+```
 chmod +x /root/bin/SimonSaysSeeq/midi_usb_info.job
+```
 
 Test calling it:
+```
 cd /root/bin
 ./midi_usb_info.job
+```
 
 And to see the output
+```
 tail -f -n 100 /var/log/SimonSaysSeeq/usb_midi_info_log
+```
 
 You might see something like:
-
+```
 Hello from midi_usb_info.job.
 The date / time is:
 Mon Mar 8 07:41:56 UTC 2021
@@ -50,11 +57,12 @@ IO  hw:1,0,0  USB MIDI Interface MIDI 1
     |__ Port 1: Dev 2, If 1, Class=Audio, Driver=snd-usb-audio, 12M
 Bye
 ==================================
-
+```
 
 
 And call it from cron
+```
 crontab -e
-
 # m h  dom mon dow   command
 * * * * * /root/bin/SimonSaysSeeq/midi_usb_info.job
+```
