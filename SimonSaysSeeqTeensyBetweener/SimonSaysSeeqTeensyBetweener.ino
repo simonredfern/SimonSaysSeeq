@@ -258,7 +258,7 @@ float cv_offset;
 // Midi clock and start / stop related
 // We use the following library  https://github.com/FortySevenEffects/arduino_midi_library/wiki/Using-custom-Settings
 
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI); // This was Euroshield
+//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI); // This was Euroshield. Need for USB midi?
 
 //MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI); // Check this
 
@@ -414,7 +414,7 @@ uint8_t BarCountSanity(uint8_t bar_count_in){
 
 // copy paste betweener-teensy 
 void PlayMidi(){
-  // Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+  //Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
 
   for (uint8_t n = 0; n <= 127; n++) {
     //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
@@ -423,7 +423,7 @@ void PlayMidi(){
     if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
            if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-             Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             Serial.println(String("PlayMidi Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
              //MIDI.sendNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
              SendMidiNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
            }
@@ -432,7 +432,7 @@ void PlayMidi(){
     // READ MIDI MIDI_DATA
     if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
        if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
-           Serial.println(String("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+           Serial.println(String("PlayMidi Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            // MIDI.sendNoteOff(n, 0, 1);
            SendMidiNoteOff(n, 0, 1);
        }
@@ -613,7 +613,7 @@ boolean mute_gate_b = false;
 // copy paste betweener-teensy
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
-  //Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
   if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
@@ -1152,10 +1152,10 @@ void OnStep() {
 
   // Play Note (GateA)
   if (play_note) {
-    //Serial.println(String("****************** play ")   );
+    //Serial.println(String("Play GateA if not muted ")   );
 
     if (not mute_gate_a) {
-      Serial.println(String("PLAY GateA (NOT play GateB)")   );
+      //Serial.println(String("PLAY GateA (NOT play GateB)")   );
       GateAHigh();
       //ResetCVA();
     } else {
@@ -1167,12 +1167,11 @@ void OnStep() {
   
  
     if (not mute_gate_b) {
-      Serial.println(String("PLAY GateB (NOT play GateA)")   );
+      //Serial.println(String("PLAY GateB (NOT play GateA)")   );
       GateBHigh();
       ResetCVB();
     } else {
-      Serial.println(String("GateB is MUTED"));
-      
+      //Serial.println(String("GateB is MUTED"));
     }
 
 
