@@ -8,7 +8,7 @@
 
 SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
-Version: 2021-01-28 or so.
+Version: 2021-07-24 or so.
 
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
@@ -307,6 +307,7 @@ void print_binary(unsigned int number)
 //const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
+// e.g. CV I/O 1-8	analog channel 0-7	dac~/adc~ 3-10
 
 // T2 (Trigger 2) is Physical Channel / Pin 14 
 
@@ -342,10 +343,17 @@ const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
 
 
 
-const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
-const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 input
+const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV (GATE) 1 output
+const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 output
 const int SEQUENCE_CV_OUTPUT_3_PIN = 2; // CV 3 output
-const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 input
+const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 output
+
+
+const int SEQUENCE_CV_OUTPUT_5_PIN = 4; // CV 5 output
+const int SEQUENCE_CV_OUTPUT_6_PIN = 5; // CV 6 output
+const int SEQUENCE_CV_OUTPUT_7_PIN = 6; // CV 7 output
+const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
+
 
 
 ////////////////////////////////////////////////
@@ -2753,8 +2761,12 @@ void render(BelaContext *context, void *userData)
         // Write the sample into the output buffer -- done!
         // Apply "VCA" to the output.  
 
+
+        // Channel 1 is modulated by the ADSR B
         audioWrite(context, n, 0, out_l * analog_adsr_b_level);
-        audioWrite(context, n, 1, out_r * analog_adsr_b_level);
+
+        // Unmodulated output
+        audioWrite(context, n, 1, out_r);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
@@ -2829,7 +2841,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
 		  	
-		  	// TODO use an oscillator here in stead.
+		  	// TODO use an oscillator here instead.
 		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
 		  	
 		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
@@ -2863,7 +2875,7 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 	      
-	      // OUTPUTS
+	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
 	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
 	      	if (target_gate_out_state == HIGH){
@@ -2872,13 +2884,10 @@ void render(BelaContext *context, void *userData)
 	      		analog_out_1 = -1.0;	
 	      	}
 	      	analogWrite(context, n, ch, analog_out_1);
-	    	
 	      }
 
 	      // CV 2
 	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
-
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
@@ -2886,15 +2895,12 @@ void render(BelaContext *context, void *userData)
 
 	      // CV 3 - This is below the left hand LED so should be related to the Length of the Sequence (Simple decaying envelope)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
 	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
-
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
