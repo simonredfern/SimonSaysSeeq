@@ -2861,12 +2861,13 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  
+      // Changes the Midi Lane. TODO cv input as well? 
 		  if (ch == MIDI_LANE_INPUT_PIN){
 		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
 		  	SetLane(midi_control_a_input);
 		  }
 		  
-		  // > 0.999 leads to distorsion
+		  // Not Used
 		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
 		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
 		  }
