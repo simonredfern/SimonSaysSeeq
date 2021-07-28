@@ -135,8 +135,6 @@ const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 const uint8_t MIN_midi_lane_input = 0;
 const uint8_t MAX_midi_lane_input = 16;
 
-const uint8_t MIN_MIDI_CONTROL_B_INPUT = 0;
-const uint8_t MAX_MIDI_CONTROL_B_INPUT = 16;
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -183,7 +181,7 @@ float delay_feedback_amount = 0.999; //0.999
 
 
 uint8_t midi_lane_input = 0; // normal
-uint8_t midi_control_b_input = 0; // normal
+
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -1128,7 +1126,7 @@ void printStatus(void*){
 
 
 	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
-	//	rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
+
 
 
 	
@@ -1540,25 +1538,6 @@ bar_play = bar_count;
 step_play = step_count;
 
 	
-// 	current_sequence_length_in_steps
-
-/*
-// If 0, use normal operation (mod 0 would give error)
-if (midi_lane_input == 0){
-	bar_play = bar_count;	
-} else {
-  bar_play = bar_count % midi_lane_input; 
-}
-
-
-// If 0, use normal operation (mod 0 would give error)
-if (midi_control_b_input == 0){
-	step_play = step_count;
-} else {
-  step_play = step_count % midi_control_b_input;
-}
-
-*/
 
 }
 
@@ -2872,7 +2851,6 @@ void render(BelaContext *context, void *userData)
 		  // Delay Feedback (decay)
 		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
         delay_feedback_amount = map(analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN), 0, 1, 0, 0.999);
-		  	//midi_control_b_input = floor(map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
 		  }
 		  
 		  
