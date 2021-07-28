@@ -132,8 +132,8 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MIN_MIDI_CONTROL_A_INPUT = 0;
-const uint8_t MAX_MIDI_CONTROL_A_INPUT = 16;
+const uint8_t MIN_midi_lane_input = 0;
+const uint8_t MAX_midi_lane_input = 16;
 
 const uint8_t MIN_MIDI_CONTROL_B_INPUT = 0;
 const uint8_t MAX_MIDI_CONTROL_B_INPUT = 16;
@@ -182,7 +182,7 @@ int total_delay_frames = 22050;
 float delay_feedback_amount = 0.999; //0.999
 
 
-uint8_t midi_control_a_input = 0; // normal
+uint8_t midi_lane_input = 0; // normal
 uint8_t midi_control_b_input = 0; // normal
 
 #include <math.h> //sinf
@@ -325,19 +325,19 @@ const int SEQUENCE_OUT_PIN = 0;
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 // CV I/O 1-8	ANALOG channel 0-7
-const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
-const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
+const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
+const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
 
 const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
-const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
+const int SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN = 4; // CV 5 (SALT+) was COARSE-_DELAY_TIME_INPUT_PIN
+const int SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
-const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
+const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) 
+const uint8_t DELAY_FEEDBACK_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
 
@@ -415,12 +415,12 @@ unsigned int lower_input_raw;
 // To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
 // We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
 //bool upper_pot_high_engaged = true;
-float sequence_pattern_input_raw;
-unsigned int sequence_pattern_input = 20;
-unsigned int sequence_pattern_input_last;
-unsigned int sequence_pattern_input_at_button_change;
+float sequence_a_pattern_input_raw;
+unsigned int sequence_a_pattern_input = 20;
+unsigned int sequence_a_pattern_input_last;
+unsigned int sequence_a_pattern_input_at_button_change;
 
-//bool lower_pot_high_engaged = true;
+
 float lfo_a_frequency_input_raw;
 float lfo_osc_1_frequency;
 float frequency_2;
@@ -431,13 +431,13 @@ unsigned int lfo_a_frequency_input = 20;
 unsigned int lfo_a_frequency_input_last;
 unsigned int lfo_a_frequency_input_at_button_change;
 
-//bool upper_pot_low_engaged = true;
-float sequence_length_input_raw;
-//unsigned int sequence_length_input = 20;
-unsigned int sequence_length_input_last;
-unsigned int sequence_length_input_at_button_change;
 
-//bool lower_pot_low_engaged = true;
+float sequence_a_length_input_raw;
+
+unsigned int sequence_b_length_input_last;
+unsigned int sequence_b_length_input_at_button_change;
+
+
 float lfo_b_frequency_input_raw;
 unsigned int lfo_b_frequency_input = 20;
 unsigned int lfo_b_frequency_input_last;
@@ -1110,8 +1110,8 @@ void printStatus(void*){
   	//	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
 		// Other Inputs
-		//rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
-		//rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+		//rt_printf("sequence_a_pattern_input is: %d \n", sequence_a_pattern_input);
+		//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
 		
 		
 		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
@@ -1544,10 +1544,10 @@ step_play = step_count;
 
 /*
 // If 0, use normal operation (mod 0 would give error)
-if (midi_control_a_input == 0){
+if (midi_lane_input == 0){
 	bar_play = bar_count;	
 } else {
-  bar_play = bar_count % midi_control_a_input; 
+  bar_play = bar_count % midi_lane_input; 
 }
 
 
@@ -2273,13 +2273,13 @@ void ChangeSequence(void*){
 	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
     unsigned int sequence_pattern_upper_limit = 1023; 
 	
-	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
-    //rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
+	sequence_a_pattern_input = static_cast<int>(round(map(sequence_a_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
+    //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
     
 
 
 
-    current_sequence_length_in_steps = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
+    current_sequence_length_in_steps = static_cast<int>(round(map(sequence_a_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
     
  
     //////////////////////////////////////////
@@ -2314,7 +2314,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_pattern_input, 0);
+  binary_sequence_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_a_pattern_input, 0);
 
    
 
@@ -2805,24 +2805,24 @@ void render(BelaContext *context, void *userData)
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
 	      // INPUTS 		
-		  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
-		  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
+		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
+		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
 		  }	
 	
 	
-	      // Get the sequence_pattern_input_raw
-	      if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
+	      // Get the sequence_a_pattern_input_raw
+	      if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
 	      	// note this is getting all the frames 
-	        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+	        sequence_a_pattern_input_raw = analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN);
 	        
 	        
-	        //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
+	        //rt_printf("Set sequence_a_pattern_input_raw %d ", sequence_a_pattern_input_raw); 
 	        
-	        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
+	        //rt_printf("Set sequence_a_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN)); 
 	        
 	        
-	        //sequence_pattern_input = static_cast<double>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
-	    	//rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
+	        //sequence_a_pattern_input = static_cast<double>(round(map(sequence_a_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_a_pattern_input_raw, sequence_a_pattern_input, jitter_reduction);
+	    	//rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
 	        
 	        
 	      }
@@ -2849,27 +2849,30 @@ void render(BelaContext *context, void *userData)
 		  
 		  
 		 
-		  
-		  if (ch == COARSE_DELAY_TIME_INPUT_PIN){
-		  	coarse_delay_input = map(analogRead(context, n, COARSE_DELAY_TIME_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
+		  // Maybe take this from the delay loops
+		  if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
+		  	coarse_delay_input = map(analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  	
 		  }
 		  
+
+      // Maybe just set to 0.999
 		  // > 0.999 leads to distorsion
-		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
-		  	delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 0.999);
+		  if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
+		  	delay_feedback_amount = map(analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN), 0, 1, 0, 0.999);
 		  }
 		  
 		  
       // Changes the Midi Lane. TODO cv input as well? 
 		  if (ch == MIDI_LANE_INPUT_PIN){
-		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
-		  	SetLane(midi_control_a_input);
+		  	midi_lane_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
+		  	SetLane(midi_lane_input);
 		  }
 		  
-		  // Not Used
-		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
-		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
+		  // Delay Feedback (decay)
+		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
+        delay_feedback_amount = map(analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN), 0, 1, 0, 0.999);
+		  	//midi_control_b_input = floor(map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
 		  }
 		  
 		  
