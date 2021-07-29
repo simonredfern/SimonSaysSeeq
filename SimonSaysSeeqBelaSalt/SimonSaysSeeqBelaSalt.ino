@@ -394,20 +394,16 @@ bool init_midi_sequence_has_run = false;
 
 bool need_to_auto_save_sequence = false;
 
-////////////////////////////////////////////////////
-// Actual pot values
-unsigned int upper_input_raw; // TODO Make t type.
-unsigned int lower_input_raw;
-
-
-// Create 4 virtual pots out of two pots and a button.
-// To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
-// We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
-//bool upper_pot_high_engaged = true;
 float sequence_a_pattern_input_raw;
 unsigned int sequence_a_pattern_input = 20;
 unsigned int sequence_a_pattern_input_last;
 unsigned int sequence_a_pattern_input_at_button_change;
+
+float sequence_b_pattern_input_raw;
+unsigned int sequence_b_pattern_input = 20;
+unsigned int sequence_b_pattern_input_last;
+unsigned int sequence_b_pattern_input_at_button_change;
+
 
 
 float lfo_a_frequency_input_raw;
@@ -422,6 +418,7 @@ unsigned int lfo_a_frequency_input_at_button_change;
 
 
 float sequence_a_length_input_raw;
+float sequence_b_length_input_raw;
 
 unsigned int sequence_b_length_input_last;
 unsigned int sequence_b_length_input_at_button_change;
@@ -2744,74 +2741,51 @@ void render(BelaContext *context, void *userData)
 		
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-	      // INPUTS 		
+	      // Sequence A INPUTS 		
 		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
 		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
+        // May be a hack to set two params from one knob.
+        coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  }	
-	
-	
-	      // Get the sequence_a_pattern_input_raw
-	      if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
+	    
+	    if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
 	      	// note this is getting all the frames 
 	        sequence_a_pattern_input_raw = analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN);
 	        
-	        
 	        //rt_printf("Set sequence_a_pattern_input_raw %d ", sequence_a_pattern_input_raw); 
-	        
 	        //rt_printf("Set sequence_a_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN)); 
-	        
-	        
 	        //sequence_a_pattern_input = static_cast<double>(round(map(sequence_a_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_a_pattern_input_raw, sequence_a_pattern_input, jitter_reduction);
-	    	//rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
-	        
-	        
-	      }
-	      
-	      if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 20);
- 
-	      	
-	      	//envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
-	      	//envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
-	      	
-		  	 // want range 0 to 3 seconds
-		  	//envelope_2_attack = analogRead(context, n, OSC_FREQUENCY_INPUT_PIN);
+	    	  //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
+	    }
+
+      // Sequence B INPUTS 
+      if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
+ 	      sequence_b_length_input_raw = analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN);
+		  }	
+
+		  if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
+        sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
+		  }
+
+	    if (ch == OSC_FREQUENCY_INPUT_PIN){
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
 		  }
 		  
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
-		  	
-		  	// TODO use an oscillator here instead.
+		  	// TODO use an oscillator here instead. why actually?
 		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
-		  	
-		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
+		    
 		  
-		  
-		 
-		  // Maybe take this from the delay loops
-		  if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
-		  	coarse_delay_input = map(analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
-		  	
-		  }
-		  
-
-      // Maybe just set to 0.999
-		  // > 0.999 leads to distorsion
-		  if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
-		  	delay_feedback_amount = map(analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN), 0, 1, 0, 0.999);
-		  }
-		  
-		  
-      // Changes the Midi Lane. TODO cv input as well? 
+      // Changes the Midi Lane. 
 		  if (ch == MIDI_LANE_INPUT_PIN){
 		  	midi_lane_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
 		  	SetLane(midi_lane_input);
 		  }
 		  
-		  // Delay Feedback (decay)
+		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
 		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
-        delay_feedback_amount = map(analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN), 0, 1, 0, 0.999);
+        delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 0.999);
 		  }
 		  
 		  
