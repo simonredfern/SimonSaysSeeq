@@ -60,6 +60,9 @@ The Bela software is distributed under the GNU Lesser General Public License
 //
 // install curl apt-get install -y libcurl-dev
 
+// Note: Bela might run out of diskspace
+// du -h --max-depth=1
+
 
 
 #include <Bela.h>
@@ -89,7 +92,7 @@ UdpClient myUdpClient;
 // ...
 
 
-const char version[16]= "v0.27-BelaSalt";
+const char version[16]= "v0.29-BelaSalt";
 
 Scope scope;
 
@@ -375,6 +378,8 @@ const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 // Sequence Length (and default)
 uint8_t current_sequence_a_length_in_steps = 8; 
 
+uint8_t current_sequence_b_length_in_steps = 8; 
+
 ///////////////////////
 
 //const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
@@ -478,10 +483,14 @@ bool target_led_4_state = false;
 
 
 // Used to control when/how we change sequence length 
-uint8_t new_sequence_length_in_ticks; 
+uint8_t new_sequence_a_length_in_ticks; 
+uint8_t new_sequence_b_length_in_ticks; 
+
 
 // Just counts 0 to 5 within each step
-uint8_t ticks_after_step;
+uint8_t ticks_after_step_a;
+uint8_t ticks_after_step_b;
+
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots. 
 // Actually we like the glitches - it makes the sequencer more interesting
@@ -667,7 +676,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						// Open for writing in truncate mode (we will replace the contents)
 						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 
-            count_of_file_operations = count_of_file_operations + 1;
+            			count_of_file_operations = count_of_file_operations + 1;
 						
 						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
 						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
@@ -888,7 +897,7 @@ uint8_t BarCountSanity(uint8_t bar_count_in){
   if (bar_count_in > MAX_BAR){
   	rt_printf("**** ERROR bar_count_in > MAX_BAR i.e. %d \n" , bar_count_in );
     bar_count_fixed = MAX_BAR;
-  } else if (bar_a_count_in < FIRST_BAR){
+  } else if (bar_count_in < FIRST_BAR){
     rt_printf("**** ERROR bar_count_in < FIRST_BAR i.e. %d \n" , bar_count_in );
     bar_count_fixed = FIRST_BAR;
   } else {
@@ -952,45 +961,32 @@ uint8_t IncrementOrResetBarCountB(){
   if (bar_b_count == MAX_BAR){
     bar_b_count = FIRST_BAR;
   } else {
-    bar_b_count = BarCountSanityB(bar_b_count + 1);
+    bar_b_count = BarCountSanity(bar_b_count + 1);
   }
   
-  return BarCountSanityB(bar_b_count);
+  return BarCountSanity(bar_b_count);
 }
 
 
 
 
 
-uint8_t StepCountSanityA(uint8_t step_a_count_){
-  uint8_t step_a_count_fixed;
+uint8_t StepCountSanity(uint8_t step_count_){
+  uint8_t step_count_fixed;
   
-  if (step_a_count_ > MAX_STEP){
-    rt_printf("**** ERROR step_a_count_ > MAX_STEP i.e. %f \n" , step_a_count_ );
-    step_a_count_fixed = MAX_STEP;
-  } else if (step_a_count_ < FIRST_STEP){
-    rt_printf("**** ERROR step_a_count_ > FIRST_STEP i.e. %f \n", step_a_count_ );
-    step_a_count_fixed = FIRST_STEP;
+  if (step_count_ > MAX_STEP){
+    rt_printf("**** ERROR step_count_ > MAX_STEP i.e. %f \n" , step_count_ );
+    step_count_fixed = MAX_STEP;
+  } else if (step_count_ < FIRST_STEP){
+    rt_printf("**** ERROR step_count_ > FIRST_STEP i.e. %f \n", step_count_ );
+    step_count_fixed = FIRST_STEP;
   } else {
-    step_a_count_fixed = step_a_count_;
+    step_count_fixed = step_count_;
   }
-  return step_a_count_fixed;
+  return step_count_fixed;
 }
 
-uint8_t StepCountSanityB(uint8_t step_b_count_){
-  uint8_t step_b_count_fixed;
-  
-  if (step_b_count_ > MAX_STEP){
-    rt_printf("**** ERROR step_b_count_ > MAX_STEP i.e. %f \n" , step_b_count_ );
-    step_a_count_fixed = MAX_STEP;
-  } else if (step_a_count_ < FIRST_STEP){
-    rt_printf("**** ERROR step_b_count_ > FIRST_STEP i.e. %f \n", step_b_count_ );
-    step_b_count_fixed = FIRST_STEP;
-  } else {
-    step_b_count_fixed = step_b_count_;
-  }
-  return step_b_count_fixed;
-}
+
 
 
 
@@ -1059,14 +1055,20 @@ enum osc_type
 
 
 
+
+
+// This relates to the whole machine.
 void ResetSequenceACounters(){
+	
   SetTickCountInSequenceA(0);
+
   IncrementOrResetBarCountA();
-  step_a_count = FIRST_STEP; 
+
+  step_a_count = FIRST_STEP;
+
   lfo_a_analog.setPhase(0.0);
   
   
-
   sequence_triggered_adsr_c.gate(true);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
@@ -1078,6 +1080,24 @@ void ResetSequenceACounters(){
 
   //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
+
+
+void ResetSequenceBCounters(){
+	
+
+  SetTickCountInSequenceB(0);
+  
+
+  IncrementOrResetBarCountB();
+  
+
+  step_b_count = FIRST_STEP; 
+  
+   //rt_printf("ResetSequenceBCounters Done. current_sequence_b_length_in_steps is: %d step_b_count is now: %d \n", current_sequence_b_length_in_steps, step_b_count);
+}
+
+
+
 
 
 
@@ -1110,16 +1130,11 @@ void printStatus(void*){
 
 
 
-		rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
-		rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
-		rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
-		
-		
-		rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
-		
-		
-		
-		rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
+		//rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
+		//rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
+		//rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
+		//rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
+		//rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
 		
 		
 		// Delay Feedback
@@ -1154,10 +1169,12 @@ void printStatus(void*){
 
 		
         // Sequence derived results 
-        /*
+        
     	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
-    	rt_printf("new_sequence_length_in_ticks is: %d \n", new_sequence_length_in_ticks);
-    	*/
+    	rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+    	
+    	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	
 
 
 		/*
@@ -1211,9 +1228,13 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 		*/
 
-    //	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
-    //	print_binary(the_sequence_a);
-		// rt_printf("%c \n", 'B');
+	    rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+	    print_binary(the_sequence_a);
+		rt_printf("%c \n", 'B');
+		
+		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
+	    print_binary(the_sequence_b);
+		rt_printf("%c \n", 'B');
 
 		// Sequence state
 		
@@ -1224,11 +1245,17 @@ void printStatus(void*){
 		rt_printf("step_a_play: %d \n", step_a_play);
 
 		if (step_a_count == FIRST_STEP) {
-    		rt_printf("A FIRST_STEP \n");
+    		rt_printf("FIRST_STEP A \n");
     	} else {
-    		rt_printf("A other step \n");
+    		rt_printf("Other step A \n");
     	}
     	
+    	
+    	if (step_b_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP B \n");
+    	} else {
+    		rt_printf("Other step B \n");
+    	}
 
     //	rt_printf("Midi last_note_on: %d \n", last_note_on);
     // 	rt_printf("Midi last_note_off: %d \n", last_note_off);
@@ -1378,7 +1405,7 @@ void GateALow(){
   
 }
 
-void GateBHigh(){
+void GateHighB(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_b_out_state = true;
@@ -1389,7 +1416,7 @@ void GateBHigh(){
 }
 
 
-void GateBLow(){
+void GateLowB(){
   //rt_printf("Gate LOW");
   
   target_gate_b_out_state = false;
@@ -1408,14 +1435,6 @@ void GateBLow(){
 bool RampIsPositive(){
 	// TODO BELA
 	return false;
-  //if (cv_waveform_b_amplitude_delta > 0)
-  //{
-  //  return true;
-  //} 
-  //else 
-  //{
-  //  return false;
-  //}
   
 }
 
@@ -1443,9 +1462,9 @@ uint8_t ReadBit (int number, int b ){
 
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
-void OnAStep(){
+void OnStepA(){
 	
-  //rt_printf("Hello from OnAStep: %d \n", step_a_count);
+  //rt_printf("Hello from OnStepA: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
   //print_binary(the_sequence_a);
   //rt_printf("%c \n", 'B');
@@ -1466,9 +1485,9 @@ void OnAStep(){
     }
   
   
-  step_a_count = StepCountSanityA(step_a_count);
+  step_a_count = StepCountSanity(step_a_count);
 
-      // std::string message = "--:OnAStep:" + std::to_string(step_a_count) + "--";
+      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
 	 // This sends a UDP message 
 	 // int my_result  = myUdpClient.send(&message, 32);
   
@@ -1479,30 +1498,97 @@ void OnAStep(){
   //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
   
    if (play_note){
-     //rt_printf("OnAStep: %d ****++++++****** PLAY \n", step_a_count);
+     //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
     GateAHigh(); 
    } else {
     GateALow();
-     //rt_printf("OnAStep: %d ***-----***** NOT play \n", step_a_count);
+     //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
    }
    
    Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
-   //rt_printf("==== End of OnAStep: %d \n", step_a_count);
+   //rt_printf("==== End of OnStepA: %d \n", step_a_count);
       
 }
 
 
 
 // These are ticks which are not steps - so in between possible beats.
-void OnNotAStep(){
+void OnNotStepA(){
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
   GateALow();
   
 }
 
+//////
 
+/////////////////////////////////////////////////////////////
+// These are the possible beats of the sequence
+void OnStepB(){
+	
+  //rt_printf("Hello from OnStepA: %d \n", step_a_count);
+  //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+  //print_binary(the_sequence_a);
+  //rt_printf("%c \n", 'B');
+
+  if (step_b_count > MAX_STEP) {
+    rt_printf("----------------------------------------------------------------------------\n");  
+    rt_printf("------------------ ERROR! step_b_count is: %s --- ERROR ---\n", + step_b_count);
+    rt_printf("----------------------------------------------------------------------------\n");    
+  }
+
+  
+
+    if (step_b_count == FIRST_STEP) {
+    	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
+      SyncAndResetCv(); // TODOAB
+    } else {
+      //rt_printf("----       not first step      step_a_count is %d FIRST_STEP is %d                  ------\n", step_a_count, FIRST_STEP ); 
+    }
+  
+  
+  step_b_count = StepCountSanity(step_b_count);
+
+      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
+	 // This sends a UDP message 
+	 // int my_result  = myUdpClient.send(&message, 32);
+  
+  
+  uint8_t play_note = (the_sequence_a & ( 1 << step_b_count )) >> step_b_count;  
+  
+  // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
+  //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
+  
+   if (play_note){
+     //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
+    GateHighB(); 
+   } else {
+    GateLowB();
+     //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
+   }
+   
+   Bela_scheduleAuxiliaryTask(gPrintStatus);	
+
+   //rt_printf("==== End of OnStepA: %d \n", step_a_count);
+      
+}
+
+
+
+// These are ticks which are not steps - so in between possible beats.
+void OnNotStepB(){
+  //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
+  // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
+  GateLowB();
+  
+}
+
+
+
+
+
+//////
 
 float gFreq;
 float gPhaseIncrement = 0;
@@ -1522,15 +1608,15 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-void SetPlayFromCount(){
-	
-bar_a_play = bar_a_count;
-step_a_play = step_a_count;
-
-	
-
+void SetPlayAFromCount(){
+	bar_a_play = bar_a_count;
+	step_a_play = step_a_count;
 }
 
+void SetPlayBFromCount(){
+	bar_b_play = bar_b_count;
+	step_b_play = step_b_count;
+}
 
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
@@ -1546,21 +1632,21 @@ void PlayMidi(){
 
 
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnAStep  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
+    //rt_printf("** OnStepA  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
     
     // READ MIDI sequence
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_play)][n][1].is_active == 1) { 
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
+           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
             	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][1].velocity);
+            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][0].is_active == 1) {
-       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
-           //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
+       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
+           //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step_a +  String(" Found and will send Note OFF for ") + n );
            midi.writeNoteOff(midi_channel_x, n, 0);
        }
     }
@@ -1573,13 +1659,13 @@ void PlayMidi(){
 
 
 /////////
-void AdvanceSequenceChronology(){
+void AdvanceSequenceAChronology(){
   
   // This function advances or resets the sequence powered by the clock.
 
   // But first check / set the desired sequence length
 
-  //rt_printf("Hello from AdvanceSequenceChronology ");
+  //rt_printf("Hello from AdvanceSequenceAChronology ");
 
 
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
@@ -1598,9 +1684,9 @@ void AdvanceSequenceChronology(){
     rt_printf("**** ERROR with current_sequence_a_length_in_steps but it is NOW: %d ", current_sequence_a_length_in_steps  );
   }
 
-  new_sequence_length_in_ticks = (current_sequence_a_length_in_steps) * 6;
+  new_sequence_a_length_in_ticks = (current_sequence_a_length_in_steps) * 6;
   //Serial.println(String("current_sequence_a_length_in_steps is: ") + current_sequence_a_length_in_steps  ); 
-  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+  //Serial.println(String("new_sequence_a_length_in_ticks is: ") + new_sequence_a_length_in_ticks  );  
 
   // Always advance the ticks SINCE START
   SetTotalTickCountA(loop_timing_a.tick_count_since_start += 1);
@@ -1621,18 +1707,18 @@ void AdvanceSequenceChronology(){
 
   // Advance the tick_count as long as we're not at the end of the sequence
   // tick_count_in_sequence is zero indexed
-  // new_sequence_length_in_ticks is one indexed
+  // new_sequence_a_length_in_ticks is one indexed
   // 
 
   // If we're at the end of the sequence
   if (
-    (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
+    (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
 
   // or we past the end and we're at new beat  
   ||
-  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
+  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
       && 
-      // loop_timing_a.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      // loop_timing_a.tick_count_since_start % new_sequence_a_length_in_ticks == 0 
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
       loop_timing_a.tick_count_since_start % 6 == 0 
   )
@@ -1650,14 +1736,75 @@ void AdvanceSequenceChronology(){
   step_a_count = loop_timing_a.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
-  ticks_after_step = loop_timing_a.tick_count_in_sequence % 6;
+  ticks_after_step_a = loop_timing_a.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_a_count is ") + step_a_count  + String(" ticks_after_step is ") + ticks_after_step  );
+ //Serial.println(String("step_a_count is ") + step_a_count  + String(" ticks_after_step_a is ") + ticks_after_step_a  );
  
- SetPlayFromCount();
+ SetPlayAFromCount();
 
   
 }
+
+
+void AdvanceSequenceBChronology(){
+  
+
+  if (current_sequence_b_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with current_sequence_b_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_b_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    current_sequence_b_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+    
+  }
+  
+  if (current_sequence_b_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    current_sequence_b_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with current_sequence_b_length_in_steps but it is NOW: %d ", current_sequence_b_length_in_steps  );
+  }
+
+  new_sequence_b_length_in_ticks = (current_sequence_b_length_in_steps) * 6;
+  //Serial.println(String("current_sequence_b_length_in_steps is: ") + current_sequence_b_length_in_steps  ); 
+  //Serial.println(String("new_sequence_b_length_in_ticks is: ") + new_sequence_b_length_in_ticks  );  
+
+  // Always advance the ticks SINCE START
+  SetTotalTickCountB(loop_timing_b.tick_count_since_start += 1);
+
+
+  // If we're at the end of the sequence
+  if (
+    (loop_timing_b.tick_count_in_sequence + 1 == new_sequence_b_length_in_ticks )
+
+  // or we past the end and we're at new beat  
+  ||
+  (loop_timing_b.tick_count_in_sequence + 1  >= new_sequence_b_length_in_ticks 
+      && 
+      // loop_timing_b.tick_count_since_start % new_sequence_b_length_in_ticks == 0 
+      // If somehow we overshot (because pot was being turned whilst sequence running), only 
+      loop_timing_b.tick_count_since_start % 6 == 0 
+  )
+  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
+  || 
+  loop_timing_b.tick_count_in_sequence >= 16 * 6
+  ) { // Reset
+    ResetSequenceBCounters();
+  } else {
+    SetTickCountInSequenceA(loop_timing_b.tick_count_in_sequence += 1); // Else increment.
+  }
+
+  // Update Step Count (this could also be a function but probably makes sense to store it)
+  // An integer operation - we just want the quotient.
+  step_b_count = loop_timing_b.tick_count_in_sequence / 6;
+
+  // Just to show the tick progress  
+  ticks_after_step_a = loop_timing_b.tick_count_in_sequence % 6;
+
+ //Serial.println(String("step_b_count is ") + step_b_count  + String(" ticks_after_step_a is ") + ticks_after_step_a  );
+ 
+ SetPlayBFromCount();
+
+  
+}
+
+
+
 
 
 
@@ -1700,12 +1847,27 @@ void OnTick(){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
-    OnAStep();
+    OnStepA();
     /////////////////////////////////////////   
   } else {
     //clockShowLow();
     // The other ticks which are not "steps".
-    OnNotAStep();
+    OnNotStepA();
+    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+
+  // Decide if we have a "step"
+  if (loop_timing_b.tick_count_in_sequence % 6 == 0){
+    //clockShowHigh();
+    //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStepB();
+    /////////////////////////////////////////   
+  } else {
+    //clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStepB();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
@@ -1718,7 +1880,8 @@ void OnTick(){
   PlayMidi();
    
   // Advance and Reset ticks and steps
-  AdvanceSequenceChronology();
+  AdvanceSequenceAChronology();
+  AdvanceSequenceBChronology();
 
 }
 
