@@ -1577,7 +1577,7 @@ void OnStepB(){
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence_a & ( 1 << step_b_count )) >> step_b_count;  
+  uint8_t play_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
   //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
