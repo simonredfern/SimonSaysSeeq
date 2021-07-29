@@ -335,13 +335,13 @@ const uint8_t DELAY_FEEDBACK_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
 
-const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV (GATE) 1 output
+const int SEQUENCE_A_GATE_OUTPUT_1_PIN = 0; // CV (GATE) 1 output
 const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 output
 const int SEQUENCE_CV_OUTPUT_3_PIN = 2; // CV 3 output
 const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 output
 
 
-const int SEQUENCE_CV_OUTPUT_5_PIN = 4; // CV 5 output
+const int SEQUENCE_B_GATE_OUTPUT_5_PIN = 4; // CV (GATE) 5 output
 const int SEQUENCE_CV_OUTPUT_6_PIN = 5; // CV 6 output
 const int SEQUENCE_CV_OUTPUT_7_PIN = 6; // CV 7 output
 const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
@@ -1019,6 +1019,11 @@ float analog_out_1;
 float analog_out_2;
 float analog_out_3;
 float analog_out_4;
+float analog_out_5;
+float analog_out_6;
+float analog_out_7;
+float analog_out_8;
+
 
 
 float audio_osc_1_result;
@@ -3022,7 +3027,7 @@ void render(BelaContext *context, void *userData)
 	      
 	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
-	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
+	      if (ch == SEQUENCE_A_GATE_OUTPUT_1_PIN){
 	      	if (target_gate_a_out_state == HIGH){
 	      		analog_out_1 = 1.0;
 	      	} else {
@@ -3049,6 +3054,17 @@ void render(BelaContext *context, void *userData)
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
+	      
+	      if (ch == SEQUENCE_B_GATE_OUTPUT_5_PIN){
+	      	if (target_gate_b_out_state == HIGH){
+	      		analog_out_5 = 1.0;
+	      	} else {
+	      		analog_out_5 = -1.0;	
+	      	}
+	      	analogWrite(context, n, ch, analog_out_5);
+	      }
+	      
+	      
 	      
 	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
 
