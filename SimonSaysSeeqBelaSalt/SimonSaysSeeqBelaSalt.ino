@@ -373,7 +373,7 @@ const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 // Sequence Length (and default)
-uint8_t current_sequence_length_in_steps = 8; 
+uint8_t current_sequence_a_length_in_steps = 8; 
 
 ///////////////////////
 
@@ -861,53 +861,79 @@ struct Timing
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
-Timing loop_timing;
+Timing loop_timing_a;
+Timing loop_timing_b;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
 uint8_t step_a_count; // write
 uint8_t step_a_play; // read
 
+uint8_t step_b_count; // write
+uint8_t step_b_play; // read
+
 // Count of the bar / measure.
 uint8_t bar_a_count; // for wrting
 uint8_t bar_a_play; // for reading
 
+uint8_t bar_b_count; // for wrting
+uint8_t bar_b_play; // for reading
+
+
+
 // Helper functions that operate on global variables. Yae!  
 
-uint8_t BarCountSanity(uint8_t bar_a_count_in){
-  uint8_t bar_a_count_fixed;
+uint8_t BarCountSanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
   
-  if (bar_a_count_in > MAX_BAR){
-  	rt_printf("**** ERROR bar_a_count_in > MAX_BAR i.e. %d \n" , bar_a_count_in );
-    bar_a_count_fixed = MAX_BAR;
+  if (bar_count_in > MAX_BAR){
+  	rt_printf("**** ERROR bar_count_in > MAX_BAR i.e. %d \n" , bar_count_in );
+    bar_count_fixed = MAX_BAR;
   } else if (bar_a_count_in < FIRST_BAR){
-    rt_printf("**** ERROR bar_a_count_in < FIRST_BAR i.e. %d \n" , bar_a_count_in );
-    bar_a_count_fixed = FIRST_BAR;
+    rt_printf("**** ERROR bar_count_in < FIRST_BAR i.e. %d \n" , bar_count_in );
+    bar_count_fixed = FIRST_BAR;
   } else {
-    bar_a_count_fixed = bar_a_count_in;
+    bar_count_fixed = bar_count_in;
   }
-  return bar_a_count_fixed;
+  return bar_count_fixed;
 }
 
 
-void SetTickCountInSequence(uint8_t value){
-  loop_timing.tick_count_in_sequence = value;
-  loop_timing.tick_count_since_step = value % 6;
+void SetTickCountInSequenceA(uint8_t value){
+  loop_timing_a.tick_count_in_sequence = value;
+  loop_timing_a.tick_count_since_step = value % 6;
 }
 
-void SetTotalTickCount(int value){
-  loop_timing.tick_count_since_start = value;
+void SetTickCountInSequenceB(uint8_t value){
+  loop_timing_b.tick_count_in_sequence = value;
+  loop_timing_b.tick_count_since_step = value % 6;
 }
+
+void SetTotalTickCountA(int value){
+  loop_timing_a.tick_count_since_start = value;
+}
+
+void SetTotalTickCountB(int value){
+  loop_timing_b.tick_count_since_start = value;
+}
+
 
 void Beginning(){
-  SetTickCountInSequence(0);
+  SetTickCountInSequenceA(0);
+  SetTickCountInSequenceB(0);
+  
   step_a_count = FIRST_STEP;
   bar_a_count = FIRST_BAR;
   step_a_play = FIRST_STEP;
   bar_a_play = FIRST_BAR;
+  
+  step_b_count = FIRST_STEP;
+  bar_b_count = FIRST_BAR;
+  step_b_play = FIRST_STEP;
+  bar_b_play = FIRST_BAR;
 }
 
 
-uint8_t IncrementOrResetBarCount(){
+uint8_t IncrementOrResetBarCountA(){
 
   // Every time we call this function we advance or reset the bar
   if (bar_a_count == MAX_BAR){
@@ -916,33 +942,27 @@ uint8_t IncrementOrResetBarCount(){
     bar_a_count = BarCountSanity(bar_a_count + 1);
   }
   
-  //rt_printf("** IncrementOrResetBarCount bar_a_count is now: %d \n", bar_a_count);
+  //rt_printf("** IncrementOrResetBarCountA bar_a_count is now: %d \n", bar_a_count);
   return BarCountSanity(bar_a_count);
 }
 
-/*
-// This is not referenced!
-void ResetToFirstStep(){
-  
-  // TODO check if we really need this or possible bug with bars
-  SetTickCountInSequence(0);
-  step_a_count = FIRST_STEP;
+uint8_t IncrementOrResetBarCountB(){
 
-  IncrementOrResetBarCount();
+  // Every time we call this function we advance or reset the bar
+  if (bar_b_count == MAX_BAR){
+    bar_b_count = FIRST_BAR;
+  } else {
+    bar_b_count = BarCountSanityB(bar_b_count + 1);
+  }
   
-  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_a_count is now: ") + step_a_count);
+  return BarCountSanityB(bar_b_count);
 }
-*/
 
 
 
 
 
-
-
-
-
-uint8_t StepCountSanity(uint8_t step_a_count_){
+uint8_t StepCountSanityA(uint8_t step_a_count_){
   uint8_t step_a_count_fixed;
   
   if (step_a_count_ > MAX_STEP){
@@ -957,7 +977,20 @@ uint8_t StepCountSanity(uint8_t step_a_count_){
   return step_a_count_fixed;
 }
 
-
+uint8_t StepCountSanityB(uint8_t step_b_count_){
+  uint8_t step_b_count_fixed;
+  
+  if (step_b_count_ > MAX_STEP){
+    rt_printf("**** ERROR step_b_count_ > MAX_STEP i.e. %f \n" , step_b_count_ );
+    step_a_count_fixed = MAX_STEP;
+  } else if (step_a_count_ < FIRST_STEP){
+    rt_printf("**** ERROR step_b_count_ > FIRST_STEP i.e. %f \n", step_b_count_ );
+    step_b_count_fixed = FIRST_STEP;
+  } else {
+    step_b_count_fixed = step_b_count_;
+  }
+  return step_b_count_fixed;
+}
 
 
 
@@ -1026,9 +1059,9 @@ enum osc_type
 
 
 
-void ResetSequenceCounters(){
-  SetTickCountInSequence(0);
-  IncrementOrResetBarCount();
+void ResetSequenceACounters(){
+  SetTickCountInSequenceA(0);
+  IncrementOrResetBarCountA();
   step_a_count = FIRST_STEP; 
   lfo_a_analog.setPhase(0.0);
   
@@ -1043,7 +1076,7 @@ void ResetSequenceCounters(){
   // We'll be able to use this, to set delay in frames
   frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
 
-  //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_length_in_steps, step_a_count);
+  //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
 
@@ -1104,16 +1137,16 @@ void printStatus(void*){
 		//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
 		
 		
-		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
-		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
-		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
-		rt_printf("new_button_4_state is: %d \n", new_button_4_state);
+		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
+		// rt_printf("new_button_2_state is: %d \n", new_button_2_state);
+		// rt_printf("new_button_3_state is: %d \n", new_button_3_state);
+		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
-		rt_printf("do_button_1_action is: %d \n", do_button_1_action);
-		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
-		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
-		rt_printf("do_button_4_action is: %d \n", do_button_4_action);
+		// rt_printf("do_button_1_action is: %d \n", do_button_1_action);
+		// rt_printf("do_button_2_action is: %d \n", do_button_2_action);
+		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
+		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
 
 
@@ -1122,7 +1155,7 @@ void printStatus(void*){
 		
         // Sequence derived results 
         /*
-    	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
+    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
     	rt_printf("new_sequence_length_in_ticks is: %d \n", new_sequence_length_in_ticks);
     	*/
 
@@ -1166,8 +1199,8 @@ void printStatus(void*){
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
     	*/
 
-    	//rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-    	//rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+    	//rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
+    	//rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
 
     	
 
@@ -1284,7 +1317,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           // We want the note on, so set it on.
           rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
           // WRITE MIDI MIDI_DATA
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
           channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
           channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
           
@@ -1307,7 +1340,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
              rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
              
              // WRITE MIDI MIDI_DATA
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
 
@@ -1323,7 +1356,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
 
 void GateAHigh(){
-  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_a_out_state = true;
   target_led_1_state = true; 
@@ -1346,7 +1379,7 @@ void GateALow(){
 }
 
 void GateBHigh(){
-  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_b_out_state = true;
   target_led_3_state = true; 
@@ -1433,7 +1466,7 @@ void OnAStep(){
     }
   
   
-  step_a_count = StepCountSanity(step_a_count);
+  step_a_count = StepCountSanityA(step_a_count);
 
       // std::string message = "--:OnAStep:" + std::to_string(step_a_count) + "--";
 	 // This sends a UDP message 
@@ -1516,17 +1549,17 @@ void PlayMidi(){
     //rt_printf("** OnAStep  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
     
     // READ MIDI sequence
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-            	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
+           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
+            	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
+            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
-       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][0].is_active == 1) {
+       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanityA(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            midi.writeNoteOff(midi_channel_x, n, 0);
        }
@@ -1550,27 +1583,27 @@ void AdvanceSequenceChronology(){
 
 
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  //current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
+  //current_sequence_a_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_a_length_in_steps_raw;
 
-  //rt_printf("current_sequence_length_in_steps is: %d ", current_sequence_length_in_steps  );
+  //rt_printf("current_sequence_a_length_in_steps is: %d ", current_sequence_a_length_in_steps  );
 
-  if (current_sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
-    rt_printf("**** ERROR with current_sequence_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
-    current_sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+  if (current_sequence_a_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with current_sequence_a_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_a_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    current_sequence_a_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
     
   }
   
-  if (current_sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
-    current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
-    rt_printf("**** ERROR with current_sequence_length_in_steps but it is NOW: %d ", current_sequence_length_in_steps  );
+  if (current_sequence_a_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    current_sequence_a_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with current_sequence_a_length_in_steps but it is NOW: %d ", current_sequence_a_length_in_steps  );
   }
 
-  new_sequence_length_in_ticks = (current_sequence_length_in_steps) * 6;
-  //Serial.println(String("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  ); 
+  new_sequence_length_in_ticks = (current_sequence_a_length_in_steps) * 6;
+  //Serial.println(String("current_sequence_a_length_in_steps is: ") + current_sequence_a_length_in_steps  ); 
   //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
 
   // Always advance the ticks SINCE START
-  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+  SetTotalTickCountA(loop_timing_a.tick_count_since_start += 1);
 
 
 
@@ -1593,31 +1626,31 @@ void AdvanceSequenceChronology(){
 
   // If we're at the end of the sequence
   if (
-    (loop_timing.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
+    (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
 
   // or we past the end and we're at new beat  
   ||
-  (loop_timing.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
+  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
       && 
-      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      // loop_timing_a.tick_count_since_start % new_sequence_length_in_ticks == 0 
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
-      loop_timing.tick_count_since_start % 6 == 0 
+      loop_timing_a.tick_count_since_start % 6 == 0 
   )
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
-  loop_timing.tick_count_in_sequence >= 16 * 6
+  loop_timing_a.tick_count_in_sequence >= 16 * 6
   ) { // Reset
-    ResetSequenceCounters();
+    ResetSequenceACounters();
   } else {
-    SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
+    SetTickCountInSequenceA(loop_timing_a.tick_count_in_sequence += 1); // Else increment.
   }
 
   // Update Step Count (this could also be a function but probably makes sense to store it)
   // An integer operation - we just want the quotient.
-  step_a_count = loop_timing.tick_count_in_sequence / 6;
+  step_a_count = loop_timing_a.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
-  ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+  ticks_after_step = loop_timing_a.tick_count_in_sequence % 6;
 
  //Serial.println(String("step_a_count is ") + step_a_count  + String(" ticks_after_step is ") + ticks_after_step  );
  
@@ -1639,7 +1672,7 @@ void OnTick(){
 
   /////////////////
   // BPM Detection
-  if (loop_timing.tick_count_since_start % 24 == 0){
+  if (loop_timing_a.tick_count_since_start % 24 == 0){
     // 1 Tick (clock pulse) = f Audio Frames
     // 1 Tick = f / 44100 (Audio Sample Rate) seconds
     // There are 44100/f Ticks per seconds
@@ -1663,9 +1696,9 @@ void OnTick(){
  
 
   // Decide if we have a "step"
-  if (loop_timing.tick_count_in_sequence % 6 == 0){
+  if (loop_timing_a.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
-    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
     OnAStep();
     /////////////////////////////////////////   
@@ -2085,8 +2118,8 @@ void InitMidiSequence(bool force){
 void InitSequencer(){
   GateALow();
   CvStop();
-  loop_timing.tick_count_since_start = 0;
-  ResetSequenceCounters();
+  loop_timing_a.tick_count_since_start = 0;
+  ResetSequenceACounters();
 
  
 }
@@ -2215,7 +2248,7 @@ void ChangeSequence(void*){
 
 
 
-    current_sequence_length_in_steps = static_cast<int>(round(map(sequence_a_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
+    current_sequence_a_length_in_steps = static_cast<int>(round(map(sequence_a_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
     
  
     //////////////////////////////////////////
@@ -2232,13 +2265,13 @@ void ChangeSequence(void*){
 
   
 
-//binary_sequence_upper_limit = pow(current_sequence_length_in_steps, 2);
+//binary_sequence_upper_limit = pow(current_sequence_a_length_in_steps, 2);
 
-// REMEMBER, current_sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// REMEMBER, current_sequence_a_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^current_sequence_length_in_steps) - 1
-sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1; 
+// or (2^current_sequence_a_length_in_steps) - 1
+sequence_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1; 
 
 
 
@@ -2275,7 +2308,7 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
     the_sequence_a = gray_code_sequence_a;
 
-    //the_sequence_a = BitClear(the_sequence_a, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
+    //the_sequence_a = BitClear(the_sequence_a, current_sequence_a_length_in_steps -1); // current_sequence_a_length_in_steps is 1 based index. bitClear is zero based index.
     //the_sequence_a = ~ the_sequence_a; // Invert
 
     // So pot fully counter clockwise is 1 on the first beat 
