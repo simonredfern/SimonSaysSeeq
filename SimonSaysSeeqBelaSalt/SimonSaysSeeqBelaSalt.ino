@@ -1113,7 +1113,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 10 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 
@@ -1126,7 +1126,7 @@ void printStatus(void*){
     
 		// Delay Time
 		
-		rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
+		//rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
 
 
 
@@ -1141,7 +1141,7 @@ void printStatus(void*){
 		//rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
-		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
+		//rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
 		
 		
 		// Analog / Digital Clock In.
@@ -1180,15 +1180,25 @@ void printStatus(void*){
 		/*
     	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
+	
     	*/
     	
+    	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
+    	rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
+
+    	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
+    	rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
+    	
+    	
+    	
+    	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	
     	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
     	rt_printf("analog_adsr_b_level is: %f \n", analog_adsr_b_level);
     	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
-    	
+    	*/
 
 
 		/*
@@ -1216,11 +1226,15 @@ void printStatus(void*){
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
     	*/
 
-    	//rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
-    	//rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
+/*
+    	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
+    	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
 
+
+    	rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
+    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
     	
-
+*/
     	
 		/*
 		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
@@ -1238,23 +1252,23 @@ void printStatus(void*){
 
 		// Sequence state
 		
-    rt_printf("bar_a_count: %d \n", bar_a_count);
+    	//rt_printf("bar_a_count: %d \n", bar_a_count);
 		rt_printf("step_a_count: %d \n", step_a_count);
 		
-    rt_printf("bar_a_play: %d \n", bar_a_play);
+    	//rt_printf("bar_a_play: %d \n", bar_a_play);
 		rt_printf("step_a_play: %d \n", step_a_play);
 
 		if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
     	} else {
-    		rt_printf("Other step A \n");
+    		rt_printf("other step A \n");
     	}
     	
     	
     	if (step_b_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP B \n");
     	} else {
-    		rt_printf("Other step B \n");
+    		rt_printf("other step B \n");
     	}
 
     //	rt_printf("Midi last_note_on: %d \n", last_note_on);
@@ -1748,7 +1762,10 @@ void AdvanceSequenceAChronology(){
 
 void AdvanceSequenceBChronology(){
   
-
+ //rt_printf("**** AdvanceSequenceBChronology");
+ 
+ 
+ 
   if (current_sequence_b_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
     rt_printf("**** ERROR with current_sequence_b_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_b_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
     current_sequence_b_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
@@ -2937,14 +2954,15 @@ void render(BelaContext *context, void *userData)
 		
 		
 		
-		
+		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
 	      // Sequence A INPUTS 		
 		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
 		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
-        // May be a hack to set two params from one knob.
-        coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
+        
+        	// May be a hack to set two params from one knob.
+        	coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  }	
 	    
 	    if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
@@ -2957,14 +2975,14 @@ void render(BelaContext *context, void *userData)
 	    	  //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
 	    }
 
-      // Sequence B INPUTS 
-      if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
+    	// Sequence B INPUTS 
+    	if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
  	      sequence_b_length_input_raw = analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN);
-		  }	
+		 }	
 
-		  if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
-        sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
-		  }
+		 if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
+        	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
+		 }
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
