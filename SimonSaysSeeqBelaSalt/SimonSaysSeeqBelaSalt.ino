@@ -1170,8 +1170,7 @@ void printStatus(void*){
 		
         // Sequence derived results 
         
-    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
-    	rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+
     	
     	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
     	
@@ -1186,9 +1185,19 @@ void printStatus(void*){
     	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
     	rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
 
+    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
+    	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+	    print_binary(the_sequence_a);
+		rt_printf("%c \n", 'B');
+
+
     	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
     	rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
     	
+		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps); 
+		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
+	    print_binary(the_sequence_b);
+		rt_printf("%c \n", 'B');
     	
     	
     	/*
@@ -1242,21 +1251,16 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 		*/
 
-	    rt_printf("the_sequence_a is: %d \n", the_sequence_a);
-	    print_binary(the_sequence_a);
-		rt_printf("%c \n", 'B');
-		
-		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
-	    print_binary(the_sequence_b);
-		rt_printf("%c \n", 'B');
+
 
 		// Sequence state
 		
     	//rt_printf("bar_a_count: %d \n", bar_a_count);
 		rt_printf("step_a_count: %d \n", step_a_count);
+		rt_printf("step_b_count: %d \n", step_b_count);
 		
     	//rt_printf("bar_a_play: %d \n", bar_a_play);
-		rt_printf("step_a_play: %d \n", step_a_play);
+		//rt_printf("step_a_play: %d \n", step_a_play);
 
 		if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
@@ -2425,18 +2429,23 @@ void ChangeSequence(void*){
 	sequence_a_pattern_input = static_cast<int>(round(map(sequence_a_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
     //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
     
+	sequence_b_pattern_input = static_cast<int>(round(map(sequence_b_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
+    //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
 
 
 
     current_sequence_a_length_in_steps = static_cast<int>(round(map(sequence_a_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
     
+	current_sequence_b_length_in_steps = static_cast<int>(round(map(sequence_b_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
+
+
  
     //////////////////////////////////////////
 // Assign values to change the sequencer.
 ///////////////////////////////////
 
    last_binary_sequence_a_result = binary_sequence_a_result;
-
+   last_binary_sequence_b_result = binary_sequence_b_result;
  
 
    // If we have 8 bits, use the range up to 255
