@@ -534,9 +534,9 @@ if(frame_timer < 440000) {
 	if (flash_interval > 100){
 		if (frame_timer >= next_flash_change){
 			target_led_1_state = ! target_led_1_state;
-      target_led_2_state = ! target_led_2_state;
-      target_led_3_state = ! target_led_3_state;
-      target_led_4_state = ! target_led_4_state;
+    		target_led_2_state = ! target_led_2_state;
+    		target_led_3_state = ! target_led_3_state;
+    		target_led_4_state = ! target_led_4_state;
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
 			//rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
@@ -545,9 +545,9 @@ if(frame_timer < 440000) {
 	} else {
 		// In the end we want the led to be off (until something else changes the state)
 		target_led_1_state = false;
-    target_led_2_state = false;
-    target_led_3_state = false;
-    target_led_4_state = false;
+    	target_led_2_state = false;
+    	target_led_3_state = false;
+    	target_led_4_state = false;
 	}
   }
 }
@@ -1332,18 +1332,6 @@ void GateAHigh(){
   step_triggered_adsr_b.gate(true);
 }
 
-void GateBHigh(){
-  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
-  
-  target_gate_b_out_state = true;
-  target_led_2_state = true; 
-    
-  //audio_adsr_a.gate(true);
-  //step_triggered_adsr_b.gate(true);
-}
-
-
-
 void GateALow(){
   //rt_printf("Gate LOW");
   
@@ -1357,11 +1345,22 @@ void GateALow(){
   
 }
 
+void GateBHigh(){
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+  
+  target_gate_b_out_state = true;
+  target_led_3_state = true; 
+    
+  //audio_adsr_a.gate(true);
+  //step_triggered_adsr_b.gate(true);
+}
+
+
 void GateBLow(){
   //rt_printf("Gate LOW");
   
   target_gate_b_out_state = false;
-  target_led_2_state = false; 
+  target_led_3_state = false; 
   
   //audio_adsr_a.gate(false);
   //step_triggered_adsr_b.gate(false);
@@ -2908,7 +2907,17 @@ void render(BelaContext *context, void *userData)
             digitalWriteOnce(context, m, LED_2_PIN, HIGH);
           }
           
+          if (target_led_3_state == HIGH){
+            digitalWriteOnce(context, m, LED_3_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_3_PIN, HIGH);
+          }
           
+          if (target_led_4_state == HIGH){
+            digitalWriteOnce(context, m, LED_4_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_4_PIN, HIGH);
+          }
           
         	
         	// Do similar for another PIN for if (step_a_count == FIRST_STEP)
@@ -3115,3 +3124,4 @@ class UdpClient{
 
 #endif /* UDPCLIENT_H_ */
 
+ 
