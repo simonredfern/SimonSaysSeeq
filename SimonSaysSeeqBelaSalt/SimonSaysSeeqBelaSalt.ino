@@ -151,8 +151,6 @@ uint64_t frames_per_sequence = 0;
 
 
 uint64_t last_tick_frame = 0;
- 
-//int clock_width = 0;
 
 uint64_t elapsed_frames_since_last_tick = 0;
 
@@ -255,13 +253,6 @@ int old_button_4_state = 0;
 
 /////////////////
 
-
-int old_both_buttons_pressed_state = 0;
-int new_both_buttons_pressed_state = 0;
-int both_buttons_pressed_counter = 0;
-int both_buttons_pressed_even = 0;
-int do_both_buttons_action_a = 0;
-int do_both_buttons_action_b = 0;
 
 int do_button_1_action = 0;
 int do_button_2_action = 0;
@@ -1127,18 +1118,6 @@ void printStatus(void*){
 
 	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 
-
-
-	
-		/*
-		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
-		rt_printf("new_both_buttons_pressed_state is: %d \n", new_both_buttons_pressed_state);
-		rt_printf("both_buttons_pressed_counter is: %d \n", both_buttons_pressed_counter);
-		rt_printf("both_buttons_pressed_even is: %d \n", both_buttons_pressed_even);
-		rt_printf("do_both_buttons_action_a is: %d \n", do_both_buttons_action_a);
-		rt_printf("do_both_buttons_action_b is: %d \n", do_both_buttons_action_b);
-		*/
-		
 		
         // Sequence derived results 
         /*
@@ -1493,24 +1472,6 @@ void OnNotStep(){
   GateLow();
   
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2921,33 +2882,6 @@ void render(BelaContext *context, void *userData)
         	old_button_4_state = new_button_4_state;
         	new_button_4_state = digitalRead(context, m, button_4_PIN);
 
-
-
-
-        	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
-        	
-        	// if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
-        	// 	both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
-        	// 	new_both_buttons_pressed_state = 1;
-        		
-        	// 	if ((both_buttons_pressed_counter % 2) == 0){
-        	// 		both_buttons_pressed_even = 1;
-    
-        	// 		do_both_buttons_action_a = 1;
-        	// 		do_both_buttons_action_b = 0;
-        	// 	} else {
-        	// 	    both_buttons_pressed_even = 0;
-        	// 	    do_both_buttons_action_a = 0;
-        	// 	    do_both_buttons_action_b = 1;
-        	// 	}
-        		
-        	// 	// Reset the buttons becuase we don't want a one button action as well
-        	// 	new_button_1_state = 0;
-        	// 	new_button_2_state = 0;
-        		
-        	// } else {
-        	// 	new_both_buttons_pressed_state = 0;	
- 
         	
 	        	// Left button newly pressed get smaller
 	        	if ((new_button_1_state != old_button_1_state) && new_button_1_state == 1){
@@ -2969,11 +2903,8 @@ void render(BelaContext *context, void *userData)
 	        		do_button_4_action = 1;
 	        	}
         	
-        	
-        //	}// End both buttons pressed check
-        	
-        	
-        
+        	        	
+  
         	// Only set new state if target is changed
         	if (target_gate_out_state != gate_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
