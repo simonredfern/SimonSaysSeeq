@@ -139,6 +139,8 @@ const uint8_t MIN_midi_lane_input = 0;
 const uint8_t MAX_midi_lane_input = 16;
 
 
+uint64_t last_function = 0; // set this in a function to a number
+
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
 
@@ -529,6 +531,8 @@ float flash_interval = 44000;
 
 
 void FlashHello(){
+	last_function = 23847629378469;
+	
 // This gets called in the digital loop
 // Say hello when this patch starts up.
 
@@ -612,6 +616,8 @@ NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2];
 
 
 void SyncSequenceToFile(bool write_to_file){
+	
+	last_function = 61276187263819;
 	
 	
 	rt_printf("Hello from SyncSequenceToFile write_to_file is %d \n", write_to_file);
@@ -791,6 +797,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void WriteSequenceToFiles(void*){
 	
+	last_function = 2934696738924;
+	
 	//if (need_to_auto_save_sequence == true){
 		SyncSequenceToFile(true);
 	//	need_to_auto_save_sequence = false;
@@ -798,6 +806,8 @@ void WriteSequenceToFiles(void*){
 }
 
 void ReadSequenceFromFiles(){
+	last_function = 2938476293478897689;
+	
 	SyncSequenceToFile(false);
 }
 
@@ -926,6 +936,8 @@ void SetTotalTickCountB(int value){
 
 
 void Beginning(){
+	last_function = 28736478987692;
+	
   SetTickCountInSequenceA(0);
   SetTickCountInSequenceB(0);
   
@@ -942,6 +954,8 @@ void Beginning(){
 
 
 uint8_t IncrementOrResetBarCountA(){
+	
+	last_function = 2398726942;
 
   // Every time we call this function we advance or reset the bar
   if (bar_a_count == MAX_BAR){
@@ -955,6 +969,8 @@ uint8_t IncrementOrResetBarCountA(){
 }
 
 uint8_t IncrementOrResetBarCountB(){
+	
+	last_function = 239626464264262;
 
   // Every time we call this function we advance or reset the bar
   if (bar_b_count == MAX_BAR){
@@ -971,6 +987,8 @@ uint8_t IncrementOrResetBarCountB(){
 
 
 uint8_t StepCountSanity(uint8_t step_count_){
+	last_function = 672349764239642;
+	
   uint8_t step_count_fixed;
   
   if (step_count_ > MAX_STEP){
@@ -1064,6 +1082,8 @@ enum osc_type
 // This relates to the whole machine.
 void ResetSequenceACounters(){
 	
+	last_function = 345297865438769768;
+	
   SetTickCountInSequenceA(0);
 
   IncrementOrResetBarCountA();
@@ -1087,6 +1107,8 @@ void ResetSequenceACounters(){
 
 
 void ResetSequenceBCounters(){
+	
+	last_function = 76679624692469;
 	
 
   SetTickCountInSequenceB(0);
@@ -1120,6 +1142,11 @@ void printStatus(void*){
     if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
+		
+		rt_printf("last_function is: %d \n", last_function);
+
+
+// last_function_32
 
 		  // Global frame timing
 
@@ -1131,6 +1158,8 @@ void printStatus(void*){
 		// Delay Time
 		
 		//rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
+
+
 
 
 
@@ -1323,6 +1352,9 @@ void printStatus(void*){
 
 
 void DisableMidiNotes(uint8_t note){
+	
+	last_function = 29384769238749;
+	
              // Disable that note for all steps.
            uint8_t sc = 0;
            uint8_t bc = 0;
@@ -1339,6 +1371,8 @@ void DisableMidiNotes(uint8_t note){
 
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+	
+	last_function = 492694689242;
 
   rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
   if (on_off == MIDI_NOTE_ON){
@@ -1405,6 +1439,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
 
 void GateAHigh(){
+	
+   last_function = 98762934;	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_a_out_state = true;
@@ -1415,6 +1451,8 @@ void GateAHigh(){
 }
 
 void GateALow(){
+	
+	last_function = 98273649;
   //rt_printf("Gate LOW");
   
   target_gate_a_out_state = false;
@@ -1428,6 +1466,9 @@ void GateALow(){
 }
 
 void GateHighB(){
+	
+   last_function = 9696391626;	
+	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_b_out_state = true;
@@ -1440,6 +1481,8 @@ void GateHighB(){
 
 void GateLowB(){
   //rt_printf("Gate LOW");
+  
+  last_function = 1241287469;
   
   target_gate_b_out_state = false;
   target_led_3_state = false; 
@@ -1455,6 +1498,8 @@ void GateLowB(){
 
 
 bool RampIsPositive(){
+	last_function = 68426842684268;
+	
 	// TODO BELA
 	return false;
   
@@ -1474,6 +1519,8 @@ void SyncAndResetCv(){
 
 // Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
 uint8_t ReadBit (int number, int b ){
+	
+	last_function = 9264732486428642;
 	(number & ( 1 << b )) >> b;
 }
 
@@ -1485,6 +1532,8 @@ uint8_t ReadBit (int number, int b ){
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
 void OnStepA(){
+	
+	last_function = 9429624927929732;
 	
   //rt_printf("Hello from OnStepA: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1537,6 +1586,9 @@ void OnStepA(){
 
 // These are ticks which are not steps - so in between possible beats.
 void OnNotStepA(){
+	
+	last_function = 9642692468436843;
+	
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
   GateALow();
@@ -1548,6 +1600,8 @@ void OnNotStepA(){
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
 void OnStepB(){
+	
+	last_function = 422946926496296;
 	
   //rt_printf("Hello from OnStepA: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1600,6 +1654,9 @@ void OnStepB(){
 
 // These are ticks which are not steps - so in between possible beats.
 void OnNotStepB(){
+	
+	last_function = 4329649269469;
+	
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
   GateLowB();
@@ -1631,11 +1688,16 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 void SetPlayAFromCount(){
+	last_function = 2692347232436798;
+	
 	bar_a_play = bar_a_count;
 	step_a_play = step_a_count;
 }
 
 void SetPlayBFromCount(){
+	
+	last_function = 246938646928379;
+	
 	bar_b_play = bar_b_count;
 	step_b_play = step_b_count;
 }
@@ -1643,6 +1705,9 @@ void SetPlayBFromCount(){
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
+	
+	last_function = 23429634928364892;
+	
   //rt_printf("midi_note  ") + i + String(" value is ") + channel_x_midi_note_events[step_a_count][i]  );
 
 			// midi_byte_t statusByte = 0xB0; // control change on channel 0
@@ -1682,6 +1747,8 @@ void PlayMidi(){
 
 /////////
 void AdvanceSequenceAChronology(){
+	
+	last_function = 2349642386;
   
   // This function advances or resets the sequence powered by the clock.
 
@@ -1769,6 +1836,8 @@ void AdvanceSequenceAChronology(){
 
 
 void AdvanceSequenceBChronology(){
+	
+	last_function = 585644635;
   
  //rt_printf("**** AdvanceSequenceBChronology");
  
@@ -1834,6 +1903,9 @@ void AdvanceSequenceBChronology(){
 
 
 void OnTick(){
+	
+	last_function = 676756655411;
+	
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer activity.
 // Can be called from Midi Clock and/or Digital Clock In.
@@ -1925,6 +1997,8 @@ void OnTick(){
 
 // See Midi.h in the Libraries section of the Bela IDE
 void readMidiLoop(MidiChannelMessage message, void* arg){
+	
+	last_function = 65655445443;
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 	
@@ -1987,6 +2061,8 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 // https://www.codesdope.com/blog/article/set-toggle-and-clear-a-bit-in-c/
 // That will clear the nth bit of number. You must invert the bit string with the bitwise NOT operator (~), then AND it.
 int BitClear (unsigned int number, unsigned int n) {
+	
+	last_function = 54543232;
 	// return number &= ~(1 << n);	
 	return number &= ~(1UL << n);
 }
@@ -2007,6 +2083,8 @@ int BitClear (unsigned int number, unsigned int n) {
 // Modified from code by Greg Shakar
 float fscale( float originalMin, float originalMax, float newBegin, float
 newEnd, float inputValue, float curve){
+	
+	last_function = 4534;
 
   float OriginalRange = 0;
   float new_range = 0;
@@ -2082,6 +2160,8 @@ newEnd, float inputValue, float curve){
 // From https://gist.github.com/shirish47/d21b896570a8fccbd9c3
 unsigned int Binary2Gray(unsigned int data)
  {
+ 	last_function = 561122;
+ 	
    unsigned int n_data=(data>>1);
    n_data=(data ^ n_data);
    
@@ -2093,19 +2173,21 @@ unsigned int Binary2Gray(unsigned int data)
 // linear conversion https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
 float linearScale( float original_range_min, float original_range_max, float new_range_min, float new_range_max, float original_value){
+	
+	last_function = 990088;
 
-float original_range = (original_range_max - original_range_min);
-
-//Serial.println(String("linearScale original_range ") + original_range );
-
-float new_range = (new_range_max - new_range_min);  
-//Serial.println(String("linearScale new_range ") + new_range );
-
-float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
-
-//Serial.println(String("linearScale new_value ") + new_value );
-
-return new_value;
+	float original_range = (original_range_max - original_range_min);
+	
+	//Serial.println(String("linearScale original_range ") + original_range );
+	
+	float new_range = (new_range_max - new_range_min);  
+	//Serial.println(String("linearScale new_range ") + new_range );
+	
+	float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
+	
+	//Serial.println(String("linearScale new_value ") + new_value );
+	
+	return new_value;
 }
 
 
@@ -2152,6 +2234,8 @@ void Led4Digital(bool state){
 
 
 void ChangeCvWaveformBAmplitude(){
+	
+	last_function = 948462;
   
   // change by an amount (might go up or down)
   cv_waveform_b_amplitude += cv_waveform_b_amplitude_delta;
@@ -2162,6 +2246,8 @@ void ChangeCvWaveformBAmplitude(){
 }
 
 void SetWaveformBObjectAmplitude (){
+	
+	last_function = 2963849689;
   
    // reset if its out of bounds
   if (cv_waveform_b_amplitude < 0 ) {
@@ -2185,6 +2271,8 @@ void SetWaveformBObjectAmplitude (){
 
 
 void CvStop(){
+	
+	last_function = 883355;
   rt_printf("CvStop \n");
   
   // TODO
@@ -2214,6 +2302,8 @@ void clockShowLow(){
 
 void AllNotesOff(void*){
 	
+	last_function = 99883352;
+	
 	// Don't do this too often
 	if (frame_timer - last_notes_off_frame > 11000){
 		  // All MIDI notes off.
@@ -2229,6 +2319,8 @@ void AllNotesOff(void*){
 }
 
 void SetLane(uint8_t lane_in){
+	
+	last_function = 5533889;
 
 	if (lane_in > MAX_LANE){
 		current_midi_lane = MAX_LANE;
@@ -2249,6 +2341,8 @@ void SetLane(uint8_t lane_in){
 
 
 void InitMidiSequence(bool force){
+	
+	last_function = 32786;
 	
   if (init_midi_sequence_has_run == false || force == true){	
 
@@ -2304,6 +2398,9 @@ void InitMidiSequence(bool force){
 
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer(){
+	
+  last_function = 9876542;	
+	
   GateALow();
   CvStop();
   loop_timing_a.tick_count_since_start = 0;
@@ -2313,12 +2410,17 @@ void InitSequencer(){
 }
 
 void StartSequencer(){
+	
+	last_function = 6782341;
+	
   InitSequencer();
   sequence_is_running = HIGH;
   need_to_auto_save_sequence = true;
 }
 
 void StopSequencer(){
+	
+	last_function = 8253845858;
 //	auto millisec_since_epoch_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	
 	
@@ -2345,6 +2447,8 @@ void StopSequencer(){
 
 
 int GetValue(int raw, int last, int jitter_reduction){
+	
+	last_function = 248258542;
 int value; 
 
  int diff = abs(raw - last);
@@ -2361,6 +2465,8 @@ return value;
 }
 
 bool IsCrossing(int value_1, int value_2, int fuzzyness){
+	
+	last_function = 23423485375;
   // Return true if the two values are close
   if (abs(value_1 - value_2) <= fuzzyness){
     return true;
@@ -2412,6 +2518,8 @@ float gDel_y2_r = 0;
 
 ////
 void InitAudioBuffer(){
+	
+	last_function = 2585254852;
 	// Buffer holding previous samples per channel
 	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
@@ -2422,6 +2530,8 @@ void InitAudioBuffer(){
 
 
 void ChangeSequence(void*){
+	
+	last_function = 24964222;
 	
 	 //rt_printf(" ChangeSequence " );
 	
@@ -2619,6 +2729,8 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 
 
 void MaybeOnTick(){
+	
+	last_function = 6644;
   if (do_tick == true){
     do_tick = false;
     OnTick();
@@ -2660,6 +2772,8 @@ WriteFile file2;
 /////////////////////////////////////////////////////////
 
 bool setup(BelaContext *context, void *userData){
+	
+	last_function = 42369696;
 	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
@@ -2852,6 +2966,8 @@ bool setup(BelaContext *context, void *userData){
 
 void render(BelaContext *context, void *userData)
 {
+	
+	last_function = 886653;
 
   ///////////////////////////////////////////
   // Look for Analogue Clock (24 PPQ)
@@ -3266,6 +3382,8 @@ void render(BelaContext *context, void *userData)
 
 void cleanup(BelaContext *context, void *userData)
 {
+	last_function = 588773;
+	
 	Bela_scheduleAuxiliaryTask(gAllNotesOff);
 }
 
@@ -3277,6 +3395,8 @@ void cleanup(BelaContext *context, void *userData)
 // complete if the system is under heavy audio load.
 void recalculate_frequencies(void*)
 {
+		last_function = 628497;
+	
         float freq = gNewMinFrequency;
         float increment = (gNewMaxFrequency - gNewMinFrequency) / (float)gNumOscillators;
         for(int n = 0; n < gNumOscillators; n++) {
