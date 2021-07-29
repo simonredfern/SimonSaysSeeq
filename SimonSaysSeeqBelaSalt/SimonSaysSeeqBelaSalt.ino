@@ -377,7 +377,6 @@ const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 // Sequence Length (and default)
 uint8_t current_sequence_a_length_in_steps = 8; 
-
 uint8_t current_sequence_b_length_in_steps = 8; 
 
 ///////////////////////
@@ -2424,12 +2423,14 @@ void ChangeSequence(void*){
 	
 	
 	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
-    unsigned int sequence_pattern_upper_limit = 1023; 
+    unsigned int sequence_a_pattern_upper_limit = 1023; 
+	unsigned int sequence_b_pattern_upper_limit = 1023;
 	
-	sequence_a_pattern_input = static_cast<int>(round(map(sequence_a_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
+	
+	sequence_a_pattern_input = static_cast<int>(round(map(sequence_a_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit))); 
     //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
     
-	sequence_b_pattern_input = static_cast<int>(round(map(sequence_b_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
+	sequence_b_pattern_input = static_cast<int>(round(map(sequence_b_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit))); 
     //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
 
 
@@ -2460,8 +2461,8 @@ void ChangeSequence(void*){
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
 // or (2^current_sequence_a_length_in_steps) - 1
-sequence_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1; 
-
+sequence_a_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1; 
+sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1; 
 
 
    //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
@@ -2472,8 +2473,8 @@ sequence_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_a_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_a_pattern_input, 0);
-
+  binary_sequence_a_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit, sequence_a_pattern_input, 0);
+  binary_sequence_b_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_b_pattern_upper_limit, sequence_b_pattern_input, 0);
    
 
 
@@ -2492,10 +2493,11 @@ sequence_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1;
    //Serial.print("\t");
    //Serial.print(gray_code_sequence_a, BIN);
    //Serial.println();
-
+   gray_code_sequence_b = Binary2Gray(binary_sequence_b_result);
 
 
     the_sequence_a = gray_code_sequence_a;
+    the_sequence_b = gray_code_sequence_b;
 
     //the_sequence_a = BitClear(the_sequence_a, current_sequence_a_length_in_steps -1); // current_sequence_a_length_in_steps is 1 based index. bitClear is zero based index.
     //the_sequence_a = ~ the_sequence_a; // Invert
