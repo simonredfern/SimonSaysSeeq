@@ -384,7 +384,7 @@ const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
-uint8_t midi_channel_a = 0; // This is zero indexed. 0 will send on midi channel 1!
+uint8_t midi_channel_x = 0; // This is zero indexed. 0 will send on midi channel 1!
 uint8_t last_note_on = 0;
 uint8_t last_note_off = 0;
 uint8_t last_note_disabled = 0;
@@ -447,17 +447,29 @@ unsigned int coarse_delay_input = 1;
 // Musical parameters that the user can tweak.
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
-unsigned int binary_sequence_result;
-unsigned int gray_code_sequence;
-unsigned int the_sequence;
-unsigned int last_binary_sequence_result; // So we can detect changes
+unsigned int binary_sequence_a_result;
+unsigned int gray_code_sequence_a;
+unsigned int the_sequence_a;
+unsigned int last_binary_sequence_a_result; // So we can detect changes
+
+unsigned int binary_sequence_b_result;
+unsigned int gray_code_sequence_b;
+unsigned int the_sequence_b;
+unsigned int last_binary_sequence_b_result; // So we can detect changes
+
+
 
 
 bool do_tick = true;
 
 bool do_envelope_1_on = false;
+
 bool target_gate_a_out_state = false;
-bool gate_out_state_set = false;
+bool gate_a_out_state_set = false;
+
+
+bool target_gate_b_out_state = false;
+bool gate_b_out_state_set = false;
 
 
 bool target_led_1_state = false;
@@ -1156,13 +1168,13 @@ void printStatus(void*){
 
     	
 		/*
-		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
-		print_binary(gray_code_sequence);
+		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
+		print_binary(gray_code_sequence_a);
 		rt_printf("%c \n", 'B');
 		*/
 
-    //	rt_printf("the_sequence is: %d \n", the_sequence);
-    //	print_binary(the_sequence);
+    //	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+    //	print_binary(the_sequence_a);
 		// rt_printf("%c \n", 'B');
 
 		// Sequence state
@@ -1184,7 +1196,7 @@ void printStatus(void*){
     // 	rt_printf("Midi last_note_off: %d \n", last_note_off);
     //	rt_printf("Midi last_note_disabled: %d \n", last_note_disabled);
     	
-    //	rt_printf("Midi midi_channel_a: %d \n", midi_channel_a);
+    //	rt_printf("Midi midi_channel_x: %d \n", midi_channel_x);
     	
     	
     
@@ -1194,7 +1206,7 @@ void printStatus(void*){
 
     // Sequence Outputs 
     //rt_printf("target_gate_a_out_state is: %d \n", target_gate_a_out_state);
-		//rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
+		//rt_printf("gate_a_out_state_set is: %d \n", gate_a_out_state_set);      
 
 
       //std::string message = "$simon!";
@@ -1273,7 +1285,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
-          	midi.writeNoteOn(midi_channel_a, note, velocity); // echo midi to the output
+          	midi.writeNoteOn(midi_channel_x, note, velocity); // echo midi to the output
           }
           
           
@@ -1298,7 +1310,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 			
 			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
 			if (sequence_is_running == 0){ 
-				midi.writeNoteOff(midi_channel_a, note, 0);
+				midi.writeNoteOff(midi_channel_x, note, 0);
 			}
         	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
   }
@@ -1308,15 +1320,24 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 void GateAHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
-
   target_gate_a_out_state = true;
   target_led_1_state = true; 
     
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
-  
-
 }
+
+void GateBHigh(){
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+  
+  target_gate_b_out_state = true;
+  target_led_2_state = true; 
+    
+  //audio_adsr_a.gate(true);
+  //step_triggered_adsr_b.gate(true);
+}
+
+
 
 void GateALow(){
   //rt_printf("Gate LOW");
@@ -1329,11 +1350,23 @@ void GateALow(){
   
   sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
   
-  
-
-  
-
 }
+
+void GateBLow(){
+  //rt_printf("Gate LOW");
+  
+  target_gate_b_out_state = false;
+  target_led_2_state = false; 
+  
+  //audio_adsr_a.gate(false);
+  //step_triggered_adsr_b.gate(false);
+  
+  //sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
+  
+}
+
+
+
 
 bool RampIsPositive(){
 	// TODO BELA
@@ -1376,8 +1409,8 @@ uint8_t ReadBit (int number, int b ){
 void OnAStep(){
 	
   //rt_printf("Hello from OnAStep: %d \n", step_a_count);
-  //rt_printf("the_sequence is: %d \n", the_sequence);
-  //print_binary(the_sequence);
+  //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+  //print_binary(the_sequence_a);
   //rt_printf("%c \n", 'B');
 
   if (step_a_count > MAX_STEP) {
@@ -1403,10 +1436,10 @@ void OnAStep(){
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence & ( 1 << step_a_count )) >> step_a_count;  
+  uint8_t play_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
-  //uint8_t play_note = ReadBit(the_sequence, step_a_count);
+  //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
   
    if (play_note){
      //rt_printf("OnAStep: %d ****++++++****** PLAY \n", step_a_count);
@@ -1483,7 +1516,7 @@ void PlayMidi(){
            // The note could be on one of 6 ticks in the sequence
            if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
             	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_a, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
+            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
@@ -1491,7 +1524,7 @@ void PlayMidi(){
     if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
        if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-           midi.writeNoteOff(midi_channel_a, n, 0);
+           midi.writeNoteOff(midi_channel_x, n, 0);
        }
     }
   } // End midi note loop
@@ -1687,14 +1720,14 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(type_received == kmmNoteOn && velocity_received > 0){
 			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
 			// Write any note ON into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_a);
+			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_x);
 	// Check for a NOTE OFF	 
 	} else if (message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
 		
 			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
 			
 			// Write any note OFF into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_a);
+			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_x);
 			
 	// CLOCK but not currently working.
 	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
@@ -1961,7 +1994,7 @@ void AllNotesOff(void*){
 		  // All MIDI notes off.
 		  rt_printf("All MIDI notes OFF \n");
 		  for (uint8_t n = 0; n <= 127; n++) {
-		     midi.writeNoteOff(midi_channel_a, n, 0);
+		     midi.writeNoteOff(midi_channel_x, n, 0);
 		  }
 		  last_notes_off_frame = frame_timer;
 	} else {
@@ -2185,7 +2218,7 @@ void ChangeSequence(void*){
 // Assign values to change the sequencer.
 ///////////////////////////////////
 
-   last_binary_sequence_result = binary_sequence_result;
+   last_binary_sequence_a_result = binary_sequence_a_result;
 
  
 
@@ -2213,42 +2246,42 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_a_pattern_input, 0);
+  binary_sequence_a_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_a_pattern_input, 0);
 
    
 
 
-   if (binary_sequence_result != last_binary_sequence_result){
+   if (binary_sequence_a_result != last_binary_sequence_a_result){
     //rt_printf("binary_sequence has changed **");
    }
 
 
-   //rt_printf("binary_sequence_result is: ") + binary_sequence_result  );
+   //rt_printf("binary_sequence_a_result is: ") + binary_sequence_a_result  );
    //Serial.print("\t");
-   //Serial.print(binary_sequence_result, BIN);
+   //Serial.print(binary_sequence_a_result, BIN);
    //Serial.println();
 
-   gray_code_sequence = Binary2Gray(binary_sequence_result);
-   //rt_printf("gray_code_sequence is: ") + gray_code_sequence  );
+   gray_code_sequence_a = Binary2Gray(binary_sequence_a_result);
+   //rt_printf("gray_code_sequence_a is: ") + gray_code_sequence_a  );
    //Serial.print("\t");
-   //Serial.print(gray_code_sequence, BIN);
+   //Serial.print(gray_code_sequence_a, BIN);
    //Serial.println();
 
 
 
-    the_sequence = gray_code_sequence;
+    the_sequence_a = gray_code_sequence_a;
 
-    //the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
-    //the_sequence = ~ the_sequence; // Invert
+    //the_sequence_a = BitClear(the_sequence_a, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
+    //the_sequence_a = ~ the_sequence_a; // Invert
 
     // So pot fully counter clockwise is 1 on the first beat 
-    // if (binary_sequence_result == 1){
-    //   the_sequence = 1;
+    // if (binary_sequence_a_result == 1){
+    //   the_sequence_a = 1;
     // }
 
-   //rt_printf("the_sequence is: %s ", the_sequence  );
+   //rt_printf("the_sequence_a is: %s ", the_sequence_a  );
    //Serial.print("\t");
-   //Serial.print(the_sequence, BIN);
+   //Serial.print(the_sequence_a, BIN);
    //Serial.println();
    
    
@@ -2842,10 +2875,10 @@ void render(BelaContext *context, void *userData)
         	        	
   
         	// Only set new state if target is changed
-        	if (target_gate_a_out_state != gate_out_state_set){
+        	if (target_gate_a_out_state != gate_a_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
 	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_a_out_state);
-	        	gate_out_state_set = target_gate_a_out_state;
+	        	gate_a_out_state_set = target_gate_a_out_state;
         	}
 
 
