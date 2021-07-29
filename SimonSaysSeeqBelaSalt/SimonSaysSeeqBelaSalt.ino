@@ -307,8 +307,8 @@ const int CLOCK_INPUT_DIGITAL_PIN = 15;
 // Digital Outputs
 // T1 out	digital channel 0
 // T2 out	digital channel 5
-const int SEQUENCE_OUT_PIN = 0;
-
+const int SEQUENCE_A_OUT_PIN = 0;
+const int SEQUENCE_B_OUT_PIN = 5; // TODO check
 
 
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
@@ -466,7 +466,6 @@ bool do_envelope_1_on = false;
 
 bool target_gate_a_out_state = false;
 bool gate_a_out_state_set = false;
-
 
 bool target_gate_b_out_state = false;
 bool gate_b_out_state_set = false;
@@ -2877,22 +2876,31 @@ void render(BelaContext *context, void *userData)
         	// Only set new state if target is changed
         	if (target_gate_a_out_state != gate_a_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_a_out_state);
+	        	digitalWrite(context, m, SEQUENCE_A_OUT_PIN, target_gate_a_out_state);
 	        	gate_a_out_state_set = target_gate_a_out_state;
         	}
+
+        	if (target_gate_b_out_state != gate_b_out_state_set){
+        		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
+	        	digitalWrite(context, m, SEQUENCE_B_OUT_PIN, target_gate_b_out_state);
+	        	gate_b_out_state_set = target_gate_b_out_state;
+        	}
+
 
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
           // Also set by flash
           if (target_led_1_state == HIGH){
-            digitalWriteOnce(context, m, LED_1_PIN, LOW);
-            
+            digitalWriteOnce(context, m, LED_1_PIN, LOW);      
           } else {
             digitalWriteOnce(context, m, LED_1_PIN, HIGH);
-
           }
           
-          
+          if (target_led_2_state == HIGH){
+            digitalWriteOnce(context, m, LED_2_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_2_PIN, HIGH);
+          }
           
           
           
