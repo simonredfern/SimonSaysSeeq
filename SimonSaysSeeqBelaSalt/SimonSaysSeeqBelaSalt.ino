@@ -355,7 +355,7 @@ const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
 // const uint8_t BRIGHT_4 = 100;
 // const uint8_t BRIGHT_5 = 255;
 
-// Use zero based index for sequencer. i.e. step_count for the first step is 0.
+// Use zero based index for sequencer. i.e. step_a_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
@@ -561,9 +561,9 @@ int test_int = 8 ;
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-//NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+//NoteInfo channel_x_midi_note_events[MAX_STEP+1][128][2]; 
 
-NoteInfo channel_a_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
+NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
 
@@ -645,22 +645,22 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 		        	
 
 					// Only write active notes. (we deleted all files above so should be ok. )
-					if (channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
+					if (channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
 						
 						// Open for writing in truncate mode (we will replace the contents)
 						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 
             count_of_file_operations = count_of_file_operations + 1;
 						
-						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active);
-						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity);
+						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
+						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
 						
-						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[ln][bc][sc][n][1].velocity);
+						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_x_midi_note_events[ln][bc][sc][n][1].velocity);
 					
 						// Must cast the value to int else it won't be written to the file.
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
 
 					
 						output_file.close();
@@ -694,11 +694,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_a_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity);
+								rt_printf("Should have set channel_x_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
 							}
 							
 						////////////
@@ -717,11 +717,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
+								rt_printf("Should have set channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
 							}
 					    
 					    
@@ -739,7 +739,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
 					    
 					    
 			
@@ -796,7 +796,7 @@ void ReadSequenceFromFiles(){
 
 
 
-// "Ghost notes" are created to cancel out a note-off in channel_a_midi_note_events that is created when during the note off of low velocity notes.
+// "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created when during the note off of low velocity notes.
 class GhostNote
 {
  public:
@@ -804,7 +804,7 @@ class GhostNote
    uint8_t is_active = 0;
 };
 
-GhostNote channel_a_ghost_events[128];
+GhostNote channel_x_ghost_events[128];
 
 ////////////////////////////////////////
 // Bit Constants for bit wise operations 
@@ -847,28 +847,28 @@ struct Timing
 Timing loop_timing;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
-uint8_t step_count; // write
-uint8_t step_play; // read
+uint8_t step_a_count; // write
+uint8_t step_a_play; // read
 
 // Count of the bar / measure.
-uint8_t bar_count; // for wrting
-uint8_t bar_play; // for reading
+uint8_t bar_a_count; // for wrting
+uint8_t bar_a_play; // for reading
 
 // Helper functions that operate on global variables. Yae!  
 
-uint8_t BarCountSanity(uint8_t bar_count_in){
-  uint8_t bar_count_fixed;
+uint8_t BarCountSanity(uint8_t bar_a_count_in){
+  uint8_t bar_a_count_fixed;
   
-  if (bar_count_in > MAX_BAR){
-  	rt_printf("**** ERROR bar_count_in > MAX_BAR i.e. %d \n" , bar_count_in );
-    bar_count_fixed = MAX_BAR;
-  } else if (bar_count_in < FIRST_BAR){
-    rt_printf("**** ERROR bar_count_in < FIRST_BAR i.e. %d \n" , bar_count_in );
-    bar_count_fixed = FIRST_BAR;
+  if (bar_a_count_in > MAX_BAR){
+  	rt_printf("**** ERROR bar_a_count_in > MAX_BAR i.e. %d \n" , bar_a_count_in );
+    bar_a_count_fixed = MAX_BAR;
+  } else if (bar_a_count_in < FIRST_BAR){
+    rt_printf("**** ERROR bar_a_count_in < FIRST_BAR i.e. %d \n" , bar_a_count_in );
+    bar_a_count_fixed = FIRST_BAR;
   } else {
-    bar_count_fixed = bar_count_in;
+    bar_a_count_fixed = bar_a_count_in;
   }
-  return bar_count_fixed;
+  return bar_a_count_fixed;
 }
 
 
@@ -883,24 +883,24 @@ void SetTotalTickCount(int value){
 
 void Beginning(){
   SetTickCountInSequence(0);
-  step_count = FIRST_STEP;
-  bar_count = FIRST_BAR;
-  step_play = FIRST_STEP;
-  bar_play = FIRST_BAR;
+  step_a_count = FIRST_STEP;
+  bar_a_count = FIRST_BAR;
+  step_a_play = FIRST_STEP;
+  bar_a_play = FIRST_BAR;
 }
 
 
 uint8_t IncrementOrResetBarCount(){
 
   // Every time we call this function we advance or reset the bar
-  if (bar_count == MAX_BAR){
-    bar_count = FIRST_BAR;
+  if (bar_a_count == MAX_BAR){
+    bar_a_count = FIRST_BAR;
   } else {
-    bar_count = BarCountSanity(bar_count + 1);
+    bar_a_count = BarCountSanity(bar_a_count + 1);
   }
   
-  //rt_printf("** IncrementOrResetBarCount bar_count is now: %d \n", bar_count);
-  return BarCountSanity(bar_count);
+  //rt_printf("** IncrementOrResetBarCount bar_a_count is now: %d \n", bar_a_count);
+  return BarCountSanity(bar_a_count);
 }
 
 /*
@@ -909,11 +909,11 @@ void ResetToFirstStep(){
   
   // TODO check if we really need this or possible bug with bars
   SetTickCountInSequence(0);
-  step_count = FIRST_STEP;
+  step_a_count = FIRST_STEP;
 
   IncrementOrResetBarCount();
   
-  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_a_count is now: ") + step_a_count);
 }
 */
 
@@ -925,19 +925,19 @@ void ResetToFirstStep(){
 
 
 
-uint8_t StepCountSanity(uint8_t step_count_){
-  uint8_t step_count_fixed;
+uint8_t StepCountSanity(uint8_t step_a_count_){
+  uint8_t step_a_count_fixed;
   
-  if (step_count_ > MAX_STEP){
-    rt_printf("**** ERROR step_count_ > MAX_STEP i.e. %f \n" , step_count_ );
-    step_count_fixed = MAX_STEP;
-  } else if (step_count_ < FIRST_STEP){
-    rt_printf("**** ERROR step_count_ > FIRST_STEP i.e. %f \n", step_count_ );
-    step_count_fixed = FIRST_STEP;
+  if (step_a_count_ > MAX_STEP){
+    rt_printf("**** ERROR step_a_count_ > MAX_STEP i.e. %f \n" , step_a_count_ );
+    step_a_count_fixed = MAX_STEP;
+  } else if (step_a_count_ < FIRST_STEP){
+    rt_printf("**** ERROR step_a_count_ > FIRST_STEP i.e. %f \n", step_a_count_ );
+    step_a_count_fixed = FIRST_STEP;
   } else {
-    step_count_fixed = step_count_;
+    step_a_count_fixed = step_a_count_;
   }
-  return step_count_fixed;
+  return step_a_count_fixed;
 }
 
 
@@ -1012,7 +1012,7 @@ enum osc_type
 void ResetSequenceCounters(){
   SetTickCountInSequence(0);
   IncrementOrResetBarCount();
-  step_count = FIRST_STEP; 
+  step_a_count = FIRST_STEP; 
   lfo_a_analog.setPhase(0.0);
   
   
@@ -1026,7 +1026,7 @@ void ResetSequenceCounters(){
   // We'll be able to use this, to set delay in frames
   frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
 
-  //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
+  //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_length_in_steps, step_a_count);
 }
 
 
@@ -1167,16 +1167,16 @@ void printStatus(void*){
 
 		// Sequence state
 		
-    	rt_printf("bar_count: %d \n", bar_count);
-		rt_printf("step_count: %d \n", step_count);
+    rt_printf("bar_a_count: %d \n", bar_a_count);
+		rt_printf("step_a_count: %d \n", step_a_count);
 		
-    	rt_printf("bar_play: %d \n", bar_play);
-		rt_printf("step_play: %d \n", step_play);
+    rt_printf("bar_a_play: %d \n", bar_a_play);
+		rt_printf("step_a_play: %d \n", step_a_play);
 
-		if (step_count == FIRST_STEP) {
-    		rt_printf("FIRST_STEP \n");
+		if (step_a_count == FIRST_STEP) {
+    		rt_printf("A FIRST_STEP \n");
     	} else {
-    		rt_printf("other step \n");
+    		rt_printf("A other step \n");
     	}
     	
 
@@ -1211,20 +1211,9 @@ void printStatus(void*){
 //rt_printf("sent %d  bytes \n", my_result);
 
 
-
-	
-	
-
-
-
       rt_printf("\n==== Bye from printStatus ======= \n");
       
-      
 
-
-
-    	
-    	
     }
 
 
@@ -1234,18 +1223,17 @@ void printStatus(void*){
 
 
 
-
-void DisableNotes(uint8_t note){
+void DisableMidiNotes(uint8_t note){
              // Disable that note for all steps.
            uint8_t sc = 0;
            uint8_t bc = 0;
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
 }
@@ -1253,7 +1241,7 @@ void DisableNotes(uint8_t note){
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 
-  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_count is currently %d, step_count is currently %d \n", on_off, note, velocity, channel, bar_count, step_count);
+  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
   if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
@@ -1264,24 +1252,24 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
            
            // Disable the note on all steps
            //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
-           DisableNotes(note);
+           DisableMidiNotes(note);
            
            last_note_disabled = note;
 
-          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_x_midi_note_events
           // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
           // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
           // these Note OFF events. 
           // One way is to store them here for processing after the note OFF actually happens. 
-          channel_a_ghost_events[note].is_active=1;
+          channel_x_ghost_events[note].is_active=1;
     
         } else {
           // We want the note on, so set it on.
-          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_count, velocity );
+          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].is_active = 1;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
           
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
@@ -1291,7 +1279,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
           
           last_note_on = note;
           
-          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
+          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
 
         } 
       
@@ -1299,12 +1287,12 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           
             // Note Off
-             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
+             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
              
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].is_active = 1;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
 
 			 last_note_off = note;
 			
@@ -1312,7 +1300,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 			if (sequence_is_running == 0){ 
 				midi.writeNoteOff(midi_channel_a, note, 0);
 			}
-        	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
+        	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
   }
   } 
 
@@ -1387,50 +1375,50 @@ uint8_t ReadBit (int number, int b ){
 // These are the possible beats of the sequence
 void OnAStep(){
 	
-  //rt_printf("Hello from OnAStep: %d \n", step_count);
+  //rt_printf("Hello from OnAStep: %d \n", step_a_count);
   //rt_printf("the_sequence is: %d \n", the_sequence);
   //print_binary(the_sequence);
   //rt_printf("%c \n", 'B');
 
-  if (step_count > MAX_STEP) {
+  if (step_a_count > MAX_STEP) {
     rt_printf("----------------------------------------------------------------------------\n");  
-    rt_printf("------------------ ERROR! step_count is: %s --- ERROR ---\n", + step_count);
+    rt_printf("------------------ ERROR! step_a_count is: %s --- ERROR ---\n", + step_a_count);
     rt_printf("----------------------------------------------------------------------------\n");    
   }
 
   
 
-    if (step_count == FIRST_STEP) {
+    if (step_a_count == FIRST_STEP) {
     	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
       SyncAndResetCv();
     } else {
-      //rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
+      //rt_printf("----       not first step      step_a_count is %d FIRST_STEP is %d                  ------\n", step_a_count, FIRST_STEP ); 
     }
   
   
-  step_count = StepCountSanity(step_count);
+  step_a_count = StepCountSanity(step_a_count);
 
-      // std::string message = "--:OnAStep:" + std::to_string(step_count) + "--";
+      // std::string message = "--:OnAStep:" + std::to_string(step_a_count) + "--";
 	 // This sends a UDP message 
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence & ( 1 << step_count )) >> step_count;  
+  uint8_t play_note = (the_sequence & ( 1 << step_a_count )) >> step_a_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
-  //uint8_t play_note = ReadBit(the_sequence, step_count);
+  //uint8_t play_note = ReadBit(the_sequence, step_a_count);
   
    if (play_note){
-     //rt_printf("OnAStep: %d ****++++++****** PLAY \n", step_count);
+     //rt_printf("OnAStep: %d ****++++++****** PLAY \n", step_a_count);
     GateAHigh(); 
    } else {
     GateALow();
-     //rt_printf("OnAStep: %d ***-----***** NOT play \n", step_count);
+     //rt_printf("OnAStep: %d ***-----***** NOT play \n", step_a_count);
    }
    
    Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
-   //rt_printf("==== End of OnAStep: %d \n", step_count);
+   //rt_printf("==== End of OnAStep: %d \n", step_a_count);
       
 }
 
@@ -1438,7 +1426,7 @@ void OnAStep(){
 
 // These are ticks which are not steps - so in between possible beats.
 void OnNotAStep(){
-  //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
+  //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
   GateALow();
   
@@ -1466,8 +1454,8 @@ int gAudioFramesPerAnalogFrame = 0;
 
 void SetPlayFromCount(){
 	
-bar_play = bar_count;
-step_play = step_count;
+bar_a_play = bar_a_count;
+step_a_play = step_a_count;
 
 	
 
@@ -1477,7 +1465,7 @@ step_play = step_count;
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
-  //rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+  //rt_printf("midi_note  ") + i + String(" value is ") + channel_x_midi_note_events[step_a_count][i]  );
 
 			// midi_byte_t statusByte = 0xB0; // control change on channel 0
 			// midi_byte_t controller = 30; // controller number 30
@@ -1488,21 +1476,21 @@ void PlayMidi(){
 
 
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnAStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    //rt_printf("** OnAStep  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
     
     // READ MIDI sequence
-    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-            	//rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
+           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+            	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing.tick_count_since_step, n );
+            	midi.writeNoteOn (midi_channel_a, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
-           //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
+       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+           //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
            midi.writeNoteOff(midi_channel_a, n, 0);
        }
     }
@@ -1589,12 +1577,12 @@ void AdvanceSequenceChronology(){
 
   // Update Step Count (this could also be a function but probably makes sense to store it)
   // An integer operation - we just want the quotient.
-  step_count = loop_timing.tick_count_in_sequence / 6;
+  step_a_count = loop_timing.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  );
+ //Serial.println(String("step_a_count is ") + step_a_count  + String(" ticks_after_step is ") + ticks_after_step  );
  
  SetPlayFromCount();
 
@@ -2023,11 +2011,11 @@ void InitMidiSequence(bool force){
       for (uint8_t n = 0; n <= 127; n++) {
         // Initialise and print Note on (1) and Off (2) contents of the array.
         // WRITE MIDI MIDI_DATA
-        channel_a_midi_note_events[ln][bc][sc][n][1].is_active = 0;
-        channel_a_midi_note_events[ln][bc][sc][n][0].is_active = 0;
+        channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
+        channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
   
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
       } 
     }
   }
@@ -2036,7 +2024,7 @@ void InitMidiSequence(bool force){
    
   
     for (uint8_t n = 0; n <= 127; n++) {
-     channel_a_ghost_events[n].is_active = 0;
+     channel_x_ghost_events[n].is_active = 0;
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   }
   
@@ -2876,7 +2864,7 @@ void render(BelaContext *context, void *userData)
           
           
         	
-        	// Do similar for another PIN for if (step_count == FIRST_STEP)
+        	// Do similar for another PIN for if (step_a_count == FIRST_STEP)
         	
 
 
