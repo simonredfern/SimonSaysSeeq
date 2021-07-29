@@ -456,7 +456,7 @@ unsigned int last_binary_sequence_result; // So we can detect changes
 bool do_tick = true;
 
 bool do_envelope_1_on = false;
-bool target_gate_out_state = false;
+bool target_gate_a_out_state = false;
 bool gate_out_state_set = false;
 
 
@@ -1193,7 +1193,7 @@ void printStatus(void*){
     rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
     // Sequence Outputs 
-    //rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
+    //rt_printf("target_gate_a_out_state is: %d \n", target_gate_a_out_state);
 		//rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
 
 
@@ -1317,28 +1317,23 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
   } 
 
 
-void GateHigh(){
+void GateAHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
   
-  
-  target_gate_out_state = true;
+
+  target_gate_a_out_state = true;
   target_led_1_state = true; 
-  
-  
+    
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
-  
-  
-  
-
   
 
 }
 
-void GateLow(){
+void GateALow(){
   //rt_printf("Gate LOW");
   
-  target_gate_out_state = false;
+  target_gate_a_out_state = false;
   target_led_1_state = false; 
   
   audio_adsr_a.gate(false);
@@ -1390,20 +1385,12 @@ uint8_t ReadBit (int number, int b ){
 
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
-void OnStep(){
+void OnAStep(){
 	
-	
-
-
-  
-
-  //rt_printf("Hello from OnStep: %d \n", step_count);
+  //rt_printf("Hello from OnAStep: %d \n", step_count);
   //rt_printf("the_sequence is: %d \n", the_sequence);
   //print_binary(the_sequence);
   //rt_printf("%c \n", 'B');
-
-
-
 
   if (step_count > MAX_STEP) {
     rt_printf("----------------------------------------------------------------------------\n");  
@@ -1423,7 +1410,7 @@ void OnStep(){
   
   step_count = StepCountSanity(step_count);
 
-      // std::string message = "--:OnStep:" + std::to_string(step_count) + "--";
+      // std::string message = "--:OnAStep:" + std::to_string(step_count) + "--";
 	 // This sends a UDP message 
 	 // int my_result  = myUdpClient.send(&message, 32);
   
@@ -1434,26 +1421,26 @@ void OnStep(){
   //uint8_t play_note = ReadBit(the_sequence, step_count);
   
    if (play_note){
-     //rt_printf("OnStep: %d ****++++++****** PLAY \n", step_count);
-    GateHigh(); 
+     //rt_printf("OnAStep: %d ****++++++****** PLAY \n", step_count);
+    GateAHigh(); 
    } else {
-    GateLow();
-     //rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
+    GateALow();
+     //rt_printf("OnAStep: %d ***-----***** NOT play \n", step_count);
    }
    
    Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
-   //rt_printf("==== End of OnStep: %d \n", step_count);
+   //rt_printf("==== End of OnAStep: %d \n", step_count);
       
 }
 
 
 
 // These are ticks which are not steps - so in between possible beats.
-void OnNotStep(){
+void OnNotAStep(){
   //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLow();
+  GateALow();
   
 }
 
@@ -1501,7 +1488,7 @@ void PlayMidi(){
 
 
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    //rt_printf("** OnAStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
     
     // READ MIDI sequence
     if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
@@ -1655,12 +1642,12 @@ void OnTick(){
     //clockShowHigh();
     //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
-    OnStep();
+    OnAStep();
     /////////////////////////////////////////   
   } else {
     //clockShowLow();
     // The other ticks which are not "steps".
-    OnNotStep();
+    OnNotAStep();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
@@ -2071,7 +2058,7 @@ void InitMidiSequence(bool force){
 
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer(){
-  GateLow();
+  GateALow();
   CvStop();
   loop_timing.tick_count_since_start = 0;
   ResetSequenceCounters();
@@ -2782,7 +2769,7 @@ void render(BelaContext *context, void *userData)
 	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
 	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
-	      	if (target_gate_out_state == HIGH){
+	      	if (target_gate_a_out_state == HIGH){
 	      		analog_out_1 = 1.0;
 	      	} else {
 	      		analog_out_1 = -1.0;	
@@ -2867,10 +2854,10 @@ void render(BelaContext *context, void *userData)
         	        	
   
         	// Only set new state if target is changed
-        	if (target_gate_out_state != gate_out_state_set){
+        	if (target_gate_a_out_state != gate_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
-	        	gate_out_state_set = target_gate_out_state;
+	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_a_out_state);
+	        	gate_out_state_set = target_gate_a_out_state;
         	}
 
 
