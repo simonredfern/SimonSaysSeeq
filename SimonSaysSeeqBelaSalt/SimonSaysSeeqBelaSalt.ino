@@ -394,11 +394,17 @@ bool init_midi_sequence_has_run = false;
 
 bool need_to_auto_save_sequence = false;
 
+
+
+float sequence_a_length_input_raw;
 float sequence_a_pattern_input_raw;
 unsigned int sequence_a_pattern_input = 20;
 unsigned int sequence_a_pattern_input_last;
 unsigned int sequence_a_pattern_input_at_button_change;
 
+
+
+float sequence_b_length_input_raw;
 float sequence_b_pattern_input_raw;
 unsigned int sequence_b_pattern_input = 20;
 unsigned int sequence_b_pattern_input_last;
@@ -417,11 +423,6 @@ unsigned int lfo_a_frequency_input_last;
 unsigned int lfo_a_frequency_input_at_button_change;
 
 
-float sequence_a_length_input_raw;
-float sequence_b_length_input_raw;
-
-unsigned int sequence_b_length_input_last;
-unsigned int sequence_b_length_input_at_button_change;
 
 
 float lfo_b_frequency_input_raw;
@@ -441,29 +442,15 @@ float external_modulator_object_level;
 float audio_left_input_raw;
 float audio_right_input_raw;
 
-
-
-
 unsigned int coarse_delay_input = 1;
 
-
-
-////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
-
-//uint8_t current_sequence_length_in_steps_raw;
-
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
 unsigned int binary_sequence_result;
 unsigned int gray_code_sequence;
 unsigned int the_sequence;
 unsigned int last_binary_sequence_result; // So we can detect changes
-
-
 
 
 bool do_tick = true;
