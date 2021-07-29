@@ -534,6 +534,9 @@ if(frame_timer < 440000) {
 	if (flash_interval > 100){
 		if (frame_timer >= next_flash_change){
 			target_led_1_state = ! target_led_1_state;
+      target_led_2_state = ! target_led_2_state;
+      target_led_3_state = ! target_led_3_state;
+      target_led_4_state = ! target_led_4_state;
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
 			//rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
@@ -542,6 +545,9 @@ if(frame_timer < 440000) {
 	} else {
 		// In the end we want the led to be off (until something else changes the state)
 		target_led_1_state = false;
+    target_led_2_state = false;
+    target_led_3_state = false;
+    target_led_4_state = false;
 	}
   }
 }
