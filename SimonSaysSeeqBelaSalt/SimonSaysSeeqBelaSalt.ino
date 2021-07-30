@@ -65,7 +65,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 // #!/bin/bash
 // dir=/path/to/directory/you/want/to/check
 // num=[number of top largest directories to list)
-// du -a $dir | sort -n -r | head -n $num
+// du -ah $dir | sort -n -r | head -n $num
 
 
 
