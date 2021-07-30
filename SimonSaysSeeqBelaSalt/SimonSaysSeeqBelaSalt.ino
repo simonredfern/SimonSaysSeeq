@@ -62,6 +62,10 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 // Note: Bela might run out of diskspace
 // du -h --max-depth=1
+// #!/bin/bash
+// dir=/path/to/directory/you/want/to/check
+// num=[number of top largest directories to list)
+// du -a $dir | sort -n -r | head -n $num
 
 
 
