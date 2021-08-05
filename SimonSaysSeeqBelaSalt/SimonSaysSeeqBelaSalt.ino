@@ -8,8 +8,6 @@
 
 SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
-Version: 2021-07-24 or so.
-
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
 This file uses BELA libraries and example code, see below.
@@ -18,6 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
+const char version[16]= "v0.30-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -96,7 +95,7 @@ UdpClient myUdpClient;
 // ...
 
 
-const char version[16]= "v0.29-BelaSalt";
+
 
 Scope scope;
 
@@ -1607,7 +1606,7 @@ void OnStepB(){
 	
 	last_function = 422946926496296;
 	
-  //rt_printf("Hello from OnStepA: %d \n", step_a_count);
+  //rt_printf("Hello from OnStepB: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
   //print_binary(the_sequence_a);
   //rt_printf("%c \n", 'B');
@@ -1622,7 +1621,7 @@ void OnStepB(){
 
     if (step_b_count == FIRST_STEP) {
     	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
-      SyncAndResetCv(); // TODOAB
+      //SyncAndResetCv(); // TODOAB
     } else {
       //rt_printf("----       not first step      step_a_count is %d FIRST_STEP is %d                  ------\n", step_a_count, FIRST_STEP ); 
     }
@@ -2406,11 +2405,18 @@ void InitSequencer(){
   last_function = 9876542;	
 	
   GateALow();
+  GateBLow();
+
   CvStop();
+
+
   loop_timing_a.tick_count_since_start = 0;
   ResetSequenceACounters();
 
- 
+  loop_timing_b.tick_count_since_start = 0;
+  ResetSequenceBCounters();
+
+
 }
 
 void StartSequencer(){
