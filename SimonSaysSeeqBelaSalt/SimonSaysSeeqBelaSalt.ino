@@ -2747,34 +2747,11 @@ void MaybeOnTick(){
   }
 }
 
-////////
-
-// from Bela delay example:
-
-//#define DELAY_BUFFER_SIZE 44100
-
-// 400000 enough for 16 step sequence at 30 bpm
-// Then a maximum multiplier of 16
-
-// 400000 * 16 
-
-
-
-
-
-
 
 
 #include <libraries/WriteFile/WriteFile.h>
 WriteFile file1;
 WriteFile file2;
-
-
-
-
-
-
-
 
 
 
