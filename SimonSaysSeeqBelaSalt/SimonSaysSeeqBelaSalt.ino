@@ -1482,7 +1482,7 @@ void GateHighB(){
 }
 
 
-void GateLowB(){
+void GateBLow(){
   //rt_printf("Gate LOW");
   
   last_function = 1241287469;
@@ -1643,7 +1643,7 @@ void OnStepB(){
      //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
     GateHighB(); 
    } else {
-    GateLowB();
+    GateBLow();
      //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
    }
    
@@ -1662,7 +1662,7 @@ void OnNotStepB(){
 	
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLowB();
+  GateBLow();
   
 }
 
