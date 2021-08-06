@@ -1942,7 +1942,7 @@ void OnTick(){
   }
  
 
-  // Decide if we have a "step"
+  // Decide if we have an A "step"
   if (loop_timing_a.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
@@ -1957,7 +1957,7 @@ void OnTick(){
   }
 
 
-  // Decide if we have a "step"
+  // Decide if we have a B "step"
   if (loop_timing_b.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
@@ -3076,7 +3076,8 @@ void render(BelaContext *context, void *userData)
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-	      // Sequence A INPUTS 		
+	      // Sequence A INPUTS
+      // Length A   		
 		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
 		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
         
@@ -3084,6 +3085,7 @@ void render(BelaContext *context, void *userData)
         	coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  }	
 	    
+      // Pattern A
 	    if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
 	      	// note this is getting all the frames 
 	        sequence_a_pattern_input_raw = analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN);
@@ -3095,25 +3097,30 @@ void render(BelaContext *context, void *userData)
 	    }
 
     	// Sequence B INPUTS 
+      // Length B
     	if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
  	      sequence_b_length_input_raw = analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN);
 		 }	
 
+     // Pattern B
 		 if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
         	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
 		 }
 
-	    if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
-		  }
-		  
-		  if (ch == ADSR_RELEASE_INPUT_PIN){
-		  	// TODO use an oscillator here instead. why actually?
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
-		  }
+
+    // LFO Freq
+    if (ch == OSC_FREQUENCY_INPUT_PIN){
+        lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
+    }
+
+    // LFO Release		  
+    if (ch == ADSR_RELEASE_INPUT_PIN){
+      // TODO use an oscillator here instead. why actually?
+      envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
+    }
 		    
 		  
-      // Changes the Midi Lane. 
+      // Midi Lane. 
 		  if (ch == MIDI_LANE_INPUT_PIN){
 		  	midi_lane_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
 		  	SetLane(midi_lane_input);
