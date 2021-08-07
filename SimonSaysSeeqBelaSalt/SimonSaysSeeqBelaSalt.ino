@@ -1232,6 +1232,8 @@ void printStatus(void*){
     	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
     	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
     	
+    	rt_printf("step_a_count is: %d \n", step_a_count);
+    	
     	if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
     	} else {
@@ -1252,6 +1254,8 @@ void printStatus(void*){
 		
 		rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
     	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+
+		rt_printf("step_b_count is: %d \n", step_b_count);
 
         if (step_b_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP B \n");
@@ -1580,12 +1584,12 @@ void OnStepA(){
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
+  uint8_t play_a_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
   //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
   
-   if (play_note){
+   if (play_a_note){
      //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
     GateAHigh(); 
    } else {
@@ -1648,12 +1652,12 @@ void OnStepB(){
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
+  uint8_t play_b_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
   //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
   
-   if (play_note){
+   if (play_b_note){
      //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
     GateHighB(); 
    } else {
