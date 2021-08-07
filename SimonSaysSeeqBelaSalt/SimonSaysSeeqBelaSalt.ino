@@ -882,8 +882,8 @@ struct Timing
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
-Timing loop_timing_a;
-Timing loop_timing_b;
+struct Timing loop_timing_a;
+struct Timing loop_timing_b;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
 uint8_t step_a_count; // write
@@ -1098,7 +1098,7 @@ void ResetSequenceACounters(){
   
   sequence_triggered_adsr_c.gate(true);
 
-  previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
+  previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence A was reset
   last_sequence_reset_frame = frame_timer; // Now
   
   
@@ -1224,6 +1224,9 @@ void printStatus(void*){
     	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
 
     	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
+    	rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	
+    	
     	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
 	    print_binary(the_sequence_a);
 		rt_printf("%c \n", 'B');
@@ -1246,7 +1249,8 @@ void printStatus(void*){
     	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
     	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
     	
-		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps); 
+		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+		rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
 		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
 	    print_binary(the_sequence_b);
 		rt_printf("%c \n", 'B');
@@ -1820,6 +1824,7 @@ void AdvanceSequenceAChronology(){
   // new_sequence_a_length_in_ticks is one indexed
   // 
 
+  // Should we Reset or Increment?
   // If we're at the end of the sequence
   if (
     (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
