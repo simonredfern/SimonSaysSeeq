@@ -1218,8 +1218,10 @@ void printStatus(void*){
 	
     	*/
     	
+    	rt_printf("\n==== Sequence A ======= \n");
+    	
     	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
-    	rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
+    	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
 
     	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
     	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1227,13 +1229,35 @@ void printStatus(void*){
 		rt_printf("%c \n", 'B');
 
 
+    	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
+    	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
+    	
+    	if (step_a_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP A \n");
+    	} else {
+    		rt_printf("other step A \n");
+    	}
+
+
+		rt_printf("\n==== Sequence B ======= \n");
+
     	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
-    	rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
+    	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
     	
 		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps); 
 		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
 	    print_binary(the_sequence_b);
 		rt_printf("%c \n", 'B');
+		
+		
+		rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
+    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+
+        if (step_b_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP B \n");
+    	} else {
+    		rt_printf("other step B \n");
+    	}
     	
     	
     	/*
@@ -1272,12 +1296,10 @@ void printStatus(void*){
     	*/
 
 /*
-    	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
-    	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
 
 
-    	rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
-    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+
+
     	
 */
     	
@@ -1292,24 +1314,16 @@ void printStatus(void*){
 		// Sequence state
 		
     	//rt_printf("bar_a_count: %d \n", bar_a_count);
-		rt_printf("step_a_count: %d \n", step_a_count);
-		rt_printf("step_b_count: %d \n", step_b_count);
+		//rt_printf("step_a_count: %d \n", step_a_count);
+		//rt_printf("step_b_count: %d \n", step_b_count);
 		
     	//rt_printf("bar_a_play: %d \n", bar_a_play);
 		//rt_printf("step_a_play: %d \n", step_a_play);
 
-		if (step_a_count == FIRST_STEP) {
-    		rt_printf("FIRST_STEP A \n");
-    	} else {
-    		rt_printf("other step A \n");
-    	}
+
     	
     	
-    	if (step_b_count == FIRST_STEP) {
-    		rt_printf("FIRST_STEP B \n");
-    	} else {
-    		rt_printf("other step B \n");
-    	}
+
 
     //	rt_printf("Midi last_note_on: %d \n", last_note_on);
     // 	rt_printf("Midi last_note_off: %d \n", last_note_off);
@@ -1321,7 +1335,7 @@ void printStatus(void*){
     
     	
 
-    rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+    //rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
     // Sequence Outputs 
     //rt_printf("target_gate_a_out_state is: %d \n", target_gate_a_out_state);
@@ -1942,7 +1956,7 @@ void OnTick(){
   }
  
 
-  // Decide if we have an A "step"
+  // Decide if we have a "step"
   if (loop_timing_a.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
@@ -1957,7 +1971,7 @@ void OnTick(){
   }
 
 
-  // Decide if we have a B "step"
+  // Decide if we have a "step"
   if (loop_timing_b.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
@@ -3076,8 +3090,7 @@ void render(BelaContext *context, void *userData)
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-	      // Sequence A INPUTS
-      // Length A   		
+	      // Sequence A INPUTS 		
 		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
 		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
         
@@ -3085,7 +3098,6 @@ void render(BelaContext *context, void *userData)
         	coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  }	
 	    
-      // Pattern A
 	    if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
 	      	// note this is getting all the frames 
 	        sequence_a_pattern_input_raw = analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN);
@@ -3097,30 +3109,25 @@ void render(BelaContext *context, void *userData)
 	    }
 
     	// Sequence B INPUTS 
-      // Length B
     	if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
  	      sequence_b_length_input_raw = analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN);
 		 }	
 
-     // Pattern B
 		 if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
         	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
 		 }
 
-
-    // LFO Freq
-    if (ch == OSC_FREQUENCY_INPUT_PIN){
-        lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
-    }
-
-    // LFO Release		  
-    if (ch == ADSR_RELEASE_INPUT_PIN){
-      // TODO use an oscillator here instead. why actually?
-      envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
-    }
+	    if (ch == OSC_FREQUENCY_INPUT_PIN){
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
+		  }
+		  
+		  if (ch == ADSR_RELEASE_INPUT_PIN){
+		  	// TODO use an oscillator here instead. why actually?
+		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
+		  }
 		    
 		  
-      // Midi Lane. 
+      // Changes the Midi Lane. 
 		  if (ch == MIDI_LANE_INPUT_PIN){
 		  	midi_lane_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
 		  	SetLane(midi_lane_input);
