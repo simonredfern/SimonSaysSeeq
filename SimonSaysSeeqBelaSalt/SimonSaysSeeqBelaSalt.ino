@@ -1914,7 +1914,7 @@ void AdvanceSequenceBChronology(){
   step_b_count = loop_timing_b.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
-  ticks_after_step_a = loop_timing_b.tick_count_in_sequence % 6;
+  ticks_after_step_b = loop_timing_b.tick_count_in_sequence % 6;
 
  //Serial.println(String("step_b_count is ") + step_b_count  + String(" ticks_after_step_a is ") + ticks_after_step_a  );
  
@@ -1941,7 +1941,7 @@ void OnTick(){
   last_tick_frame = frame_timer;	
 
   /////////////////
-  // BPM Detection
+  // BPM Detection (we use A)
   if (loop_timing_a.tick_count_since_start % 24 == 0){
     // 1 Tick (clock pulse) = f Audio Frames
     // 1 Tick = f / 44100 (Audio Sample Rate) seconds
