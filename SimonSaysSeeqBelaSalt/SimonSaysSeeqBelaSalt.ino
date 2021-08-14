@@ -182,8 +182,12 @@ int analog_sample_rate;
 int coarse_delay_frames = 22050;
 int total_delay_frames = 22050;
 
+int ana_memory_total_delay_frames = 22050;
+
 // Amount of feedback
-float delay_feedback_amount = 0.999; //0.999
+float delay_feedback_amount = 0.999; 
+
+float ana_memory_delay_feedback_amount = 0.999; 
 
 
 uint8_t midi_lane_input = 0; // normal
@@ -196,7 +200,7 @@ uint8_t midi_lane_input = 0; // normal
 
 
 #define DELAY_BUFFER_SIZE 6400000
-
+#define ANA_MEMORY_BUFFER_SIZE 6400000
 
 const float kMinimumFrequency = 20.0f;
 const float kMaximumFrequency = 8000.0f;
@@ -2514,14 +2518,28 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+
+
+float ana_memory_gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
+float ana_memory_gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+
+
 // Write pointer
 int gDelayBufWritePtr = 0;
+
+int ana_memory_gDelayBufWritePtr = 0;
 
 // Amount of delay
 float gDelayAmount = 1.0;
 
+
+float ana_memory_gDelayAmount = 1.0;
+
+
 // Level of pre-delay input
 float gDelayAmountPre = 0.75;
+
+float ana_memory_gDelayAmountPre = 0.75;
 
 
 // Butterworth coefficients for low-pass filter @ 8000Hz
@@ -2540,6 +2558,30 @@ float gDel_x1_r = 0;
 float gDel_x2_r = 0;
 float gDel_y1_r = 0;
 float gDel_y2_r = 0;
+
+///
+
+
+// Butterworth coefficients for low-pass filter @ 8000Hz
+float ana_memory_gDel_a0 = 0.1772443606634904;
+float ana_memory_gDel_a1 = 0.3544887213269808;
+float ana_memory_gDel_a2 = 0.1772443606634904;
+float ana_memory_gDel_a3 = -0.5087156198145868;
+float ana_memory_gDel_a4 = 0.2176930624685485;
+
+// Previous two input and output values for each channel (required for applying the filter)
+float ana_memory_gDel_x1_l = 0;
+float ana_memory_gDel_x2_l = 0;
+float ana_memory_gDel_y1_l = 0;
+float ana_memory_gDel_y2_l = 0;
+float ana_memory_gDel_x1_r = 0;
+float ana_memory_gDel_x2_r = 0;
+float ana_memory_gDel_y1_r = 0;
+float ana_memory_gDel_y2_r = 0;
+
+
+
+
 
 ///////// End of Bela Delay example
 
@@ -3190,8 +3232,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float ana_memory_del_input_l = (ana_memory_ana_memory_gDelayAmountPre * ana_memory_out_l + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
-        float ana_memory_del_input_r = (ana_memory_ana_memory_gDelayAmountPre * ana_memory_out_r + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_l = (ana_memory_gDelayAmountPre * ana_memory_out_l + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_r = (ana_memory_gDelayAmountPre * ana_memory_out_r + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
