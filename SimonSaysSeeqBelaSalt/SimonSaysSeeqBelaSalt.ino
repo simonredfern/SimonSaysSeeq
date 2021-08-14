@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.30-BelaSalt";
+const char version[16]= "v0.31-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -1293,6 +1293,14 @@ void printStatus(void*){
 		rt_printf("analog_out_3 is: %f \n", analog_out_3);
 		rt_printf("analog_out_4 is: %f \n", analog_out_4);
 		*/
+		
+		rt_printf("analog_out_5 is: %f \n", analog_out_5);
+		rt_printf("analog_out_6 is: %f \n", analog_out_6);
+		rt_printf("analog_out_7 is: %f \n", analog_out_7);
+		rt_printf("analog_out_8 is: %f \n", analog_out_8);
+					
+		
+
 		
 		/*
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
@@ -3178,14 +3186,14 @@ void render(BelaContext *context, void *userData)
 		 }
 
 		// Begin Bela delay example code
-		    float ana_memory_out_l = 0;
-        float ana_memory_out_r = 0;
+		//    float analog_out_7 = 0;
+        //float analog_out_8 = 0;
 
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
 
-            ana_memory_out_l = analogRead(context,n,OSC_FREQUENCY_INPUT_PIN);
+            analog_out_7 = analogRead(context,n,OSC_FREQUENCY_INPUT_PIN);
 		  }
 
 
@@ -3198,7 +3206,7 @@ void render(BelaContext *context, void *userData)
 		  	// TODO use an oscillator here instead. why actually?
 		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
 
-        ana_memory_out_r = analogRead(context,n,ADSR_RELEASE_INPUT_PIN);
+        analog_out_8 = analogRead(context,n,ADSR_RELEASE_INPUT_PIN);
 
 		  }
 		    
@@ -3232,8 +3240,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float ana_memory_del_input_l = (ana_memory_gDelayAmountPre * ana_memory_out_l + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
-        float ana_memory_del_input_r = (ana_memory_gDelayAmountPre * ana_memory_out_r + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_l = (ana_memory_gDelayAmountPre * analog_out_7 + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_r = (ana_memory_gDelayAmountPre * analog_out_8 + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
@@ -3271,17 +3279,17 @@ void render(BelaContext *context, void *userData)
         ana_memory_gDelayBuffer_r[ana_memory_gDelayBufWritePtr] = ana_memory_del_input_r;
         
         // Get the delayed sample (by reading `ana_memory_total_delay_frames` many samples behind our current write pointer) and add it to our output sample
-        ana_memory_out_l += ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_gDelayAmount;
-        ana_memory_out_r += ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_gDelayAmount;
+        analog_out_7 += ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_gDelayAmount;
+        analog_out_8 += ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_gDelayAmount;
         
         // Write the sample into the output buffer -- done!
         // Apply "VCA" to the output.  
 
 
-        analogWrite(context, n, SEQUENCE_CV_OUTPUT_7_PIN, ana_memory_out_l);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_7_PIN, analog_out_7);
 
         // Unmodulated output
-        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, ana_memory_out_r);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
