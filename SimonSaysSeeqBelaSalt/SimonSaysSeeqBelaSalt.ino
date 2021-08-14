@@ -1111,6 +1111,8 @@ void ResetSequenceACounters(){
   // We'll be able to use this, to set delay in frames
   frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
 
+  draw_buf_write_pointer = 0;
+
   //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
