@@ -343,7 +343,7 @@ const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+)
 const uint8_t DRAW_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
-
+bool need_to_reset_draw_buf_pointer = false;
 
 
 const int SEQUENCE_A_GATE_OUTPUT_1_PIN = 0; // CV (GATE) 1 output
@@ -1111,7 +1111,9 @@ void ResetSequenceACounters(){
   // We'll be able to use this, to set delay in frames
   frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
 
-  draw_buf_write_pointer = 0;
+ 
+  
+  need_to_reset_draw_buf_pointer = true;
 
   rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
@@ -1853,7 +1855,7 @@ void AdvanceSequenceAChronology(){
   // If we're at the end of the sequence
   if (
     (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
-  // might cause multiple resets
+  // this causes multiple resets on bela
   // or we past the end and we're at new beat  
   //||
   //(loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
@@ -3211,18 +3213,24 @@ void render(BelaContext *context, void *userData)
 		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
 		            draw_buf_write_pointer = 0;
 		        }
+		        
+		        // this might be set when we reset sequence (get to FIRST_STEP)
+		        if (need_to_reset_draw_buf_pointer == true){
+		        	draw_buf_write_pointer = 0;
+		        	need_to_reset_draw_buf_pointer = false;
+		        }
 		
 		        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
 		        if (new_button_3_state == 1){
-		  		      analog_out_6 = analogRead(context,n,DRAW_INPUT_PIN);
-		            draw_buffer[draw_buf_write_pointer] = analog_out_6;
+		  		      analog_out_8 = analogRead(context,n,DRAW_INPUT_PIN);
+		            draw_buffer[draw_buf_write_pointer] = analog_out_8;
 		        } else {
 		        	// Else use the buffer value
-		            analog_out_6 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		            analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
 		        }     
 		
 				// Write output
-		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_6_PIN, analog_out_6);
+		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
 
 
 		  }
