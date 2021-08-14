@@ -1193,8 +1193,8 @@ void printStatus(void*){
 		
 		
 		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
-		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
-		// rt_printf("new_button_3_state is: %d \n", new_button_3_state);
+		//rt_printf("new_button_2_state is: %d \n", new_button_2_state);
+		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
@@ -3220,10 +3220,10 @@ void render(BelaContext *context, void *userData)
 		  
 		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
 		  if (ch == DELAY_FEEDBACK_AND_DRAW_INPUT_PIN){
-        delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_AND_DRAW_INPUT_PIN), 0, 1, 0, 0.999);
+        		delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_AND_DRAW_INPUT_PIN), 0, 1, 0, 0.999);
 
-        analog_out_6 = analogRead(context,n,DELAY_FEEDBACK_AND_DRAW_INPUT_PIN);
-        analog_out_7 = analog_out_6;
+        		analog_out_6 = analogRead(context,n,DELAY_FEEDBACK_AND_DRAW_INPUT_PIN);
+        		analog_out_7 = analog_out_6;
 
 ///// New Analog Memory idea   HERE
 
