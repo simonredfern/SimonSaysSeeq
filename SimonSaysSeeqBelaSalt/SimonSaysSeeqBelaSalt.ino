@@ -1113,7 +1113,7 @@ void ResetSequenceACounters(){
 
   draw_buf_write_pointer = 0;
 
-  //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
+  rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
 
@@ -1853,15 +1853,15 @@ void AdvanceSequenceAChronology(){
   // If we're at the end of the sequence
   if (
     (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
-
+  // might cause multiple resets
   // or we past the end and we're at new beat  
-  ||
-  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
-      && 
+  //||
+  //(loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
+  //    && 
       // loop_timing_a.tick_count_since_start % new_sequence_a_length_in_ticks == 0 
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
-      loop_timing_a.tick_count_since_start % 6 == 0 
-  )
+  //    loop_timing_a.tick_count_since_start % 6 == 0 
+  //)
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
   loop_timing_a.tick_count_in_sequence >= 16 * 6
@@ -3208,9 +3208,9 @@ void render(BelaContext *context, void *userData)
 
         
 		        // Increment draw buffer write pointer
-		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE)
+		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
 		            draw_buf_write_pointer = 0;
-		        
+		        }
 		
 		        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
 		        if (new_button_3_state == 1){
