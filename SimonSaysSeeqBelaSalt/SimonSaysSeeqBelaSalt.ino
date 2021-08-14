@@ -338,7 +338,7 @@ const int SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
 const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) 
-const uint8_t DELAY_FEEDBACK_INPUT_PIN = 7; // CV 8 (SALT+)
+const uint8_t DELAY_FEEDBACK_AND_DRAW_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
 
@@ -1193,7 +1193,7 @@ void printStatus(void*){
 		
 		
 		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
-		// rt_printf("new_button_2_state is: %d \n", new_button_2_state);
+		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
 		// rt_printf("new_button_3_state is: %d \n", new_button_3_state);
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
@@ -3192,8 +3192,6 @@ void render(BelaContext *context, void *userData)
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
 	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
-
-            analog_out_7 = analogRead(context,n,OSC_FREQUENCY_INPUT_PIN);
 		  }
 
 
@@ -3205,9 +3203,6 @@ void render(BelaContext *context, void *userData)
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
 		  	// TODO use an oscillator here instead. why actually?
 		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
-
-        analog_out_8 = analogRead(context,n,ADSR_RELEASE_INPUT_PIN);
-
 		  }
 		    
 		  
@@ -3218,9 +3213,11 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
-		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
-        delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 0.999);
+		  if (ch == DELAY_FEEDBACK_AND_DRAW_INPUT_PIN){
+        delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_AND_DRAW_INPUT_PIN), 0, 1, 0, 0.999);
 
+        analog_out_6 = analogRead(context,n,DELAY_FEEDBACK_AND_DRAW_INPUT_PIN);
+        analog_out_7 = analog_out_6;
 
 ///// New Analog Memory idea   HERE
 
@@ -3240,8 +3237,8 @@ void render(BelaContext *context, void *userData)
         // Calculate the sample that will be written into the delay buffer...
         // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
         // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float ana_memory_del_input_l = (ana_memory_gDelayAmountPre * analog_out_7 + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
-        float ana_memory_del_input_r = (ana_memory_gDelayAmountPre * analog_out_8 + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_l = (ana_memory_gDelayAmountPre * analog_out_6 + ana_memory_gDelayBuffer_l[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
+        float ana_memory_del_input_r = (ana_memory_gDelayAmountPre * analog_out_7 + ana_memory_gDelayBuffer_r[(ana_memory_gDelayBufWritePtr - ana_memory_total_delay_frames + ANA_MEMORY_BUFFER_SIZE)%ANA_MEMORY_BUFFER_SIZE] * ana_memory_delay_feedback_amount);
         
         // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
         
@@ -3286,10 +3283,10 @@ void render(BelaContext *context, void *userData)
         // Apply "VCA" to the output.  
 
 
-        analogWrite(context, n, SEQUENCE_CV_OUTPUT_7_PIN, analog_out_7);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_6_PIN, analog_out_6);
 
         // Unmodulated output
-        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_7_PIN, analog_out_7);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
