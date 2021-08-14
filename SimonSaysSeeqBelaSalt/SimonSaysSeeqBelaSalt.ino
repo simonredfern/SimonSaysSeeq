@@ -1294,6 +1294,12 @@ void printStatus(void*){
 		rt_printf("analog_out_4 is: %f \n", analog_out_4);
 		*/
 		
+		
+		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
+		
+		
+		
+		
 		rt_printf("analog_out_5 is: %f \n", analog_out_5);
 		rt_printf("analog_out_6 is: %f \n", analog_out_6);
 		rt_printf("analog_out_7 is: %f \n", analog_out_7);
