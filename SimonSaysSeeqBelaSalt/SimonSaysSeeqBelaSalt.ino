@@ -3278,10 +3278,10 @@ void render(BelaContext *context, void *userData)
         // Apply "VCA" to the output.  
 
 
-        analogWrite(context, n, 0, ana_memory_out_l);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_7_PIN, ana_memory_out_l);
 
         // Unmodulated output
-        analogWrite(context, n, 1, ana_memory_out_r);
+        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, ana_memory_out_r);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
