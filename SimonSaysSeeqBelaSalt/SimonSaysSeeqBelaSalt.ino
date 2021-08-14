@@ -178,6 +178,8 @@ uint64_t frames_per_24_ticks = 22064; // This must never be zero else we can div
 int audio_sample_rate;
 int analog_sample_rate;
 
+int draw_buf_write_pointer = 0;
+
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
 int coarse_delay_frames = 22050;
 int total_delay_frames = 22050;
@@ -1295,7 +1297,7 @@ void printStatus(void*){
 		*/
 		
 		
-		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
+		//rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
 		
 		
 		
@@ -1304,6 +1306,9 @@ void printStatus(void*){
 		rt_printf("analog_out_6 is: %f \n", analog_out_6);
 		rt_printf("analog_out_7 is: %f \n", analog_out_7);
 		rt_printf("analog_out_8 is: %f \n", analog_out_8);
+		
+		
+			rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
 					
 		
 
@@ -2541,19 +2546,19 @@ float draw_gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
 // Write pointer
 int gDelayBufWritePtr = 0;
 
-int draw_buf_write_pointer = 0;
+
 
 // Amount of delay
 float gDelayAmount = 1.0;
 
 
-float draw_gDelayAmount = 1.0;
+float draw_feedback_ratio = 1.0;
 
 
 // Level of pre-delay input
 float gDelayAmountPre = 0.75;
 
-float draw_gDelayAmountPre = 0.75;
+float draw_feedback_ratioPre = 0.75;
 
 
 // Butterworth coefficients for low-pass filter @ 8000Hz
@@ -2576,28 +2581,6 @@ float gDel_y2_r = 0;
 ///
 
 
-// Butterworth coefficients for low-pass filter @ 8000Hz
-float draw_gDel_a0 = 0.1772443606634904;
-float draw_gDel_a1 = 0.3544887213269808;
-float draw_gDel_a2 = 0.1772443606634904;
-float draw_gDel_a3 = -0.5087156198145868;
-float draw_gDel_a4 = 0.2176930624685485;
-
-// Previous two input and output values for each channel (required for applying the filter)
-float draw_gDel_x1_l = 0;
-float draw_gDel_x2_l = 0;
-float draw_gDel_y1_l = 0;
-float draw_gDel_y2_l = 0;
-float draw_gDel_x1_r = 0;
-float draw_gDel_x2_r = 0;
-float draw_gDel_y1_r = 0;
-float draw_gDel_y2_r = 0;
-
-
-
-
-
-///////// End of Bela Delay example
 
 
 
@@ -3220,33 +3203,24 @@ void render(BelaContext *context, void *userData)
 		  
 		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
 		  if (ch == DRAW_INPUT_PIN){
-        		//delay_feedback_amount = map(analogRead(context, n, DRAW_INPUT_PIN), 0, 1, 0, 0.999);
-
-      
-
-
-
-
-
-        ////////////////////////////////
 
         
-        // Increment draw buffer write pointer
-        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE)
-            draw_buf_write_pointer = 0;
-        
-
-        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
-        if (new_button_3_state == 1){
-  		      analog_out_6 = analogRead(context,n,DRAW_INPUT_PIN);
-            draw_buffer[draw_buf_write_pointer] = analog_out_6;
-        } else {
-        	// Else use the buffer value
-            analog_out_6 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE)%DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
-        }     
-
-		// Write output
-        analogWrite(context, n, SEQUENCE_CV_OUTPUT_6_PIN, analog_out_6);
+		        // Increment draw buffer write pointer
+		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE)
+		            draw_buf_write_pointer = 0;
+		        
+		
+		        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
+		        if (new_button_3_state == 1){
+		  		      analog_out_6 = analogRead(context,n,DRAW_INPUT_PIN);
+		            draw_buffer[draw_buf_write_pointer] = analog_out_6;
+		        } else {
+		        	// Else use the buffer value
+		            analog_out_6 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		        }     
+		
+				// Write output
+		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_6_PIN, analog_out_6);
 
 
 		  }
