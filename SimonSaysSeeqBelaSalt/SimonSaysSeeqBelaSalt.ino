@@ -2217,9 +2217,9 @@ unsigned int Binary2Gray(unsigned int data)
  	last_function = 561122;
  	
    unsigned int n_data=(data>>1);
-   n_data=(data ^ n_data);
-   
-  return n_data;
+   unsigned int n_data_2=(data ^ n_data);
+
+  return n_data_2;
  }
 ///////////////////////////////////////////////////////////////
 
@@ -3290,7 +3290,7 @@ void render(BelaContext *context, void *userData)
 	}
 	
 
-	
+	// How often does this run? 
 	Bela_scheduleAuxiliaryTask(gChangeSequenceTask);
 	
 	
