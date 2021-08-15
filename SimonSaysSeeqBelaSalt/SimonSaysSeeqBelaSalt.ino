@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.31-BelaSalt";
+const char version[16]= "v0.32-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -1933,7 +1933,7 @@ void AdvanceSequenceBChronology(){
   ) { // Reset
     ResetSequenceBCounters();
   } else {
-    SetTickCountInSequenceA(loop_timing_b.tick_count_in_sequence += 1); // Else increment.
+    SetTickCountInSequenceB(loop_timing_b.tick_count_in_sequence += 1); // Else increment.
   }
 
   // Update Step Count (this could also be a function but probably makes sense to store it)
