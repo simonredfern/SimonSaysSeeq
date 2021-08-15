@@ -1858,13 +1858,13 @@ void AdvanceSequenceAChronology(){
     (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
   // this causes multiple resets on bela
   // or we past the end and we're at new beat  
-  //||
-  //(loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
-  //    && 
+  ||
+  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
+      && 
       // loop_timing_a.tick_count_since_start % new_sequence_a_length_in_ticks == 0 
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
-  //    loop_timing_a.tick_count_since_start % 6 == 0 
-  //)
+      loop_timing_a.tick_count_since_start % 6 == 0 
+  )
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
   loop_timing_a.tick_count_in_sequence >= 16 * 6
@@ -2216,10 +2216,14 @@ unsigned int Binary2Gray(unsigned int data)
  {
  	last_function = 561122;
  	
-   unsigned int n_data=(data>>1);
-   unsigned int n_data_2=(data ^ n_data);
+ 	//rt_printf("======== Hello from Binary2Gray data is: %d ========= \n",data);
+ 	
+   unsigned int n_data = (data>>1);
+   unsigned int gray_code = (data ^ n_data);
+   
+   //rt_printf("======== Bye from Binary2Gray gray_code is: %d ========= \n",gray_code);
 
-  return n_data_2;
+  return gray_code;
  }
 ///////////////////////////////////////////////////////////////
 
