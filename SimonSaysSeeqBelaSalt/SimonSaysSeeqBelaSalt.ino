@@ -540,7 +540,7 @@ float flash_interval = 44000;
 
 
 void FlashHello(){
-	last_function = 23847629378469;
+	last_function = 238469;
 	
 // This gets called in the digital loop
 // Say hello when this patch starts up.
@@ -626,7 +626,7 @@ NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2];
 
 void SyncSequenceToFile(bool write_to_file){
 	
-	last_function = 61276187263819;
+	last_function = 6123819;
 	
 	
 	rt_printf("Hello from SyncSequenceToFile write_to_file is %d \n", write_to_file);
@@ -806,7 +806,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void WriteSequenceToFiles(void*){
 	
-	last_function = 2934696738924;
+	last_function = 293924;
 	
 	//if (need_to_auto_save_sequence == true){
 		SyncSequenceToFile(true);
@@ -815,7 +815,7 @@ void WriteSequenceToFiles(void*){
 }
 
 void ReadSequenceFromFiles(){
-	last_function = 2938476293478897689;
+	last_function = 298897689;
 	
 	SyncSequenceToFile(false);
 }
@@ -945,7 +945,7 @@ void SetTotalTickCountB(int value){
 
 
 void Beginning(){
-	last_function = 28736478987692;
+	last_function = 2119892;
 	
   SetTickCountInSequenceA(0);
   SetTickCountInSequenceB(0);
@@ -964,7 +964,7 @@ void Beginning(){
 
 uint8_t IncrementOrResetBarCountA(){
 	
-	last_function = 2398726942;
+	last_function = 239872;
 
   // Every time we call this function we advance or reset the bar
   if (bar_a_count == MAX_BAR){
@@ -979,7 +979,7 @@ uint8_t IncrementOrResetBarCountA(){
 
 uint8_t IncrementOrResetBarCountB(){
 	
-	last_function = 239626464264262;
+	last_function = 23962;
 
   // Every time we call this function we advance or reset the bar
   if (bar_b_count == MAX_BAR){
@@ -996,7 +996,7 @@ uint8_t IncrementOrResetBarCountB(){
 
 
 uint8_t StepCountSanity(uint8_t step_count_){
-	last_function = 672349764239642;
+	last_function = 672349;
 	
   uint8_t step_count_fixed;
   
@@ -1091,7 +1091,7 @@ enum osc_type
 // This relates to the whole machine.
 void ResetSequenceACounters(){
 	
-	last_function = 345297865438769768;
+	last_function = 3452978;
 	
   SetTickCountInSequenceA(0);
 
@@ -1121,7 +1121,7 @@ void ResetSequenceACounters(){
 
 void ResetSequenceBCounters(){
 	
-	last_function = 76679624692469;
+	last_function = 766799;
 	
 
   SetTickCountInSequenceB(0);
@@ -1405,7 +1405,7 @@ void printStatus(void*){
 
 void DisableMidiNotes(uint8_t note){
 	
-	last_function = 29384769238749;
+	last_function = 28749;
 	
              // Disable that note for all steps.
            uint8_t sc = 0;
@@ -1424,7 +1424,7 @@ void DisableMidiNotes(uint8_t note){
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
 	
-	last_function = 492694689242;
+	last_function = 466942;
 
   rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
   if (on_off == MIDI_NOTE_ON){
@@ -1492,7 +1492,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
 
 void GateAHigh(){
 	
-   last_function = 98762934;	
+   last_function = 982934;	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_gate_a_out_state = true;
@@ -1504,7 +1504,7 @@ void GateAHigh(){
 
 void GateALow(){
 	
-	last_function = 98273649;
+	last_function = 9849;
   //rt_printf("Gate LOW");
   
   target_gate_a_out_state = false;
@@ -1519,7 +1519,7 @@ void GateALow(){
 
 void GateHighB(){
 	
-   last_function = 9696391626;	
+   last_function = 969636;	
 	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
@@ -1534,7 +1534,7 @@ void GateHighB(){
 void GateBLow(){
   //rt_printf("Gate LOW");
   
-  last_function = 1241287469;
+  last_function = 17469;
   
   target_gate_b_out_state = false;
   target_led_3_state = false; 
@@ -1550,7 +1550,7 @@ void GateBLow(){
 
 
 bool RampIsPositive(){
-	last_function = 68426842684268;
+	last_function = 6684268;
 	
 	// TODO BELA
 	return false;
@@ -1572,7 +1572,7 @@ void SyncAndResetCv(){
 // Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
 uint8_t ReadBit (int number, int b ){
 	
-	last_function = 9264732486428642;
+	last_function = 28642;
 	(number & ( 1 << b )) >> b;
 }
 
@@ -1585,7 +1585,7 @@ uint8_t ReadBit (int number, int b ){
 // These are the possible beats of the sequence
 void OnStepA(){
 	
-	last_function = 9429624927929732;
+	last_function = 929732;
 	
   //rt_printf("Hello from OnStepA: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1639,7 +1639,7 @@ void OnStepA(){
 // These are ticks which are not steps - so in between possible beats.
 void OnNotStepA(){
 	
-	last_function = 9642692468436843;
+	last_function = 843;
 	
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
@@ -1653,7 +1653,7 @@ void OnNotStepA(){
 // These are the possible beats of the sequence
 void OnStepB(){
 	
-	last_function = 422946926496296;
+	last_function = 296;
 	
   //rt_printf("Hello from OnStepB: %d \n", step_a_count);
   //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1707,7 +1707,7 @@ void OnStepB(){
 // These are ticks which are not steps - so in between possible beats.
 void OnNotStepB(){
 	
-	last_function = 4329649269469;
+	last_function = 69469;
 	
   //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
@@ -1740,7 +1740,7 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 void SetPlayAFromCount(){
-	last_function = 2692347232436798;
+	last_function = 6798;
 	
 	bar_a_play = bar_a_count;
 	step_a_play = step_a_count;
@@ -1748,7 +1748,7 @@ void SetPlayAFromCount(){
 
 void SetPlayBFromCount(){
 	
-	last_function = 246938646928379;
+	last_function = 79;
 	
 	bar_b_play = bar_b_count;
 	step_b_play = step_b_count;
@@ -1758,7 +1758,7 @@ void SetPlayBFromCount(){
 
 void PlayMidi(){
 	
-	last_function = 23429634928364892;
+	last_function = 364892;
 	
   //rt_printf("midi_note  ") + i + String(" value is ") + channel_x_midi_note_events[step_a_count][i]  );
 
@@ -1800,7 +1800,7 @@ void PlayMidi(){
 /////////
 void AdvanceSequenceAChronology(){
 	
-	last_function = 2349642386;
+	last_function = 2386;
   
   // This function advances or resets the sequence powered by the clock.
 
@@ -1890,7 +1890,7 @@ void AdvanceSequenceAChronology(){
 
 void AdvanceSequenceBChronology(){
 	
-	last_function = 585644635;
+	last_function = 585635;
   
  //rt_printf("**** AdvanceSequenceBChronology");
  
@@ -1957,7 +1957,7 @@ void AdvanceSequenceBChronology(){
 
 void OnTick(){
 	
-	last_function = 676756655411;
+	last_function = 55411;
 	
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer activity.
@@ -2051,7 +2051,7 @@ void OnTick(){
 // See Midi.h in the Libraries section of the Bela IDE
 void readMidiLoop(MidiChannelMessage message, void* arg){
 	
-	last_function = 65655445443;
+	last_function = 9945443;
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 	
@@ -2300,7 +2300,7 @@ void ChangeCvWaveformBAmplitude(){
 
 void SetWaveformBObjectAmplitude (){
 	
-	last_function = 2963849689;
+	last_function = 296689;
   
    // reset if its out of bounds
   if (cv_waveform_b_amplitude < 0 ) {
@@ -2480,7 +2480,7 @@ void StartSequencer(){
 
 void StopSequencer(){
 	
-	last_function = 8253845858;
+	last_function = 82558;
 //	auto millisec_since_epoch_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	
 	
@@ -2508,7 +2508,7 @@ void StopSequencer(){
 
 int GetValue(int raw, int last, int jitter_reduction){
 	
-	last_function = 248258542;
+	last_function = 2542;
 int value; 
 
  int diff = abs(raw - last);
@@ -2526,7 +2526,7 @@ return value;
 
 bool IsCrossing(int value_1, int value_2, int fuzzyness){
 	
-	last_function = 23423485375;
+	last_function = 5375;
   // Return true if the two values are close
   if (abs(value_1 - value_2) <= fuzzyness){
     return true;
@@ -2595,7 +2595,7 @@ float gDel_y2_r = 0;
 ////
 void InitAudioBuffer(){
 	
-	last_function = 2585254852;
+	last_function = 25852;
 	// Buffer holding previous samples per channel
 	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
@@ -2826,7 +2826,7 @@ WriteFile file2;
 
 bool setup(BelaContext *context, void *userData){
 	
-	last_function = 42369696;
+	last_function = 42396;
 	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
