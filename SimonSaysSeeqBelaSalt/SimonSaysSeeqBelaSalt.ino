@@ -1156,7 +1156,8 @@ void printStatus(void*){
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
-		rt_printf("last_function is: %d \n", last_function);
+		
+		rt_printf("last_function is: %llu \n", last_function);
 
 
 // last_function_32
