@@ -3226,7 +3226,10 @@ void render(BelaContext *context, void *userData)
 		            draw_buffer[draw_buf_write_pointer] = analog_out_8;
 		        } else {
 		        	// Else use the buffer value
-		            analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		            // analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		        	analog_out_8 = draw_buffer[draw_buf_write_pointer];
+		        	
+		        	
 		        }     
 		
 				// Write output
@@ -3587,4 +3590,4 @@ class UdpClient{
 
 #endif /* UDPCLIENT_H_ */
 
- 
+  
