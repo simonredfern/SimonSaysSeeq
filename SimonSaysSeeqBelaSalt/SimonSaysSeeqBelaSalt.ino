@@ -485,13 +485,13 @@ bool do_tick = true;
 bool do_envelope_1_on = false;
 
 bool target_analog_gate_a_out_state = false;
-bool analog_gate_a_out_state_set = false;
+bool current_analog_gate_a_out_state = false;
 
 bool target_digital_gate_a_out_state = false;
 bool current_digital_gate_a_out_state = false;
 
 bool target_analog_gate_b_out_state = false;
-bool analog_gate_b_out_state_set = false;
+bool current_analog_gate_b_out_state = false;
 
 bool target_digital_gate_b_out_state = false;
 bool current_digital_gate_b_out_state = false;
@@ -1386,7 +1386,7 @@ void printStatus(void*){
 
     // Sequence Outputs 
     //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
-		//rt_printf("analog_gate_a_out_state_set is: %d \n", analog_gate_a_out_state_set);      
+		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
 
 
       //std::string message = "$simon!";
