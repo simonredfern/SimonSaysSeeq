@@ -326,8 +326,8 @@ const int CLOCK_INPUT_DIGITAL_PIN = 15;
 // Digital Outputs
 // T1 out	digital channel 0
 // T2 out	digital channel 5
-const int SEQUENCE_A_OUT_PIN = 0;
-const int SEQUENCE_B_OUT_PIN = 5; // TODO check
+const int SEQUENCE_A_DIGITAL_OUT_PIN = 0;
+const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 
 
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
@@ -1508,7 +1508,11 @@ void GateAHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_analog_gate_a_out_state = true;
+  target_digital_gate_a_out_state = true;
   target_led_1_state = true; 
+
+
+
     
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
@@ -1520,6 +1524,8 @@ void GateALow(){
   //rt_printf("Gate LOW");
   
   target_analog_gate_a_out_state = false;
+  target_digital_gate_a_out_state = false;
+  
   target_led_1_state = false; 
   
   audio_adsr_a.gate(false);
@@ -3358,16 +3364,16 @@ void render(BelaContext *context, void *userData)
         	        	
   
         	// Only set new state if target is changed
-        	if (target_analog_gate_a_out_state != analog_gate_a_out_state_set){
+        	if (target_digital_gate_a_out_state != digital_gate_a_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_A_OUT_PIN, target_analog_gate_a_out_state);
-	        	analog_gate_a_out_state_set = target_analog_gate_a_out_state;
+	        	digitalWrite(context, m, SEQUENCE_A_DIGITAL_OUT_PIN, target_digital_gate_a_out_state);
+	        	digital_gate_a_out_state_set = target_digital_gate_a_out_state;
         	}
 
-        	if (target_analog_gate_b_out_state != analog_gate_b_out_state_set){
+        	if (target_digital_gate_b_out_state != digital_gate_b_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_B_OUT_PIN, target_analog_gate_b_out_state);
-	        	analog_gate_b_out_state_set = target_analog_gate_b_out_state;
+	        	digitalWrite(context, m, SEQUENCE_B_DIGITAL_OUT_PIN, target_digital_gate_b_out_state);
+	        	digital_gate_b_out_state_set = target_digital_gate_b_out_state;
         	}
 
 
