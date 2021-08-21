@@ -487,14 +487,14 @@ bool do_envelope_1_on = false;
 bool target_analog_gate_a_out_state = false;
 bool analog_gate_a_out_state_set = false;
 
-bool target_digital_gate_a_out_state = false;
-bool digital_gate_a_out_state_set = false;
+bool digital_gate_a_out_target_state = false;
+bool digital_gate_a_out_set_state = false;
 
 bool target_analog_gate_b_out_state = false;
 bool analog_gate_b_out_state_set = false;
 
-bool target_digital_gate_b_out_state = false;
-bool digital_gate_b_out_state_set = false;
+bool digital_gate_b_out_target_state = false;
+bool digital_gate_b_out_set_state = false;
 
 
 bool target_led_1_state = false;
@@ -1508,7 +1508,7 @@ void GateAHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_analog_gate_a_out_state = true;
-  target_digital_gate_a_out_state = true;
+  digital_gate_a_out_target_state = true;
   target_led_1_state = true; 
 
 
@@ -1524,7 +1524,7 @@ void GateALow(){
   //rt_printf("Gate LOW");
   
   target_analog_gate_a_out_state = false;
-  target_digital_gate_a_out_state = false;
+  digital_gate_a_out_target_state = false;
   
   target_led_1_state = false; 
   
@@ -1535,13 +1535,16 @@ void GateALow(){
   
 }
 
-void GateHighB(){
+void GateBHigh(){
 	
    last_function = 969636;	
 	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_analog_gate_b_out_state = true;
+
+  target_digital_gate_b_out_state = true;
+
   target_led_3_state = true; 
     
   //audio_adsr_a.gate(true);
@@ -1555,6 +1558,10 @@ void GateBLow(){
   last_function = 17469;
   
   target_analog_gate_b_out_state = false;
+
+  target_digital_gate_b_out_state = false;
+
+
   target_led_3_state = false; 
   
   //audio_adsr_a.gate(false);
@@ -1708,7 +1715,7 @@ void OnStepB(){
   
    if (play_b_note){
      //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
-    GateHighB(); 
+    GateBHigh(); 
    } else {
     GateBLow();
      //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
@@ -3364,16 +3371,16 @@ void render(BelaContext *context, void *userData)
         	        	
   
         	// Only set new state if target is changed
-        	if (target_digital_gate_a_out_state != digital_gate_a_out_state_set){
+        	if (digital_gate_a_out_target_state != digital_gate_a_out_set_state){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_A_DIGITAL_OUT_PIN, target_digital_gate_a_out_state);
-	        	digital_gate_a_out_state_set = target_digital_gate_a_out_state;
+	        	digitalWrite(context, m, SEQUENCE_A_DIGITAL_OUT_PIN, digital_gate_a_out_target_state);
+	        	digital_gate_a_out_set_state = digital_gate_a_out_target_state;
         	}
 
-        	if (target_digital_gate_b_out_state != digital_gate_b_out_state_set){
+        	if (digital_gate_b_out_target_state != digital_gate_b_out_set_state){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_B_DIGITAL_OUT_PIN, target_digital_gate_b_out_state);
-	        	digital_gate_b_out_state_set = target_digital_gate_b_out_state;
+	        	digitalWrite(context, m, SEQUENCE_B_DIGITAL_OUT_PIN, digital_gate_b_out_target_state);
+	        	digital_gate_b_out_set_state = digital_gate_b_out_target_state;
         	}
 
 
