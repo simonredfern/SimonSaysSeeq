@@ -66,7 +66,12 @@ The Bela software is distributed under the GNU Lesser General Public License
 // num=[number of top largest directories to list)
 // du -ah $dir | sort -n -r | head -n $num
 
-
+// https://monome.org/docs/serialosc/raspbian/
+// but before doing the serialoscd configure: 
+// Changing line 257 of serialosc/wscript to
+// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
+// Serialosc will compile but serialoscd is not found
+// with https://github.com/monome/serialosc/issues/53
 
 #include <Bela.h>
 #include <libraries/Midi/Midi.h>
@@ -479,11 +484,17 @@ bool do_tick = true;
 
 bool do_envelope_1_on = false;
 
-bool target_gate_a_out_state = false;
-bool gate_a_out_state_set = false;
+bool target_analog_gate_a_out_state = false;
+bool analog_gate_a_out_state_set = false;
 
-bool target_gate_b_out_state = false;
-bool gate_b_out_state_set = false;
+bool target_digital_gate_a_out_state = false;
+bool digital_gate_a_out_state_set = false;
+
+bool target_analog_gate_b_out_state = false;
+bool analog_gate_b_out_state_set = false;
+
+bool target_digital_gate_b_out_state = false;
+bool digital_gate_b_out_state_set = false;
 
 
 bool target_led_1_state = false;
@@ -1374,8 +1385,8 @@ void printStatus(void*){
     //rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
     // Sequence Outputs 
-    //rt_printf("target_gate_a_out_state is: %d \n", target_gate_a_out_state);
-		//rt_printf("gate_a_out_state_set is: %d \n", gate_a_out_state_set);      
+    //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
+		//rt_printf("analog_gate_a_out_state_set is: %d \n", analog_gate_a_out_state_set);      
 
 
       //std::string message = "$simon!";
@@ -1496,7 +1507,7 @@ void GateAHigh(){
    last_function = 982934;	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
-  target_gate_a_out_state = true;
+  target_analog_gate_a_out_state = true;
   target_led_1_state = true; 
     
   audio_adsr_a.gate(true);
@@ -1508,7 +1519,7 @@ void GateALow(){
 	last_function = 9849;
   //rt_printf("Gate LOW");
   
-  target_gate_a_out_state = false;
+  target_analog_gate_a_out_state = false;
   target_led_1_state = false; 
   
   audio_adsr_a.gate(false);
@@ -1524,7 +1535,7 @@ void GateHighB(){
 	
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
-  target_gate_b_out_state = true;
+  target_analog_gate_b_out_state = true;
   target_led_3_state = true; 
     
   //audio_adsr_a.gate(true);
@@ -1537,7 +1548,7 @@ void GateBLow(){
   
   last_function = 17469;
   
-  target_gate_b_out_state = false;
+  target_analog_gate_b_out_state = false;
   target_led_3_state = false; 
   
   //audio_adsr_a.gate(false);
@@ -3251,7 +3262,7 @@ void render(BelaContext *context, void *userData)
 	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
 	      if (ch == SEQUENCE_A_GATE_OUTPUT_1_PIN){
-	      	if (target_gate_a_out_state == HIGH){
+	      	if (target_analog_gate_a_out_state == HIGH){
 	      		analog_out_1 = 1.0;
 	      	} else {
 	      		analog_out_1 = -1.0;	
@@ -3279,7 +3290,7 @@ void render(BelaContext *context, void *userData)
 	      }
 	      
 	      if (ch == SEQUENCE_B_GATE_OUTPUT_5_PIN){
-	      	if (target_gate_b_out_state == HIGH){
+	      	if (target_analog_gate_b_out_state == HIGH){
 	      		analog_out_5 = 1.0;
 	      	} else {
 	      		analog_out_5 = -1.0;	
@@ -3347,16 +3358,16 @@ void render(BelaContext *context, void *userData)
         	        	
   
         	// Only set new state if target is changed
-        	if (target_gate_a_out_state != gate_a_out_state_set){
+        	if (target_analog_gate_a_out_state != analog_gate_a_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_A_OUT_PIN, target_gate_a_out_state);
-	        	gate_a_out_state_set = target_gate_a_out_state;
+	        	digitalWrite(context, m, SEQUENCE_A_OUT_PIN, target_analog_gate_a_out_state);
+	        	analog_gate_a_out_state_set = target_analog_gate_a_out_state;
         	}
 
-        	if (target_gate_b_out_state != gate_b_out_state_set){
+        	if (target_analog_gate_b_out_state != analog_gate_b_out_state_set){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_B_OUT_PIN, target_gate_b_out_state);
-	        	gate_b_out_state_set = target_gate_b_out_state;
+	        	digitalWrite(context, m, SEQUENCE_B_OUT_PIN, target_analog_gate_b_out_state);
+	        	analog_gate_b_out_state_set = target_analog_gate_b_out_state;
         	}
 
 
