@@ -8,8 +8,6 @@
 
 SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
 
-Version: 2021-01-28 or so.
-
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
 This file uses BELA libraries and example code, see below.
@@ -18,6 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
+const char version[16]= "v0.32-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -60,7 +59,40 @@ The Bela software is distributed under the GNU Lesser General Public License
 //
 // install curl apt-get install -y libcurl-dev
 
+// Note: Bela might run out of disk space
+// du -h --max-depth=1
+// #!/bin/bash
+// dir=/path/to/directory/you/want/to/check
+// num=[number of top largest directories to list)
+// du -ah $dir | sort -n -r | head -n $num
 
+
+// Add this to your /etc/init.d
+
+// root@bela:/etc/init.d# cat ./bela_startup.sh 
+// #!/bin/bash
+// rm /var/log/*.log
+// rm /var/log/syslog
+// rm /var/log/*.gz
+// rm /var/log/syslog.1
+// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
+
+// Make it executable with chmod u+x bela_startup.sh
+
+
+//root@bela:/var/log# rm /var/log/*.log
+//root@bela:/var/log# rm /var/log/syslog
+//root@bela:/var/log# rm /var/log/*.gz
+//root@bela:/var/log# rm /var/log/syslog.1 
+
+
+
+// https://monome.org/docs/serialosc/raspbian/
+// but before doing the serialoscd configure: 
+// Changing line 257 of serialosc/wscript to
+// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
+// Serialosc will compile but serialoscd is not found
+// with https://github.com/monome/serialosc/issues/53
 
 #include <Bela.h>
 #include <libraries/Midi/Midi.h>
@@ -89,7 +121,7 @@ UdpClient myUdpClient;
 // ...
 
 
-const char version[16]= "v0.27-BelaSalt";
+
 
 Scope scope;
 
@@ -132,11 +164,11 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MIN_MIDI_CONTROL_A_INPUT = 0;
-const uint8_t MAX_MIDI_CONTROL_A_INPUT = 16;
+const uint8_t MIN_midi_lane_input = 0;
+const uint8_t MAX_midi_lane_input = 16;
 
-const uint8_t MIN_MIDI_CONTROL_B_INPUT = 0;
-const uint8_t MAX_MIDI_CONTROL_B_INPUT = 16;
+
+uint64_t last_function = 0; // set this in a function to a number
 
 // This is our global frame timer. We count total elapsed frames with this.
 uint64_t frame_timer = 0;
@@ -153,8 +185,6 @@ uint64_t frames_per_sequence = 0;
 
 
 uint64_t last_tick_frame = 0;
- 
-//int clock_width = 0;
 
 uint64_t elapsed_frames_since_last_tick = 0;
 
@@ -174,16 +204,22 @@ uint64_t frames_per_24_ticks = 22064; // This must never be zero else we can div
 int audio_sample_rate;
 int analog_sample_rate;
 
+int draw_buf_write_pointer = 0;
+
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
 int coarse_delay_frames = 22050;
 int total_delay_frames = 22050;
 
+int draw_total_frames = 22050;
+
 // Amount of feedback
-float delay_feedback_amount = 0.999; //0.999
+float delay_feedback_amount = 0.999; 
+
+float draw_delay_feedback_amount = 0.999; 
 
 
-uint8_t midi_control_a_input = 0; // normal
-uint8_t midi_control_b_input = 0; // normal
+uint8_t midi_lane_input = 0; // normal
+
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -192,7 +228,7 @@ uint8_t midi_control_b_input = 0; // normal
 
 
 #define DELAY_BUFFER_SIZE 6400000
-
+#define DRAW_BUFFER_SIZE 6400000
 
 const float kMinimumFrequency = 20.0f;
 const float kMaximumFrequency = 8000.0f;
@@ -258,13 +294,6 @@ int old_button_4_state = 0;
 /////////////////
 
 
-int old_both_buttons_pressed_state = 0;
-int new_both_buttons_pressed_state = 0;
-int both_buttons_pressed_counter = 0;
-int both_buttons_pressed_even = 0;
-int do_both_buttons_action_a = 0;
-int do_both_buttons_action_b = 0;
-
 int do_button_1_action = 0;
 int do_button_2_action = 0;
 int do_button_3_action = 0;
@@ -307,6 +336,7 @@ void print_binary(unsigned int number)
 //const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
+// e.g. CV I/O 1-8	analog channel 0-7	dac~/adc~ 3-10
 
 // T2 (Trigger 2) is Physical Channel / Pin 14 
 
@@ -317,35 +347,42 @@ const int CLOCK_INPUT_DIGITAL_PIN = 15;
 // Digital Outputs
 // T1 out	digital channel 0
 // T2 out	digital channel 5
-const int SEQUENCE_OUT_PIN = 0;
-
+const int SEQUENCE_A_DIGITAL_OUT_PIN = 0;
+const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 
 
 //const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 // CV I/O 1-8	ANALOG channel 0-7
-const int SEQUENCE_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
-const int SEQUENCE_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
+const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
+const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
 
 const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
 const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
 
 
-const int COARSE_DELAY_TIME_INPUT_PIN = 4; // CV 5 (SALT+)
-const int DELAY_FEEDBACK_INPUT_PIN = 6; // CV 6 (SALT+)
+const int SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN = 4; // CV 5 (SALT+) was COARSE-_DELAY_TIME_INPUT_PIN
+const int SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
-const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) (TODO check)
-const uint8_t MIDI_CONTROL_B_INPUT_PIN = 7; // CV 8 (SALT+) (TODO check)
+const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) 
+const uint8_t DRAW_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
+bool need_to_reset_draw_buf_pointer = false;
 
 
-
-const int SEQUENCE_GATE_OUTPUT_1_PIN = 0; // CV 1 output
-const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 input
+const int SEQUENCE_A_GATE_OUTPUT_1_PIN = 0; // CV (GATE) 1 output
+const int SEQUENCE_CV_OUTPUT_2_PIN = 1; // CV 2 output
 const int SEQUENCE_CV_OUTPUT_3_PIN = 2; // CV 3 output
-const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 input
+const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 output
+
+
+const int SEQUENCE_B_GATE_OUTPUT_5_PIN = 4; // CV (GATE) 5 output
+const int SEQUENCE_CV_OUTPUT_6_PIN = 5; // CV 6 output
+const int SEQUENCE_CV_OUTPUT_7_PIN = 6; // CV 7 output
+const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
+
 
 
 ////////////////////////////////////////////////
@@ -358,7 +395,7 @@ const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 input
 // const uint8_t BRIGHT_4 = 100;
 // const uint8_t BRIGHT_5 = 255;
 
-// Use zero based index for sequencer. i.e. step_count for the first step is 0.
+// Use zero based index for sequencer. i.e. step_a_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
 
@@ -376,7 +413,8 @@ const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 // Sequence Length (and default)
-uint8_t current_sequence_length_in_steps = 8; 
+uint8_t current_sequence_a_length_in_steps = 8; 
+uint8_t current_sequence_b_length_in_steps = 8; 
 
 ///////////////////////
 
@@ -387,7 +425,7 @@ const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
-uint8_t midi_channel_a = 0; // This is zero indexed. 0 will send on midi channel 1!
+uint8_t midi_channel_x = 0; // This is zero indexed. 0 will send on midi channel 1!
 uint8_t last_note_on = 0;
 uint8_t last_note_off = 0;
 uint8_t last_note_disabled = 0;
@@ -397,22 +435,24 @@ bool init_midi_sequence_has_run = false;
 
 bool need_to_auto_save_sequence = false;
 
-////////////////////////////////////////////////////
-// Actual pot values
-unsigned int upper_input_raw; // TODO Make t type.
-unsigned int lower_input_raw;
 
 
-// Create 4 virtual pots out of two pots and a button.
-// To handle the case when 1) Pot is fully counter clockwise 2) We press the button 3) Move the pot fully clockwise 4) Release the button.
-// We introduce the concept that a virtual pot can be "engaged" or not so we can catchup with its stored value only when the pot gets back to that position.
-//bool upper_pot_high_engaged = true;
-float sequence_pattern_input_raw;
-unsigned int sequence_pattern_input = 20;
-unsigned int sequence_pattern_input_last;
-unsigned int sequence_pattern_input_at_button_change;
+float sequence_a_length_input_raw;
+float sequence_a_pattern_input_raw;
+unsigned int sequence_a_pattern_input = 20;
+unsigned int sequence_a_pattern_input_last;
+unsigned int sequence_a_pattern_input_at_button_change;
 
-//bool lower_pot_high_engaged = true;
+
+
+float sequence_b_length_input_raw;
+float sequence_b_pattern_input_raw;
+unsigned int sequence_b_pattern_input = 20;
+unsigned int sequence_b_pattern_input_last;
+unsigned int sequence_b_pattern_input_at_button_change;
+
+
+
 float lfo_a_frequency_input_raw;
 float lfo_osc_1_frequency;
 float frequency_2;
@@ -423,13 +463,9 @@ unsigned int lfo_a_frequency_input = 20;
 unsigned int lfo_a_frequency_input_last;
 unsigned int lfo_a_frequency_input_at_button_change;
 
-//bool upper_pot_low_engaged = true;
-float sequence_length_input_raw;
-//unsigned int sequence_length_input = 20;
-unsigned int sequence_length_input_last;
-unsigned int sequence_length_input_at_button_change;
 
-//bool lower_pot_low_engaged = true;
+
+
 float lfo_b_frequency_input_raw;
 unsigned int lfo_b_frequency_input = 20;
 unsigned int lfo_b_frequency_input_last;
@@ -447,27 +483,20 @@ float external_modulator_object_level;
 float audio_left_input_raw;
 float audio_right_input_raw;
 
-
-
-
 unsigned int coarse_delay_input = 1;
 
-
-
-////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
-//uint8_t current_sequence_length_in_steps_raw;
-
-
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
-unsigned int binary_sequence_result;
-unsigned int gray_code_sequence;
-unsigned int the_sequence;
-unsigned int last_binary_sequence_result; // So we can detect changes
+unsigned int binary_sequence_a_result;
+unsigned int gray_code_sequence_a;
+unsigned int the_sequence_a;
+unsigned int last_binary_sequence_a_result; // So we can detect changes
+
+unsigned int binary_sequence_b_result;
+unsigned int gray_code_sequence_b;
+unsigned int the_sequence_b;
+unsigned int last_binary_sequence_b_result; // So we can detect changes
 
 
 
@@ -475,8 +504,18 @@ unsigned int last_binary_sequence_result; // So we can detect changes
 bool do_tick = true;
 
 bool do_envelope_1_on = false;
-bool target_gate_out_state = false;
-bool gate_out_state_set = false;
+
+bool target_analog_gate_a_out_state = false;
+bool current_analog_gate_a_out_state = false;
+
+bool target_digital_gate_a_out_state = false;
+bool current_digital_gate_a_out_state = false;
+
+bool target_analog_gate_b_out_state = false;
+bool current_analog_gate_b_out_state = false;
+
+bool target_digital_gate_b_out_state = false;
+bool current_digital_gate_b_out_state = false;
 
 
 bool target_led_1_state = false;
@@ -486,10 +525,14 @@ bool target_led_4_state = false;
 
 
 // Used to control when/how we change sequence length 
-uint8_t new_sequence_length_in_ticks; 
+uint8_t new_sequence_a_length_in_ticks; 
+uint8_t new_sequence_b_length_in_ticks; 
+
 
 // Just counts 0 to 5 within each step
-uint8_t ticks_after_step;
+uint8_t ticks_after_step_a;
+uint8_t ticks_after_step_b;
+
 
 // Jitter Reduction: Used to flatten out glitches from the analog pots. 
 // Actually we like the glitches - it makes the sequencer more interesting
@@ -529,6 +572,8 @@ float flash_interval = 44000;
 
 
 void FlashHello(){
+	last_function = 238469;
+	
 // This gets called in the digital loop
 // Say hello when this patch starts up.
 
@@ -542,6 +587,9 @@ if(frame_timer < 440000) {
 	if (flash_interval > 100){
 		if (frame_timer >= next_flash_change){
 			target_led_1_state = ! target_led_1_state;
+    		target_led_2_state = ! target_led_2_state;
+    		target_led_3_state = ! target_led_3_state;
+    		target_led_4_state = ! target_led_4_state;
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
 			//rt_printf("At frame_timer %llu I'm setting last_flash_change to %d and flash_interval to %f  \n" , frame_timer, last_flash_change, flash_interval );
@@ -550,6 +598,9 @@ if(frame_timer < 440000) {
 	} else {
 		// In the end we want the led to be off (until something else changes the state)
 		target_led_1_state = false;
+    	target_led_2_state = false;
+    	target_led_3_state = false;
+    	target_led_4_state = false;
 	}
   }
 }
@@ -580,9 +631,9 @@ int test_int = 8 ;
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-//NoteInfo channel_a_midi_note_events[MAX_STEP+1][128][2]; 
+//NoteInfo channel_x_midi_note_events[MAX_STEP+1][128][2]; 
 
-NoteInfo channel_a_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
+NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
 
@@ -606,6 +657,8 @@ NoteInfo channel_a_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2];
 
 
 void SyncSequenceToFile(bool write_to_file){
+	
+	last_function = 6123819;
 	
 	
 	rt_printf("Hello from SyncSequenceToFile write_to_file is %d \n", write_to_file);
@@ -664,22 +717,22 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 		        	
 
 					// Only write active notes. (we deleted all files above so should be ok. )
-					if (channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
+					if (channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
 						
 						// Open for writing in truncate mode (we will replace the contents)
 						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 
-            count_of_file_operations = count_of_file_operations + 1;
+            			count_of_file_operations = count_of_file_operations + 1;
 						
-						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active);
-						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity);
+						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
+						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
 						
-						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_a_midi_note_events[ln][bc][sc][n][1].velocity);
+						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_x_midi_note_events[ln][bc][sc][n][1].velocity);
 					
 						// Must cast the value to int else it won't be written to the file.
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
-						output_file << (int) channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
+						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
 
 					
 						output_file.close();
@@ -713,11 +766,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_a_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].velocity);
+								rt_printf("Should have set channel_x_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
 							}
 							
 						////////////
@@ -736,11 +789,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_a_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
+								rt_printf("Should have set channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
 							}
 					    
 					    
@@ -758,7 +811,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_a_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
+					    channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
 					    
 					    
 			
@@ -785,6 +838,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void WriteSequenceToFiles(void*){
 	
+	last_function = 293924;
+	
 	//if (need_to_auto_save_sequence == true){
 		SyncSequenceToFile(true);
 	//	need_to_auto_save_sequence = false;
@@ -792,6 +847,8 @@ void WriteSequenceToFiles(void*){
 }
 
 void ReadSequenceFromFiles(){
+	last_function = 298897689;
+	
 	SyncSequenceToFile(false);
 }
 
@@ -815,7 +872,7 @@ void ReadSequenceFromFiles(){
 
 
 
-// "Ghost notes" are created to cancel out a note-off in channel_a_midi_note_events that is created when during the note off of low velocity notes.
+// "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created when during the note off of low velocity notes.
 class GhostNote
 {
  public:
@@ -823,7 +880,7 @@ class GhostNote
    uint8_t is_active = 0;
 };
 
-GhostNote channel_a_ghost_events[128];
+GhostNote channel_x_ghost_events[128];
 
 ////////////////////////////////////////
 // Bit Constants for bit wise operations 
@@ -863,15 +920,24 @@ struct Timing
 };
 
 // Timing is controlled by the loop. Only the loop should update it.
-Timing loop_timing;
+struct Timing loop_timing_a;
+struct Timing loop_timing_b;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes 
-uint8_t step_count; // write
-uint8_t step_play; // read
+uint8_t step_a_count; // write
+uint8_t step_a_play; // read
+
+uint8_t step_b_count; // write
+uint8_t step_b_play; // read
 
 // Count of the bar / measure.
-uint8_t bar_count; // for wrting
-uint8_t bar_play; // for reading
+uint8_t bar_a_count; // for wrting
+uint8_t bar_a_play; // for reading
+
+uint8_t bar_b_count; // for wrting
+uint8_t bar_b_play; // for reading
+
+
 
 // Helper functions that operate on global variables. Yae!  
 
@@ -891,60 +957,79 @@ uint8_t BarCountSanity(uint8_t bar_count_in){
 }
 
 
-void SetTickCountInSequence(uint8_t value){
-  loop_timing.tick_count_in_sequence = value;
-  loop_timing.tick_count_since_step = value % 6;
+void SetTickCountInSequenceA(uint8_t value){
+  loop_timing_a.tick_count_in_sequence = value;
+  loop_timing_a.tick_count_since_step = value % 6;
 }
 
-void SetTotalTickCount(int value){
-  loop_timing.tick_count_since_start = value;
+void SetTickCountInSequenceB(uint8_t value){
+  loop_timing_b.tick_count_in_sequence = value;
+  loop_timing_b.tick_count_since_step = value % 6;
 }
+
+void SetTotalTickCountA(int value){
+  loop_timing_a.tick_count_since_start = value;
+}
+
+void SetTotalTickCountB(int value){
+  loop_timing_b.tick_count_since_start = value;
+}
+
 
 void Beginning(){
-  SetTickCountInSequence(0);
-  step_count = FIRST_STEP;
-  bar_count = FIRST_BAR;
-  step_play = FIRST_STEP;
-  bar_play = FIRST_BAR;
+	last_function = 2119892;
+	
+  SetTickCountInSequenceA(0);
+  SetTickCountInSequenceB(0);
+  
+  step_a_count = FIRST_STEP;
+  bar_a_count = FIRST_BAR;
+  step_a_play = FIRST_STEP;
+  bar_a_play = FIRST_BAR;
+  
+  step_b_count = FIRST_STEP;
+  bar_b_count = FIRST_BAR;
+  step_b_play = FIRST_STEP;
+  bar_b_play = FIRST_BAR;
 }
 
 
-uint8_t IncrementOrResetBarCount(){
+uint8_t IncrementOrResetBarCountA(){
+	
+	last_function = 239872;
 
   // Every time we call this function we advance or reset the bar
-  if (bar_count == MAX_BAR){
-    bar_count = FIRST_BAR;
+  if (bar_a_count == MAX_BAR){
+    bar_a_count = FIRST_BAR;
   } else {
-    bar_count = BarCountSanity(bar_count + 1);
+    bar_a_count = BarCountSanity(bar_a_count + 1);
   }
   
-  //rt_printf("** IncrementOrResetBarCount bar_count is now: %d \n", bar_count);
-  return BarCountSanity(bar_count);
+  //rt_printf("** IncrementOrResetBarCountA bar_a_count is now: %d \n", bar_a_count);
+  return BarCountSanity(bar_a_count);
 }
 
-/*
-// This is not referenced!
-void ResetToFirstStep(){
-  
-  // TODO check if we really need this or possible bug with bars
-  SetTickCountInSequence(0);
-  step_count = FIRST_STEP;
+uint8_t IncrementOrResetBarCountB(){
+	
+	last_function = 23962;
 
-  IncrementOrResetBarCount();
+  // Every time we call this function we advance or reset the bar
+  if (bar_b_count == MAX_BAR){
+    bar_b_count = FIRST_BAR;
+  } else {
+    bar_b_count = BarCountSanity(bar_b_count + 1);
+  }
   
-  //Serial.println(String("ResetToFirstStep Done. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  return BarCountSanity(bar_b_count);
 }
-*/
-
-
-
-
 
 
 
 
 
 uint8_t StepCountSanity(uint8_t step_count_){
+	last_function = 672349;
+	
   uint8_t step_count_fixed;
   
   if (step_count_ > MAX_STEP){
@@ -993,6 +1078,11 @@ float analog_out_1;
 float analog_out_2;
 float analog_out_3;
 float analog_out_4;
+float analog_out_5;
+float analog_out_6;
+float analog_out_7;
+float analog_out_8;
+
 
 
 float audio_osc_1_result;
@@ -1028,25 +1118,57 @@ enum osc_type
 
 
 
-void ResetSequenceCounters(){
-  SetTickCountInSequence(0);
-  IncrementOrResetBarCount();
-  step_count = FIRST_STEP; 
+
+
+// This relates to the whole machine.
+void ResetSequenceACounters(){
+	
+	last_function = 3452978;
+	
+  SetTickCountInSequenceA(0);
+
+  IncrementOrResetBarCountA();
+
+  step_a_count = FIRST_STEP;
+
   lfo_a_analog.setPhase(0.0);
   
   
-
   sequence_triggered_adsr_c.gate(true);
 
-  previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence was reset
+  previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence A was reset
   last_sequence_reset_frame = frame_timer; // Now
   
   
   // We'll be able to use this, to set delay in frames
   frames_per_sequence = last_sequence_reset_frame - previous_sequence_reset_frame;
 
-  //rt_printf("ResetSequenceCounters Done. current_sequence_length_in_steps is: %d step_count is now: %d \n", current_sequence_length_in_steps, step_count);
+ 
+  
+  need_to_reset_draw_buf_pointer = true;
+
+  //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
+
+
+void ResetSequenceBCounters(){
+	
+	last_function = 766799;
+	
+
+  SetTickCountInSequenceB(0);
+  
+
+  IncrementOrResetBarCountB();
+  
+
+  step_b_count = FIRST_STEP; 
+  
+   //rt_printf("ResetSequenceBCounters Done. current_sequence_b_length_in_steps is: %d step_b_count is now: %d \n", current_sequence_b_length_in_steps, step_b_count);
+}
+
+
+
 
 
 
@@ -1062,9 +1184,15 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 10 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
+		
+		
+		rt_printf("last_function is: %llu \n", last_function);
+
+
+// last_function_32
 
 		  // Global frame timing
 
@@ -1075,84 +1203,122 @@ void printStatus(void*){
     
 		// Delay Time
 		
-		rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
+		//rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
 
 
 
-		rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
-		rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
-		rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
-		
-		
-		rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
-		
-		
-		
-		rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
+
+
+		//rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
+		//rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
+		//rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
+		//rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
+		//rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
 		
 		
 		// Delay Feedback
 		//rt_printf("feedback_delta is: %f \n", feedback_delta);
 
 	    
-		rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
+		//rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
 		
 		
 		// Analog / Digital Clock In.
   	//	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
 		// Other Inputs
-		//rt_printf("sequence_pattern_input is: %d \n", sequence_pattern_input);
-		//rt_printf("sequence_length_input_raw is: %f \n", sequence_length_input_raw);
+		//rt_printf("sequence_a_pattern_input is: %d \n", sequence_a_pattern_input);
+		//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
 		
 		
-		rt_printf("new_button_1_state is: %d \n", new_button_1_state);
-		rt_printf("new_button_2_state is: %d \n", new_button_2_state);
+		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
+		//rt_printf("new_button_2_state is: %d \n", new_button_2_state);
 		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
-		rt_printf("new_button_4_state is: %d \n", new_button_4_state);
+		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
-		rt_printf("do_button_1_action is: %d \n", do_button_1_action);
-		rt_printf("do_button_2_action is: %d \n", do_button_2_action);
-		rt_printf("do_button_3_action is: %d \n", do_button_3_action);
-		rt_printf("do_button_4_action is: %d \n", do_button_4_action);
+		// rt_printf("do_button_1_action is: %d \n", do_button_1_action);
+		// rt_printf("do_button_2_action is: %d \n", do_button_2_action);
+		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
+		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
 
 
 	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
-	//	rt_printf("midi_control_b_input is: %d \n", midi_control_b_input);
 
-
-	
-		/*
-		rt_printf("old_both_buttons_pressed_state is: %d \n", old_both_buttons_pressed_state);
-		rt_printf("new_both_buttons_pressed_state is: %d \n", new_both_buttons_pressed_state);
-		rt_printf("both_buttons_pressed_counter is: %d \n", both_buttons_pressed_counter);
-		rt_printf("both_buttons_pressed_even is: %d \n", both_buttons_pressed_even);
-		rt_printf("do_both_buttons_action_a is: %d \n", do_both_buttons_action_a);
-		rt_printf("do_both_buttons_action_b is: %d \n", do_both_buttons_action_b);
-		*/
-		
 		
         // Sequence derived results 
-        /*
-    	rt_printf("current_sequence_length_in_steps is: %d \n", current_sequence_length_in_steps);
-    	rt_printf("new_sequence_length_in_ticks is: %d \n", new_sequence_length_in_ticks);
-    	*/
+        
+
+    	
+    	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	
 
 
 		/*
     	rt_printf("envelope_1_attack is: %f \n", envelope_1_attack);
     	rt_printf("envelope_1_decay is: %f \n", envelope_1_decay);
+	
     	*/
     	
+    	rt_printf("\n==== Sequence A ======= \n");
+    	
+    	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
+    	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
+
+    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
+    	rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	
+    	
+    	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+	    print_binary(the_sequence_a);
+		rt_printf("%c \n", 'B');
+
+
+    	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
+    	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
+    	
+    	rt_printf("step_a_count is: %d \n", step_a_count);
+    	
+    	if (step_a_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP A \n");
+    	} else {
+    		rt_printf("other step A \n");
+    	}
+
+
+		rt_printf("\n==== Sequence B ======= \n");
+
+    	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
+    	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
+    	
+		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+		rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
+		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
+	    print_binary(the_sequence_b);
+		rt_printf("%c \n", 'B');
+		
+		
+		rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
+    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+
+		rt_printf("step_b_count is: %d \n", step_b_count);
+
+        if (step_b_count == FIRST_STEP) {
+    		rt_printf("FIRST_STEP B \n");
+    	} else {
+    		rt_printf("other step B \n");
+    	}
+    	
+    	
+    	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	
     	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
     	rt_printf("analog_adsr_b_level is: %f \n", analog_adsr_b_level);
     	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
-    	
+    	*/
 
 
 		/*
@@ -1167,6 +1333,23 @@ void printStatus(void*){
 		rt_printf("analog_out_4 is: %f \n", analog_out_4);
 		*/
 		
+		
+		//rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
+		
+		
+		
+		
+		rt_printf("analog_out_5 is: %f \n", analog_out_5);
+		rt_printf("analog_out_6 is: %f \n", analog_out_6);
+		rt_printf("analog_out_7 is: %f \n", analog_out_7);
+		rt_printf("analog_out_8 is: %f \n", analog_out_8);
+		
+		
+			rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
+					
+		
+
+		
 		/*
 		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
 		rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
@@ -1180,52 +1363,51 @@ void printStatus(void*){
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
     	*/
 
-    	//rt_printf("loop_timing.tick_count_in_sequence is: %d \n", loop_timing.tick_count_in_sequence);
-    	//rt_printf("loop_timing.tick_count_since_start is: %d \n", loop_timing.tick_count_since_start);
+/*
+
+
+
 
     	
-
+*/
     	
 		/*
-		rt_printf("gray_code_sequence is: %d \n", gray_code_sequence);
-		print_binary(gray_code_sequence);
+		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
+		print_binary(gray_code_sequence_a);
 		rt_printf("%c \n", 'B');
 		*/
 
-    //	rt_printf("the_sequence is: %d \n", the_sequence);
-    //	print_binary(the_sequence);
-		// rt_printf("%c \n", 'B');
+
 
 		// Sequence state
 		
-    	rt_printf("bar_count: %d \n", bar_count);
-		rt_printf("step_count: %d \n", step_count);
+    	//rt_printf("bar_a_count: %d \n", bar_a_count);
+		//rt_printf("step_a_count: %d \n", step_a_count);
+		//rt_printf("step_b_count: %d \n", step_b_count);
 		
-    	rt_printf("bar_play: %d \n", bar_play);
-		rt_printf("step_play: %d \n", step_play);
+    	//rt_printf("bar_a_play: %d \n", bar_a_play);
+		//rt_printf("step_a_play: %d \n", step_a_play);
 
-		if (step_count == FIRST_STEP) {
-    		rt_printf("FIRST_STEP \n");
-    	} else {
-    		rt_printf("other step \n");
-    	}
+
     	
+    	
+
 
     //	rt_printf("Midi last_note_on: %d \n", last_note_on);
     // 	rt_printf("Midi last_note_off: %d \n", last_note_off);
     //	rt_printf("Midi last_note_disabled: %d \n", last_note_disabled);
     	
-    //	rt_printf("Midi midi_channel_a: %d \n", midi_channel_a);
+    //	rt_printf("Midi midi_channel_x: %d \n", midi_channel_x);
     	
     	
     
     	
 
-    rt_printf("sequence_is_running is: %d \n", sequence_is_running);
+    //rt_printf("sequence_is_running is: %d \n", sequence_is_running);
 
     // Sequence Outputs 
-    //rt_printf("target_gate_out_state is: %d \n", target_gate_out_state);
-		//rt_printf("gate_out_state_set is: %d \n", gate_out_state_set);      
+    //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
+		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
 
 
       //std::string message = "$simon!";
@@ -1242,20 +1424,9 @@ void printStatus(void*){
 //rt_printf("sent %d  bytes \n", my_result);
 
 
-
-	
-	
-
-
-
       rt_printf("\n==== Bye from printStatus ======= \n");
       
-      
 
-
-
-    	
-    	
     }
 
 
@@ -1265,26 +1436,30 @@ void printStatus(void*){
 
 
 
-
-void DisableNotes(uint8_t note){
+void DisableMidiNotes(uint8_t note){
+	
+	last_function = 28749;
+	
              // Disable that note for all steps.
            uint8_t sc = 0;
            uint8_t bc = 0;
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
-              channel_a_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
+              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
 }
 
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+	
+	last_function = 466942;
 
-  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_count is currently %d, step_count is currently %d \n", on_off, note, velocity, channel, bar_count, step_count);
+  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
   if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
@@ -1295,34 +1470,34 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
            
            // Disable the note on all steps
            //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
-           DisableNotes(note);
+           DisableMidiNotes(note);
            
            last_note_disabled = note;
 
-          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_x_midi_note_events
           // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
           // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
           // these Note OFF events. 
           // One way is to store them here for processing after the note OFF actually happens. 
-          channel_a_ghost_events[note].is_active=1;
+          channel_x_ghost_events[note].is_active=1;
     
         } else {
           // We want the note on, so set it on.
-          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_count, velocity );
+          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
           // WRITE MIDI MIDI_DATA
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].velocity = velocity;
-          channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][1].is_active = 1;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
           
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
-          	midi.writeNoteOn(midi_channel_a, note, velocity); // echo midi to the output
+          	midi.writeNoteOn(midi_channel_x, note, velocity); // echo midi to the output
           }
           
           
           last_note_on = note;
           
-          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_count, velocity );
+          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
 
         } 
       
@@ -1330,46 +1505,48 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
         } else {
           
             // Note Off
-             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
+             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
              
              // WRITE MIDI MIDI_DATA
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].velocity = velocity;
-             channel_a_midi_note_events[current_midi_lane][bar_count][step_count][note][0].is_active = 1;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
 
 			 last_note_off = note;
 			
 			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
 			if (sequence_is_running == 0){ 
-				midi.writeNoteOff(midi_channel_a, note, 0);
+				midi.writeNoteOff(midi_channel_x, note, 0);
 			}
-        	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_count, step_count );
+        	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
   }
   } 
 
 
-void GateHigh(){
-  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing.tick_count_since_start);
+void GateAHigh(){
+	
+   last_function = 982934;	
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
-  
-  target_gate_out_state = true;
+  target_analog_gate_a_out_state = true;
+  target_digital_gate_a_out_state = true;
   target_led_1_state = true; 
-  
-  
+
+
+
+    
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
-  
-  
-  
-
-  
-
 }
 
-void GateLow(){
+void GateALow(){
+	
+	last_function = 9849;
   //rt_printf("Gate LOW");
   
-  target_gate_out_state = false;
+  target_analog_gate_a_out_state = false;
+  target_digital_gate_a_out_state = false;
+  
   target_led_1_state = false; 
   
   audio_adsr_a.gate(false);
@@ -1377,23 +1554,52 @@ void GateLow(){
   
   sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
   
-  
-
-  
-
 }
 
+void GateBHigh(){
+	
+   last_function = 969636;	
+	
+  //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
+  
+  target_analog_gate_b_out_state = true;
+
+  target_digital_gate_b_out_state = true;
+
+  target_led_3_state = true; 
+    
+  //audio_adsr_a.gate(true);
+  //step_triggered_adsr_b.gate(true);
+}
+
+
+void GateBLow(){
+  //rt_printf("Gate LOW");
+  
+  last_function = 17469;
+  
+  target_analog_gate_b_out_state = false;
+
+  target_digital_gate_b_out_state = false;
+
+
+  target_led_3_state = false; 
+  
+  //audio_adsr_a.gate(false);
+  //step_triggered_adsr_b.gate(false);
+  
+  //sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
+  
+}
+
+
+
+
 bool RampIsPositive(){
+	last_function = 6684268;
+	
 	// TODO BELA
 	return false;
-  //if (cv_waveform_b_amplitude_delta > 0)
-  //{
-  //  return true;
-  //} 
-  //else 
-  //{
-  //  return false;
-  //}
   
 }
 
@@ -1411,6 +1617,8 @@ void SyncAndResetCv(){
 
 // Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
 uint8_t ReadBit (int number, int b ){
+	
+	last_function = 28642;
 	(number & ( 1 << b )) >> b;
 }
 
@@ -1421,70 +1629,135 @@ uint8_t ReadBit (int number, int b ){
 
 /////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
-void OnStep(){
+void OnStepA(){
 	
+	last_function = 929732;
 	
-
-
-  
-
-  //rt_printf("Hello from OnStep: %d \n", step_count);
-  //rt_printf("the_sequence is: %d \n", the_sequence);
-  //print_binary(the_sequence);
+  //rt_printf("Hello from OnStepA: %d \n", step_a_count);
+  //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+  //print_binary(the_sequence_a);
   //rt_printf("%c \n", 'B');
 
-
-
-
-  if (step_count > MAX_STEP) {
+  if (step_a_count > MAX_STEP) {
     rt_printf("----------------------------------------------------------------------------\n");  
-    rt_printf("------------------ ERROR! step_count is: %s --- ERROR ---\n", + step_count);
+    rt_printf("------------------ ERROR! step_a_count is: %s --- ERROR ---\n", + step_a_count);
     rt_printf("----------------------------------------------------------------------------\n");    
   }
 
   
 
-    if (step_count == FIRST_STEP) {
+    if (step_a_count == FIRST_STEP) {
     	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
       SyncAndResetCv();
     } else {
-      //rt_printf("----       not first step      step_count is %d FIRST_STEP is %d                  ------\n", step_count, FIRST_STEP ); 
+      //rt_printf("----       not first step      step_a_count is %d FIRST_STEP is %d                  ------\n", step_a_count, FIRST_STEP ); 
     }
   
   
-  step_count = StepCountSanity(step_count);
+  step_a_count = StepCountSanity(step_a_count);
 
-      // std::string message = "--:OnStep:" + std::to_string(step_count) + "--";
+      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
 	 // This sends a UDP message 
 	 // int my_result  = myUdpClient.send(&message, 32);
   
   
-  uint8_t play_note = (the_sequence & ( 1 << step_count )) >> step_count;  
+  uint8_t play_a_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
   
   // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
-  //uint8_t play_note = ReadBit(the_sequence, step_count);
+  //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
   
-   if (play_note){
-     //rt_printf("OnStep: %d ****++++++****** PLAY \n", step_count);
-    GateHigh(); 
+   if (play_a_note){
+     //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
+    GateAHigh(); 
    } else {
-    GateLow();
-     //rt_printf("OnStep: %d ***-----***** NOT play \n", step_count);
+    GateALow();
+     //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
    }
    
    Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
-   //rt_printf("==== End of OnStep: %d \n", step_count);
+   //rt_printf("==== End of OnStepA: %d \n", step_a_count);
       
 }
 
 
 
 // These are ticks which are not steps - so in between possible beats.
-void OnNotStep(){
-  //rt_printf("NOT step_countIn is: ") + step_countIn  ); 
+void OnNotStepA(){
+	
+	last_function = 843;
+	
+  //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
   // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
-  GateLow();
+  GateALow();
+  
+}
+
+//////
+
+/////////////////////////////////////////////////////////////
+// These are the possible beats of the sequence
+void OnStepB(){
+	
+	last_function = 296;
+	
+  //rt_printf("Hello from OnStepB: %d \n", step_a_count);
+  //rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+  //print_binary(the_sequence_a);
+  //rt_printf("%c \n", 'B');
+
+  if (step_b_count > MAX_STEP) {
+    rt_printf("----------------------------------------------------------------------------\n");  
+    rt_printf("------------------ ERROR! step_b_count is: %s --- ERROR ---\n", + step_b_count);
+    rt_printf("----------------------------------------------------------------------------\n");    
+  }
+
+  
+
+    if (step_b_count == FIRST_STEP) {
+    	//rt_printf("----   -------   YES FIRST_STEP     -------    ------\n");
+      //SyncAndResetCv(); // TODOAB
+    } else {
+      //rt_printf("----       not first step      step_a_count is %d FIRST_STEP is %d                  ------\n", step_a_count, FIRST_STEP ); 
+    }
+  
+  
+  step_b_count = StepCountSanity(step_b_count);
+
+      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
+	 // This sends a UDP message 
+	 // int my_result  = myUdpClient.send(&message, 32);
+  
+  
+  uint8_t play_b_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
+  
+  // Why does the line below trigger "Xenomai/cobalt: watchdog triggered" whereas the same logic in this function does not?
+  //uint8_t play_note = ReadBit(the_sequence_a, step_a_count);
+  
+   if (play_b_note){
+     //rt_printf("OnStepA: %d ****++++++****** PLAY \n", step_a_count);
+    GateBHigh(); 
+   } else {
+    GateBLow();
+     //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
+   }
+   
+   Bela_scheduleAuxiliaryTask(gPrintStatus);	
+
+   //rt_printf("==== End of OnStepA: %d \n", step_a_count);
+      
+}
+
+
+
+// These are ticks which are not steps - so in between possible beats.
+void OnNotStepB(){
+	
+	last_function = 69469;
+	
+  //rt_printf("NOT step_a_countIn is: ") + step_a_countIn  ); 
+  // TODO not sure how this worked before. function name? ChangeCvWaveformBAmplitude(); 
+  GateBLow();
   
 }
 
@@ -1492,21 +1765,7 @@ void OnNotStep(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//////
 
 float gFreq;
 float gPhaseIncrement = 0;
@@ -1526,39 +1785,28 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-void SetPlayFromCount(){
+void SetPlayAFromCount(){
+	last_function = 6798;
 	
-bar_play = bar_count;
-step_play = step_count;
+	bar_a_play = bar_a_count;
+	step_a_play = step_a_count;
+}
 
+void SetPlayBFromCount(){
 	
-// 	current_sequence_length_in_steps
-
-/*
-// If 0, use normal operation (mod 0 would give error)
-if (midi_control_a_input == 0){
-	bar_play = bar_count;	
-} else {
-  bar_play = bar_count % midi_control_a_input; 
+	last_function = 79;
+	
+	bar_b_play = bar_b_count;
+	step_b_play = step_b_count;
 }
-
-
-// If 0, use normal operation (mod 0 would give error)
-if (midi_control_b_input == 0){
-	step_play = step_count;
-} else {
-  step_play = step_count % midi_control_b_input;
-}
-
-*/
-
-}
-
 
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
-  //rt_printf("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+	
+	last_function = 364892;
+	
+  //rt_printf("midi_note  ") + i + String(" value is ") + channel_x_midi_note_events[step_a_count][i]  );
 
 			// midi_byte_t statusByte = 0xB0; // control change on channel 0
 			// midi_byte_t controller = 30; // controller number 30
@@ -1569,22 +1817,22 @@ void PlayMidi(){
 
 
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnStep  ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    //rt_printf("** OnStepA  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
     
     // READ MIDI sequence
-    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].is_active == 1) { 
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_play)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
-            	//rt_printf("PlayMidi step_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_play, loop_timing.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_a, n, channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][1].velocity);
+           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
+            	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
+            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA
-    if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].is_active == 1) {
-       if (channel_a_midi_note_events[current_midi_lane][BarCountSanity(bar_play)][StepCountSanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
-           //rt_printf("Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
-           midi.writeNoteOff(midi_channel_a, n, 0);
+    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
+       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
+           //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step_a +  String(" Found and will send Note OFF for ") + n );
+           midi.writeNoteOff(midi_channel_x, n, 0);
        }
     }
   } // End midi note loop
@@ -1596,37 +1844,39 @@ void PlayMidi(){
 
 
 /////////
-void AdvanceSequenceChronology(){
+void AdvanceSequenceAChronology(){
+	
+	last_function = 2386;
   
   // This function advances or resets the sequence powered by the clock.
 
   // But first check / set the desired sequence length
 
-  //rt_printf("Hello from AdvanceSequenceChronology ");
+  //rt_printf("Hello from AdvanceSequenceAChronology ");
 
 
   // Reverse because we want fully clockwise to be short so we get 1's if sequence is 1.
-  //current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_length_in_steps_raw;
+  //current_sequence_a_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS - current_sequence_a_length_in_steps_raw;
 
-  //rt_printf("current_sequence_length_in_steps is: %d ", current_sequence_length_in_steps  );
+  //rt_printf("current_sequence_a_length_in_steps is: %d ", current_sequence_a_length_in_steps  );
 
-  if (current_sequence_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
-    rt_printf("**** ERROR with current_sequence_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
-    current_sequence_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+  if (current_sequence_a_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with current_sequence_a_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_a_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    current_sequence_a_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
     
   }
   
-  if (current_sequence_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
-    current_sequence_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
-    rt_printf("**** ERROR with current_sequence_length_in_steps but it is NOW: %d ", current_sequence_length_in_steps  );
+  if (current_sequence_a_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    current_sequence_a_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with current_sequence_a_length_in_steps but it is NOW: %d ", current_sequence_a_length_in_steps  );
   }
 
-  new_sequence_length_in_ticks = (current_sequence_length_in_steps) * 6;
-  //Serial.println(String("current_sequence_length_in_steps is: ") + current_sequence_length_in_steps  ); 
-  //Serial.println(String("new_sequence_length_in_ticks is: ") + new_sequence_length_in_ticks  );  
+  new_sequence_a_length_in_ticks = (current_sequence_a_length_in_steps) * 6;
+  //Serial.println(String("current_sequence_a_length_in_steps is: ") + current_sequence_a_length_in_steps  ); 
+  //Serial.println(String("new_sequence_a_length_in_ticks is: ") + new_sequence_a_length_in_ticks  );  
 
   // Always advance the ticks SINCE START
-  SetTotalTickCount(loop_timing.tick_count_since_start += 1);
+  SetTotalTickCountA(loop_timing_a.tick_count_since_start += 1);
 
 
 
@@ -1644,47 +1894,118 @@ void AdvanceSequenceChronology(){
 
   // Advance the tick_count as long as we're not at the end of the sequence
   // tick_count_in_sequence is zero indexed
-  // new_sequence_length_in_ticks is one indexed
+  // new_sequence_a_length_in_ticks is one indexed
   // 
 
+  // Should we Reset or Increment?
   // If we're at the end of the sequence
   if (
-    (loop_timing.tick_count_in_sequence + 1 == new_sequence_length_in_ticks )
-
+    (loop_timing_a.tick_count_in_sequence + 1 == new_sequence_a_length_in_ticks )
+  // this causes multiple resets on bela
   // or we past the end and we're at new beat  
+  // WE NEED this check else we crash when sequence length gets reduced because we overshoot 
   ||
-  (loop_timing.tick_count_in_sequence + 1  >= new_sequence_length_in_ticks 
+  (loop_timing_a.tick_count_in_sequence + 1  >= new_sequence_a_length_in_ticks 
       && 
-      // loop_timing.tick_count_since_start % new_sequence_length_in_ticks == 0 
+      // loop_timing_a.tick_count_since_start % new_sequence_a_length_in_ticks == 0 
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
-      loop_timing.tick_count_since_start % 6 == 0 
+      loop_timing_a.tick_count_since_start % 6 == 0 
   )
   // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
-  loop_timing.tick_count_in_sequence >= 16 * 6
+  loop_timing_a.tick_count_in_sequence >= 16 * 6
   ) { // Reset
-    ResetSequenceCounters();
+    ResetSequenceACounters();
   } else {
-    SetTickCountInSequence(loop_timing.tick_count_in_sequence += 1); // Else increment.
+    SetTickCountInSequenceA(loop_timing_a.tick_count_in_sequence += 1); // Else increment.
   }
 
   // Update Step Count (this could also be a function but probably makes sense to store it)
   // An integer operation - we just want the quotient.
-  step_count = loop_timing.tick_count_in_sequence / 6;
+  step_a_count = loop_timing_a.tick_count_in_sequence / 6;
 
   // Just to show the tick progress  
-  ticks_after_step = loop_timing.tick_count_in_sequence % 6;
+  ticks_after_step_a = loop_timing_a.tick_count_in_sequence % 6;
 
- //Serial.println(String("step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step  );
+ //Serial.println(String("step_a_count is ") + step_a_count  + String(" ticks_after_step_a is ") + ticks_after_step_a  );
  
- SetPlayFromCount();
+ SetPlayAFromCount();
+
+  
+}
+
+
+void AdvanceSequenceBChronology(){
+	
+	last_function = 585635;
+  
+ //rt_printf("**** AdvanceSequenceBChronology");
+ 
+ 
+ 
+  if (current_sequence_b_length_in_steps < MIN_SEQUENCE_LENGTH_IN_STEPS){
+    rt_printf("**** ERROR with current_sequence_b_length_in_steps it WAS: %d but setting it to: %d ", current_sequence_b_length_in_steps, MIN_SEQUENCE_LENGTH_IN_STEPS );
+    current_sequence_b_length_in_steps = MIN_SEQUENCE_LENGTH_IN_STEPS; 
+    
+  }
+  
+  if (current_sequence_b_length_in_steps > MAX_SEQUENCE_LENGTH_IN_STEPS){
+    current_sequence_b_length_in_steps = MAX_SEQUENCE_LENGTH_IN_STEPS; 
+    rt_printf("**** ERROR with current_sequence_b_length_in_steps but it is NOW: %d ", current_sequence_b_length_in_steps  );
+  }
+
+  new_sequence_b_length_in_ticks = (current_sequence_b_length_in_steps) * 6;
+  //Serial.println(String("current_sequence_b_length_in_steps is: ") + current_sequence_b_length_in_steps  ); 
+  //Serial.println(String("new_sequence_b_length_in_ticks is: ") + new_sequence_b_length_in_ticks  );  
+
+  // Always advance the ticks SINCE START
+  SetTotalTickCountB(loop_timing_b.tick_count_since_start += 1);
+
+
+  // If we're at the end of the sequence
+  if (
+    (loop_timing_b.tick_count_in_sequence + 1 == new_sequence_b_length_in_ticks )
+
+  // or we past the end and we're at new beat  
+  ||
+  (loop_timing_b.tick_count_in_sequence + 1  >= new_sequence_b_length_in_ticks 
+      && 
+      // loop_timing_b.tick_count_since_start % new_sequence_b_length_in_ticks == 0 
+      // If somehow we overshot (because pot was being turned whilst sequence running), only 
+      loop_timing_b.tick_count_since_start % 6 == 0 
+  )
+  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
+  || 
+  loop_timing_b.tick_count_in_sequence >= 16 * 6
+  ) { // Reset
+    ResetSequenceBCounters();
+  } else {
+    SetTickCountInSequenceB(loop_timing_b.tick_count_in_sequence += 1); // Else increment.
+  }
+
+  // Update Step Count (this could also be a function but probably makes sense to store it)
+  // An integer operation - we just want the quotient.
+  step_b_count = loop_timing_b.tick_count_in_sequence / 6;
+
+  // Just to show the tick progress  
+  ticks_after_step_b = loop_timing_b.tick_count_in_sequence % 6;
+
+ //Serial.println(String("step_b_count is ") + step_b_count  + String(" ticks_after_step_a is ") + ticks_after_step_a  );
+ 
+ SetPlayBFromCount();
 
   
 }
 
 
 
+
+
+
 void OnTick(){
+	
+	last_function = 55411;
+	
 // Called on Every MIDI or Analogue clock pulse
 // Drives sequencer activity.
 // Can be called from Midi Clock and/or Digital Clock In.
@@ -1694,8 +2015,8 @@ void OnTick(){
   last_tick_frame = frame_timer;	
 
   /////////////////
-  // BPM Detection
-  if (loop_timing.tick_count_since_start % 24 == 0){
+  // BPM Detection (we use A)
+  if (loop_timing_a.tick_count_since_start % 24 == 0){
     // 1 Tick (clock pulse) = f Audio Frames
     // 1 Tick = f / 44100 (Audio Sample Rate) seconds
     // There are 44100/f Ticks per seconds
@@ -1719,16 +2040,31 @@ void OnTick(){
  
 
   // Decide if we have a "step"
-  if (loop_timing.tick_count_in_sequence % 6 == 0){
+  if (loop_timing_a.tick_count_in_sequence % 6 == 0){
     //clockShowHigh();
-    //rt_printf("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
-    OnStep();
+    OnStepA();
     /////////////////////////////////////////   
   } else {
     //clockShowLow();
     // The other ticks which are not "steps".
-    OnNotStep();
+    OnNotStepA();
+    //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+
+  // Decide if we have a "step"
+  if (loop_timing_b.tick_count_in_sequence % 6 == 0){
+    //clockShowHigh();
+    //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStepB();
+    /////////////////////////////////////////   
+  } else {
+    //clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStepB();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
   }
 
@@ -1741,7 +2077,8 @@ void OnTick(){
   PlayMidi();
    
   // Advance and Reset ticks and steps
-  AdvanceSequenceChronology();
+  AdvanceSequenceAChronology();
+  AdvanceSequenceBChronology();
 
 }
 
@@ -1760,6 +2097,8 @@ void OnTick(){
 
 // See Midi.h in the Libraries section of the Bela IDE
 void readMidiLoop(MidiChannelMessage message, void* arg){
+	
+	last_function = 9945443;
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 	
@@ -1780,14 +2119,14 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	if(type_received == kmmNoteOn && velocity_received > 0){
 			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
 			// Write any note ON into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_a);
+			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_x);
 	// Check for a NOTE OFF	 
 	} else if (message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
 		
 			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
 			
 			// Write any note OFF into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_a);
+			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_x);
 			
 	// CLOCK but not currently working.
 	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
@@ -1822,6 +2161,8 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 // https://www.codesdope.com/blog/article/set-toggle-and-clear-a-bit-in-c/
 // That will clear the nth bit of number. You must invert the bit string with the bitwise NOT operator (~), then AND it.
 int BitClear (unsigned int number, unsigned int n) {
+	
+	last_function = 54543232;
 	// return number &= ~(1 << n);	
 	return number &= ~(1UL << n);
 }
@@ -1842,6 +2183,8 @@ int BitClear (unsigned int number, unsigned int n) {
 // Modified from code by Greg Shakar
 float fscale( float originalMin, float originalMax, float newBegin, float
 newEnd, float inputValue, float curve){
+	
+	last_function = 4534;
 
   float OriginalRange = 0;
   float new_range = 0;
@@ -1917,10 +2260,16 @@ newEnd, float inputValue, float curve){
 // From https://gist.github.com/shirish47/d21b896570a8fccbd9c3
 unsigned int Binary2Gray(unsigned int data)
  {
-   unsigned int n_data=(data>>1);
-   n_data=(data ^ n_data);
+ 	last_function = 561122;
+ 	
+ 	//rt_printf("======== Hello from Binary2Gray data is: %d ========= \n",data);
+ 	
+   unsigned int n_data = (data>>1);
+   unsigned int gray_code = (data ^ n_data);
    
-  return n_data;
+   //rt_printf("======== Bye from Binary2Gray gray_code is: %d ========= \n",gray_code);
+
+  return gray_code;
  }
 ///////////////////////////////////////////////////////////////
 
@@ -1928,19 +2277,21 @@ unsigned int Binary2Gray(unsigned int data)
 // linear conversion https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
 
 float linearScale( float original_range_min, float original_range_max, float new_range_min, float new_range_max, float original_value){
+	
+	last_function = 990088;
 
-float original_range = (original_range_max - original_range_min);
-
-//Serial.println(String("linearScale original_range ") + original_range );
-
-float new_range = (new_range_max - new_range_min);  
-//Serial.println(String("linearScale new_range ") + new_range );
-
-float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
-
-//Serial.println(String("linearScale new_value ") + new_value );
-
-return new_value;
+	float original_range = (original_range_max - original_range_min);
+	
+	//Serial.println(String("linearScale original_range ") + original_range );
+	
+	float new_range = (new_range_max - new_range_min);  
+	//Serial.println(String("linearScale new_range ") + new_range );
+	
+	float new_value = (((original_value - original_range_min) * new_range) / original_range) + new_range_min;
+	
+	//Serial.println(String("linearScale new_value ") + new_value );
+	
+	return new_value;
 }
 
 
@@ -1987,6 +2338,8 @@ void Led4Digital(bool state){
 
 
 void ChangeCvWaveformBAmplitude(){
+	
+	last_function = 948462;
   
   // change by an amount (might go up or down)
   cv_waveform_b_amplitude += cv_waveform_b_amplitude_delta;
@@ -1997,6 +2350,8 @@ void ChangeCvWaveformBAmplitude(){
 }
 
 void SetWaveformBObjectAmplitude (){
+	
+	last_function = 296689;
   
    // reset if its out of bounds
   if (cv_waveform_b_amplitude < 0 ) {
@@ -2020,6 +2375,8 @@ void SetWaveformBObjectAmplitude (){
 
 
 void CvStop(){
+	
+	last_function = 883355;
   rt_printf("CvStop \n");
   
   // TODO
@@ -2049,12 +2406,14 @@ void clockShowLow(){
 
 void AllNotesOff(void*){
 	
+	last_function = 99883352;
+	
 	// Don't do this too often
 	if (frame_timer - last_notes_off_frame > 11000){
 		  // All MIDI notes off.
 		  rt_printf("All MIDI notes OFF \n");
 		  for (uint8_t n = 0; n <= 127; n++) {
-		     midi.writeNoteOff(midi_channel_a, n, 0);
+		     midi.writeNoteOff(midi_channel_x, n, 0);
 		  }
 		  last_notes_off_frame = frame_timer;
 	} else {
@@ -2064,6 +2423,8 @@ void AllNotesOff(void*){
 }
 
 void SetLane(uint8_t lane_in){
+	
+	last_function = 5533889;
 
 	if (lane_in > MAX_LANE){
 		current_midi_lane = MAX_LANE;
@@ -2085,6 +2446,8 @@ void SetLane(uint8_t lane_in){
 
 void InitMidiSequence(bool force){
 	
+	last_function = 32786;
+	
   if (init_midi_sequence_has_run == false || force == true){	
 
   rt_printf("InitMidiSequence Start \n");
@@ -2104,11 +2467,11 @@ void InitMidiSequence(bool force){
       for (uint8_t n = 0; n <= 127; n++) {
         // Initialise and print Note on (1) and Off (2) contents of the array.
         // WRITE MIDI MIDI_DATA
-        channel_a_midi_note_events[ln][bc][sc][n][1].is_active = 0;
-        channel_a_midi_note_events[ln][bc][sc][n][0].is_active = 0;
+        channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
+        channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
   
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
       } 
     }
   }
@@ -2117,7 +2480,7 @@ void InitMidiSequence(bool force){
    
   
     for (uint8_t n = 0; n <= 127; n++) {
-     channel_a_ghost_events[n].is_active = 0;
+     channel_x_ghost_events[n].is_active = 0;
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   }
   
@@ -2139,21 +2502,36 @@ void InitMidiSequence(bool force){
 
 // Each time we start the sequencer we want to start from the same conditions.
 void InitSequencer(){
-  GateLow();
-  CvStop();
-  loop_timing.tick_count_since_start = 0;
-  ResetSequenceCounters();
+	
+  last_function = 9876542;	
+	
+  GateALow();
+  GateBLow();
 
- 
+  CvStop();
+
+
+  loop_timing_a.tick_count_since_start = 0;
+  ResetSequenceACounters();
+
+  loop_timing_b.tick_count_since_start = 0;
+  ResetSequenceBCounters();
+
+
 }
 
 void StartSequencer(){
+	
+	last_function = 6782341;
+	
   InitSequencer();
   sequence_is_running = HIGH;
   need_to_auto_save_sequence = true;
 }
 
 void StopSequencer(){
+	
+	last_function = 82558;
 //	auto millisec_since_epoch_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	
 	
@@ -2180,6 +2558,8 @@ void StopSequencer(){
 
 
 int GetValue(int raw, int last, int jitter_reduction){
+	
+	last_function = 2542;
 int value; 
 
  int diff = abs(raw - last);
@@ -2196,6 +2576,8 @@ return value;
 }
 
 bool IsCrossing(int value_1, int value_2, int fuzzyness){
+	
+	last_function = 5375;
   // Return true if the two values are close
   if (abs(value_1 - value_2) <= fuzzyness){
     return true;
@@ -2210,14 +2592,28 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+
+
+float draw_buffer[DELAY_BUFFER_SIZE] = {0};
+float draw_gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+
+
 // Write pointer
 int gDelayBufWritePtr = 0;
+
+
 
 // Amount of delay
 float gDelayAmount = 1.0;
 
+
+float draw_feedback_ratio = 1.0;
+
+
 // Level of pre-delay input
 float gDelayAmountPre = 0.75;
+
+float draw_feedback_ratioPre = 0.75;
 
 
 // Butterworth coefficients for low-pass filter @ 8000Hz
@@ -2237,7 +2633,9 @@ float gDel_x2_r = 0;
 float gDel_y1_r = 0;
 float gDel_y2_r = 0;
 
-///////// End of Bela Delay example
+///
+
+
 
 
 
@@ -2247,6 +2645,8 @@ float gDel_y2_r = 0;
 
 ////
 void InitAudioBuffer(){
+	
+	last_function = 25852;
 	// Buffer holding previous samples per channel
 	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
 	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
@@ -2258,28 +2658,37 @@ void InitAudioBuffer(){
 
 void ChangeSequence(void*){
 	
+	last_function = 24964222;
+	
 	 //rt_printf(" ChangeSequence " );
 	
 	
 	
 	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
-    unsigned int sequence_pattern_upper_limit = 1023; 
+    unsigned int sequence_a_pattern_upper_limit = 1023; 
+	unsigned int sequence_b_pattern_upper_limit = 1023;
 	
-	sequence_pattern_input = static_cast<int>(round(map(sequence_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_pattern_upper_limit))); 
-    //rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
+	
+	sequence_a_pattern_input = static_cast<int>(round(map(sequence_a_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit))); 
+    //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
     
+	sequence_b_pattern_input = static_cast<int>(round(map(sequence_b_pattern_input_raw, 0, 1, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit))); 
+    //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
 
 
 
-    current_sequence_length_in_steps = static_cast<int>(round(map(sequence_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
+    current_sequence_a_length_in_steps = static_cast<int>(round(map(sequence_a_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
     
+	current_sequence_b_length_in_steps = static_cast<int>(round(map(sequence_b_length_input_raw, 0, 1, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS))); 
+
+
  
     //////////////////////////////////////////
 // Assign values to change the sequencer.
 ///////////////////////////////////
 
-   last_binary_sequence_result = binary_sequence_result;
-
+   last_binary_sequence_a_result = binary_sequence_a_result;
+   last_binary_sequence_b_result = binary_sequence_b_result;
  
 
    // If we have 8 bits, use the range up to 255
@@ -2288,14 +2697,14 @@ void ChangeSequence(void*){
 
   
 
-//binary_sequence_upper_limit = pow(current_sequence_length_in_steps, 2);
+//binary_sequence_upper_limit = pow(current_sequence_a_length_in_steps, 2);
 
-// REMEMBER, current_sequence_length_in_steps is ONE indexed (from 1 up to 16) 
+// REMEMBER, current_sequence_a_length_in_steps is ONE indexed (from 1 up to 16) 
 // For a 3 step sequence we want to cover all the possibilities of a 3 step sequence which is (2^3) - 1 = 7
 // i.e. all bits on of a 3 step sequence is 111 = 7 decimal 
-// or (2^current_sequence_length_in_steps) - 1
-sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1; 
-
+// or (2^current_sequence_a_length_in_steps) - 1
+sequence_a_pattern_upper_limit = pow(2, current_sequence_a_length_in_steps) - 1; 
+sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1; 
 
 
    //rt_printf("binary_sequence_upper_limit is: ") + binary_sequence_upper_limit  );
@@ -2306,42 +2715,43 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
    // ***UPPER Pot HIGH Button*** //////////
   // Generally the lowest value from the pot we get is 2 or 3 
   // setting-1
-  binary_sequence_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_pattern_upper_limit, sequence_pattern_input, 0);
-
+  binary_sequence_a_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_a_pattern_upper_limit, sequence_a_pattern_input, 0);
+  binary_sequence_b_result = fscale( 1, 1023, sequence_pattern_lower_limit, sequence_b_pattern_upper_limit, sequence_b_pattern_input, 0);
    
 
 
-   if (binary_sequence_result != last_binary_sequence_result){
+   if (binary_sequence_a_result != last_binary_sequence_a_result){
     //rt_printf("binary_sequence has changed **");
    }
 
 
-   //rt_printf("binary_sequence_result is: ") + binary_sequence_result  );
+   //rt_printf("binary_sequence_a_result is: ") + binary_sequence_a_result  );
    //Serial.print("\t");
-   //Serial.print(binary_sequence_result, BIN);
+   //Serial.print(binary_sequence_a_result, BIN);
    //Serial.println();
 
-   gray_code_sequence = Binary2Gray(binary_sequence_result);
-   //rt_printf("gray_code_sequence is: ") + gray_code_sequence  );
+   gray_code_sequence_a = Binary2Gray(binary_sequence_a_result);
+   //rt_printf("gray_code_sequence_a is: ") + gray_code_sequence_a  );
    //Serial.print("\t");
-   //Serial.print(gray_code_sequence, BIN);
+   //Serial.print(gray_code_sequence_a, BIN);
    //Serial.println();
+   gray_code_sequence_b = Binary2Gray(binary_sequence_b_result);
 
 
+    the_sequence_a = gray_code_sequence_a;
+    the_sequence_b = gray_code_sequence_b;
 
-    the_sequence = gray_code_sequence;
-
-    //the_sequence = BitClear(the_sequence, current_sequence_length_in_steps -1); // current_sequence_length_in_steps is 1 based index. bitClear is zero based index.
-    //the_sequence = ~ the_sequence; // Invert
+    //the_sequence_a = BitClear(the_sequence_a, current_sequence_a_length_in_steps -1); // current_sequence_a_length_in_steps is 1 based index. bitClear is zero based index.
+    //the_sequence_a = ~ the_sequence_a; // Invert
 
     // So pot fully counter clockwise is 1 on the first beat 
-    // if (binary_sequence_result == 1){
-    //   the_sequence = 1;
+    // if (binary_sequence_a_result == 1){
+    //   the_sequence_a = 1;
     // }
 
-   //rt_printf("the_sequence is: %s ", the_sequence  );
+   //rt_printf("the_sequence_a is: %s ", the_sequence_a  );
    //Serial.print("\t");
-   //Serial.print(the_sequence, BIN);
+   //Serial.print(the_sequence_a, BIN);
    //Serial.println();
    
    
@@ -2446,27 +2856,13 @@ sequence_pattern_upper_limit = pow(2, current_sequence_length_in_steps) - 1;
 
 
 void MaybeOnTick(){
+	
+	last_function = 6644;
   if (do_tick == true){
     do_tick = false;
     OnTick();
   }
 }
-
-////////
-
-// from Bela delay example:
-
-//#define DELAY_BUFFER_SIZE 44100
-
-// 400000 enough for 16 step sequence at 30 bpm
-// Then a maximum multiplier of 16
-
-// 400000 * 16 
-
-
-
-
-
 
 
 
@@ -2477,16 +2873,11 @@ WriteFile file2;
 
 
 
-
-
-
-
-
-
-
 /////////////////////////////////////////////////////////
 
 bool setup(BelaContext *context, void *userData){
+	
+	last_function = 42396;
 	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
@@ -2629,6 +3020,10 @@ bool setup(BelaContext *context, void *userData){
         // The two LEDS on Salt
         pinMode(context, 0, LED_1_PIN, OUTPUT);
         pinMode(context, 0, LED_2_PIN, OUTPUT);
+        
+        // The two LEDS on Salt + 
+        pinMode(context, 0, LED_3_PIN, OUTPUT);
+        pinMode(context, 0, LED_4_PIN, OUTPUT);
 
 
 
@@ -2675,6 +3070,8 @@ bool setup(BelaContext *context, void *userData){
 
 void render(BelaContext *context, void *userData)
 {
+	
+	last_function = 886653;
 
   ///////////////////////////////////////////
   // Look for Analogue Clock (24 PPQ)
@@ -2753,8 +3150,12 @@ void render(BelaContext *context, void *userData)
         // Write the sample into the output buffer -- done!
         // Apply "VCA" to the output.  
 
+
+        // Channel 1 is modulated by the ADSR B
         audioWrite(context, n, 0, out_l * analog_adsr_b_level);
-        audioWrite(context, n, 1, out_r * analog_adsr_b_level);
+
+        // Unmodulated output
+        audioWrite(context, n, 1, out_r);
 		    // End Bela delay example code
 		    //////////////////////////////
 		
@@ -2788,97 +3189,123 @@ void render(BelaContext *context, void *userData)
 		analog_out_4 = ( lfo_a_result_analog + analog_adsr_b_level ) / 2.0;
 		
 		
+
+
+
+
+
+
+
+
+
 		
-		
+		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
 			
-	      // INPUTS 		
-		  if (ch == SEQUENCE_LENGTH_ANALOG_INPUT_PIN){
-		  	sequence_length_input_raw = analogRead(context, n, SEQUENCE_LENGTH_ANALOG_INPUT_PIN);
+	      // Sequence A INPUTS 		
+		  if (ch == SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN){
+		  	sequence_a_length_input_raw = analogRead(context, n, SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN);
+        
+        	// May be a hack to set two params from one knob.
+        	coarse_delay_input = map(analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
 		  }	
-	
-	
-	      // Get the sequence_pattern_input_raw
-	      if (ch == SEQUENCE_PATTERN_ANALOG_INPUT_PIN ){
+	    
+	    if (ch == SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN ){
 	      	// note this is getting all the frames 
-	        sequence_pattern_input_raw = analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN);
+	        sequence_a_pattern_input_raw = analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN);
 	        
-	        
-	        //rt_printf("Set sequence_pattern_input_raw %d ", sequence_pattern_input_raw); 
-	        
-	        //rt_printf("Set sequence_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_PATTERN_ANALOG_INPUT_PIN)); 
-	        
-	        
-	        //sequence_pattern_input = static_cast<double>(round(map(sequence_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_pattern_input_raw, sequence_pattern_input, jitter_reduction);
-	    	//rt_printf("**** NEW value for sequence_pattern_input is: %d ", sequence_pattern_input  );
-	        
-	        
-	      }
-	      
-	      if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 20);
- 
-	      	
-	      	//envelope_1_attack = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.001, 0.5);
-	      	//envelope_1_decay = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.5, 3.0);
-	      	
-		  	 // want range 0 to 3 seconds
-		  	//envelope_2_attack = analogRead(context, n, OSC_FREQUENCY_INPUT_PIN);
+	        //rt_printf("Set sequence_a_pattern_input_raw %d ", sequence_a_pattern_input_raw); 
+	        //rt_printf("Set sequence_a_pattern_input_raw %f ", analogRead(context, n, SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN)); 
+	        //sequence_a_pattern_input = static_cast<double>(round(map(sequence_a_pattern_input_raw, 0.0, 1.0, 0.0, 255.0))); // GetValue(sequence_a_pattern_input_raw, sequence_a_pattern_input, jitter_reduction);
+	    	  //rt_printf("**** NEW value for sequence_a_pattern_input is: %d ", sequence_a_pattern_input  );
+	    }
+
+    	// Sequence B INPUTS 
+    	if (ch == SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN){
+ 	      sequence_b_length_input_raw = analogRead(context, n, SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN);
+		 }	
+
+		 if (ch == SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN){
+        	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
+		 }
+
+		// Begin Bela delay example code
+		//    float analog_out_7 = 0;
+        //float analog_out_8 = 0;
+
+
+	    if (ch == OSC_FREQUENCY_INPUT_PIN){
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
 		  }
-		  
+
+
+
+        
+
+
+
 		  if (ch == ADSR_RELEASE_INPUT_PIN){
-		  	
-		  	// TODO use an oscillator here in stead.
+		  	// TODO use an oscillator here instead. why actually?
 		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
-		  	
-		  //	lfo_b_frequency_input_raw = analogRead(context, n, ADSR_RELEASE_INPUT_PIN);
 		  }
+		    
 		  
-		  
-		 
-		  
-		  if (ch == COARSE_DELAY_TIME_INPUT_PIN){
-		  	coarse_delay_input = map(analogRead(context, n, COARSE_DELAY_TIME_INPUT_PIN), 0, 1, 0, MAX_COARSE_DELAY_TIME_INPUT);
-		  	
-		  }
-		  
-		  // > 0.999 leads to distorsion
-		  if (ch == DELAY_FEEDBACK_INPUT_PIN){
-		  	delay_feedback_amount = map(analogRead(context, n, DELAY_FEEDBACK_INPUT_PIN), 0, 1, 0, 0.999);
-		  }
-		  
-		  
+      // Changes the Midi Lane. 
 		  if (ch == MIDI_LANE_INPUT_PIN){
-		  	midi_control_a_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
-		  	SetLane(midi_control_a_input);
+		  	midi_lane_input = floor(map(analogRead(context, n, MIDI_LANE_INPUT_PIN), 0, 1, MIN_LANE, MAX_LANE));
+		  	SetLane(midi_lane_input);
 		  }
 		  
-		  // > 0.999 leads to distorsion
-		  if (ch == MIDI_CONTROL_B_INPUT_PIN){
-		  	midi_control_b_input = floor(map(analogRead(context, n, MIDI_CONTROL_B_INPUT_PIN), 0, 1, MIN_MIDI_CONTROL_B_INPUT, MAX_MIDI_CONTROL_B_INPUT));
+		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
+		  if (ch == DRAW_INPUT_PIN){
+
+        
+		        // Increment draw buffer write pointer
+		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
+		            draw_buf_write_pointer = 0;
+		        }
+		        
+		        // this might be set when we reset sequence (get to FIRST_STEP)
+		        if (need_to_reset_draw_buf_pointer == true){
+		        	draw_buf_write_pointer = 0;
+		        	need_to_reset_draw_buf_pointer = false;
+		        }
+		
+		        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
+		        if (new_button_3_state == 1){
+		  		      analog_out_8 = analogRead(context,n,DRAW_INPUT_PIN);
+		            draw_buffer[draw_buf_write_pointer] = analog_out_8;
+		        } else {
+		        	// Else use the buffer value
+		            // analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		        	analog_out_8 = draw_buffer[draw_buf_write_pointer];
+		        	
+		        	
+		        }     
+		
+				// Write output
+		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
+
+
 		  }
 		  
 		  
 		  
 		  
 	      
-	      // OUTPUTS
+	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
-	      if (ch == SEQUENCE_GATE_OUTPUT_1_PIN){
-	      	if (target_gate_out_state == HIGH){
+	      if (ch == SEQUENCE_A_GATE_OUTPUT_1_PIN){
+	      	if (target_analog_gate_a_out_state == HIGH){
 	      		analog_out_1 = 1.0;
 	      	} else {
 	      		analog_out_1 = -1.0;	
 	      	}
 	      	analogWrite(context, n, ch, analog_out_1);
-	    	
 	      }
 
 	      // CV 2
 	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
-
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
@@ -2886,18 +3313,26 @@ void render(BelaContext *context, void *userData)
 
 	      // CV 3 - This is below the left hand LED so should be related to the Length of the Sequence (Simple decaying envelope)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
 	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
-
-
 	      	//rt_printf("amp is: %f", amp);
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
+	      
+	      if (ch == SEQUENCE_B_GATE_OUTPUT_5_PIN){
+	      	if (target_analog_gate_b_out_state == HIGH){
+	      		analog_out_5 = 1.0;
+	      	} else {
+	      		analog_out_5 = -1.0;	
+	      	}
+	      	analogWrite(context, n, ch, analog_out_5);
+	      }
+	      
+	      
 	      
 	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
 
@@ -2905,7 +3340,7 @@ void render(BelaContext *context, void *userData)
 	}
 	
 
-	
+	// How often does this run? 
 	Bela_scheduleAuxiliaryTask(gChangeSequenceTask);
 	
 	
@@ -2933,33 +3368,6 @@ void render(BelaContext *context, void *userData)
         	old_button_4_state = new_button_4_state;
         	new_button_4_state = digitalRead(context, m, button_4_PIN);
 
-
-
-
-        	old_both_buttons_pressed_state = new_both_buttons_pressed_state;
-        	
-        	// if ((new_button_1_state == 1 && new_button_2_state == 1) && old_both_buttons_pressed_state == 0) {
-        	// 	both_buttons_pressed_counter = both_buttons_pressed_counter + 1;
-        	// 	new_both_buttons_pressed_state = 1;
-        		
-        	// 	if ((both_buttons_pressed_counter % 2) == 0){
-        	// 		both_buttons_pressed_even = 1;
-    
-        	// 		do_both_buttons_action_a = 1;
-        	// 		do_both_buttons_action_b = 0;
-        	// 	} else {
-        	// 	    both_buttons_pressed_even = 0;
-        	// 	    do_both_buttons_action_a = 0;
-        	// 	    do_both_buttons_action_b = 1;
-        	// 	}
-        		
-        	// 	// Reset the buttons becuase we don't want a one button action as well
-        	// 	new_button_1_state = 0;
-        	// 	new_button_2_state = 0;
-        		
-        	// } else {
-        	// 	new_both_buttons_pressed_state = 0;	
- 
         	
 	        	// Left button newly pressed get smaller
 	        	if ((new_button_1_state != old_button_1_state) && new_button_1_state == 1){
@@ -2981,35 +3389,51 @@ void render(BelaContext *context, void *userData)
 	        		do_button_4_action = 1;
 	        	}
         	
-        	
-        //	}// End both buttons pressed check
-        	
-        	
-        
+        	        	
+  
         	// Only set new state if target is changed
-        	if (target_gate_out_state != gate_out_state_set){
+        	if (target_digital_gate_a_out_state != current_digital_gate_a_out_state){
         		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
-	        	digitalWrite(context, m, SEQUENCE_OUT_PIN, target_gate_out_state);
-	        	gate_out_state_set = target_gate_out_state;
+	        	digitalWrite(context, m, SEQUENCE_A_DIGITAL_OUT_PIN, target_digital_gate_a_out_state);
+	        	current_digital_gate_a_out_state = target_digital_gate_a_out_state;
         	}
+
+        	if (target_digital_gate_b_out_state != current_digital_gate_b_out_state){
+        		// 0 to 3.3V ? Salt docs says its 0 to 5 V (Eurorack trigger voltage is 0 - 5V)
+	        	digitalWrite(context, m, SEQUENCE_B_DIGITAL_OUT_PIN, target_digital_gate_b_out_state);
+	        	current_digital_gate_b_out_state = target_digital_gate_b_out_state;
+        	}
+
 
 
           // Drive the LEDS. See https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
           // Also set by flash
           if (target_led_1_state == HIGH){
-            digitalWriteOnce(context, m, LED_1_PIN, LOW);
-            
+            digitalWriteOnce(context, m, LED_1_PIN, LOW);      
           } else {
             digitalWriteOnce(context, m, LED_1_PIN, HIGH);
-
           }
           
+          if (target_led_2_state == HIGH){
+            digitalWriteOnce(context, m, LED_2_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_2_PIN, HIGH);
+          }
           
+          if (target_led_3_state == HIGH){
+            digitalWriteOnce(context, m, LED_3_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_3_PIN, HIGH);
+          }
           
-          
+          if (target_led_4_state == HIGH){
+            digitalWriteOnce(context, m, LED_4_PIN, LOW);      
+          } else {
+            digitalWriteOnce(context, m, LED_4_PIN, HIGH);
+          }
           
         	
-        	// Do similar for another PIN for if (step_count == FIRST_STEP)
+        	// Do similar for another PIN for if (step_a_count == FIRST_STEP)
         	
 
 
@@ -3110,6 +3534,8 @@ void render(BelaContext *context, void *userData)
 
 void cleanup(BelaContext *context, void *userData)
 {
+	last_function = 588773;
+	
 	Bela_scheduleAuxiliaryTask(gAllNotesOff);
 }
 
@@ -3121,6 +3547,8 @@ void cleanup(BelaContext *context, void *userData)
 // complete if the system is under heavy audio load.
 void recalculate_frequencies(void*)
 {
+		last_function = 628497;
+	
         float freq = gNewMinFrequency;
         float increment = (gNewMaxFrequency - gNewMinFrequency) / (float)gNumOscillators;
         for(int n = 0; n < gNumOscillators; n++) {
@@ -3213,3 +3641,4 @@ class UdpClient{
 
 #endif /* UDPCLIENT_H_ */
 
+  

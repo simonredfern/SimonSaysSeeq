@@ -21,10 +21,10 @@ AudioAnalyzeRMS          test_rms_object;
 
 AudioConnection          patchCordTest1(test_waveform_object, test_rms_object);
 
-AudioSynthWaveformDc     gate_dc_waveform;
+AudioSynthWaveformDc     gate_a_dc_waveform;
 
 
-AudioSynthWaveformDc     gate_2_dc_waveform;
+AudioSynthWaveformDc     gate_b_dc_waveform;
 
 /////////////////////////////////////
 // How we generate CV
@@ -74,7 +74,7 @@ AudioAnalyzeRMS          gate_monitor_rms;
 //////////////////////////
 // GATE Output and Monitor
 
-AudioConnection          patchCord9(gate_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
+AudioConnection          patchCord9(gate_a_dc_waveform, gate_monitor_rms); // GATE -> montior (for LED)
 
 
 AudioControlSGTL5000     audioShield;
@@ -107,6 +107,11 @@ const uint8_t BRIGHT_5 = 255;
 // Use zero based index for sequencer. i.e. step_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
 const uint8_t MAX_STEP = 15;
+
+// Use zero based index for bar.
+const uint8_t FIRST_BAR = 0;
+const uint8_t MAX_BAR = 1; // Memory User!
+
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
@@ -253,7 +258,7 @@ float cv_offset;
 // Midi clock and start / stop related
 // We use the following library  https://github.com/FortySevenEffects/arduino_midi_library/wiki/Using-custom-Settings
 
-//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI); // This was Euroshield
+//MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI); // This was Euroshield. Need for USB midi?
 
 //MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI); // Check this
 
@@ -266,15 +271,18 @@ float cv_offset;
 
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
-// Note name (number) and step information is stored in the array below.
+// Note name (number) and step information is stored in the array below.         
 class NoteInfo
 {
-  public:
-    uint8_t velocity = 0 ;
-    uint8_t tick_count_in_sequence = 0;
-    uint8_t is_active = 0;
+ public:
+   uint8_t velocity = 0 ;
+   uint8_t tick_count_since_step = 0; 
+   boolean is_active = 0;
 };
 /////////
+
+
+
 
 ////////
 // For each sequence step / midi note number  / on-or-off we store a NoteInfo (which defines a bit more info)
@@ -284,7 +292,10 @@ class NoteInfo
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-NoteInfo channel_a_midi_note_events[MAX_STEP + 1][128][2];
+NoteInfo channel_a_midi_note_events[MAX_BAR+1][MAX_STEP+1][128][2]; 
+////////
+
+
 ////////
 
 
@@ -328,21 +339,27 @@ float cv_modulator_b_amplitude;
 float cv_modulator_b_amplitude_delta;
 
 
-
-// Timing
+// Timing 
 // count the ticks (24 per quarter note / crotchet since the last crotchet or start)
 
 struct Timing
 {
-  uint8_t tick_count_in_sequence = 0;
-  int tick_count_since_start = 0;
+    uint8_t tick_count_in_sequence = 0; // Since we started the sequencer  
+    uint32_t tick_count_since_start = 0; // since the clock started running this time.
+    uint8_t tick_count_since_step = 0; // between 0 and 5 as there are 6 ticks in a step
 };
+
+
+
 
 // Timing is controlled by the loop. Only the loop should update it.
 Timing loop_timing;
 
 // Count of the main pulse i.e. sixteenth notes or eigth notes
 uint8_t step_count;
+
+// Count of the bar / measure.
+uint8_t bar_count;
 
 // Helper functions that operate on global variables. Yae!
 
@@ -378,7 +395,51 @@ boolean midi_clock_detected = LOW;
 boolean do_reset_sequence_counters = false;
 
 
+// copy paste betweener-teensy
+uint8_t BarCountSanity(uint8_t bar_count_in){
+  uint8_t bar_count_fixed;
+  
+  if (bar_count_in > MAX_BAR){
+    Serial.println(String("**** ERROR bar_count_in > MAX_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = MAX_BAR;
+  } else if (bar_count_in < FIRST_BAR){
+    Serial.println(String("**** ERROR bar_count_in < FIRST_BAR i.e. ") + bar_count_in );
+    bar_count_fixed = FIRST_BAR;
+  } else {
+    bar_count_fixed = bar_count_in;
+  }
+  return bar_count_fixed;
+}
 
+
+// copy paste betweener-teensy 
+void PlayMidi(){
+  //Serial.println(String("midi_note  ") + i + String(" value is ") + channel_a_midi_note_events[step_count][i]  );
+
+  for (uint8_t n = 0; n <= 127; n++) {
+    //Serial.println(String("** OnStep ") + step_count + String(" Note ") + n +  String(" ON value is ") + channel_a_midi_note_events[step_count][n][1]);
+    
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].is_active == 1) { 
+           // The note could be on one of 6 ticks in the sequence
+           if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].tick_count_since_step == loop_timing.tick_count_since_step){
+             Serial.println(String("PlayMidi Step:Ticks ") + step_count + String(":") + ticks_after_step + String(" Found and will send Note ON for ") + n );
+             //MIDI.sendNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
+             SendMidiNoteOn(n, channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][1].velocity, 1);
+           }
+    } 
+
+    // READ MIDI MIDI_DATA
+    if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].is_active == 1) {
+       if (channel_a_midi_note_events[BarCountSanity(bar_count)][step_count_sanity(step_count)][n][0].tick_count_since_step == loop_timing.tick_count_since_step){ 
+           Serial.println(String("PlayMidi Step:Ticks ") + step_count + String(":") + ticks_after_step +  String(" Found and will send Note OFF for ") + n );
+           // MIDI.sendNoteOff(n, 0, 1);
+           SendMidiNoteOff(n, 0, 1);
+       }
+    }
+} // End midi note loop
+
+}
 
 
 void setup() {
@@ -430,6 +491,13 @@ void setup() {
 
   // Begin Midi
   //MIDI.begin(MIDI_CHANNEL_OMNI);
+
+
+
+  // MIDI Callbacks
+  usbMIDI.setHandleNoteOn(OnNoteOn) ;
+  usbMIDI.setHandleNoteOff(OnNoteOff);
+
 
 
 
@@ -517,18 +585,180 @@ boolean mute_gate_a = false;
 boolean mute_gate_b = false;
 
 
+  // Callback for USB Midi On
+  void OnNoteOn(byte channel, byte note, byte velocity){
+    //Serial.println(String("OnNoteOn") + note + String("velocity is ") + velocity );
+    OnMidiNoteInEvent(1, note, velocity, channel);
+  }
+
+  // Callback for USB Midi Off
+  void OnNoteOff(byte channel, byte note, byte velocity){
+    //Serial.println(String("OnNoteOff") + note + String("velocity is ") + velocity );
+    OnMidiNoteInEvent(0, note, velocity, channel);
+  }
+
+  void SendMidiNoteOff (byte note, byte velocity, byte channel){
+    // DIN MIDI.sendNoteOff(note, velocity, channel);
+    // USB
+    usbMIDI.sendNoteOff(note, 0, channel);
+  }
+
+  void SendMidiNoteOn (byte note, byte velocity, byte channel){
+    usbMIDI.sendNoteOn(note, velocity, channel);
+  }
+
+  
+
+
+// copy paste betweener-teensy
+void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+
+  Serial.println(String("Got MIDI note Event ON/OFF is ") + on_off + String(" Note: ") +  note + String(" Velocity: ") +  velocity + String(" Channel: ") +  channel + String(" when step is ") + step_count );
+  if (on_off == MIDI_NOTE_ON){
+
+        // A mechanism to clear notes from memory by playing them quietly.
+        if (velocity < 7 ){
+           // Send Note OFF
+           //MIDI.sendNoteOff(note, 0, 1);
+           SendMidiNoteOff(note, 0, 1);
+           
+           // Disable the note on all steps
+           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
+           DisableNotes(note);
+
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_a_midi_note_events
+          // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
+          // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
+          // these Note OFF events. 
+          // One way is to store them here for processing after the note OFF actually happens. 
+          channel_a_ghost_events[note].is_active=1;
+    
+        } else {
+          // We want the note on, so set it on.
+          //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+          // WRITE MIDI MIDI_DATA
+          channel_a_midi_note_events[bar_count][step_count][note][1].tick_count_since_step = loop_timing.tick_count_since_step; // Only one of these per step.
+          channel_a_midi_note_events[bar_count][step_count][note][1].velocity = velocity;
+          channel_a_midi_note_events[bar_count][step_count][note][1].is_active = 1;
+          //Serial.println(String("Done setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+
+        } 
+      
+          
+        } else {
+          
+            // Note Off
+             //Serial.println(String("Setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
+             // WRITE MIDI MIDI_DATA
+             channel_a_midi_note_events[bar_count][step_count][note][0].tick_count_since_step = loop_timing.tick_count_since_step;
+             channel_a_midi_note_events[bar_count][step_count][note][0].velocity = velocity;
+             channel_a_midi_note_events[bar_count][step_count][note][0].is_active = 1;
+             //Serial.println(String("Done setting MIDI note OFF for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count );
+
+          
+  }
+  } 
+
+
+
 void loop() {
 
   // The way we "connect" the Audio Objects to the output of the Betweener is to read an rms object and use that value
   // to writeCVOut.
 
 
+/////////////
+
+
+
+/*
+int note, velocity, channel; 
+  if (MIDI.read()) {                    // Is there a MIDI message incoming ?
+    byte type = MIDI.getType();
+    switch (type) {
+      case midi::NoteOn:
+        note = MIDI.getData1();
+        velocity = MIDI.getData2();
+        channel = MIDI.getChannel();
+        if (velocity > 0) {
+          Serial.println(String("Note On:  ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+          OnMidiNoteInEvent(MIDI_NOTE_ON,note, velocity,channel);
+        } else {
+          Serial.println(String("Note Off: ch=") + channel + ", note=" + note);
+          OnMidiNoteInEvent(MIDI_NOTE_OFF,note, velocity,channel);
+        }
+        break;
+      case midi::NoteOff:
+        note = MIDI.getData1();
+        velocity = MIDI.getData2();
+        channel = MIDI.getChannel();
+
+       // Before we do something with this note OFF, check we're not expecting a note OFF from the disable mechanism.
+       // If so, ignore the Note OFF, else proceed. 
+       if (channel_a_ghost_events[note].is_active == 1){
+            Serial.println(String("I was expecting a ghost Note OFF for ") + note + String(" Thus I will ignore this Note OFF ") );
+            // Reset the ghost event
+            channel_a_ghost_events[note].is_active = 0;
+       } else {
+          OnMidiNoteInEvent(MIDI_NOTE_OFF, note, velocity, channel);
+       }
+        
+        break;
+      case midi::Clock:
+        // Midi devices sending clock send one of these 24 times per crotchet (a quarter note). 24PPQ
+        midi_clock_detected = HIGH;
+        //Serial.println(String("+++++++++++++++++++++++++++++++++ midi_clock_detected SET TO TRUE is: ") + midi_clock_detected) ;
+//        note = MIDI.getData1();
+//        velocity = MIDI.getData2();
+//        channel = MIDI.getChannel();
+        //Serial.println(String("We got Clock: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+
+        ///////////////////////////////
+        // Drive the sequencer via MIDI
+        OnTick();
+        ///////////////////////////////
+
+
+
+        break;
+      case midi::Start:
+        StartSequencer();
+        break;
+      case midi::Stop:
+        StopSequencer();
+
+        //Serial.println(String("We got Stop: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+        break;
+      case midi::Continue:
+        //Serial.println(String("We got Continue: ch=") + channel + ", note=" + note + ", velocity=" + velocity);
+        break;     
+      default:
+        Serial.println(String("Message, type=") + type);
+        int d1 = MIDI.getData1();
+        int d2 = MIDI.getData2();
+        Serial.println(String("**************************** Message, type=") + type + ", data = " + d1 + " " + d2);
+
+        // If sustain pedal pressed, clear the sequence  
+        if (type == 176 && d1 == 64 && d2 == 127){
+          Serial.println(String("Sustain pedal pressed. Let's clear our sequence..") + type);
+          InitMidiSequence();
+        }        
+    }
+  } // End of MIDI message detected
+    else {
+  // Serial.println(String("No MIDI message found"));
+}
+
+*/
+
+
+/////////////
 
   b.readAllInputs();
 
 
   if (b.trig2.risingEdge()) {
-    Serial.println(String("YES Incoming Reset on trig2 ")   );
+    //Serial.println(String("YES Incoming Reset on trig2 ")   );
     do_reset_sequence_counters = true;
   } else {
     //Serial.println(String("NO Incoming Reset on trig2 ")   );
@@ -544,15 +774,6 @@ void loop() {
     OnTick();
     last_clock_pulse = millis();
   }
-
-  //  b.readTriggers();
-  //  if (b.triggerRose(2)){
-  //    Serial.println(String("Incoming Reset on trig2 ")   );
-  //    do_reset_sequence_counters = true;
-  //  } else {
-  //    //Serial.println(String("NO Incoming Reset on trig2 ")   );
-  //  }
-
 
 
 
@@ -599,33 +820,7 @@ void loop() {
   }
 
 
-
-
-
-
-
-  //if (false){
-  //  if (test_rms_object.available()){
-  //          float test_rms = test_rms_object.read();
-  //
-  //          // Also use this to drive the betweener ouput
-  //
-  //            int test_rms_scaled = fscale( 0.0, 1.0, 0, 4095, test_rms, 0);
-  //            Serial.println(String("test_rms_scaled is: ") + test_rms_scaled  );
-  //            //b.writeCVOut(1, test_rms_scaled);
-  //            //b.writeCVOut(2, test_rms_scaled);
-  //            //b.writeCVOut(3, test_rms_scaled);
-  //            b.writeCVOut(4, test_rms_scaled);
-  //
-  //
-  //  } else {
-  //    //Serial.println(String("test_rms_object is not available!!"));
-  //  }
-  //}
-
-
-
-
+  usbMIDI.read(); // Note: putting this early in this function caused problems with GateB?
 
   ///////////////////
 
@@ -679,7 +874,7 @@ void OnTick() {
   // Called on Every MIDI or Analogue clock pulse
   // Drives sequencer settings and activity.
 
-  // Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);
+  //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence);
 
 
   // Read inputs and update settings.
@@ -706,9 +901,52 @@ void OnTick() {
 
   SetSequencePattern();
 
+
+  // Play any suitable midi in the sequence 
+  PlayMidi();
+
   // Advance and Reset ticks and steps
   AdvanceSequenceChronology();
 }
+
+
+/////
+/*
+ * 
+ * 
+ * 
+
+// copy paste betweener-teensy - From Teensy
+void OnTick(){
+// Called on Every MIDI or Analogue clock pulse
+// Drives sequencer settings and activity.
+
+  // Read inputs and update settings.  
+  SequenceSettings();
+
+  // Decide if we have a "step"
+  if (loop_timing.tick_count_in_sequence % 6 == 0){
+    clockShowHigh();
+    //Serial.println(String("loop_timing.tick_count_in_sequence is: ") + loop_timing.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
+    //////////////////////////////////////////
+    OnStep();
+    /////////////////////////////////////////   
+  } else {
+    clockShowLow();
+    // The other ticks which are not "steps".
+    OnNotStep();
+    //Serial.println(String("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
+  }
+
+  // Play any suitable midi in the sequence 
+  PlayMidi();
+   
+  // Advance and Reset ticks and steps
+  AdvanceSequenceChronology();
+}
+
+*/
+////
 
 
 
@@ -844,35 +1082,36 @@ void ReadInputsAndUpdateSettings() {
 
 } // End of ReadInputsAndUpdateSettings
 ////////////////////////////////////////////////
-
-
-void InitMidiSequence() {
+void InitMidiSequence(){
 
   Serial.println(String("InitMidiSequence Start ")  );
 
-  // Loop through steps
-  for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-    //Serial.println(String("Step ") + sc );
+  // Loop through bars
+  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
 
-    // Loop through notes
-    for (uint8_t n = 0; n <= 127; n++) {
-      // Initialise and print Note on (1) and Off (2) contents of the array.
-      // WRITE MIDI MIDI_DATA
-      channel_a_midi_note_events[sc][n][1].is_active = 0;
-      channel_a_midi_note_events[sc][n][0].is_active = 0;
-
-
-      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[sc][n][1].is_active);
-      //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[sc][n][0].is_active);
+    // Loop through steps
+    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+      //Serial.println(String("Step ") + sc );
+    
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Initialise and print Note on (1) and Off (2) contents of the array.
+        // WRITE MIDI MIDI_DATA
+        channel_a_midi_note_events[bc][sc][n][1].is_active = 0;
+        channel_a_midi_note_events[bc][sc][n][0].is_active = 0;
+  
+        
+        //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_a_midi_note_events[bc][sc][n][1].is_active);
+        //Serial.println(String("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_a_midi_note_events[bc][sc][n][0].is_active);
+      } 
     }
   }
 
-
   for (uint8_t n = 0; n <= 127; n++) {
-    channel_a_ghost_events[n].is_active = 0;
-    //Serial.println(String("Init Step with ghost ") + String(" Note ") + n +  String(" is_active false ") );
-  }
-
+     channel_a_ghost_events[n].is_active = 0;
+     Serial.println(String("Init Step with ghost ") + String(" Note ") + n +  String(" is_active false ") );
+  } 
+  
 
   Serial.println(String("InitMidiSequence Done ")  );
 }
@@ -885,7 +1124,7 @@ void InitMidiSequence() {
 /////////////////////////////////////////////////////////////
 void OnStep() {
 
-  Serial.println(String("OnStep zero indexed step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP);
+  //Serial.println(String("OnStep step_count/MAX_STEP is: ") + step_count + "/" + MAX_STEP); // zero indexed
 
   if (step_count > MAX_STEP) {
     Serial.println(String("*****************************************************************************************"));
@@ -893,14 +1132,13 @@ void OnStep() {
     Serial.println(String("*****************************************************************************************"));
   }
 
-  //
-   // if (step_count != FIRST_STEP){
+ 
       if (do_reset_sequence_counters == true){
         ResetSequenceCounters();
         do_reset_sequence_counters = false;
         Serial.println(String("do_reset_sequence_counters was true. I called ResetSequenceCounters"));
       }
-   // }
+
 
   uint8_t play_note = bitRead(hybrid_sequence_1, step_count_sanity(step_count));
 
@@ -914,38 +1152,26 @@ void OnStep() {
 
   // Play Note (GateA)
   if (play_note) {
-    //Serial.println(String("****************** play ")   );
+    //Serial.println(String("Play GateA if not muted ")   );
 
     if (not mute_gate_a) {
+      //Serial.println(String("PLAY GateA (NOT play GateB)")   );
       GateAHigh();
       //ResetCVA();
     } else {
       //Serial.println(String("mute_gate_a is Muted"));
     }
 
-    // OnFirstStep();
-
-    // We might want to only start the CV pulse on the first step
-    //        if (reset_cv_lfo_at_FIRST_STEP == true){
-    //          if (step_count == FIRST_STEP) {
-    //            OnFirstStep();
-    //          }
-    //        } else {
-    //          OnFirstStep();
-    //        }
-
-
   } else {
     // Opposite (GateB)
   
-    //Serial.println(String("not play ")   );
-
-
+ 
     if (not mute_gate_b) {
+      //Serial.println(String("PLAY GateB (NOT play GateA)")   );
       GateBHigh();
       ResetCVB();
     } else {
-      //Serial.println(String("mute_gate_b is Muted"));
+      //Serial.println(String("GateB is MUTED"));
     }
 
 
@@ -968,38 +1194,27 @@ void OnNotStep() {
   ChangeCvModulatorBAmplitude();
 }
 
+
+
+
+
+
+
 void GateAHigh() {
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // This is to drive the LED (other things too?)
-  gate_dc_waveform.amplitude(0.99, 10);
+  gate_a_dc_waveform.amplitude(0.99, 10);
 
   // The output
   b.writeCVOut(1, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
-
-
-  ////////////////
-
-
-
 }
-
-void ResetCVB() {
-
-  carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
-
-  cv_modulator_b_amplitude = 0.99;
-
-  //Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
-  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
-}
-
 
 void GateALow() {
   //Serial.println(String("Gate LOW") );
 
   // For LED
-  gate_dc_waveform.amplitude(0);
+  gate_a_dc_waveform.amplitude(0);
 
   // For output
   b.writeCVOut(1, 0);
@@ -1009,10 +1224,10 @@ void GateALow() {
 
 
 void GateBHigh() {
-  //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
+  //Serial.println(String("Gate B HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
-  gate_2_dc_waveform.amplitude(0.99, 10);
+  //gate_b_dc_waveform.amplitude(0.99, 10);
 
   // For output
   b.writeCVOut(2, 4095); //cvout selects channel 1 through 4; value is in range 0-4095
@@ -1020,10 +1235,11 @@ void GateBHigh() {
 }
 
 void GateBLow() {
-  //Serial.println(String("Gate LOW") );
+
+  //Serial.println(String("Gate B LOW at tick_count_since_start: ") + loop_timing.tick_count_since_start);
 
   // For what?
-  gate_2_dc_waveform.amplitude(0);
+  //gate_b_dc_waveform.amplitude(0);
 
   // For output
   b.writeCVOut(2, 0);
@@ -1046,6 +1262,15 @@ void ResetCVA() {
 
 }
 
+
+void ResetCVB() {
+  carrier_b_object.phase(90); // Sine wave has maximum at 90 degrees
+
+  cv_modulator_b_amplitude = 0.99;
+
+  //Serial.println(String("ResetCVB to ") + cv_modulator_b_amplitude);
+  modulator_b_object.amplitude(cv_modulator_b_amplitude, 10);
+}
 
 
 void OnFirstStep() {
@@ -1388,31 +1613,26 @@ void Flash(int delayTime, int noOfTimes, int ledPin) {
 
 
 
-void DisableNotes(uint8_t note) {
-  // Disable that note for all steps.
-  uint8_t sc = 0;
-  for (sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-    // WRITE MIDI MIDI_DATA
-    channel_a_midi_note_events[sc][note][1].velocity = 0;
-    channel_a_midi_note_events[sc][note][1].is_active = 0;
-    channel_a_midi_note_events[sc][note][0].velocity = 0;
-    channel_a_midi_note_events[sc][note][0].is_active = 0;
-  }
+// copy paste betweener-teensy
+void DisableNotes(uint8_t note){
+             // Disable that note for all steps.
+           uint8_t sc = 0;
+           uint8_t bc = 0;
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+              // WRITE MIDI MIDI_DATA
+              channel_a_midi_note_events[bc][sc][note][1].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][1].is_active = 0;
+              channel_a_midi_note_events[bc][sc][note][0].velocity = 0;
+              channel_a_midi_note_events[bc][sc][note][0].is_active = 0;         
+            }
+           }
 }
 
 //
 
 
-// We don't want the note on
-//    if (channel_a_midi_note_events[step_count][note] == MIDI_NOTE_ON){
-//       // If its currently on, set it off.
-//       Serial.println(String("Setting MIDI note OFF: ") + note + String(" when step is ") + step_count );
-//       channel_a_midi_note_events[step_count][note] = MIDI_NOTE_OFF;
-//    } else {
-//      // If its not currently on, just set it to unset so we don't send gazzilions of note off messages
-//      Serial.println(String("Setting MIDI note UNSET: ") + note + String(" when step is ") + step_count );
-//      channel_a_midi_note_events[step_count][note] = MIDI_NOTE_UNSET;
-//    }
+
 
 
 
