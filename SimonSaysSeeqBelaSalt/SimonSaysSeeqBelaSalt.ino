@@ -59,12 +59,33 @@ The Bela software is distributed under the GNU Lesser General Public License
 //
 // install curl apt-get install -y libcurl-dev
 
-// Note: Bela might run out of diskspace
+// Note: Bela might run out of disk space
 // du -h --max-depth=1
 // #!/bin/bash
 // dir=/path/to/directory/you/want/to/check
 // num=[number of top largest directories to list)
 // du -ah $dir | sort -n -r | head -n $num
+
+
+// Add this to your /etc/init.d
+
+// root@bela:/etc/init.d# cat ./bela_startup.sh 
+// #!/bin/bash
+// rm /var/log/*.log
+// rm /var/log/syslog
+// rm /var/log/*.gz
+// rm /var/log/syslog.1
+// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
+
+// Make it executable with chmod u+x bela_startup.sh
+
+
+//root@bela:/var/log# rm /var/log/*.log
+//root@bela:/var/log# rm /var/log/syslog
+//root@bela:/var/log# rm /var/log/*.gz
+//root@bela:/var/log# rm /var/log/syslog.1 
+
+
 
 // https://monome.org/docs/serialosc/raspbian/
 // but before doing the serialoscd configure: 
