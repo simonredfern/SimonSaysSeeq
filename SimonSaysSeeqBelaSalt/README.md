@@ -2,7 +2,7 @@
 
 See this video for an intro into some features and how to modify source code: [SimonSaysSeeq on Bela Salt Twitch video](https://www.twitch.tv/videos/885185134)
 
-![SimonSaysSeeq on Bela Salt](https://github.com/simonredfern/SimonSaysSeeq/blob/master/SimonSaysSeeqBelaSalt/SimonSaysSeeq_on_Bela_Salt_and_Salt%2B.png)
+![SimonSaysSeeq on Bela Salt](https://user-images.githubusercontent.com/485218/130356514-66c2da51-d012-400f-80cd-211b52f4bfbe.png)
 
 
 To find out which USB devices are active (if disconnected from your main computer)

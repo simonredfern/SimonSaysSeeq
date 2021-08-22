@@ -94,6 +94,9 @@ The Bela software is distributed under the GNU Lesser General Public License
 // Serialosc will compile but serialoscd is not found
 // with https://github.com/monome/serialosc/issues/53
 
+// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
+
+
 #include <Bela.h>
 #include <libraries/Midi/Midi.h>
 #include <stdlib.h>
