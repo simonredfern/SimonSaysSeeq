@@ -417,6 +417,9 @@ const uint8_t MAX_LANE = 7; // Memory User!
 uint8_t previous_lane = 0;
 uint8_t current_midi_lane = 0;
 
+uint8_t SILENT_MIDI_LANE = 0;
+
+
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
@@ -1492,12 +1495,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
     
         } else {
           // We want the note on, so set it on.
-          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
-          // WRITE MIDI MIDI_DATA
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
-          
+
+          if (current_midi_lane != SILENT_MIDI_LANE){ 
+            rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+            // WRITE MIDI MIDI_DATA
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
+          } else {
+            rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+          }
+
+
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
           	midi.writeNoteOn(midi_channel_x, note, velocity); // echo midi to the output
@@ -1516,12 +1525,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
             // Note Off
              rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
              
-             // WRITE MIDI MIDI_DATA
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+             // WRITE MIDI MIDI_DATA (unless on silent lane)
+            if (current_midi_lane != SILENT_MIDI_LANE){ 
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+            
+            } else {
+               rt_printf("SILENT land so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+            }
 
-			 last_note_off = note;
+			      last_note_off = note;
+             
 			
 			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
 			if (sequence_is_running == 0){ 
