@@ -77,7 +77,13 @@ The Bela software is distributed under the GNU Lesser General Public License
 // rm /var/log/syslog.1
 // echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
 
-// Make it executable with chmod u+x bela_startup.sh
+// Make it executable with 
+// chmod u+x bela_startup.sh
+// chmod +x bela_startup.sh <- Need this else it doesn't run.
+
+// DONT seem to need to add it to crontab (edited via, for example, crontab -e)
+// @reboot /etc/init.d/bela_startup.sh
+
 
 
 //root@bela:/var/log# rm /var/log/*.log
@@ -167,8 +173,8 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MIN_midi_lane_input = 0;
-const uint8_t MAX_midi_lane_input = 16;
+//const uint8_t MIN_midi_lane_input = 0;
+//const uint8_t MAX_midi_lane_input = 16;
 
 
 uint64_t last_function = 0; // set this in a function to a number
@@ -1245,9 +1251,9 @@ void printStatus(void*){
 		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
+    rt_printf("\n==== MIDI ======= \n");
 
-
-	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
+	  rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 
 		
         // Sequence derived results 
@@ -3015,9 +3021,14 @@ bool setup(BelaContext *context, void *userData){
         sequence_triggered_adsr_c.setSustainLevel(envelope_1_sustain);
 
 
-        // Set buttons pins as inputs
+        // The two buttons on Salt as inputs
         pinMode(context, 0, button_1_PIN, INPUT);
         pinMode(context, 0, button_2_PIN, INPUT);
+
+
+        // The two buttons on Salt + as inputs
+        pinMode(context, 0, button_3_PIN, INPUT);
+        pinMode(context, 0, button_4_PIN, INPUT);
 
 
         // The two LEDS on Salt
@@ -3027,6 +3038,8 @@ bool setup(BelaContext *context, void *userData){
         // The two LEDS on Salt + 
         pinMode(context, 0, LED_3_PIN, OUTPUT);
         pinMode(context, 0, LED_4_PIN, OUTPUT);
+
+        // Get different colours out of LEDS? See https://github.com/BelaPlatform/Bela/blob/master/examples/Digital/bicolor-LEDs/render.cpp
 
 
 
