@@ -2446,6 +2446,7 @@ void AllNotesOff(void*){
 		  rt_printf("All MIDI notes OFF \n");
 		  for (uint8_t n = 0; n <= 127; n++) {
 		     midi.writeNoteOff(midi_channel_x, n, 0);
+         target_led_4_state = false;
 		  }
 		  last_notes_off_frame = frame_timer;
 	} else {
@@ -2469,6 +2470,13 @@ void SetLane(uint8_t lane_in){
   if (previous_lane != current_midi_lane){
     // Don't want to call this too often.
     // Need to limit this in case we have CV input making current_midi_lane change fast
+
+    if (current_midi_lane == SILENT_MIDI_LANE){
+       rt_printf("Just changed to SILENT_MIDI_LANE \n"); 
+       Bela_scheduleAuxiliaryTask(gAllNotesOff);
+    }
+
+
     //Bela_scheduleAuxiliaryTask(gAllNotesOff);
     previous_lane = current_midi_lane;
   }
