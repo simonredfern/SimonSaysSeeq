@@ -65,17 +65,22 @@ The Bela software is distributed under the GNU Lesser General Public License
 // dir=/path/to/directory/you/want/to/check
 // num=[number of top largest directories to list)
 // du -ah $dir | sort -n -r | head -n $num
+// du -hs /var/*
 
 
 // Add this to your /etc/init.d
 
-// root@bela:/etc/init.d# cat ./bela_startup.sh 
+// root@bela:/etc/init.d# cat bela_startup.sh 
 // #!/bin/bash
 // rm /var/log/*.log
-// rm /var/log/syslog
+// echo > /var/log/syslog
 // rm /var/log/*.gz
-// rm /var/log/syslog.1
+// echo > /var/log/syslog.1
 // echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
+
+
+// echo > /var/log/*.log
+
 
 // Make it executable with 
 // chmod u+x bela_startup.sh
