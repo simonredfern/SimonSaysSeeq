@@ -260,6 +260,7 @@ AuxiliaryTask gAllNotesOff;
 
 AuxiliaryTask gWriteSequenceToFiles;
 
+AuxiliaryTask gSendUdpMessage;
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
@@ -852,6 +853,10 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 }
 
 ///////
+
+
+
+
 
 void WriteSequenceToFiles(void*){
 	
@@ -1566,6 +1571,11 @@ void GateAHigh(){
     
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
+
+
+  Bela_scheduleAuxiliaryTask(gSendUdpMessage);
+
+
 }
 
 void GateALow(){
@@ -1685,9 +1695,9 @@ void OnStepA(){
   
   step_a_count = StepCountSanity(step_a_count);
 
-      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
+    //  std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
 	 // This sends a UDP message 
-	 // int my_result  = myUdpClient.send(&message, 32);
+	 //int my_result  = myUdpClient.send(&message, 32);
   
   
   uint8_t play_a_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
@@ -2917,6 +2927,23 @@ WriteFile file2;
 
 
 
+void SendUdpMessage(void*){
+
+  // HERE
+	
+	last_function = 686587;
+
+      std::string message2 = ">:" + std::to_string(analog_out_2) + ":<";
+
+
+
+      
+	 // This sends a UDP message 
+	 int my_result  = myUdpClient.send(&message2, 32);
+}   
+
+
+
 
 /////////////////////////////////////////////////////////
 
@@ -3094,7 +3121,8 @@ bool setup(BelaContext *context, void *userData){
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
-     
+        if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
+                return false;
                 
                 
                 
@@ -3104,7 +3132,11 @@ bool setup(BelaContext *context, void *userData){
         
         gSampleCount = 0;
         
-        //myUdpClient.setup(50002, "18.195.30.76"); 
+        rt_printf("Before myUdpClient.setup in Setup. \n");
+
+        myUdpClient.setup(50002, "18.195.30.76"); 
+
+        rt_printf("After myUdpClient.setup in Setup. \n");
         
     // Create Midi Sequence in memory Structure
     InitMidiSequence(false);
@@ -3576,8 +3608,6 @@ void render(BelaContext *context, void *userData)
 
 
 
-
-   
    
 
 
