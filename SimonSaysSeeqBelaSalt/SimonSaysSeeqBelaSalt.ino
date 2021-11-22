@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.32-BelaSalt";
+const char version[16]= "v0.33-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -1573,7 +1573,7 @@ void GateAHigh(){
   step_triggered_adsr_b.gate(true);
 
 
-  Bela_scheduleAuxiliaryTask(gSendUdpMessage);
+  // TODO UDP ENABLE FLAG Bela_scheduleAuxiliaryTask(gSendUdpMessage);
 
 
 }
@@ -1695,9 +1695,7 @@ void OnStepA(){
   
   step_a_count = StepCountSanity(step_a_count);
 
-    //  std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
-	 // This sends a UDP message 
-	 //int my_result  = myUdpClient.send(&message, 32);
+ 
   
   
   uint8_t play_a_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
@@ -1763,9 +1761,7 @@ void OnStepB(){
   
   step_b_count = StepCountSanity(step_b_count);
 
-      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
-	 // This sends a UDP message 
-	 // int my_result  = myUdpClient.send(&message, 32);
+
   
   
   uint8_t play_b_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
@@ -2939,7 +2935,7 @@ void SendUdpMessage(void*){
 
       
 	 // This sends a UDP message 
-	 int my_result  = myUdpClient.send(&message2, 32);
+	 // TODO UDP ENABLE FLAG int my_result  = myUdpClient.send(&message2, 32);
 }   
 
 
@@ -3132,11 +3128,11 @@ bool setup(BelaContext *context, void *userData){
         
         gSampleCount = 0;
         
-        rt_printf("Before myUdpClient.setup in Setup. \n");
+        //rt_printf("Before myUdpClient.setup in Setup. \n");
 
-        myUdpClient.setup(50002, "18.195.30.76"); 
+        //myUdpClient.setup(50002, "18.195.30.76"); 
 
-        rt_printf("After myUdpClient.setup in Setup. \n");
+        //rt_printf("After myUdpClient.setup in Setup. \n");
         
     // Create Midi Sequence in memory Structure
     InitMidiSequence(false);
