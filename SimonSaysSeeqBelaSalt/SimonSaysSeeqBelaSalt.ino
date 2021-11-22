@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.33-BelaSalt";
+const char version[16]= "v0.34-BelaSalt";
 
 /*
  ____  _____ _        _    
