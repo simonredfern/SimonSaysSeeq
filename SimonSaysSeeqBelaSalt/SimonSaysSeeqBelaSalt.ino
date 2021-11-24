@@ -1087,14 +1087,14 @@ ADSR step_triggered_adsr_b;
 ADSR sequence_triggered_adsr_c;
 
 float audio_adsr_a_level = 0;
-float analog_adsr_b_level = 0;
+float analog_step_triggered_adsr_b_level = 0;
 float analog_sequence_triggered_adsr_c_level = 0;
 
 
 float envelope_1_attack = 0.0001; // audio_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
-float envelope_1_release = 0.5; // initial value envelope_1 release (seconds)
+float envelope_1_release = 0.5; // INITIAL value only envelope_1 release (seconds). This is set by a pot.
 
 float analog_out_1;
 float analog_out_2;
@@ -1338,7 +1338,7 @@ void printStatus(void*){
     	
     	
     	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
-    	rt_printf("analog_adsr_b_level is: %f \n", analog_adsr_b_level);
+    	rt_printf("analog_step_triggered_adsr_b_level is: %f \n", analog_step_triggered_adsr_b_level);
     	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
     	*/
 
@@ -3232,7 +3232,7 @@ void render(BelaContext *context, void *userData)
 
 
         // Channel 1 is modulated by the ADSR B
-        audioWrite(context, n, 0, out_l * analog_adsr_b_level);
+        audioWrite(context, n, 0, out_l * analog_step_triggered_adsr_b_level);
 
         // Unmodulated output
         audioWrite(context, n, 1, out_r);
@@ -3251,7 +3251,7 @@ void render(BelaContext *context, void *userData)
 		lfo_a_result_analog = lfo_a_analog.process();
 		
 		// Process step triggered analog envelope
-		analog_adsr_b_level  = step_triggered_adsr_b.process();  
+		analog_step_triggered_adsr_b_level  = step_triggered_adsr_b.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
 		analog_sequence_triggered_adsr_c_level  = env3_amp * sequence_triggered_adsr_c.process();
@@ -3260,13 +3260,18 @@ void render(BelaContext *context, void *userData)
 		
 		
 		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_adsr_b_level; 
+		analog_out_2 = lfo_a_result_analog * analog_sequence_triggered_adsr_c_level; 
+
+
+		// Using an inverse of the sequence triggered adsr
+		//analog_out_3 = lfo_a_result_analog * (1.0 - analog_sequence_triggered_adsr_c_level); 
+
+    // Bit more complext mod
+    analog_out_3 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + (lfo_a_result_analog * analog_step_triggered_adsr_b_level)) / 2.0;  
+
 		
-		// Plain envelope This is like a gate at the start of sequence plus release (so can use it as both a gate and an envelope)
-		analog_out_3 = analog_sequence_triggered_adsr_c_level;
-		
-		// Additive output
-		analog_out_4 = ( lfo_a_result_analog + analog_adsr_b_level ) / 2.0;
+		// Bit more complex add
+		analog_out_4 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + analog_step_triggered_adsr_b_level) / 2.0; 
 		
 		
 
