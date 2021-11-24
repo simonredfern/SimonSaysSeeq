@@ -3255,34 +3255,21 @@ void render(BelaContext *context, void *userData)
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
 		analog_sequence_triggered_adsr_c_level  = env3_amp * sequence_triggered_adsr_c.process();
-		
-
-		
-		
+				
 		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_sequence_triggered_adsr_c_level; 
+		analog_out_2 = lfo_a_result_analog * analog_sequence_triggered_adsr_c_level;
 
-
-		// Using an inverse of the sequence triggered adsr
-		//analog_out_3 = lfo_a_result_analog * (1.0 - analog_sequence_triggered_adsr_c_level); 
+    analog_out_6 = analog_out_2; 
 
     // Bit more complext mod
     analog_out_3 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + (lfo_a_result_analog * analog_step_triggered_adsr_b_level)) / 2.0;  
 
-		
+    analog_out_7 = analog_out_3; 
+
 		// Bit more complex add
 		analog_out_4 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + analog_step_triggered_adsr_b_level) / 2.0; 
 		
-		
-
-
-
-
-
-
-
-
-
+    analog_out_8 = analog_out_4; 
 		
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
@@ -3416,6 +3403,29 @@ void render(BelaContext *context, void *userData)
 	      	}
 	      	analogWrite(context, n, ch, analog_out_5);
 	      }
+
+
+
+	      // CV 6
+	      if (ch == SEQUENCE_CV_OUTPUT_6_PIN){
+	      	//rt_printf("amp is: %f", amp);
+	      	analogWrite(context, n, ch, analog_out_6);
+	      }
+
+
+	      // CV 7 
+	      if (ch == SEQUENCE_CV_OUTPUT_7_PIN){
+	      	//rt_printf("amp is: %f", amp);
+	      	analogWrite(context, n, ch, analog_out_7);
+	      }
+	      
+	      // CV 8
+	      if (ch == SEQUENCE_CV_OUTPUT_8_PIN){
+	      	//rt_printf("amp is: %f", amp);
+	      	analogWrite(context, n, ch, analog_out_8);
+	      }
+
+
 	      
 	      
 	      
