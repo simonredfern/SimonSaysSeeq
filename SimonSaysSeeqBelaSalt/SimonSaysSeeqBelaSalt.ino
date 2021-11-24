@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.32-BelaSalt";
+const char version[16]= "v0.34-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -65,19 +65,30 @@ The Bela software is distributed under the GNU Lesser General Public License
 // dir=/path/to/directory/you/want/to/check
 // num=[number of top largest directories to list)
 // du -ah $dir | sort -n -r | head -n $num
+// du -hs /var/*
 
 
 // Add this to your /etc/init.d
 
-// root@bela:/etc/init.d# cat ./bela_startup.sh 
+// root@bela:/etc/init.d# cat bela_startup.sh 
 // #!/bin/bash
 // rm /var/log/*.log
-// rm /var/log/syslog
+// echo > /var/log/syslog
 // rm /var/log/*.gz
-// rm /var/log/syslog.1
+// echo > /var/log/syslog.1
 // echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
 
-// Make it executable with chmod u+x bela_startup.sh
+
+// echo > /var/log/*.log
+
+
+// Make it executable with 
+// chmod u+x bela_startup.sh
+// chmod +x bela_startup.sh <- Need this else it doesn't run.
+
+// DONT seem to need to add it to crontab (edited via, for example, crontab -e)
+// @reboot /etc/init.d/bela_startup.sh
+
 
 
 //root@bela:/var/log# rm /var/log/*.log
@@ -167,8 +178,8 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
 
 // Divde clock - maybe just for midi maybe for sequence too
-const uint8_t MIN_midi_lane_input = 0;
-const uint8_t MAX_midi_lane_input = 16;
+//const uint8_t MIN_midi_lane_input = 0;
+//const uint8_t MAX_midi_lane_input = 16;
 
 
 uint64_t last_function = 0; // set this in a function to a number
@@ -249,6 +260,7 @@ AuxiliaryTask gAllNotesOff;
 
 AuxiliaryTask gWriteSequenceToFiles;
 
+AuxiliaryTask gSendUdpMessage;
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
@@ -410,6 +422,9 @@ const uint8_t MAX_LANE = 7; // Memory User!
 
 uint8_t previous_lane = 0;
 uint8_t current_midi_lane = 0;
+
+uint8_t SILENT_MIDI_LANE = 0;
+
 
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
@@ -839,6 +854,10 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 ///////
 
+
+
+
+
 void WriteSequenceToFiles(void*){
 	
 	last_function = 293924;
@@ -1068,14 +1087,14 @@ ADSR step_triggered_adsr_b;
 ADSR sequence_triggered_adsr_c;
 
 float audio_adsr_a_level = 0;
-float analog_adsr_b_level = 0;
+float analog_step_triggered_adsr_b_level = 0;
 float analog_sequence_triggered_adsr_c_level = 0;
 
 
 float envelope_1_attack = 0.0001; // audio_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
-float envelope_1_release = 0.5; // initial value envelope_1 release (seconds)
+float envelope_1_release = 0.5; // INITIAL value only envelope_1 release (seconds). This is set by a pot.
 
 float analog_out_1;
 float analog_out_2;
@@ -1245,9 +1264,9 @@ void printStatus(void*){
 		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
+    rt_printf("\n==== MIDI ======= \n");
 
-
-	//	rt_printf("current_midi_lane is: %d \n", current_midi_lane);
+	  rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 
 		
         // Sequence derived results 
@@ -1319,7 +1338,7 @@ void printStatus(void*){
     	
     	
     	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
-    	rt_printf("analog_adsr_b_level is: %f \n", analog_adsr_b_level);
+    	rt_printf("analog_step_triggered_adsr_b_level is: %f \n", analog_step_triggered_adsr_b_level);
     	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
     	*/
 
@@ -1486,12 +1505,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
     
         } else {
           // We want the note on, so set it on.
-          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
-          // WRITE MIDI MIDI_DATA
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
-          
+
+          if (current_midi_lane != SILENT_MIDI_LANE){ 
+            rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+            // WRITE MIDI MIDI_DATA
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
+          } else {
+            rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+          }
+
+
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){
           	midi.writeNoteOn(midi_channel_x, note, velocity); // echo midi to the output
@@ -1510,12 +1535,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t c
             // Note Off
              rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
              
-             // WRITE MIDI MIDI_DATA
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
-             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+             // WRITE MIDI MIDI_DATA (unless on silent lane)
+            if (current_midi_lane != SILENT_MIDI_LANE){ 
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+            
+            } else {
+               rt_printf("SILENT land so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+            }
 
-			 last_note_off = note;
+			      last_note_off = note;
+             
 			
 			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
 			if (sequence_is_running == 0){ 
@@ -1540,6 +1571,11 @@ void GateAHigh(){
     
   audio_adsr_a.gate(true);
   step_triggered_adsr_b.gate(true);
+
+
+  // TODO UDP ENABLE FLAG Bela_scheduleAuxiliaryTask(gSendUdpMessage);
+
+
 }
 
 void GateALow(){
@@ -1659,9 +1695,7 @@ void OnStepA(){
   
   step_a_count = StepCountSanity(step_a_count);
 
-      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
-	 // This sends a UDP message 
-	 // int my_result  = myUdpClient.send(&message, 32);
+ 
   
   
   uint8_t play_a_note = (the_sequence_a & ( 1 << step_a_count )) >> step_a_count;  
@@ -1727,9 +1761,7 @@ void OnStepB(){
   
   step_b_count = StepCountSanity(step_b_count);
 
-      // std::string message = "--:OnStepA:" + std::to_string(step_a_count) + "--";
-	 // This sends a UDP message 
-	 // int my_result  = myUdpClient.send(&message, 32);
+
   
   
   uint8_t play_b_note = (the_sequence_b & ( 1 << step_b_count )) >> step_b_count;  
@@ -1827,7 +1859,11 @@ void PlayMidi(){
            // The note could be on one of 6 ticks in the sequence
            if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
             	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
-            	midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
+            	
+              // Set LED 4 high
+              target_led_4_state = true;
+              
+              midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
@@ -1835,6 +1871,10 @@ void PlayMidi(){
     if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
        if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step_a +  String(" Found and will send Note OFF for ") + n );
+
+           // Set LED 4 low
+           target_led_4_state = false;
+
            midi.writeNoteOff(midi_channel_x, n, 0);
        }
     }
@@ -2417,6 +2457,7 @@ void AllNotesOff(void*){
 		  rt_printf("All MIDI notes OFF \n");
 		  for (uint8_t n = 0; n <= 127; n++) {
 		     midi.writeNoteOff(midi_channel_x, n, 0);
+         target_led_4_state = false;
 		  }
 		  last_notes_off_frame = frame_timer;
 	} else {
@@ -2440,6 +2481,13 @@ void SetLane(uint8_t lane_in){
   if (previous_lane != current_midi_lane){
     // Don't want to call this too often.
     // Need to limit this in case we have CV input making current_midi_lane change fast
+
+    if (current_midi_lane == SILENT_MIDI_LANE){
+       rt_printf("Just changed to SILENT_MIDI_LANE \n"); 
+       Bela_scheduleAuxiliaryTask(gAllNotesOff);
+    }
+
+
     //Bela_scheduleAuxiliaryTask(gAllNotesOff);
     previous_lane = current_midi_lane;
   }
@@ -2875,6 +2923,23 @@ WriteFile file2;
 
 
 
+void SendUdpMessage(void*){
+
+  // HERE
+	
+	last_function = 686587;
+
+      std::string message2 = ">:" + std::to_string(analog_out_2) + ":<";
+
+
+
+      
+	 // This sends a UDP message 
+	 // TODO UDP ENABLE FLAG int my_result  = myUdpClient.send(&message2, 32);
+}   
+
+
+
 
 /////////////////////////////////////////////////////////
 
@@ -3015,9 +3080,14 @@ bool setup(BelaContext *context, void *userData){
         sequence_triggered_adsr_c.setSustainLevel(envelope_1_sustain);
 
 
-        // Set buttons pins as inputs
+        // The two buttons on Salt as inputs
         pinMode(context, 0, button_1_PIN, INPUT);
         pinMode(context, 0, button_2_PIN, INPUT);
+
+
+        // The two buttons on Salt + as inputs
+        pinMode(context, 0, button_3_PIN, INPUT);
+        pinMode(context, 0, button_4_PIN, INPUT);
 
 
         // The two LEDS on Salt
@@ -3027,6 +3097,8 @@ bool setup(BelaContext *context, void *userData){
         // The two LEDS on Salt + 
         pinMode(context, 0, LED_3_PIN, OUTPUT);
         pinMode(context, 0, LED_4_PIN, OUTPUT);
+
+        // Get different colours out of LEDS? See https://github.com/BelaPlatform/Bela/blob/master/examples/Digital/bicolor-LEDs/render.cpp
 
 
 
@@ -3045,7 +3117,8 @@ bool setup(BelaContext *context, void *userData){
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
-     
+        if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
+                return false;
                 
                 
                 
@@ -3055,7 +3128,11 @@ bool setup(BelaContext *context, void *userData){
         
         gSampleCount = 0;
         
+        //rt_printf("Before myUdpClient.setup in Setup. \n");
+
         //myUdpClient.setup(50002, "18.195.30.76"); 
+
+        //rt_printf("After myUdpClient.setup in Setup. \n");
         
     // Create Midi Sequence in memory Structure
     InitMidiSequence(false);
@@ -3155,7 +3232,7 @@ void render(BelaContext *context, void *userData)
 
 
         // Channel 1 is modulated by the ADSR B
-        audioWrite(context, n, 0, out_l * analog_adsr_b_level);
+        audioWrite(context, n, 0, out_l * analog_step_triggered_adsr_b_level);
 
         // Unmodulated output
         audioWrite(context, n, 1, out_r);
@@ -3174,7 +3251,7 @@ void render(BelaContext *context, void *userData)
 		lfo_a_result_analog = lfo_a_analog.process();
 		
 		// Process step triggered analog envelope
-		analog_adsr_b_level  = step_triggered_adsr_b.process();  
+		analog_step_triggered_adsr_b_level  = step_triggered_adsr_b.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
 		analog_sequence_triggered_adsr_c_level  = env3_amp * sequence_triggered_adsr_c.process();
@@ -3183,13 +3260,18 @@ void render(BelaContext *context, void *userData)
 		
 		
 		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_adsr_b_level; 
+		analog_out_2 = lfo_a_result_analog * analog_sequence_triggered_adsr_c_level; 
+
+
+		// Using an inverse of the sequence triggered adsr
+		//analog_out_3 = lfo_a_result_analog * (1.0 - analog_sequence_triggered_adsr_c_level); 
+
+    // Bit more complext mod
+    analog_out_3 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + (lfo_a_result_analog * analog_step_triggered_adsr_b_level)) / 2.0;  
+
 		
-		// Plain envelope This is like a gate at the start of sequence plus release (so can use it as both a gate and an envelope)
-		analog_out_3 = analog_sequence_triggered_adsr_c_level;
-		
-		// Additive output
-		analog_out_4 = ( lfo_a_result_analog + analog_adsr_b_level ) / 2.0;
+		// Bit more complex add
+		analog_out_4 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + analog_step_triggered_adsr_b_level) / 2.0; 
 		
 		
 
@@ -3527,8 +3609,6 @@ void render(BelaContext *context, void *userData)
 
 
 
-
-   
    
 
 
