@@ -154,6 +154,58 @@ UdpClient myUdpClient;
 
 // ...
 
+//
+// Example serial osc data handler.
+// 
+class MonomeDemo
+	: public SerialOsc::Listener
+{
+public:
+	MonomeDemo(SerialOsc *osc)
+		: osc(osc)
+	{
+		osc->start(this);
+	}
+
+public:
+	virtual void deviceFound(const MonomeDevice * const device)
+	{
+		std::cout << "Found device " << device->id << " (type " << device->type << ")." << std::endl;
+		osc->sendDeviceLedAllCommand(device, false);
+	}
+
+	virtual void deviceRemoved(const std::string &id)
+	{
+		std::cout << "Device " << id << " removed." << std::endl;
+	}
+	
+	virtual void buttonPressMessageReceived(MonomeDevice *device, int x, int y, bool state)
+	{
+		std::cout << "Button press from " << device->id << " received. Prefix = " << device->prefix << ",  x = " << x << ", y = " << y << ", state = " << state << std::endl;
+		osc->sendDeviceLedCommand(device, x, y, state);
+	}
+
+private:
+	SerialOsc *osc;
+};
+
+
+//int main(int argc, const char* argv[])
+int main()
+{
+	std::string input;
+	SerialOsc osc("test", 13000);
+	MonomeDemo device(&osc);
+
+	while (input != "q") {
+		std::cout << "type 'q' to quit." << std::endl;
+		std::getline(std::cin, input);
+	}
+
+	osc.stop();
+
+	return 0;
+}
 
 
 
@@ -2966,6 +3018,8 @@ void SendUdpMessage(void*){
 bool setup(BelaContext *context, void *userData){
 	
 	last_function = 42396;
+	
+	main();
 	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
