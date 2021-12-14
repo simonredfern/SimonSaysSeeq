@@ -98,14 +98,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 
 
-// https://monome.org/docs/serialosc/raspbian/
-// but before doing the serialoscd configure: 
-// Changing line 257 of serialosc/wscript to
-// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
-// Serialosc will compile but serialoscd is not found
-// with https://github.com/monome/serialosc/issues/53
 
-// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
 
 
 #include <Bela.h>
@@ -129,6 +122,28 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <cstdlib>
 
 #include <libraries/UdpClient/UdpClient.h>
+
+
+// Monome Grid
+// https://monome.org/docs/serialosc/raspbian/
+// but before doing the serialoscd configure: 
+// Changing line 257 of serialosc/wscript to
+// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
+// Serialosc will compile but serialoscd is not found
+// with https://github.com/monome/serialosc/issues/53
+
+// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
+
+// https://monome.org/docs/serialosc/setup/
+// https://monome.org/docs/serialosc/serial.txt
+// note have to generate auto_conf file by ./waf configure and move it into correct directory
+// serialosc.h refers to files in the folder serialosc so put them directly under Bela i.e. here:
+#include <serialosc/serialosc.h>
+
+
+//thread = std::thread(&SerialOsc::runThread, this);
+
+
 
 UdpClient myUdpClient;
 
@@ -1111,10 +1126,10 @@ float audio_osc_1_result;
 float lfo_a_result_analog;
 float analog_osc_3_result;
 
-// float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
-// float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
-// float envelope_2_sustain = 0.9; // envelope_2 sustain level
-// float envelope_2_release = 0.5; // envelope_2 release (seconds)
+float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
+float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
+float envelope_2_sustain = 0.9; // envelope_2 sustain level
+float envelope_2_release = 0.5; // envelope_2 release (seconds)
 
 // float sequence_triggered_adsr_c_attack = 0.0001; // envelope_2 attack (seconds)
 // float sequence_triggered_adsr_c_decay = 0.25; // envelope_2 decay (seconds)
@@ -3355,7 +3370,7 @@ void render(BelaContext *context, void *userData)
 		        	
 		        }     
 		
-				// Write output
+				    // Write output Draw Output
 		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
 
 
@@ -3419,11 +3434,11 @@ void render(BelaContext *context, void *userData)
 	      	analogWrite(context, n, ch, analog_out_7);
 	      }
 	      
-	      // CV 8
-	      if (ch == SEQUENCE_CV_OUTPUT_8_PIN){
-	      	//rt_printf("amp is: %f", amp);
-	      	analogWrite(context, n, ch, analog_out_8);
-	      }
+	      // CV 8 -- See above, Draw CV
+	      //if (ch == SEQUENCE_CV_OUTPUT_8_PIN){
+	      //	//rt_printf("amp is: %f", amp);
+	      //	analogWrite(context, n, ch, analog_out_8);
+	      //}
 
 
 	      
