@@ -56,14 +56,6 @@ The Bela software is distributed under the GNU Lesser General Public License
 // ping 8.8.8.8
 
 
-// cat /etc/resolv.conf
-// vi this to add 8.8.8.8 - seems to get reset
-// nameserver 192.168.3.1
-// nameserver 8.8.8.8
-
-// so above doesn't get reset, edit the following for the domain name server
-// vi /etc/dhcp/dhclient.conf
-
 //
 // install curl apt-get install -y libcurl-dev
 
@@ -133,10 +125,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 
 // Monome Grid
-// http://daniel-bytes.github.io/serialosc_example/
-
-
-// https://forum.bela.io/d/863-monome-grid-osc-bela/5
+// https://forum.bela.io/d/863-monome-grid-osc_bank-bela/5
 // https://monome.org/docs/serialosc/raspbian/
 // but before doing the serialoscd configure: 
 // Changing line 257 of serialosc/wscript to
@@ -150,66 +139,15 @@ The Bela software is distributed under the GNU Lesser General Public License
 // https://monome.org/docs/serialosc/serial.txt
 // note have to generate auto_conf file by ./waf configure and move it into correct directory
 // serialosc.h refers to files in the folder serialosc so put them directly under Bela i.e. here:
-#include <serialosc/serialosc.h>
 
+// Create a folder serialosc_helpers in the Bela folder and copy the following files / folders 
+// https://github.com/daniel-bytes/serialosc_example/tree/master/serialosc_example
+// Note the folder renames since SerialOsc is looking for specific folder names it seems
+//root@bela:~/Bela/serialosc_helpers# ls
+//MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
 
-#ifdef _WIN32
-	// additional libs needed for oscpack
-	#pragma comment(lib, "ws2_32.lib") 
-	#pragma comment(lib, "winmm.lib") 
-#endif
+#include <serialosc_helpers/SerialOsc.h>
 
-//
-// Example serial osc data handler.
-// 
-class MonomeDemo
-	: public SerialOsc::Listener
-{
-public:
-	MonomeDemo(SerialOsc *osc)
-		: osc(osc)
-	{
-		osc->start(this);
-	}
-
-public:
-	virtual void deviceFound(const MonomeDevice * const device)
-	{
-		std::cout << "Found device " << device->id << " (type " << device->type << ")." << std::endl;
-		osc->sendDeviceLedAllCommand(device, false);
-	}
-
-	virtual void deviceRemoved(const std::string &id)
-	{
-		std::cout << "Device " << id << " removed." << std::endl;
-	}
-	
-	virtual void buttonPressMessageReceived(MonomeDevice *device, int x, int y, bool state)
-	{
-		std::cout << "Button press from " << device->id << " received. Prefix = " << device->prefix << ",  x = " << x << ", y = " << y << ", state = " << state << std::endl;
-		osc->sendDeviceLedCommand(device, x, y, state);
-	}
-
-private:
-	SerialOsc *osc;
-};
-
-
-int main(int argc, const char* argv[])
-{
-	std::string input;
-	SerialOsc osc("test", 13000);
-	MonomeDemo device(&osc);
-
-	while (input != "q") {
-		std::cout << "type 'q' to quit." << std::endl;
-		std::getline(std::cin, input);
-	}
-
-	osc.stop();
-
-	return 0;
-}
 
 
 UdpClient myUdpClient;
@@ -350,7 +288,7 @@ AuxiliaryTask gSendUdpMessage;
 int gNumOscillators = 2; // was 500
 int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
-OscillatorBank osc;
+OscillatorBank osc_bank;
 
 Oscillator oscillator_2_audio;
 Oscillator lfo_a_analog;
@@ -3100,11 +3038,11 @@ bool setup(BelaContext *context, void *userData){
         
         //rt_printf("Creating an oscilator in Setup. \n");
         
-        osc.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
+        osc_bank.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
         // Fill in the wavetable with one period of your waveform
-        float* wavetable = osc.getWavetable();
-        for(int n = 0; n < osc.getWavetableLength() + 1; n++){
-                wavetable[n] = sinf(2.0 * M_PI * (float)n / (float)osc.getWavetableLength());
+        float* wavetable = osc_bank.getWavetable();
+        for(int n = 0; n < osc_bank.getWavetableLength() + 1; n++){
+                wavetable[n] = sinf(2.0 * M_PI * (float)n / (float)osc_bank.getWavetableLength());
         }
         
         // Initialise frequency and amplitude
@@ -3113,14 +3051,14 @@ bool setup(BelaContext *context, void *userData){
         for(int n = 0; n < gNumOscillators; n++) {
                 if(context->analogFrames == 0) {
                         // Random frequencies when used without analogInputs
-                        osc.setFrequency(n, kMinimumFrequency + (kMaximumFrequency - kMinimumFrequency) * ((float)random() / (float)RAND_MAX));
+                        osc_bank.setFrequency(n, kMinimumFrequency + (kMaximumFrequency - kMinimumFrequency) * ((float)random() / (float)RAND_MAX));
                 }
                 else {
                         // Constant spread of frequencies when used with analogInputs
-                        osc.setFrequency(n, freq);
+                        osc_bank.setFrequency(n, freq);
                         freq += increment;
                 }
-                osc.setAmplitude(n, (float)random() / (float)RAND_MAX / (float)gNumOscillators);
+                osc_bank.setAmplitude(n, (float)random() / (float)RAND_MAX / (float)gNumOscillators);
         }
         increment = 0;
         freq = 440.0;
@@ -3130,7 +3068,7 @@ bool setup(BelaContext *context, void *userData){
                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
                 float newFreq = freq * randScale;
                 // For efficiency, frequency is expressed in change in wavetable position per sample, not Hz or radians
-                osc.setFrequency(n, newFreq);
+                osc_bank.setFrequency(n, newFreq);
                 freq += increment;
         }
         // Initialise auxiliary tasks
@@ -3731,7 +3669,7 @@ void recalculate_frequencies(void*)
                 // to avoid weird phase effects
                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
                 float newFreq = freq * randScale;
-                osc.setFrequency(n, newFreq);
+                osc_bank.setFrequency(n, newFreq);
                 freq += increment;
         }
 }
