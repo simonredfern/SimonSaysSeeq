@@ -56,6 +56,14 @@ The Bela software is distributed under the GNU Lesser General Public License
 // ping 8.8.8.8
 
 
+// cat /etc/resolv.conf
+// vi this to add 8.8.8.8 - seems to get reset
+// nameserver 192.168.3.1
+// nameserver 8.8.8.8
+
+// so above doesn't get reset, edit the following for the domain name server
+// vi /etc/dhcp/dhclient.conf
+
 //
 // install curl apt-get install -y libcurl-dev
 
@@ -125,6 +133,10 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 
 // Monome Grid
+// http://daniel-bytes.github.io/serialosc_example/
+
+
+// https://forum.bela.io/d/863-monome-grid-osc-bela/5
 // https://monome.org/docs/serialosc/raspbian/
 // but before doing the serialoscd configure: 
 // Changing line 257 of serialosc/wscript to
@@ -141,8 +153,63 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <serialosc/serialosc.h>
 
 
-//thread = std::thread(&SerialOsc::runThread, this);
+#ifdef _WIN32
+	// additional libs needed for oscpack
+	#pragma comment(lib, "ws2_32.lib") 
+	#pragma comment(lib, "winmm.lib") 
+#endif
 
+//
+// Example serial osc data handler.
+// 
+class MonomeDemo
+	: public SerialOsc::Listener
+{
+public:
+	MonomeDemo(SerialOsc *osc)
+		: osc(osc)
+	{
+		osc->start(this);
+	}
+
+public:
+	virtual void deviceFound(const MonomeDevice * const device)
+	{
+		std::cout << "Found device " << device->id << " (type " << device->type << ")." << std::endl;
+		osc->sendDeviceLedAllCommand(device, false);
+	}
+
+	virtual void deviceRemoved(const std::string &id)
+	{
+		std::cout << "Device " << id << " removed." << std::endl;
+	}
+	
+	virtual void buttonPressMessageReceived(MonomeDevice *device, int x, int y, bool state)
+	{
+		std::cout << "Button press from " << device->id << " received. Prefix = " << device->prefix << ",  x = " << x << ", y = " << y << ", state = " << state << std::endl;
+		osc->sendDeviceLedCommand(device, x, y, state);
+	}
+
+private:
+	SerialOsc *osc;
+};
+
+
+int main(int argc, const char* argv[])
+{
+	std::string input;
+	SerialOsc osc("test", 13000);
+	MonomeDemo device(&osc);
+
+	while (input != "q") {
+		std::cout << "type 'q' to quit." << std::endl;
+		std::getline(std::cin, input);
+	}
+
+	osc.stop();
+
+	return 0;
+}
 
 
 UdpClient myUdpClient;
