@@ -146,7 +146,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 //root@bela:~/Bela/serialosc_helpers# ls
 //MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
 
-#include <serialosc_helpers/SerialOsc.h>
+//#include <serialosc_helpers/SerialOsc.h>
 
 
 
@@ -157,6 +157,8 @@ UdpClient myUdpClient;
 //
 // Example serial osc data handler.
 // 
+/*
+
 class MonomeDemo
 	: public SerialOsc::Listener
 {
@@ -207,7 +209,7 @@ int main()
 	return 0;
 }
 
-
+*/
 
 Scope scope;
 
@@ -3019,7 +3021,7 @@ bool setup(BelaContext *context, void *userData){
 	
 	last_function = 42396;
 	
-	main();
+	//main();
 	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
