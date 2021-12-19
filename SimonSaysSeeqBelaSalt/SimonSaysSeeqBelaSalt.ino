@@ -146,7 +146,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 //root@bela:~/Bela/serialosc_helpers# ls
 //MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
 
-#include <serialosc_helpers/SerialOsc.h>
+// #include <serialosc_helpers/SerialOsc.h>
 
 
 
@@ -208,8 +208,8 @@ int main()
 
 	return 0;
 }
-
 */
+
 
 Scope scope;
 
