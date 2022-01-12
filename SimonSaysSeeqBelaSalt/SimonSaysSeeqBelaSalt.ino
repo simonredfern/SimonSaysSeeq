@@ -67,6 +67,8 @@ The Bela software is distributed under the GNU Lesser General Public License
 // du -ah $dir | sort -n -r | head -n $num
 // du -hs /var/*
 
+// Can apparently delete /var/cache/apt
+
 
 // Add this to your /etc/init.d
 
@@ -121,10 +123,121 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <cstdlib>
 
-#include <libraries/UdpClient/UdpClient.h>
+//#include <libraries/UdpClient/UdpClient.h>
+
+// see below
+#include <serialosc_example/serialosc_example/SerialOsc.h>
+
 
 
 // Monome Grid
+// To install serialosc from sources on linux follow: 
+// // https://monome.org/docs/serialosc/raspbian/
+// (copied from above)
+// raspberry pi os
+// precompiled packages
+// monome software packages from the ubuntu ppa work great on raspberry pi os. to install them on raspbian stretch, add the repository signing key first:
+
+// gpg --keyserver keyserver.ubuntu.com --recv DD9300F1
+// gpg --export --armor DD9300F1 | sudo apt-key add -
+// then add the repository url to your sources.list:
+
+// echo "deb http://ppa.launchpad.net/artfwo/monome/ubuntu bionic main" | sudo tee /etc/apt/sources.list.d/monome.list
+// finally run:
+
+// sudo apt update
+// sudo apt install serialosc
+// the package is configured to start serialosc automatically on boot and save the grid state under /var/lib/serialosc. to disable this behaviour, simply run:
+
+// sudo systemctl disable serialosc.service
+// compiling from source
+// while this build script is specific to raspberry pi os (for the raspberry pi), there’s a good change it’ll work with other embedded linux distributions and devices.
+
+// this script will install libmonome and serialosc. these are essential for communicating with grids and arcs on linux.
+
+// sudo apt-get install liblo-dev
+// git clone https://github.com/monome/libmonome.git
+// cd libmonome
+// ./waf configure
+// ./waf
+// sudo ./waf install
+// cd ..
+
+// sudo apt-get install libudev-dev libavahi-compat-libdnssd-dev libuv1-dev
+// git clone https://github.com/monome/serialosc.git
+// cd serialosc
+// git submodule init && git submodule update
+// ./waf configure --enable-system-libuv
+// ./waf
+// sudo ./waf install
+// cd ..
+// to run serialosc, execute serialoscd.
+// (end copy)
+
+// We need to put serialosc example on the bela /root/Bela/projects/SimonSaysSeeqBela
+
+// git clone https://github.com/daniel-bytes/serialosc_example.git
+
+
+// SerialOsc is expecting certain files under osc
+
+// cd /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example
+// and create some symbolic links there
+
+// To mitigate error:
+// In file serialosc_example/serialosc_example/osckpack/ip/posix/NetworkingUtils.cpp: 'ip/NetworkingUtils.h' file not found column: 10, line: 37
+
+
+// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/osc osc
+
+//        source                                                                            link
+// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip/posix/ip
+
+// Get rid of win32
+///Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip# rmdir  win32
+
+
+
+
+// From https://monome.org/docs/serialosc/linux/
+
+
+// root@bela:~# cat /etc/*release 
+// PRETTY_NAME="Debian GNU/Linux 9 (stretch)"
+// NAME="Debian GNU/Linux"
+// VERSION_ID="9"
+// VERSION="9 (stretch)"
+// VERSION_CODENAME=stretch
+// ID=debian
+// HOME_URL="https://www.debian.org/"
+// SUPPORT_URL="https://www.debian.org/support"
+// BUG_REPORT_URL="https://bugs.debian.org/"
+
+
+
+// sudo apt-get install dirmngr
+// sudo apt install software-properties-common
+// sudo add-apt-repository ppa:artfwo/monome
+
+// OR
+// Add the following to:
+///etc/apt/sources.list
+
+
+//deb http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
+//deb-src http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
+
+//https://monome.org/docs/serialosc/raspbian/
+
+// sudo apt-get update
+// sudo apt-get install libmonome
+// sudo apt-get install serialosc
+
+
+
+
+
+/////////
 // https://forum.bela.io/d/863-monome-grid-osc_bank-bela/5
 // https://monome.org/docs/serialosc/raspbian/
 // but before doing the serialoscd configure: 
@@ -146,11 +259,11 @@ The Bela software is distributed under the GNU Lesser General Public License
 //root@bela:~/Bela/serialosc_helpers# ls
 //MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
 
-// #include <serialosc_helpers/SerialOsc.h>
 
 
 
-UdpClient myUdpClient;
+
+//UdpClient myUdpClient;
 
 // ...
 
@@ -1280,7 +1393,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1 == 0) {
+    if(gCount % 100 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
