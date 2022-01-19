@@ -10,10 +10,11 @@
 // We use: https://github.com/PaulStoffregen/Audio See https://www.pjrc.com/teensy/gui/index.html
 // This file is programmed to use a: https://1010music.com/euroshield-user-guide (unfortuanatly discontinued) 
 // Please see the README for more info. 
+/////////////////////////////////
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.26; 
+const float simon_says_seq_version = 0.27; 
 
 
 #include <Audio.h>
@@ -29,7 +30,7 @@ AudioEffectMultiply      multiply1;
 AudioEffectMultiply      multiply2;
 
 AudioAmplifier amp_1_object;
- 
+AudioAmplifier amp_for_monitor_object; 
 
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
@@ -39,7 +40,7 @@ AudioAnalyzeRMS          gate_monitor;
 
 //////////////////////////
 // GATE Output and Monitor
-AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
+AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> UPPER Audio Out
 AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
 
 //////////////
@@ -56,12 +57,11 @@ AudioConnection          patchCord13(external_modulator_object, 0, multiply2, 0)
 
 
 // CV Output (via multiply) and Monitor
-AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
+AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> LOWER Audio Out
 AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
+//AudioConnection          patchCord2(amp_1_object, amp_for_monitor_object); // CV -> monitor (for LED)
 
-//AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
-
-AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // CV -> Lower Audio Out
+AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // For CV output to be "multed" internally
 
 
 AudioAnalyzePeak     peak_L;
@@ -889,6 +889,9 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
  
    float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
+
+
+// Hmm why are we setting this gain based on the left_peak_level? (jan 19 2021)
 
    amp_1_object.gain(amp_1_gain); // setting-
    //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
