@@ -58,8 +58,12 @@ AudioConnection          patchCord13(external_modulator_object, 0, multiply2, 0)
 
 // CV Output (via multiply) and Monitor
 AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> LOWER Audio Out
-AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
-//AudioConnection          patchCord2(amp_1_object, amp_for_monitor_object); // CV -> monitor (for LED)
+
+AudioConnection          patchCord2(amp_1_object, amp_for_monitor_object);
+
+AudioConnection          patchCord14(amp_for_monitor_object, cv_monitor); // CV -> monitor (for LED)
+
+ 
 
 AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // For CV output to be "multed" internally
 
@@ -887,13 +891,21 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
 
  
-   float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
+   //float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
+
+   float amp_1_gain = 0.2;  // let external ofset / gain set this higher
+   
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
 
 // Hmm why are we setting this gain based on the left_peak_level? (jan 19 2021)
 
-   amp_1_object.gain(amp_1_gain); // setting-
+   amp_1_object.gain(amp_1_gain); 
+   
+   amp_for_monitor_object.gain(1.0);
+
+   
+   // setting-
    //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
