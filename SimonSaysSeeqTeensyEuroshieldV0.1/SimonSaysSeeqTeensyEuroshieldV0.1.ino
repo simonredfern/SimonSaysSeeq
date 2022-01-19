@@ -14,7 +14,7 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.27; 
+const float simon_says_seq_version = 0.28; 
 
 
 #include <Audio.h>
@@ -211,7 +211,8 @@ uint8_t FUZZINESS_AMOUNT = 100;
 unsigned int cv_waveform_a_frequency_raw;
 float cv_waveform_a_frequency;
 
-  boolean reset_cv_lfo_at_FIRST_STEP = false;
+// set this to true for guaranteed reset of lfo
+boolean reset_cv_lfo_at_FIRST_STEP = true;
 
 // Amplitude of the LFO
 unsigned int cv_waveform_a_amplitude_raw;
@@ -927,7 +928,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
 
-  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
+  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1. // This could be the case anyway (see value of reset_cv_lfo_at_FIRST_STEP above)
   if (cv_waveform_b_frequency_raw > CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - 20){
     reset_cv_lfo_at_FIRST_STEP = true;
     //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
@@ -1063,7 +1064,7 @@ void OnStep(){
   
 
     if (step_count == FIRST_STEP) {
-      SyncAndResetCv();
+      ConditionalSyncAndResetCv();
     } else {
       ChangeCvWaveformBAmplitude();
     }
@@ -1104,8 +1105,10 @@ void GateLow(){
 }
 
 
+
+// HERE
 // Kind of syncs the CV 
-void SyncAndResetCv(){
+void ConditionalSyncAndResetCv(){
   //Serial.println(String("CV Pulse On") );
    
   cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
@@ -1113,20 +1116,21 @@ void SyncAndResetCv(){
     // Used to modulate CV. This signal is multiplied by cv_waveform 
 
   // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
+  // or if reset_cv_lfo_at_FIRST_STEP
   
   if (RampIsPositive()){
-    if (cv_waveform_b_amplitude == 1) {
+    if (cv_waveform_b_amplitude == 1 || reset_cv_lfo_at_FIRST_STEP == 1) {
       cv_waveform_b_amplitude = 0;
-      Serial.println(String("SyncAndResetCv : 0") );
+      Serial.println(String("ConditionalSyncAndResetCv : 0") );
       
       SetWaveformBObjectAmplitude ();
     }
 
   } else {
-    if (cv_waveform_b_amplitude == 0) {
+    if (cv_waveform_b_amplitude == 0 || reset_cv_lfo_at_FIRST_STEP == 1) {
       cv_waveform_b_amplitude = 1;
 
-       Serial.println(String("SyncAndResetCv : 1") );
+       Serial.println(String("ConditionalSyncAndResetCv : 1") );
       
       SetWaveformBObjectAmplitude ();
     }
