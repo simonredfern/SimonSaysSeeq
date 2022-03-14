@@ -1273,16 +1273,16 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR audio_adsr_a; 
-ADSR step_triggered_adsr_b;
+ADSR per_sequence_adsr_a; 
+ADSR per_sequence_adsr_b;
 ADSR per_sequence_adsr_c;
 
-float audio_adsr_a_level = 0;
-float analog_step_triggered_adsr_b_level = 0;
+float per_sequence_adsr_a_level = 0;
+float analog_per_sequence_adsr_b_level = 0;
 float analog_per_sequence_adsr_c_level = 0;
 
 
-float envelope_1_attack = 0.0001; // audio_adsr_a attack (seconds)
+float envelope_1_attack = 0.0001; // per_sequence_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
 float envelope_1_release = 0.5; // INITIAL value only envelope_1 release (seconds). This is set by a pot.
@@ -1346,7 +1346,8 @@ void ResetSequenceACounters(){
 
   lfo_a_analog.setPhase(0.0);
   
-  
+  per_sequence_adsr_a.gate(true);
+  per_sequence_adsr_b.gate(true);
   per_sequence_adsr_c.gate(true);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence A was reset
@@ -1528,8 +1529,8 @@ void printStatus(void*){
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	
-    	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
-    	rt_printf("analog_step_triggered_adsr_b_level is: %f \n", analog_step_triggered_adsr_b_level);
+    	rt_printf("per_sequence_adsr_a_level is: %f \n", per_sequence_adsr_a_level);
+    	rt_printf("analog_per_sequence_adsr_b_level is: %f \n", analog_per_sequence_adsr_b_level);
     	rt_printf("analog_per_sequence_adsr_c_level is: %f \n", analog_per_sequence_adsr_c_level);
     	*/
 
@@ -1759,10 +1760,7 @@ void GateAHigh(){
 
 
 
-    
-  audio_adsr_a.gate(true);
-  step_triggered_adsr_b.gate(true);
-
+  
 
   // TODO UDP ENABLE FLAG Bela_scheduleAuxiliaryTask(gSendUdpMessage);
 
@@ -1779,9 +1777,8 @@ void GateALow(){
   
   target_led_1_state = false; 
   
-  audio_adsr_a.gate(false);
-  step_triggered_adsr_b.gate(false);
-  
+  per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
+  per_sequence_adsr_b.gate(false); // always reset it here but not trigger it
   per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
   
 }
@@ -1793,13 +1790,13 @@ void GateBHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_analog_gate_b_out_state = true;
-
+  
   target_digital_gate_b_out_state = true;
 
   target_led_3_state = true; 
     
-  //audio_adsr_a.gate(true);
-  //step_triggered_adsr_b.gate(true);
+  //per_sequence_adsr_a.gate(true);
+  //per_sequence_adsr_b.gate(true);
 }
 
 
@@ -1815,10 +1812,6 @@ void GateBLow(){
 
   target_led_3_state = false; 
   
-  //audio_adsr_a.gate(false);
-  //step_triggered_adsr_b.gate(false);
-  
-  //per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
   
 }
 
@@ -2999,20 +2992,22 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
    
    // TODO only do this if the value changes?
    
-        audio_adsr_a.setAttackRate(envelope_1_attack * audio_sample_rate);
-        audio_adsr_a.setDecayRate(envelope_1_decay * audio_sample_rate);
-        audio_adsr_a.setSustainLevel(envelope_1_sustain);
-        audio_adsr_a.setReleaseRate(envelope_1_release * audio_sample_rate);
+        per_sequence_adsr_a.setAttackRate(envelope_1_attack * audio_sample_rate);
+        per_sequence_adsr_a.setDecayRate(envelope_1_decay * audio_sample_rate);
+        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_a.setReleaseRate(envelope_1_release * audio_sample_rate);
         
-        step_triggered_adsr_b.setAttackRate(envelope_1_attack * analog_sample_rate);
-        step_triggered_adsr_b.setDecayRate(envelope_1_decay * analog_sample_rate);
-        step_triggered_adsr_b.setReleaseRate(envelope_1_release * analog_sample_rate);
-        step_triggered_adsr_b.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_b.setAttackRate(envelope_1_attack * analog_sample_rate);
+        per_sequence_adsr_b.setDecayRate(envelope_1_decay * analog_sample_rate);
+        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_b.setReleaseRate(envelope_1_release * analog_sample_rate);
+
 
         per_sequence_adsr_c.setAttackRate(envelope_1_attack * audio_sample_rate);
         per_sequence_adsr_c.setDecayRate(envelope_1_decay * audio_sample_rate);
-        per_sequence_adsr_c.setReleaseRate(envelope_1_release * audio_sample_rate);
         per_sequence_adsr_c.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_c.setReleaseRate(envelope_1_release * audio_sample_rate);
+
         
 
 	    
@@ -3255,16 +3250,16 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set ADSR parameters
-        audio_adsr_a.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        audio_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        audio_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        audio_adsr_a.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_a.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain);
         
         // This envelope triggers on each step
-        step_triggered_adsr_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        step_triggered_adsr_b.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        step_triggered_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        step_triggered_adsr_b.setSustainLevel(envelope_1_sustain);
+        per_sequence_adsr_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
+        per_sequence_adsr_b.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        per_sequence_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
+        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain);
 
 
         per_sequence_adsr_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
@@ -3357,10 +3352,10 @@ void render(BelaContext *context, void *userData)
   // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
-		audio_adsr_a_level  = 1.0 * audio_adsr_a.process();
+		per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
 		
     
-    //audio_osc_1_result = oscillator_2_audio.process() * audio_adsr_a_level;
+    //audio_osc_1_result = oscillator_2_audio.process() * per_sequence_adsr_a_level;
 		
         ////////////////////////////////
 		    // Begin Bela delay example code
@@ -3425,7 +3420,7 @@ void render(BelaContext *context, void *userData)
 
 
         // Channel 1 is modulated by the ADSR B
-        audioWrite(context, n, 0, out_l * analog_step_triggered_adsr_b_level);
+        audioWrite(context, n, 0, out_l * analog_per_sequence_adsr_b_level);
 
         // Unmodulated output
         audioWrite(context, n, 1, out_r);
@@ -3443,8 +3438,8 @@ void render(BelaContext *context, void *userData)
 		// Process analog oscillator	
 		lfo_a_result_analog = lfo_a_analog.process();
 		
-		// Process step triggered analog envelope
-		analog_step_triggered_adsr_b_level  = step_triggered_adsr_b.process();  
+
+		analog_per_sequence_adsr_b_level  = per_sequence_adsr_b.process();  
 		
 		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
 		analog_per_sequence_adsr_c_level  = env3_amp * per_sequence_adsr_c.process();
@@ -3455,12 +3450,12 @@ void render(BelaContext *context, void *userData)
     analog_out_6 = analog_out_2; 
 
     // Bit more complext mod
-    analog_out_3 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + (lfo_a_result_analog * analog_step_triggered_adsr_b_level)) / 2.0;  
+    analog_out_3 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + (lfo_a_result_analog * analog_per_sequence_adsr_b_level)) / 2.0;  
 
     analog_out_7 = analog_out_3; 
 
 		// Bit more complex add
-		analog_out_4 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + analog_step_triggered_adsr_b_level) / 2.0; 
+		analog_out_4 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + analog_per_sequence_adsr_b_level) / 2.0; 
 		
     analog_out_8 = analog_out_4; 
 		
