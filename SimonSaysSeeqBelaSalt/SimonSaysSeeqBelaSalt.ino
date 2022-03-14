@@ -564,7 +564,7 @@ const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
 
 const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
-const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
+const int ADSR_SETTING_INPUT_PIN = 3; // CV 4 input
 
 
 const int SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN = 4; // CV 5 (SALT+) was COARSE-_DELAY_TIME_INPUT_PIN
@@ -1285,7 +1285,9 @@ float analog_per_sequence_adsr_c_level = 0;
 float envelope_1_attack = 0.0001; // per_sequence_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.9; // envelope_1 sustain level
-float envelope_1_release = 0.5; // INITIAL value only envelope_1 release (seconds). This is set by a pot.
+float envelope_1_release = 0.5; 
+float envelope_1_setting = 0.5; // INITIAL value only This is set by a pot.
+
 
 float analog_out_1;
 float analog_out_2;
@@ -1307,10 +1309,7 @@ float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
 float envelope_2_sustain = 0.9; // envelope_2 sustain level
 float envelope_2_release = 0.5; // envelope_2 release (seconds)
 
-// float per_sequence_adsr_c_attack = 0.0001; // envelope_2 attack (seconds)
-// float per_sequence_adsr_c_decay = 0.25; // envelope_2 decay (seconds)
-// float per_sequence_adsr_c_sustain = 0.9; // envelope_2 sustain level
-// float per_sequence_adsr_c_release = 0.5; // envelope_2 release (seconds)
+
 
 
 
@@ -1795,8 +1794,7 @@ void GateBHigh(){
 
   target_led_3_state = true; 
     
-  //per_sequence_adsr_a.gate(true);
-  //per_sequence_adsr_b.gate(true);
+
 }
 
 
@@ -3250,22 +3248,25 @@ bool setup(BelaContext *context, void *userData){
 
 
         // Set ADSR parameters
-        per_sequence_adsr_a.setAttackRate(envelope_1_attack * context->audioSampleRate);
+        per_sequence_adsr_a.setAttackRate(envelope_1_setting);
         per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain * context->analogSampleRate);
         per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain);
+       
         
         // This envelope triggers on each step
         per_sequence_adsr_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        per_sequence_adsr_b.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        per_sequence_adsr_b.setDecayRate(envelope_1_setting);
+        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain * context->analogSampleRate);
         per_sequence_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain);
+        
 
 
         per_sequence_adsr_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
         per_sequence_adsr_c.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        per_sequence_adsr_c.setSustainLevel(envelope_1_setting);
         per_sequence_adsr_c.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        per_sequence_adsr_c.setSustainLevel(envelope_1_sustain);
+        
 
 
         // The two buttons on Salt as inputs
@@ -3504,9 +3505,9 @@ void render(BelaContext *context, void *userData)
 
 
 
-		  if (ch == ADSR_RELEASE_INPUT_PIN){
-		  	// TODO use an oscillator here instead. why actually?
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
+		  if (ch == ADSR_SETTING_INPUT_PIN){
+		  	// used for various ADSR settings
+		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 5.0);
 		  }
 		    
 		  
