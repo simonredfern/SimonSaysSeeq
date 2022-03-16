@@ -1446,7 +1446,7 @@ void printStatus(void*){
 		
 		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
 		//rt_printf("new_button_2_state is: %d \n", new_button_2_state);
-		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
+	//	rt_printf("new_button_3_state is: %d \n", new_button_3_state);
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
@@ -1455,9 +1455,9 @@ void printStatus(void*){
 		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
-    rt_printf("\n==== MIDI ======= \n");
+    //rt_printf("\n==== MIDI ======= \n");
 
-	  rt_printf("current_midi_lane is: %d \n", current_midi_lane);
+	  //rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 
 		
         // Sequence derived results 
@@ -1476,11 +1476,11 @@ void printStatus(void*){
     	
     	rt_printf("\n==== Sequence A ======= \n");
     	
-    	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
+    	//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
     	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
 
-    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
-    	rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	//rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
+    	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
     	
     	
     	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
@@ -1502,28 +1502,34 @@ void printStatus(void*){
 
 		rt_printf("\n==== Sequence B ======= \n");
 
-    	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
+    	//rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
     	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
     	
-		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
-		rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
+		//rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+		//rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
 		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
 	    print_binary(the_sequence_b);
 		rt_printf("%c \n", 'B');
 		
 		
-		rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
-    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+		//rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
+    //	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
 
-		rt_printf("step_b_count is: %d \n", step_b_count);
+		//rt_printf("step_b_count is: %d \n", step_b_count);
 
-        if (step_b_count == FIRST_STEP) {
+      if (step_b_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP B \n");
     	} else {
     		rt_printf("other step B \n");
     	}
     	
     	
+
+
+
+
+rt_printf("envelope_1_setting is: %f \n", envelope_1_setting);
+
     	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
@@ -1552,13 +1558,13 @@ void printStatus(void*){
 		
 		
 		
-		rt_printf("analog_out_5 is: %f \n", analog_out_5);
-		rt_printf("analog_out_6 is: %f \n", analog_out_6);
-		rt_printf("analog_out_7 is: %f \n", analog_out_7);
-		rt_printf("analog_out_8 is: %f \n", analog_out_8);
+	//	rt_printf("analog_out_5 is: %f \n", analog_out_5);
+	//	rt_printf("analog_out_6 is: %f \n", analog_out_6);
+	//	rt_printf("analog_out_7 is: %f \n", analog_out_7);
+	//	rt_printf("analog_out_8 is: %f \n", analog_out_8);
 		
 		
-			rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
+	//		rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
 					
 		
 
@@ -3503,7 +3509,7 @@ void render(BelaContext *context, void *userData)
 
 		  if (ch == ADSR_SETTING_INPUT_PIN){
 		  	// used for various ADSR settings
-		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 5.0);
+		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 100.0);
 		  }
 		    
 		  
