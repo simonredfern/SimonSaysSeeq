@@ -1284,7 +1284,7 @@ float analog_per_sequence_adsr_c_level = 0;
 
 float envelope_1_attack = 0.0001; // per_sequence_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
-float envelope_1_sustain = 0.9; // envelope_1 sustain level
+float envelope_1_sustain = 0.1; // envelope_1 sustain level
 float envelope_1_release = 0.5; 
 float envelope_1_setting = 0.5; // INITIAL value only This is set by a pot.
 
@@ -2988,23 +2988,18 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
    //Serial.println();
    
    
-   // TODO only do this if the value changes?
-   
-        per_sequence_adsr_a.setAttackRate(envelope_1_attack * audio_sample_rate);
-        per_sequence_adsr_a.setDecayRate(envelope_1_decay * audio_sample_rate);
-        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain);
-        per_sequence_adsr_a.setReleaseRate(envelope_1_release * audio_sample_rate);
+
+   // Modify Attack
+   per_sequence_adsr_a.setAttackRate(envelope_1_setting * audio_sample_rate);
+
         
-        per_sequence_adsr_b.setAttackRate(envelope_1_attack * analog_sample_rate);
-        per_sequence_adsr_b.setDecayRate(envelope_1_decay * analog_sample_rate);
-        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain);
-        per_sequence_adsr_b.setReleaseRate(envelope_1_release * analog_sample_rate);
+  // Modifiy Attack and Decay
+  per_sequence_adsr_b.setAttackRate(envelope_1_setting * analog_sample_rate);
+  per_sequence_adsr_b.setDecayRate(envelope_1_setting * analog_sample_rate);
 
 
-        per_sequence_adsr_c.setAttackRate(envelope_1_attack * audio_sample_rate);
-        per_sequence_adsr_c.setDecayRate(envelope_1_decay * audio_sample_rate);
-        per_sequence_adsr_c.setSustainLevel(envelope_1_sustain);
-        per_sequence_adsr_c.setReleaseRate(envelope_1_release * audio_sample_rate);
+  // Modify Decay
+  per_sequence_adsr_c.setDecayRate(envelope_1_setting * audio_sample_rate);
 
         
 
@@ -3247,24 +3242,28 @@ bool setup(BelaContext *context, void *userData){
         analog_sample_rate = context->analogSampleRate;
 
 
-        // Set ADSR parameters
-        per_sequence_adsr_a.setAttackRate(envelope_1_setting);
+        // Setup ADSR (these are modified in Change Sequence)
+         // This envelope triggers at the start of each sequence
+         // Attack can be modified
+        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->audioSampleRate);
         per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain * context->analogSampleRate);
+        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain); // Level not time
         per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
        
         
-        // This envelope triggers on each step
-        per_sequence_adsr_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        per_sequence_adsr_b.setDecayRate(envelope_1_setting);
-        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain * context->analogSampleRate);
+        // This envelope triggers at the start of each sequence
+        // Attack and Decay can be modified
+        per_sequence_adsr_b.setAttackRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_b.setDecayRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain); // Level not time
         per_sequence_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
         
 
-
+        // This envelope triggers at the start of each sequence
+        // Decay can be modified
         per_sequence_adsr_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        per_sequence_adsr_c.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        per_sequence_adsr_c.setSustainLevel(envelope_1_setting);
+        per_sequence_adsr_c.setDecayRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_c.setSustainLevel(envelope_1_sustain); // Level not time
         per_sequence_adsr_c.setReleaseRate(envelope_1_release * context->analogSampleRate);
         
 
@@ -3490,13 +3489,10 @@ void render(BelaContext *context, void *userData)
         	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
 		 }
 
-		// Begin Bela delay example code
-		//    float analog_out_7 = 0;
-        //float analog_out_8 = 0;
 
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 10);
 		  }
 
 
