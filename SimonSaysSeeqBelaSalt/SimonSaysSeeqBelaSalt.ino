@@ -110,7 +110,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <libraries/Scope/Scope.h>
 
-#include <libraries/ADSR/ADSR.h>
+#include <libraries/ADSR/ADSR.h> // See https://www.earlevel.com/main/2013/06/03/envelope-generators-adsr-code/
 
 
 
@@ -460,6 +460,7 @@ OscillatorBank osc_bank;
 
 Oscillator oscillator_2_audio;
 Oscillator lfo_a_analog;
+Oscillator lfo_b_analog;
 
 
 int gAudioChannelNum; // number of audio channels to iterate over
@@ -1277,7 +1278,7 @@ ADSR per_sequence_adsr_a;
 ADSR per_sequence_adsr_b;
 ADSR per_sequence_adsr_c;
 
-float per_sequence_adsr_a_level = 0;
+float analog_per_sequence_adsr_a_level = 0;
 float analog_per_sequence_adsr_b_level = 0;
 float analog_per_sequence_adsr_c_level = 0;
 
@@ -1286,7 +1287,8 @@ float envelope_1_attack = 0.0001; // per_sequence_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
 float envelope_1_sustain = 0.1; // envelope_1 sustain level
 float envelope_1_release = 0.5; 
-float envelope_1_setting = 0.5; // INITIAL value only This is set by a pot.
+// A setting that's used to set various attack / decay
+float envelope_1_setting = 0.5; // INITIAL value only This is set by a pot. (seconds)
 
 
 float analog_out_1;
@@ -1301,7 +1303,10 @@ float analog_out_8;
 
 
 float audio_osc_1_result;
+
 float lfo_a_result_analog;
+float lfo_b_result_analog;
+
 float analog_osc_3_result;
 
 float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
@@ -1344,9 +1349,15 @@ void ResetSequenceACounters(){
   step_a_count = FIRST_STEP;
 
   lfo_a_analog.setPhase(0.0);
+  lfo_b_analog.setPhase(90.0);
   
+  per_sequence_adsr_a.reset();
   per_sequence_adsr_a.gate(true);
+ 
+  per_sequence_adsr_b.reset(); 
   per_sequence_adsr_b.gate(true);
+  
+  per_sequence_adsr_c.reset();
   per_sequence_adsr_c.gate(true);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence A was reset
@@ -1397,7 +1408,7 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 100 == 0) {
+    if(gCount % 1 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -1483,7 +1494,7 @@ void printStatus(void*){
     	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
     	
     	
-    	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+    	//rt_printf("the_sequence_a is: %d \n", the_sequence_a);
 	    print_binary(the_sequence_a);
 		rt_printf("%c \n", 'B');
 
@@ -1493,12 +1504,13 @@ void printStatus(void*){
     	
     	rt_printf("step_a_count is: %d \n", step_a_count);
     	
+    	/*
     	if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
     	} else {
     		rt_printf("other step A \n");
     	}
-
+		*/
 
 		rt_printf("\n==== Sequence B ======= \n");
 
@@ -1507,7 +1519,7 @@ void printStatus(void*){
     	
 		//rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
 		//rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
-		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
+		//rt_printf("the_sequence_b is: %d \n", the_sequence_b);
 	    print_binary(the_sequence_b);
 		rt_printf("%c \n", 'B');
 		
@@ -1517,26 +1529,30 @@ void printStatus(void*){
 
 		//rt_printf("step_b_count is: %d \n", step_b_count);
 
+/*
       if (step_b_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP B \n");
     	} else {
     		rt_printf("other step B \n");
     	}
+  */  	
     	
-    	
 
 
 
 
-rt_printf("envelope_1_setting is: %f \n", envelope_1_setting);
+		rt_printf("envelope_1_setting is: %f \n", envelope_1_setting);
+
+    	rt_printf("analog_per_sequence_adsr_a_level is: %f \n", analog_per_sequence_adsr_a_level);
+    	rt_printf("analog_per_sequence_adsr_b_level is: %f \n", analog_per_sequence_adsr_b_level);
+    	rt_printf("analog_per_sequence_adsr_c_level is: %f \n", analog_per_sequence_adsr_c_level);
+
 
     	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	
-    	rt_printf("per_sequence_adsr_a_level is: %f \n", per_sequence_adsr_a_level);
-    	rt_printf("analog_per_sequence_adsr_b_level is: %f \n", analog_per_sequence_adsr_b_level);
-    	rt_printf("analog_per_sequence_adsr_c_level is: %f \n", analog_per_sequence_adsr_c_level);
+
     	*/
 
 
@@ -2996,16 +3012,14 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
    
 
    // Modify Attack
-   per_sequence_adsr_a.setAttackRate(envelope_1_setting * audio_sample_rate);
+   per_sequence_adsr_a.setAttackRate(envelope_1_setting * analog_sample_rate);
 
-        
-  // Modifiy Attack and Decay
-  per_sequence_adsr_b.setAttackRate(envelope_1_setting * analog_sample_rate);
-  per_sequence_adsr_b.setDecayRate(envelope_1_setting * analog_sample_rate);
+   // Modifiy Attack and Decay
+   per_sequence_adsr_b.setAttackRate(envelope_1_setting * analog_sample_rate);
+   per_sequence_adsr_b.setDecayRate(envelope_1_setting * analog_sample_rate);
 
-
-  // Modify Decay
-  per_sequence_adsr_c.setDecayRate(envelope_1_setting * audio_sample_rate);
+   // Modify Decay
+   per_sequence_adsr_c.setDecayRate(envelope_1_setting * analog_sample_rate);
 
         
 
@@ -3013,7 +3027,11 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 	    audio_osc_2_frequency = lfo_osc_1_frequency * 8.0;
 
 
-    	lfo_a_analog.setFrequency(lfo_osc_1_frequency); // lower freq
+      lfo_a_analog.setFrequency(lfo_osc_1_frequency); 
+      lfo_b_analog.setFrequency(lfo_osc_1_frequency * 3.0 /2.0);
+
+
+
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
@@ -3139,9 +3157,12 @@ bool setup(BelaContext *context, void *userData){
 	
   InitAudioBuffer();
 
-	scope.setup(4, context->audioSampleRate);
+	scope.setup(4, context->analogSampleRate);
 
-	lfo_a_analog.setup(context->analogSampleRate);	
+	lfo_a_analog.setup(context->analogSampleRate);
+  lfo_b_analog.setup(context->analogSampleRate);
+
+
 	oscillator_2_audio.setup(context->audioSampleRate);
 
 	
@@ -3248,13 +3269,13 @@ bool setup(BelaContext *context, void *userData){
         analog_sample_rate = context->analogSampleRate;
 
 
-        // Setup ADSR (these are modified in Change Sequence)
+        // SETUP ADSR (these are modified in Change Sequence)
          // This envelope triggers at the start of each sequence
          // Attack can be modified
-        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->audioSampleRate);
-        per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
+        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->analogSampleRate);
         per_sequence_adsr_a.setSustainLevel(envelope_1_sustain); // Level not time
-        per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
+        per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->analogSampleRate);
        
         
         // This envelope triggers at the start of each sequence
@@ -3358,10 +3379,10 @@ void render(BelaContext *context, void *userData)
   // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
-		per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
+	
 		
     
-    //audio_osc_1_result = oscillator_2_audio.process() * per_sequence_adsr_a_level;
+
 		
         ////////////////////////////////
 		    // Begin Bela delay example code
@@ -3425,10 +3446,8 @@ void render(BelaContext *context, void *userData)
         // Apply "VCA" to the output.  
 
 
-        // Channel 1 is modulated by the ADSR B
-        audioWrite(context, n, 0, out_l * analog_per_sequence_adsr_b_level);
 
-        // Unmodulated output
+        audioWrite(context, n, 0, out_l);
         audioWrite(context, n, 1, out_r);
 		    // End Bela delay example code
 		    //////////////////////////////
@@ -3442,28 +3461,31 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 
 		// Process analog oscillator	
-		lfo_a_result_analog = lfo_a_analog.process();
-		
+	//	lfo_a_result_analog = lfo_a_analog.process();
+	//	lfo_b_result_analog = lfo_b_analog.process();
 
-		analog_per_sequence_adsr_b_level  = per_sequence_adsr_b.process();  
-		
-		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
-		analog_per_sequence_adsr_c_level  = env3_amp * per_sequence_adsr_c.process();
+
+	//  analog_per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
+	//	analog_per_sequence_adsr_b_level  = 1.0 * per_sequence_adsr_b.process();  
+	//	analog_per_sequence_adsr_c_level  = 1.0 * per_sequence_adsr_c.process();
 				
-		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
+		// Modulated outputs
+		//analog_out_2 = lfo_a_result_analog; // * analog_per_sequence_adsr_a_level;
+		//analog_out_2 = per_sequence_adsr_a.process();
+    	//analog_out_3 = analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = analog_per_sequence_adsr_c_level;
 
-    analog_out_6 = analog_out_2; 
-
-    // Bit more complext mod
-    analog_out_3 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + (lfo_a_result_analog * analog_per_sequence_adsr_b_level)) / 2.0;  
-
-    analog_out_7 = analog_out_3; 
-
-		// Bit more complex add
-		analog_out_4 = ((lfo_a_result_analog * analog_per_sequence_adsr_c_level) + analog_per_sequence_adsr_b_level) / 2.0; 
 		
-    analog_out_8 = analog_out_4; 
+    	//analog_out_3 = lfo_a_result_analog * analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
+		
+		
+		
+		
+
+  //  analog_out_6 = lfo_b_result_analog * analog_per_sequence_adsr_a_level;
+  //  analog_out_7 = lfo_b_result_analog * analog_per_sequence_adsr_b_level; 
+  //  analog_out_8 = lfo_b_result_analog * analog_per_sequence_adsr_c_level;
 		
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
@@ -3501,15 +3523,9 @@ void render(BelaContext *context, void *userData)
 	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 10);
 		  }
 
-
-
-        
-
-
-
-		  if (ch == ADSR_SETTING_INPUT_PIN){
+	  if (ch == ADSR_SETTING_INPUT_PIN){
 		  	// used for various ADSR settings
-		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 100.0);
+		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
 		  }
 		    
 		  
@@ -3570,6 +3586,32 @@ void render(BelaContext *context, void *userData)
 	      // CV 2
 	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	//////
+	      	
+	      		//  analog_per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
+	//	analog_per_sequence_adsr_b_level  = 1.0 * per_sequence_adsr_b.process();  
+	//	analog_per_sequence_adsr_c_level  = 1.0 * per_sequence_adsr_c.process();
+				
+		// Modulated outputs
+		//analog_out_2 = lfo_a_result_analog; // * analog_per_sequence_adsr_a_level;
+		//analog_out_2 = per_sequence_adsr_a.process();
+    	//analog_out_3 = analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = analog_per_sequence_adsr_c_level;
+
+		
+    	//analog_out_3 = lfo_a_result_analog * analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
+	      	
+	      	
+	      	
+	      	
+	      	///////
+	      	
+	      	analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
+	      	
+	      	lfo_a_result_analog = lfo_a_analog.process();
+	      	
+	      	analog_out_2 = lfo_a_result_analog * analog_per_sequence_adsr_a_level;
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
 
@@ -3577,12 +3619,14 @@ void render(BelaContext *context, void *userData)
 	      // CV 3 - This is below the left hand LED so should be related to the Length of the Sequence (Simple decaying envelope)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	analog_out_3 = per_sequence_adsr_b.process();
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
 	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	analog_out_4 = per_sequence_adsr_c.process();
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
 	      
