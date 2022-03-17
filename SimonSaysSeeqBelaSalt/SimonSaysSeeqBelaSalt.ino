@@ -3606,7 +3606,7 @@ void render(BelaContext *context, void *userData)
 	      	
 	      	
 	      	// SUM LFO A + ADSR A
-	      	analog_out_3 = (lfo_a_result_analog + analog_per_sequence_adsr_a_level)/2.0;
+	      	analog_out_3 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_a_level;
 	      	
 	      	
 	      	
