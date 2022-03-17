@@ -1798,9 +1798,9 @@ void GateALow(){
   
   target_led_1_state = false; 
   
-  per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
-  per_sequence_adsr_b.gate(false); // always reset it here but not trigger it
-  per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_b.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
   
 }
 
@@ -3272,7 +3272,7 @@ bool setup(BelaContext *context, void *userData){
         // SETUP ADSR (these are modified in Change Sequence)
          // This envelope triggers at the start of each sequence
          // Attack can be modified
-        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->analogSampleRate); // resulting times are in seconds
         per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->analogSampleRate);
         per_sequence_adsr_a.setSustainLevel(envelope_1_sustain); // Level not time
         per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->analogSampleRate);
@@ -3588,30 +3588,14 @@ void render(BelaContext *context, void *userData)
 	      	//rt_printf("amp is: %f", amp);
 	      	//////
 	      	
-	      		//  analog_per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
-	//	analog_per_sequence_adsr_b_level  = 1.0 * per_sequence_adsr_b.process();  
-	//	analog_per_sequence_adsr_c_level  = 1.0 * per_sequence_adsr_c.process();
-				
-		// Modulated outputs
-		//analog_out_2 = lfo_a_result_analog; // * analog_per_sequence_adsr_a_level;
-		//analog_out_2 = per_sequence_adsr_a.process();
-    	//analog_out_3 = analog_per_sequence_adsr_b_level; 
-		//analog_out_4 = analog_per_sequence_adsr_c_level;
 
-		
-    	//analog_out_3 = lfo_a_result_analog * analog_per_sequence_adsr_b_level; 
-		//analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
-	      	
-	      	
-	      	
-	      	
-	      	///////
-	      	
 	      	analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
 	      	
 	      	lfo_a_result_analog = lfo_a_analog.process();
 	      	
+	      	// PRODUCT LFO A * ADSR A 
 	      	analog_out_2 = lfo_a_result_analog * analog_per_sequence_adsr_a_level;
+	 
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
 
@@ -3619,14 +3603,25 @@ void render(BelaContext *context, void *userData)
 	      // CV 3 - This is below the left hand LED so should be related to the Length of the Sequence (Simple decaying envelope)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
 	      	//rt_printf("amp is: %f", amp);
-	      	analog_out_3 = per_sequence_adsr_b.process();
+	      	
+	      	
+	      	// SUM LFO A + ADSR A
+	      	analog_out_3 = (lfo_a_result_analog + analog_per_sequence_adsr_a_level)/2.0;
+	      	
+	      	
+	      	
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
 	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
 	      	//rt_printf("amp is: %f", amp);
-	      	analog_out_4 = per_sequence_adsr_c.process();
+	      	
+	      	 analog_per_sequence_adsr_b_level = per_sequence_adsr_b.process();
+	      	
+	      	// PRODUCT LFO A * ADSR B
+	      	analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_b_level;
+	      	
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
 	      
@@ -3644,6 +3639,14 @@ void render(BelaContext *context, void *userData)
 	      // CV 6
 	      if (ch == SEQUENCE_CV_OUTPUT_6_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	
+
+	      	
+	      	lfo_b_result_analog = lfo_b_analog.process();
+	      	
+	      	analog_out_6 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_b_level;
+	      	
+	      	
 	      	analogWrite(context, n, ch, analog_out_6);
 	      }
 
@@ -3651,6 +3654,13 @@ void render(BelaContext *context, void *userData)
 	      // CV 7 
 	      if (ch == SEQUENCE_CV_OUTPUT_7_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	
+	      	
+	      	 analog_per_sequence_adsr_c_level = per_sequence_adsr_c.process();
+	      	
+	      	analog_out_7 = (lfo_a_result_analog + lfo_b_result_analog) * analog_per_sequence_adsr_c_level / 3.0;
+	      	
+	      	
 	      	analogWrite(context, n, ch, analog_out_7);
 	      }
 	      
@@ -3660,10 +3670,7 @@ void render(BelaContext *context, void *userData)
 	      //	analogWrite(context, n, ch, analog_out_8);
 	      //}
 
-
-	      
-	      
-	      
+ 
 	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
 
 		}
