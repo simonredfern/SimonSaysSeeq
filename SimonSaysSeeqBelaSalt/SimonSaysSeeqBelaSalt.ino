@@ -536,8 +536,6 @@ void print_binary(unsigned int number)
 
 
 
-// Set the analog channels to read from
-//const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
 // e.g. CV I/O 1-8	analog channel 0-7	dac~/adc~ 3-10
@@ -546,6 +544,8 @@ void print_binary(unsigned int number)
 
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
+const int RESET_A_INPUT_DIGITAL_PIN = 14; // TODO CONFIRM PIN
+const int RESET_B_INPUT_DIGITAL_PIN = 17; // TODO CONFIRM PIN
 
 ////////////////////////////////
 // Digital Outputs
@@ -555,7 +555,6 @@ const int SEQUENCE_A_DIGITAL_OUT_PIN = 0;
 const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 
 
-//const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
 
 
 // TODO Add a reset (on a digital pin?)
@@ -684,7 +683,15 @@ unsigned int lfo_b_frequency_input_at_button_change;
 
 int new_digital_clock_in_state;
 int current_digital_clock_in_state;
-float analog_clock_in_level;
+
+int new_reset_a_in_state;
+int current_reset_a_in_state;
+
+int new_reset_b_in_state;
+int current_reset_b_in_state;
+
+
+float analog_clock_in_level; // unused?
 float right_peak_level;
 
 float external_modulator_object_level;
@@ -3691,6 +3698,8 @@ void render(BelaContext *context, void *userData)
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
         	
+        	new_reset_a_in_state = digitalRead(context, m, RESET_A_INPUT_DIGITAL_PIN);
+        	new_reset_b_in_state = digitalRead(context, m, RESET_B_INPUT_DIGITAL_PIN);
         	
         	
         	old_button_1_state = new_button_1_state;
