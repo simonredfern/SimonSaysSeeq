@@ -3782,7 +3782,7 @@ void render(BelaContext *context, void *userData)
         	// Do similar for another PIN for if (step_a_count == FIRST_STEP)
         	
 
-
+            // CLOCK RISE
             // If detect a rising clock edge
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               
@@ -3796,6 +3796,8 @@ void render(BelaContext *context, void *userData)
               
             } 
             
+            
+            // CLOCK FALL
             // If detect a Falling clock edge
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
@@ -3809,7 +3811,35 @@ void render(BelaContext *context, void *userData)
             	
             	// currently a constant 
             	//clock_patience = clock_width * 100;
-            } 
+            }
+            
+            
+            // RESET A RISE
+            if ((new_reset_a_in_state == HIGH) && (current_reset_a_in_state == LOW)){
+              current_reset_a_in_state = HIGH;
+              // Do reset A
+              ResetSequenceACounters();
+            }
+            
+            // RESET A FALL
+            if ((new_reset_a_in_state == LOW) && (current_reset_a_in_state == HIGH)){
+              current_reset_a_in_state = LOW;
+            }
+            
+            // RESET B RISE
+            if ((new_reset_b_in_state == HIGH) && (current_reset_b_in_state == LOW)){
+              current_reset_b_in_state = HIGH;
+              // Do reset A
+              ResetSequenceBCounters();
+            }
+            
+            // RESET B FALL
+            if ((new_reset_b_in_state == LOW) && (current_reset_b_in_state == HIGH)){
+              current_reset_b_in_state = LOW;
+            }
+            
+            
+            
       }
       
      
