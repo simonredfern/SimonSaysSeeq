@@ -544,7 +544,7 @@ void print_binary(unsigned int number)
 
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
-const int RESET_A_INPUT_DIGITAL_PIN = 14; // TODO CONFIRM PIN
+const int RESET_A_INPUT_DIGITAL_PIN = 14; //T2/SWITCH2 in	digital channel 14
 const int RESET_B_INPUT_DIGITAL_PIN = 17; // TODO CONFIRM PIN
 
 ////////////////////////////////
@@ -1378,7 +1378,7 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-  //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
+  rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
 
