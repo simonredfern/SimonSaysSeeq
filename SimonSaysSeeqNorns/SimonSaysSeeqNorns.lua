@@ -1,3 +1,6 @@
+-- SimonSaysSeeq on Norns
+-- Work in Progress!
+
 local volts = 0
 local slew = 0
 
@@ -87,7 +90,7 @@ function greetings()
   screen.update()
   
   
-  clock.sleep(5)
+  clock.sleep(3)
   --print("now awake")
   greetings_done = true
 end
@@ -104,17 +107,6 @@ function advance_step()
     current_step = 1
   end
   
-  
-  --print ("current_step is: ".. current_step)
- 
-  --print ("greetings_done is: ".. tostring(greetings_done)) 
-  
-  
-  
-  --highlight_grid[1][current_step] = "S"
-  
-  
-  
 end
   
 
@@ -123,32 +115,22 @@ end
 
 function init()
   
-    --screen.font_face(8)
-    --screen.font_size(8)
-  
-  
-    print ("before init_table")
-    init_table()
+  print ("before init_table")
+  init_table()
     
-    print_table()
+  print_table()
 
-    print("hello")
-    --my_grid = grid.connect()
-    my_grid:all(4)
-    my_grid:refresh() -- refresh the LEDs
+  print("hello")
+  my_grid:all(2)
+  my_grid:refresh() -- refresh the LEDs
     
     
-      print("my_grid follows: ")
+  print("my_grid follows: ")
   print(my_grid)
   print("my_grid.name is: " .. my_grid.name)
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
-  
-
-  
-
-
 
 end
 
@@ -210,13 +192,8 @@ function print_table()
   
   -- print ("Hello from print_table")
   
-  
   screen.clear()
   screen.move(1,1)
-  
-  
-  -- Don't want to wipe the screen until user has seen it.
-
   
     for row = 1,ROWS do -- rows 1 to 4
       for column = 1,COLS do -- columns 1 to 4
@@ -225,8 +202,10 @@ function print_table()
         
         if (current_step == column and row <= 6) then
            screen.text("*")
+           my_grid:led(column,row,6)
         else 
           screen.text(steps_grid[row][column])
+          my_grid:led(column,row,2)
         end
         
         --screen.text(highlight_grid[row][colum])
@@ -235,7 +214,8 @@ function print_table()
       end
     end
   
-
+  
+  my_grid:refresh()
   
   -- print ("Bye from print_table")
   
@@ -257,18 +237,29 @@ function redraw()
   screen.update()
 end
 
-function grid.add(new_grid) -- must be grid.add, not g.add (this is a function of the grid class)
-  print(new_grid.name.." says 'hello!'")
-   -- each grid added can be queried for device information:
-  print("new grid found at port: "..new_grid.port)
-  g = grid.connect(new_grid.port) -- connect script to the new grid
-  --grid_connected = true -- a grid has been connected!
-  --grid_dirty = true -- enable flag to redraw grid, because data has changed
-end
 
-function grid.remove(g) -- must be grid.remove, not g.remove (this is a function of the grid class)
-  print(g.name.." says 'goodbye!'")
-end
+--function redraw_grid()
+--  my_grid:all(0) -- turn all the LEDs off...
+--  for i=1,16 do
+--    my_grid:led(i,2,4) -- set step positions to brightness 4
+--  end
+--  my_grid:refresh() -- refresh the grid
+--end
+
+
+
+--function grid.add(new_grid) -- must be grid.add, not g.add (this is a function of the grid class)
+--  print(new_grid.name.." says 'hello!'")
+--   -- each grid added can be queried for device information:
+--  print("new grid found at port: "..new_grid.port)
+--  g = grid.connect(new_grid.port) -- connect script to the new grid
+--  --grid_connected = true -- a grid has been connected!
+--  --grid_dirty = true -- enable flag to redraw grid, because data has changed
+--end
+
+--function grid.remove(g) -- must be grid.remove, not g.remove (this is a function of the grid class)
+--  print(g.name.." says 'goodbye!'")
+--end
 
 
 function gate_high(gate_number)
