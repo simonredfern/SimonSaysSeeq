@@ -186,6 +186,17 @@ function init_table()
 end
 
 
+
+my_grid.key = function(x,y,z)
+  if z == 1 then
+    
+    -- TODO remake steps_grid so its columns, rows
+    steps_grid[y][x] = 1
+    
+    print(x .. ","..y)
+  end
+end
+
  
 
 function print_table()
@@ -200,14 +211,23 @@ function print_table()
         screen.move(column * 7,row * 7)
         --screen.text("table[" .. row .. "]["..col.."] is: " ..steps_grid[row][column])
         
+
         if (current_step == column and row <= 6) then
+           -- This is the scrolling cursor
            screen.text("*")
            my_grid:led(column,row,6)
-        else 
+        else
+          if (steps_grid[row][column] == 1) then
+             -- Grid square is On
+            my_grid:led(column,row,12)
+          else 
+             -- Grid square is Off
+            my_grid:led(column,row,2)
+          end
+          -- Show the stored value on screen
           screen.text(steps_grid[row][column])
-          my_grid:led(column,row,2)
         end
-        
+
         --screen.text(highlight_grid[row][colum])
         
         screen.update()
