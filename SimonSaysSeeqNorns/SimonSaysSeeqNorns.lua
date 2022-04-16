@@ -20,6 +20,13 @@ highlight_grid = {}
 greetings_done = false
 
 
+
+my_grid = grid.connect()
+
+print (my_grid)
+
+
+
 local BAR_VALS = {
   { str = "1/256", value = 1 / 256, ppq = 64 },  -- [1]
   { str = "1/128", value = 1 / 128, ppq = 32 },  -- [2]
@@ -58,14 +65,30 @@ function greetings()
   screen.move(10,10)
   screen.text("Hello, I am SimonSaysSeeq")
   screen.move(20,20)
-  screen.text("on Norns")
+  screen.text("on Norns v0.1")
   
+  screen.move(10,30)
   
+  screen.text("My Grid is:")
+  screen.move(20,40)
+  
+  if (not my_grid) then
+    screen.text("not connected")
+  else
+    screen.text(tostring(my_grid))
+  end 
+ 
+  screen.move(20,50) 
+  screen.text(my_grid.name)
+  screen.move(20,60)   
+  screen.text(my_grid.cols .. " X " .. my_grid.rows)
+
+
   screen.update()
   
   
-  clock.sleep(2)
-  print("now awake")
+  clock.sleep(5)
+  --print("now awake")
   greetings_done = true
 end
 
@@ -73,7 +96,7 @@ end
 
 
 function advance_step()
-  print ("advance_step")
+  --print ("advance_step")
   
   current_step = current_step + 1
   
@@ -82,9 +105,9 @@ function advance_step()
   end
   
   
-  print ("current_step is: ".. current_step)
+  --print ("current_step is: ".. current_step)
  
-  print ("greetings_done is: ".. tostring(greetings_done)) 
+  --print ("greetings_done is: ".. tostring(greetings_done)) 
   
   
   
@@ -110,16 +133,16 @@ function init()
     print_table()
 
     print("hello")
-    g = grid.connect()
-    g:all(4)
-    g:refresh() -- refresh the LEDs
+    --my_grid = grid.connect()
+    my_grid:all(4)
+    my_grid:refresh() -- refresh the LEDs
     
     
-      print("grid g follows: ")
-  print(g)
-  print("g.name is: " .. g.name)
-  print("g.device.cols is: " .. g.device.cols)
-  print("g.device.rows is: " .. g.device.rows)
+      print("my_grid follows: ")
+  print(my_grid)
+  print("my_grid.name is: " .. my_grid.name)
+  print("my_grid.cols is: " .. my_grid.cols)
+  print("my_grid.rows is: " .. my_grid.rows)
   
   
 
@@ -224,10 +247,10 @@ function redraw()
 
 
   if (greetings_done == false) then
-    print("i will do greetings becuase not done yet")
+    --print("i will do greetings becuase not done yet")
     clock.run(greetings)
   else 
-    print ("i will print table because greetings done")
+    --print ("i will print table because greetings done")
     print_table()
   end
   
@@ -239,8 +262,8 @@ function grid.add(new_grid) -- must be grid.add, not g.add (this is a function o
    -- each grid added can be queried for device information:
   print("new grid found at port: "..new_grid.port)
   g = grid.connect(new_grid.port) -- connect script to the new grid
-  grid_connected = true -- a grid has been connected!
-  grid_dirty = true -- enable flag to redraw grid, because data has changed
+  --grid_connected = true -- a grid has been connected!
+  --grid_dirty = true -- enable flag to redraw grid, because data has changed
 end
 
 function grid.remove(g) -- must be grid.remove, not g.remove (this is a function of the grid class)
