@@ -17,6 +17,8 @@ current_step = 1
 
 highlight_grid = {}
 
+greetings_done = false
+
 
 local BAR_VALS = {
   { str = "1/256", value = 1 / 256, ppq = 64 },  -- [1]
@@ -51,6 +53,23 @@ tick = function()
   end
 end
 
+function greetings()
+  
+  screen.move(10,10)
+  screen.text("Hello, I am SimonSaysSeeq")
+  screen.move(20,20)
+  screen.text("on Norns")
+  
+  
+  screen.update()
+  
+  
+  clock.sleep(2)
+  print("now awake")
+  greetings_done = true
+end
+
+
 
 
 function advance_step()
@@ -64,6 +83,10 @@ function advance_step()
   
   
   print ("current_step is: ".. current_step)
+ 
+  print ("greetings_done is: ".. tostring(greetings_done)) 
+  
+  
   
   --highlight_grid[1][current_step] = "S"
   
@@ -76,6 +99,11 @@ end
 
 
 function init()
+  
+    --screen.font_face(8)
+    --screen.font_size(8)
+  
+  
     print ("before init_table")
     init_table()
     
@@ -85,6 +113,19 @@ function init()
     g = grid.connect()
     g:all(4)
     g:refresh() -- refresh the LEDs
+    
+    
+      print("grid g follows: ")
+  print(g)
+  print("g.name is: " .. g.name)
+  print("g.device.cols is: " .. g.device.cols)
+  print("g.device.rows is: " .. g.device.rows)
+  
+  
+
+  
+
+
 
 end
 
@@ -146,22 +187,32 @@ function print_table()
   
   -- print ("Hello from print_table")
   
-  for row = 1,ROWS do -- rows 1 to 4
-    for column = 1,COLS do -- columns 1 to 4
-      screen.move(column * 7,row * 7)
-      --screen.text("table[" .. row .. "]["..col.."] is: " ..steps_grid[row][column])
-      
-      if (current_step == column and row <= 6) then
-         screen.text("*")
-      else 
-        screen.text(steps_grid[row][column])
+  
+  screen.clear()
+  screen.move(1,1)
+  
+  
+  -- Don't want to wipe the screen until user has seen it.
+
+  
+    for row = 1,ROWS do -- rows 1 to 4
+      for column = 1,COLS do -- columns 1 to 4
+        screen.move(column * 7,row * 7)
+        --screen.text("table[" .. row .. "]["..col.."] is: " ..steps_grid[row][column])
+        
+        if (current_step == column and row <= 6) then
+           screen.text("*")
+        else 
+          screen.text(steps_grid[row][column])
+        end
+        
+        --screen.text(highlight_grid[row][colum])
+        
+        screen.update()
       end
-      
-      --screen.text(highlight_grid[row][colum])
-      
-      screen.update()
     end
-  end
+  
+
   
   -- print ("Bye from print_table")
   
@@ -170,14 +221,15 @@ end
 
 -- redraw gets called by the norns implicitly sometimes and explicitly by us too.
 function redraw()
-  screen.clear()
-  screen.move(1,1)
-  --screen.text("Hello from LALALA  "..string.format("%.2f",volts))
-  --screen.move(10,50)
-  --screen.text("DADA" ..string.format("%.2f",volts))
-  
-  print_table()
-  
+
+
+  if (greetings_done == false) then
+    print("i will do greetings becuase not done yet")
+    clock.run(greetings)
+  else 
+    print ("i will print table because greetings done")
+    print_table()
+  end
   
   screen.update()
 end
