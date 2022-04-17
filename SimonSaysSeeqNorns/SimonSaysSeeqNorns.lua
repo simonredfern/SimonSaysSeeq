@@ -10,7 +10,7 @@ sequence = true
 COLS = 16
 ROWS = 8
 
-GRID_TABLE_FILE = "/home/we/simon-says-seeq-grid.tbl"
+GRID_TABLE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
 
@@ -23,6 +23,8 @@ greetings_done = false
 
 
 my_grid = grid.connect()
+
+grid_table_dirty = false
 
 print (my_grid)
 
@@ -145,6 +147,17 @@ end
   end)
 
 
+  clock.run(function()
+    while true do
+      clock.sleep(5)
+        if (grid_table_dirty == true) then
+          Tab.save(grid_table, GRID_TABLE_FILE)
+          grid_table_dirty = false
+        end
+    end
+  end)
+
+
  
 
 
@@ -202,7 +215,9 @@ if z == 1 then
     grid_table[x][y] = 0
   else 
     grid_table[x][y] = 1
-  end  
+  end
+  -- So we save the table to file
+  grid_table_dirty = true
 end
 
 --print(x .. ","..y .. " value after change " .. grid_table[x][y])
@@ -269,29 +284,6 @@ function redraw()
   screen.update()
 end
 
-
---function redraw_grid()
---  my_grid:all(0) -- turn all the LEDs off...
---  for i=1,16 do
---    my_grid:led(i,2,4) -- set step positions to brightness 4
---  end
---  my_grid:refresh() -- refresh the grid
---end
-
-
-
---function grid.add(new_grid) -- must be grid.add, not g.add (this is a function of the grid class)
---  print(new_grid.name.." says 'hello!'")
---   -- each grid added can be queried for device information:
---  print("new grid found at port: "..new_grid.port)
---  g = grid.connect(new_grid.port) -- connect script to the new grid
---  --grid_connected = true -- a grid has been connected!
---  --grid_dirty = true -- enable flag to redraw grid, because data has changed
---end
-
---function grid.remove(g) -- must be grid.remove, not g.remove (this is a function of the grid class)
---  print(g.name.." says 'goodbye!'")
---end
 
 
 function gate_high(gate_number)
