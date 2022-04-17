@@ -12,13 +12,11 @@ ROWS = 8
 
 GRID_TABLE_FILE = "/home/we/simon-says-seeq-grid.tbl"
 
---steps_grid = {} -- a one-dimensional table
-
 Tab = require "lib/tabutil"
 
 current_step = 1
 
-highlight_grid = {}
+-- highlight_grid = {}
 
 greetings_done = false
 
@@ -118,7 +116,7 @@ function init()
   print ("before init_table")
   init_table()
     
-  print_table()
+  refresh_grid()
 
   print("hello")
   my_grid:all(2)
@@ -155,27 +153,27 @@ function init_table()
   print ("Hello from init_table")
   
   -- Try to load the table
-  steps_grid = Tab.load (GRID_TABLE_FILE)
+  grid_table = Tab.load (GRID_TABLE_FILE)
   print("Result of table load is:")
-  print (steps_grid)
+  print (grid_table)
   
   -- if it doesn't exist
-  if steps_grid == nil then
+  if grid_table == nil then
     print ("No table, I will generate a structure and save that")
-    steps_grid = {}
+    grid_table = {}
     for col = 1, COLS do 
-      steps_grid[col] = {} -- create a table for each col
+      grid_table[col] = {} -- create a table for each col
       for row = 1, ROWS do
         if col == row then -- eg. if coordinate is (3,3)
-          steps_grid[col][row] = 1
+          grid_table[col][row] = 1
         else -- eg. if coordinate is (3,2)
-          steps_grid[col][row] = 0
+          grid_table[col][row] = 0
         end
       end
     end
     
-    Tab.save(steps_grid, GRID_TABLE_FILE)
-    steps_grid = Tab.load (GRID_TABLE_FILE)
+    Tab.save(grid_table, GRID_TABLE_FILE)
+    grid_table = Tab.load (GRID_TABLE_FILE)
   else
     print ("I already have a table")
   end
@@ -196,26 +194,26 @@ my_grid.key = function(x,y,z)
 -- We want to capture the key down event and toggle the state of the key in the grid.
 
 --print("--------------------------------------------------------------")
---print(x .. ","..y .. " z is " .. z.. " value before change " .. steps_grid[x][y])
+--print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_table[x][y])
   
 -- Capture key down event only  
 if z == 1 then
-  if steps_grid[x][y] == 1 then
-    steps_grid[x][y] = 0
+  if grid_table[x][y] == 1 then
+    grid_table[x][y] = 0
   else 
-    steps_grid[x][y] = 1
+    grid_table[x][y] = 1
   end  
 end
 
---print(x .. ","..y .. " value after change " .. steps_grid[x][y])
+--print(x .. ","..y .. " value after change " .. grid_table[x][y])
 --print("--------------------------------------------------------------")
 
 end
 
 
-function print_table()
+function refresh_grid()
   
-  -- print ("Hello from print_table")
+  -- print ("Hello from refresh_grid")
   
   screen.clear()
   screen.move(1,1)
@@ -223,7 +221,7 @@ function print_table()
     for col = 1,COLS do -- rows 1 to 4
       for row = 1,ROWS do -- columns 1 to 4
         screen.move(col * 7,row * 7)
-        --screen.text("table[" .. row .. "]["..col.."] is: " ..steps_grid[row][column])
+        --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_table[row][column])
         
 
         if (current_step == col and row <= 6) then
@@ -231,7 +229,7 @@ function print_table()
            screen.text("*")
            my_grid:led(col,row,6)
         else
-          if (steps_grid[col][row] == 1) then
+          if (grid_table[col][row] == 1) then
              -- Grid square is On
             my_grid:led(col,row,12)
           else 
@@ -239,7 +237,7 @@ function print_table()
             my_grid:led(col,row,2)
           end
           -- Show the stored value on screen
-          screen.text(steps_grid[col][row])
+          screen.text(grid_table[col][row])
         end
 
         --screen.text(highlight_grid[row][colum])
@@ -251,7 +249,7 @@ function print_table()
   
   my_grid:refresh()
   
-  -- print ("Bye from print_table")
+  -- print ("Bye from refresh_grid")
   
 end  
 
@@ -265,7 +263,7 @@ function redraw()
     clock.run(greetings)
   else 
     --print ("i will print table because greetings done")
-    print_table()
+    refresh_grid()
   end
   
   screen.update()
