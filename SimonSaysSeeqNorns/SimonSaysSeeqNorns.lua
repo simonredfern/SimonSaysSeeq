@@ -10,7 +10,7 @@ sequence = true
 COLS = 16
 ROWS = 8
 
-GRID_TABLE_FILE = "/home/we/simon-says-step-grid.tbl"
+GRID_TABLE_FILE = "/home/we/simon-says-seeq-grid.tbl"
 
 --steps_grid = {} -- a one-dimensional table
 
@@ -163,13 +163,13 @@ function init_table()
   if steps_grid == nil then
     print ("No table, I will generate a structure and save that")
     steps_grid = {}
-    for row = 1,ROWS do -- rows 1 to 4
-      steps_grid[row] = {} -- create a table for each row
-      for column = 1,COLS do -- columns 1 to 4
-        if row == column then -- eg. if coordinate is (3,3)
-          steps_grid[row][column] = 1
+    for col = 1, COLS do 
+      steps_grid[col] = {} -- create a table for each col
+      for row = 1, ROWS do
+        if col == row then -- eg. if coordinate is (3,3)
+          steps_grid[col][row] = 1
         else -- eg. if coordinate is (3,2)
-          steps_grid[row][column] = 0
+          steps_grid[col][row] = 0
         end
       end
     end
@@ -187,25 +187,31 @@ end
 
 
 
+
+-- Handle key presses on the grid
 my_grid.key = function(x,y,z)
-  if z == 1 then
-    -- TODO remake steps_grid so its columns, rows
-    steps_grid[y][x] = 1
-    
-    print(x .. ","..y.. " ON")
-  end
+-- x is the row
+-- y is the column
+-- z == 1 means key down, z == 0 means key up
+-- We want to capture the key down event and toggle the state of the key in the grid.
+
+--print("--------------------------------------------------------------")
+--print(x .. ","..y .. " z is " .. z.. " value before change " .. steps_grid[x][y])
   
-  if z == 0 then
-    -- TODO remake steps_grid so its columns, rows
-    steps_grid[y][x] = 0
-    
-    print(x .. ","..y .. " OFF")
-  end
-  
-  
+-- Capture key down event only  
+if z == 1 then
+  if steps_grid[x][y] == 1 then
+    steps_grid[x][y] = 0
+  else 
+    steps_grid[x][y] = 1
+  end  
 end
 
- 
+--print(x .. ","..y .. " value after change " .. steps_grid[x][y])
+--print("--------------------------------------------------------------")
+
+end
+
 
 function print_table()
   
@@ -214,26 +220,26 @@ function print_table()
   screen.clear()
   screen.move(1,1)
   
-    for row = 1,ROWS do -- rows 1 to 4
-      for column = 1,COLS do -- columns 1 to 4
-        screen.move(column * 7,row * 7)
+    for col = 1,COLS do -- rows 1 to 4
+      for row = 1,ROWS do -- columns 1 to 4
+        screen.move(col * 7,row * 7)
         --screen.text("table[" .. row .. "]["..col.."] is: " ..steps_grid[row][column])
         
 
-        if (current_step == column and row <= 6) then
+        if (current_step == col and row <= 6) then
            -- This is the scrolling cursor
            screen.text("*")
-           my_grid:led(column,row,6)
+           my_grid:led(col,row,6)
         else
-          if (steps_grid[row][column] == 1) then
+          if (steps_grid[col][row] == 1) then
              -- Grid square is On
-            my_grid:led(column,row,12)
+            my_grid:led(col,row,12)
           else 
              -- Grid square is Off
-            my_grid:led(column,row,2)
+            my_grid:led(col,row,2)
           end
           -- Show the stored value on screen
-          screen.text(steps_grid[row][column])
+          screen.text(steps_grid[col][row])
         end
 
         --screen.text(highlight_grid[row][colum])
