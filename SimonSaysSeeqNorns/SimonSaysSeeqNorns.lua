@@ -189,12 +189,20 @@ end
 
 my_grid.key = function(x,y,z)
   if z == 1 then
-    
     -- TODO remake steps_grid so its columns, rows
     steps_grid[y][x] = 1
     
-    print(x .. ","..y)
+    print(x .. ","..y.. " ON")
   end
+  
+  if z == 0 then
+    -- TODO remake steps_grid so its columns, rows
+    steps_grid[y][x] = 0
+    
+    print(x .. ","..y .. " OFF")
+  end
+  
+  
 end
 
  
