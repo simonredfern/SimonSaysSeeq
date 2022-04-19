@@ -7,8 +7,14 @@ local slew = 0
 -- on/off for stepped sequence 
 sequence = true
 
+
+-- Dimensions of Grid
 COLS = 16
 ROWS = 8
+
+
+-- Crow Outputs
+CROW_OUTPUTS = 4
 
 GRID_TABLE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -102,9 +108,16 @@ function advance_step()
   --print ("advance_step")
   
   current_step = current_step + 1
-  
   if (current_step > COLS) then
     current_step = 1
+  end
+  
+  for output = 1, CROW_OUTPUTS do
+    if grid_table[current_step][output] == 1 then
+      gate_high(output)
+    elseif grid_table[current_step][output] == 0 then
+      gate_low(output)
+    end
   end
   
 end
@@ -131,14 +144,17 @@ function init()
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
-
+  crow.output[1].volts = 0
+  crow.output[2].volts = 0
+  crow.output[3].volts = 0
+  crow.output[4].volts = 0
 end
 
 
   clock.run(tick)       -- start the sequencer
 
 
-  clock.run(function()  -- redraw the screen and grid at 15fps
+  clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
     while true do
       clock.sleep(1/15)
       redraw()
@@ -147,6 +163,7 @@ end
   end)
 
 
+  -- Periodically check if we need to save the grid state to file.
   clock.run(function()
     while true do
       clock.sleep(5)
@@ -286,9 +303,14 @@ end
 
 
 
-function gate_high(gate_number)
-  print("gate_high: " .. gate_number)
+function gate_high(output_number)
+  print("gate_high: " .. output_number)
+  crow.output[output_number].volts = 10
 end
 
+function gate_low(output_number)
+  print("gate_low: " .. output_number)
+  crow.output[output_number].volts = 0
+end
 
 
