@@ -144,6 +144,12 @@ function init()
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
+  
+  --params:set("clock_tempo",149)
+  
+  params:set("clock_source",4) -- 4 means crow?
+  
+  
   crow.output[1].volts = 0
   crow.output[2].volts = 0
   crow.output[3].volts = 0
@@ -313,7 +319,7 @@ end
 
 
 function gate_high(output)
-  print("gate_high: " .. output)
+  --print("gate_high: " .. output)
   --crow.output[output].action = "{to(10,0),to(0,0.001)}"
   --crow.output[output].action = "pulse(time,level,polarity)"
   crow.output[output].action = "pulse(0.001,10,1)"
@@ -321,7 +327,7 @@ function gate_high(output)
 end
 
 function gate_low(output)
-  print("gate_low: " .. output)
+  --print("gate_low: " .. output)
   crow.output[output].volts = 0
 end
 
