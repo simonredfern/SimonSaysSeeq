@@ -256,17 +256,26 @@ function refresh_grid()
         --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_table[row][column])
         
 
+        -- Show the scrolling of the steps with the first 6 rows of LEDS. (Others will be used for other controls)
         if (current_step == col and row <= 6) then
            -- This is the scrolling cursor
            screen.text("*")
-           my_grid:led(col,row,6)
+          
+          
+          if (grid_table[col][row] == 1) then 
+            -- If current step and key is on, highlight it.
+            my_grid:led(col,row,15) 
+          else
+            -- Else use scrolling brightness
+            my_grid:led(col,row,6)
+          end
         else
           if (grid_table[col][row] == 1) then
-             -- Grid square is On
+             -- Not current step but Grid square is On
             my_grid:led(col,row,12)
           else 
-             -- Grid square is Off
-            my_grid:led(col,row,2)
+             -- Not current step and key is off
+            my_grid:led(col,row,0)
           end
           -- Show the stored value on screen
           screen.text(grid_table[col][row])
