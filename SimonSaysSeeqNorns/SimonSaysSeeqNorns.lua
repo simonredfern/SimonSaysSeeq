@@ -312,14 +312,17 @@ end
 
 
 
-function gate_high(output_number)
-  print("gate_high: " .. output_number)
-  crow.output[output_number].volts = 10
+function gate_high(output)
+  print("gate_high: " .. output)
+  --crow.output[output].action = "{to(10,0),to(0,0.001)}"
+  --crow.output[output].action = "pulse(time,level,polarity)"
+  crow.output[output].action = "pulse(0.001,10,1)"
+  crow.output[output].execute()
 end
 
-function gate_low(output_number)
-  print("gate_low: " .. output_number)
-  crow.output[output_number].volts = 0
+function gate_low(output)
+  print("gate_low: " .. output)
+  crow.output[output].volts = 0
 end
 
 
