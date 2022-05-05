@@ -1,5 +1,5 @@
 -- SimonSaysSeeq on Norns
--- Work in Progress!
+-- An early version
 
 local volts = 0
 local slew = 0
@@ -34,28 +34,6 @@ grid_table_dirty = false
 
 print (my_grid)
 
-
-
-local BAR_VALS = {
-  { str = "1/256", value = 1 / 256, ppq = 64 },  -- [1]
-  { str = "1/128", value = 1 / 128, ppq = 32 },  -- [2]
-  { str = "1/96", value = 1 / 96, ppq = 24 },    -- [3]
-  { str = "1/64", value = 1 / 64, ppq = 16 },    -- [4]
-  { str = "1/48", value = 1 / 48, ppq = 12 },    -- [5]
-  { str = "1/32", value = 1 / 32, ppq = 8 },     -- [6] *
-  { str = "1/16", value = 1 / 16, ppq = 4 },     -- [7]
-  { str = "1/8", value = 1 / 8, ppq = 2 },       -- [8]
-  { str = "1/4", value = 1 / 4, ppq = 1 },       -- [9]
-  { str = "1/2", value = 1 / 2, ppq = 0.5 },     -- [10]
-  { str = "1", value = 1, ppq = 0.25 },          -- [11]
-  { str = "2", value = 2, ppq = 0.125 },         -- [12]
-  { str = "3", value = 3, ppq = 0.083 },         -- [13]
-  { str = "4", value = 4, ppq = 0.0625 },        -- [14]
-}
-
-local beat_div = BAR_VALS[1].value --grid.index].value 
-
-
 --update_id = clock.run(update)
 
 -- system clock tick
@@ -64,7 +42,7 @@ local beat_div = BAR_VALS[1].value --grid.index].value
 -- tempo is controlled via the global clock, which can be set in the PARAMETERS menu 
 tick = function()
   while true do
-    clock.sync(1)
+    clock.sync(1/4)
     if sequence then advance_step() end
   end
 end
@@ -78,17 +56,19 @@ function greetings()
   
   screen.move(10,30)
   
-  screen.text("My Grid is:")
-  screen.move(20,40)
+  
+  grid_text = "Unknown"
+  
+  --screen.move(20,40)
   
   if (not my_grid) then
-    screen.text("not connected")
+    grid_text = "Grid NOT CONNECTED"
   else
-    screen.text(tostring(my_grid))
+    grid_text = "Grid connected: " .. tostring(my_grid.name)
   end 
- 
-  screen.move(20,50) 
-  screen.text(my_grid.name)
+  
+  screen.text(grid_text)
+  
   screen.move(20,60)   
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
 
@@ -96,17 +76,28 @@ function greetings()
   screen.update()
   
   
-  clock.sleep(3)
+  clock.sleep(8)
   --print("now awake")
   greetings_done = true
 end
 
+--function process_change(v)
+--  if v == true then
+--     print("rising")
+--     clock.sync(1)
+--  else
+--    print("falling")
+--  end
+--end
 
+--crow.input[1].change = process_change
+--crow.input[1].mode("change", 2.0, 0.25, "both")
 
 
 function advance_step()
   --print ("advance_step")
   
+
   current_step = current_step + 1
   if (current_step > COLS) then
     current_step = 1
@@ -145,15 +136,16 @@ function init()
   print("my_grid.rows is: " .. my_grid.rows)
   
   
-  --params:set("clock_tempo",149)
+ -- crow.output[1].volts = 0
+--  crow.output[2].volts = 0
+--  crow.output[3].volts = 0
+--  crow.output[4].volts = 0
   
-  params:set("clock_source",4) -- 4 means crow?
+  crow.reset()
   
+  crow.output[1].action = "loop( { to(0,0), to(5,0.1), to(1,2) } )"
+  crow.output[1].execute()
   
-  crow.output[1].volts = 0
-  crow.output[2].volts = 0
-  crow.output[3].volts = 0
-  crow.output[4].volts = 0
 end
 
 
@@ -256,8 +248,8 @@ function refresh_grid()
   screen.clear()
   screen.move(1,1)
   
-    for col = 1,COLS do -- rows 1 to 4
-      for row = 1,ROWS do -- columns 1 to 4
+    for col = 1,COLS do 
+      for row = 1,ROWS do
         screen.move(col * 7,row * 7)
         --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_table[row][column])
         
@@ -294,6 +286,17 @@ function refresh_grid()
     end
   
   
+    current_tempo = clock.get_tempo()
+  
+  
+  --  ..  params:get("step_div")
+  
+  tempo_text = current_tempo .. " BPM"
+  
+  screen.move(1,63)   
+  screen.text(tempo_text)
+  -- print(tempo_text)
+  
   my_grid:refresh()
   
   -- print ("Bye from refresh_grid")
@@ -318,17 +321,18 @@ end
 
 
 
-function gate_high(output)
-  --print("gate_high: " .. output)
-  --crow.output[output].action = "{to(10,0),to(0,0.001)}"
-  --crow.output[output].action = "pulse(time,level,polarity)"
-  crow.output[output].action = "pulse(0.001,10,1)"
-  crow.output[output].execute()
+function gate_high(output_port)
+  print("gate_high: " .. output_port)
+  --crow.output[output_port].action = "pulse(time,level,polarity)"
+  crow.output[output_port].action = "pulse(0.003,10,1)"
+  crow.output[output_port].execute()
 end
 
 function gate_low(output)
-  --print("gate_low: " .. output)
-  crow.output[output].volts = 0
+  --print("gate_low " .. output)
+  --crow.output[output_port].volts = 0
+  --crow.output[output_port].execute()
+  
 end
 
 
