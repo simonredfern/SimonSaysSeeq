@@ -64,7 +64,7 @@ function greetings()
   if (not my_grid) then
     grid_text = "Grid NOT CONNECTED"
   else
-    grid_text = "Grid connected: " .. tostring(my_grid.name)
+    grid_text = "Grid: " .. tostring(my_grid.name)
   end 
   
   screen.text(grid_text)
@@ -113,11 +113,53 @@ function advance_step()
   
 end
   
+  
+--transport_active = false  
+
+function clock.transport.start()
+  print("we begin")
+  tick_id = clock.run(tick)
+  transport_active = true
+
+  screen.move(10,10)
+  screen.text("Start")
+  screen.update()
+
+end
+
+function clock.transport.stop()
+  clock.cancel(tick_id)
+  screen.move(20,20)
+  screen.text("STOP")
+  screen.update()
+end
+
+
+function key(n,z)
+  print("key pressed.  n:" .. n ..  " z:" .. z )
+  
+  -- since MIDI and Link offer their own start/stop messages,
+  -- we'll only need to manually start if using internal or crow clock sources:
+  if params:string("clock_source") == "internal" or params:string("clock_source") == "crow" then
+    if n == 3 and z == 1 then
+      if transport_active then
+        clock.transport.stop()
+      else
+        clock.transport.start()
+      end
+    screen_dirty = true
+    end
+  end
+end
 
 
 
 
 function init()
+  
+--  crow.clear()
+--  params:set("clock_source",4)
+  
   
   print ("before init_table")
   init_table()
@@ -135,16 +177,7 @@ function init()
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
-  
- -- crow.output[1].volts = 0
---  crow.output[2].volts = 0
---  crow.output[3].volts = 0
---  crow.output[4].volts = 0
-  
   crow.reset()
-  
-  crow.output[1].action = "loop( { to(0,0), to(5,0.1), to(1,2) } )"
-  crow.output[1].execute()
   
 end
 
@@ -322,7 +355,7 @@ end
 
 
 function gate_high(output_port)
-  print("gate_high: " .. output_port)
+  --print("gate_high: " .. output_port)
   --crow.output[output_port].action = "pulse(time,level,polarity)"
   crow.output[output_port].action = "pulse(0.003,10,1)"
   crow.output[output_port].execute()
@@ -330,6 +363,7 @@ end
 
 function gate_low(output)
   --print("gate_low " .. output)
+  -- causes error message
   --crow.output[output_port].volts = 0
   --crow.output[output_port].execute()
   
