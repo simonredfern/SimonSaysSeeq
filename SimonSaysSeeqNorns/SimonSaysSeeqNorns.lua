@@ -39,7 +39,8 @@ print (my_grid)
 -- this function is started by init() and runs forever
 -- if transport_active is on, it steps forward on each clock tick
 -- tempo is controlled via the global clock, which can be set in the PARAMETERS menu 
-tick = function()
+-- instead of tick = function()
+function tick()
   while true do
     clock.sync(1/4)
     if transport_active then advance_step() end
@@ -116,21 +117,24 @@ function clock.transport.start()
 
 end
 
-function enc(n,d)
-  if n==3 then
-     params:delta("clock_tempo", d)
-  end
-end  
+ 
 
 
 function clock.transport.stop()
   print("transport.stop")
+  --clock.cancel(tick_id)
   transport_active = false
   screen.move(80,80)
   screen.text("STOP")
   screen.update()
 end
 
+
+function enc(n,d)
+  if n==3 then
+     params:delta("clock_tempo", d)
+  end
+end 
 
 function key(n,z)
   print("key pressed.  n:" .. n ..  " z:" .. z )
@@ -186,10 +190,13 @@ function init()
   -- What does this do?
   crow.reset()
   
+  -- This should set the tempo
+  params:set("clock_tempo",136)
+  
 end
 
 
-  clock.run(tick)       -- start the sequencer
+ clock.run(tick)       -- start the sequencer
 
 
   clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
