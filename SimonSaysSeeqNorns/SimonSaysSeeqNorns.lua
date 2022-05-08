@@ -52,6 +52,25 @@ function tick()
   end
 end
 
+
+function midi_watcher()
+  while true do
+    clock.sync(1/4)
+    if need_to_start_midi == true then
+      -- we only want to start midi clock on the beat
+      out_midi:start()
+      need_to_start_midi = false
+    end
+  end
+end
+
+
+
+
+
+
+
+
 function greetings()
   
   screen.move(10,10)
@@ -93,10 +112,13 @@ function advance_step()
   --print ("advance_step")
   
 
-  current_step = current_step + 1
-  if (current_step > COLS) then
-    current_step = 1
-  end
+  --current_step = current_step + 1
+  --if (current_step > COLS) then
+  --  current_step = 1
+  --end
+  
+  current_step = util.wrap(current_step + 1, 1, COLS)
+  
   
   for output = 1, CROW_OUTPUTS do
     if grid_table[current_step][output] == 1 then
@@ -116,15 +138,18 @@ function clock.transport.start()
   --tick_id = clock.run(tick)
   transport_active = true
   
+  --current_step = 1
+  
   screen.move(90,63)
   screen.text("Start")
   screen.update()
 
 end
 
-function midi_start()
-  print("midi_start")
-    out_midi:start ()  
+function request_midi_start()
+  print("request_midi_start")
+  need_to_start_midi = true
+ 
 end  
  
 
@@ -132,6 +157,7 @@ end
 function clock.transport.stop()
 
   print("transport.stop")
+  current_step = 1
 
   --clock.cancel(tick_id)
   transport_active = false
@@ -142,10 +168,18 @@ end
 
 
 
-function midi_stop()
-  print("midi_stop")
+function request_midi_stop()
+  print("request_midi_stop")
+  need_to_start_midi = false
+  -- can stop the midi clock at any time.
      out_midi:stop ()
-end     
+end  
+
+
+
+
+
+
 
 
 function enc(n,d)
@@ -165,7 +199,7 @@ function key(n,z)
       if transport_active then
         
         clock.transport.stop()
-        midi_stop()
+        request_midi_stop()
       end
       
       screen_dirty = true
@@ -174,7 +208,7 @@ function key(n,z)
     if n == 3 and z == 1 then
       if not transport_active then
         clock.transport.start()
-        midi_start()
+        request_midi_start()
       end
       
       screen_dirty = true
@@ -211,14 +245,17 @@ function init()
   -- What does this do?
   crow.reset()
   
-  -- This should set the tempo
+  -- Set the starting tempo. Can be changed with right kno
   params:set("clock_tempo",136)
+  
+  --midi_watcher_id = clock.run(midi_watcher)
   
 end
 
 
  clock.run(tick)       -- start the sequencer
-
+ 
+ clock.run(midi_watcher) 
 
   clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
     while true do
@@ -359,16 +396,11 @@ function refresh_grid()
   
   --  ..  params:get("step_div")
   
-  tempo_text = current_tempo .. " BPM"
+  status_text = current_tempo .. " BPM. Step " .. current_step
   
   screen.move(1,63)   
-  screen.text(tempo_text)
-  
-  screen.move(1,83)   
-  screen.text("version " .. version)
-  
-  -- print(tempo_text)
-  
+  screen.text(status_text)
+
   my_grid:refresh()
   
   -- print ("Bye from refresh_grid")
