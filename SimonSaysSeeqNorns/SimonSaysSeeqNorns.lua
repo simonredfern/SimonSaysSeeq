@@ -1,5 +1,7 @@
 -- SimonSaysSeeq on Norns
--- An early version
+-- Left Button Stop. Right Start
+
+version = 0.1
 
 local volts = 0
 local slew = 0
@@ -34,6 +36,9 @@ grid_table_dirty = false
 
 print (my_grid)
 
+out_midi = midi.connect(1)
+
+
 
 -- system clock tick
 -- this function is started by init() and runs forever
@@ -52,7 +57,7 @@ function greetings()
   screen.move(10,10)
   screen.text("Hello, I am SimonSaysSeeq")
   screen.move(20,20)
-  screen.text("on Norns v0.1")
+  screen.text("on Norns v" .. version)
   
   screen.move(10,30)
   
@@ -104,30 +109,43 @@ function advance_step()
 end
   
   
---transport_active = false  
--- here
+
 function clock.transport.start()
+
   print("transport.start")
   --tick_id = clock.run(tick)
   transport_active = true
-
+  
   screen.move(90,63)
   screen.text("Start")
   screen.update()
 
 end
 
+function midi_start()
+  print("midi_start")
+    out_midi:start ()  
+end  
  
 
 
 function clock.transport.stop()
+
   print("transport.stop")
+
   --clock.cancel(tick_id)
   transport_active = false
   screen.move(80,80)
   screen.text("STOP")
   screen.update()
 end
+
+
+
+function midi_stop()
+  print("midi_stop")
+     out_midi:stop ()
+end     
 
 
 function enc(n,d)
@@ -145,7 +163,9 @@ function key(n,z)
 
     if n == 2 and z == 1 then
       if transport_active then
+        
         clock.transport.stop()
+        midi_stop()
       end
       
       screen_dirty = true
@@ -154,6 +174,7 @@ function key(n,z)
     if n == 3 and z == 1 then
       if not transport_active then
         clock.transport.start()
+        midi_start()
       end
       
       screen_dirty = true
@@ -342,6 +363,10 @@ function refresh_grid()
   
   screen.move(1,63)   
   screen.text(tempo_text)
+  
+  screen.move(1,83)   
+  screen.text("version " .. version)
+  
   -- print(tempo_text)
   
   my_grid:refresh()
