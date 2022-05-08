@@ -5,7 +5,7 @@ local volts = 0
 local slew = 0
 
 -- on/off for stepped sequence 
-sequence = true
+transport_active = true
 
 
 -- Dimensions of Grid
@@ -34,16 +34,15 @@ grid_table_dirty = false
 
 print (my_grid)
 
---update_id = clock.run(update)
 
 -- system clock tick
 -- this function is started by init() and runs forever
--- if the sequence is on, it steps forward on each clock tick
+-- if transport_active is on, it steps forward on each clock tick
 -- tempo is controlled via the global clock, which can be set in the PARAMETERS menu 
 tick = function()
   while true do
     clock.sync(1/4)
-    if sequence then advance_step() end
+    if transport_active then advance_step() end
   end
 end
 
@@ -81,17 +80,7 @@ function greetings()
   greetings_done = true
 end
 
---function process_change(v)
---  if v == true then
---     print("rising")
---     clock.sync(1)
---  else
---    print("falling")
---  end
---end
 
---crow.input[1].change = process_change
---crow.input[1].mode("change", 2.0, 0.25, "both")
 
 
 function advance_step()
@@ -115,21 +104,29 @@ end
   
   
 --transport_active = false  
-
+-- here
 function clock.transport.start()
-  print("we begin")
-  tick_id = clock.run(tick)
+  print("transport.start")
+  --tick_id = clock.run(tick)
   transport_active = true
 
-  screen.move(10,10)
+  screen.move(90,63)
   screen.text("Start")
   screen.update()
 
 end
 
+function enc(n,d)
+  if n==3 then
+     params:delta("clock_tempo", d)
+  end
+end  
+
+
 function clock.transport.stop()
-  clock.cancel(tick_id)
-  screen.move(20,20)
+  print("transport.stop")
+  transport_active = false
+  screen.move(80,80)
   screen.text("STOP")
   screen.update()
 end
@@ -141,14 +138,23 @@ function key(n,z)
   -- since MIDI and Link offer their own start/stop messages,
   -- we'll only need to manually start if using internal or crow clock sources:
   if params:string("clock_source") == "internal" or params:string("clock_source") == "crow" then
-    if n == 3 and z == 1 then
+
+    if n == 2 and z == 1 then
       if transport_active then
         clock.transport.stop()
-      else
+      end
+      
+      screen_dirty = true
+    end
+    
+    if n == 3 and z == 1 then
+      if not transport_active then
         clock.transport.start()
       end
-    screen_dirty = true
+      
+      screen_dirty = true
     end
+    
   end
 end
 
@@ -177,6 +183,7 @@ function init()
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
+  -- What does this do?
   crow.reset()
   
 end
