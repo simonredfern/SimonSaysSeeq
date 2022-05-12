@@ -15,6 +15,9 @@ COLS = 16
 ROWS = 8
 
 
+STATES = 16
+
+
 -- Crow Outputs
 CROW_OUTPUTS = 4
 
@@ -23,6 +26,8 @@ GRID_TABLE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 Tab = require "lib/tabutil"
 
 current_step = 1
+
+current_state = 1
 
 -- highlight_grid = {}
 
@@ -57,7 +62,7 @@ function midi_watcher()
   while true do
     clock.sync(1/4)
     if need_to_start_midi == true then
-      -- we only want to start midi clock on the beat
+      -- we only want to start midi clock at the right time!
       out_midi:start()
       need_to_start_midi = false
     end
@@ -246,6 +251,7 @@ function init()
   crow.reset()
   
   -- Set the starting tempo. Can be changed with right kno
+  -- TODO store and retreive this
   params:set("clock_tempo",136)
   
   --midi_watcher_id = clock.run(midi_watcher)
@@ -307,14 +313,48 @@ function init_table()
     
     Tab.save(grid_table, GRID_TABLE_FILE)
     grid_table = Tab.load (GRID_TABLE_FILE)
+    
+    
+
+    
+    
   else
     print ("I already have a table")
   end
+
+
+    states = {}
+    
+    for t = 1, 10 do
+      print ("t is " .. t)
+      --states[t] = grid_table
+      
+      states[t] = table.shallow_copy(grid_table)
+      
+      
+      print (states[t])
+    end
+    
+    print (states)
+    
+
+
   
   print ("Bye from init_table")
   
 
 end
+
+-- this copies a table but not too deeply
+function table.shallow_copy(t)
+  local t2 = {}
+  for k,v in pairs(t) do
+    t2[k] = v
+  end
+  return t2
+end
+
+-- copy = table.shallow_copy(a)
 
 
 
@@ -336,6 +376,19 @@ if z == 1 then
   else 
     grid_table[x][y] = 1
   end
+  
+  
+  if (x == 1 and y == 6) then
+    current_state = util.wrap(current_state - 1, 1, STATES)
+    print ("Pressed 1,6")
+  end 
+  
+    if (x == 2 and y == 6) then
+    current_state = util.wrap(current_state + 1, 1, STATES)
+    print ("Pressed 2,6")
+  end
+  
+  
   -- So we save the table to file
   grid_table_dirty = true
 end
