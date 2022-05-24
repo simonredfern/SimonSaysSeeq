@@ -493,4 +493,11 @@ function gate_low(output)
   
 end
 
+function undo()
+ print("Undo")
+end
+
+function redo()
+  print("Redo")
+ end
 
