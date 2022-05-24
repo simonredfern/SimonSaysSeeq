@@ -374,9 +374,11 @@ if z == 1 then
     grid_state[x][y] = 1
   end
 
+
+  -- As long as not touching "control rows" save the state so we can undo.
   if y < 6 then
     -- Every time we change state of rows less than 6, record the new state in the undo_lifo
-    print("Store new state")
+    print("Store Undo LIFO")
     -- TODO check memory / count of states?
     table.insert (undo_lifo, table.shallow_copy(grid_state))
 
@@ -557,21 +559,7 @@ end
 
 
 
-function pop_undo_lifo()
- print("pop_undo_lifo")
-end
 
-function push_undo_lifo()
-  print("push_undo_lifo")
- end
-
- function pop_redo_lifo()
-  print("pop_redo_lifo")
- end
- 
- function push_redo_lifo()
-   print("push_redo_lifo")
-  end
 
 
 
