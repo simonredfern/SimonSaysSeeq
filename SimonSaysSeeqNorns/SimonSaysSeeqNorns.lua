@@ -15,21 +15,19 @@ COLS = 16
 ROWS = 8
 
 
-STATES = 16
 
+rough_undo_lifo_count = 0
+rough_redo_lifo_count = 0
 
 -- Crow Outputs
 CROW_OUTPUTS = 4
 
-GRID_TABLE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
+GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
 
 current_step = 1
 
-current_state = 1
-
--- highlight_grid = {}
 
 greetings_done = false
 
@@ -37,7 +35,7 @@ greetings_done = false
 
 my_grid = grid.connect()
 
-grid_table_dirty = false
+grid_state_dirty = false
 
 print (my_grid)
 
@@ -68,11 +66,6 @@ function midi_watcher()
     end
   end
 end
-
-
-
-
-
 
 
 
@@ -126,9 +119,9 @@ function advance_step()
   
   
   for output = 1, CROW_OUTPUTS do
-    if grid_table[current_step][output] == 1 then
+    if grid_state[current_step][output] == 1 then
       gate_high(output)
-    elseif grid_table[current_step][output] == 0 then
+    elseif grid_state[current_step][output] == 0 then
       gate_low(output)
     end
   end
@@ -276,9 +269,9 @@ end
   clock.run(function()
     while true do
       clock.sleep(5)
-        if (grid_table_dirty == true) then
-          Tab.save(grid_table, GRID_TABLE_FILE)
-          grid_table_dirty = false
+        if (grid_state_dirty == true) then
+          Tab.save(grid_state, GRID_STATE_FILE)
+          grid_state_dirty = false
         end
     end
   end)
@@ -292,27 +285,27 @@ function init_table()
   print ("Hello from init_table")
   
   -- Try to load the table
-  grid_table = Tab.load (GRID_TABLE_FILE)
+  grid_state = Tab.load (GRID_STATE_FILE)
   print("Result of table load is:")
-  print (grid_table)
+  print (grid_state)
   
   -- if it doesn't exist
-  if grid_table == nil then
+  if grid_state == nil then
     print ("No table, I will generate a structure and save that")
-    grid_table = {}
+    grid_state = {}
     for col = 1, COLS do 
-      grid_table[col] = {} -- create a table for each col
+      grid_state[col] = {} -- create a table for each col
       for row = 1, ROWS do
         if col == row then -- eg. if coordinate is (3,3)
-          grid_table[col][row] = 1
+          grid_state[col][row] = 1
         else -- eg. if coordinate is (3,2)
-          grid_table[col][row] = 0
+          grid_state[col][row] = 0
         end
       end
     end
     
-    Tab.save(grid_table, GRID_TABLE_FILE)
-    grid_table = Tab.load (GRID_TABLE_FILE)
+    Tab.save(grid_state, GRID_STATE_FILE)
+    grid_state = Tab.load (GRID_STATE_FILE)
     
     
 
@@ -321,24 +314,6 @@ function init_table()
   else
     print ("I already have a table")
   end
-
-
-    states = {}
-    
-    for t = 1, 10 do
-      print ("t is " .. t)
-      --states[t] = grid_table
-      
-      states[t] = table.shallow_copy(grid_table)
-      
-      
-      print (states[t])
-    end
-    
-    print (states)
-    
-
-
   
   print ("Bye from init_table")
   
@@ -367,33 +342,86 @@ my_grid.key = function(x,y,z)
 -- We want to capture the key down event and toggle the state of the key in the grid.
 
 --print("--------------------------------------------------------------")
---print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_table[x][y])
+--print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[x][y])
   
 -- Capture key down event only  
 if z == 1 then
-  if grid_table[x][y] == 1 then
-    grid_table[x][y] = 0
+  if grid_state[x][y] == 1 then
+    grid_state[x][y] = 0
   else 
-    grid_table[x][y] = 1
+    grid_state[x][y] = 1
   end
+
+  if y < 6 then
+    -- Every time we change state of rows less than 6, record the new state in the undo_lifo
+    print("Store new state")
+    -- TODO check memory / count of states?
+    table.insert (undo_lifo, table.shallow_copy(grid_state))
+
+    rough_undo_lifo_count = rough_undo_lifo_count + 1
+    print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+
+
+  end   
+
   
   
   if (x == 1 and y == 6) then
-    current_state = util.wrap(current_state - 1, 1, STATES)
-    print ("Pressed 1,6")
+    -- UNDO
+    print ("Pressed 1,6: UNDO")
+    
+    -- In order to Undo we: 
+    
+    -- 1) Push the current state to the redo_lifo so we can get back to it.
+    table.insert (redo_lifo, table.shallow_copy(grid_state))
+    rough_redo_lifo_count = rough_redo_lifo_count + 1
+    print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
+
+
+    -- 2) Pop from the undo_lifo to the current state.
+    grid_state = table.remove (undo_lifo)
+    rough_undo_lifo_count = rough_undo_lifo_count - 1
+    print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+
+    -- Thus if A through G are all the states we've seen, and E is the current state, we'd have the following:
+    
+    --    ABCDEFG
+    --        *
+    -- grid_state: E
+    --
+    -- undo_lifo       redo_lifo
+    --    D                F 
+    --    C                G 
+    --    B
+    --    A 
+
+
   end 
   
     if (x == 2 and y == 6) then
-    current_state = util.wrap(current_state + 1, 1, STATES)
-    print ("Pressed 2,6")
+    -- REDO  
+    print ("Pressed 2,6: REDO")
+
+    -- 1) Push the current state to the undo_lifo so we can get back to it.
+    table.insert (undo_lifo, table.shallow_copy(grid_state))
+    rough_undo_lifo_count = rough_undo_lifo_count + 1
+    print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+
+
+
+    -- 2) Pop the redo_lifo into the current state.
+    grid_state = table.remove (redo_lifo) 
+    rough_redo_lifo_count = rough_redo_lifo_count - 1
+    print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
+
   end
   
   
   -- So we save the table to file
-  grid_table_dirty = true
+  grid_state_dirty = true
 end
 
---print(x .. ","..y .. " value after change " .. grid_table[x][y])
+--print(x .. ","..y .. " value after change " .. grid_state[x][y])
 --print("--------------------------------------------------------------")
 
 end
@@ -409,7 +437,7 @@ function refresh_grid()
     for col = 1,COLS do 
       for row = 1,ROWS do
         screen.move(col * 7,row * 7)
-        --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_table[row][column])
+        --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
         
 
         -- Show the scrolling of the steps with the first 6 rows of LEDS. (Others will be used for other controls)
@@ -418,7 +446,7 @@ function refresh_grid()
            screen.text("*")
           
           
-          if (grid_table[col][row] == 1) then 
+          if (grid_state[col][row] == 1) then 
             -- If current step and key is on, highlight it.
             my_grid:led(col,row,15) 
           else
@@ -426,7 +454,7 @@ function refresh_grid()
             my_grid:led(col,row,6)
           end
         else
-          if (grid_table[col][row] == 1) then
+          if (grid_state[col][row] == 1) then
              -- Not current step but Grid square is On
             my_grid:led(col,row,12)
           else 
@@ -434,7 +462,7 @@ function refresh_grid()
             my_grid:led(col,row,0)
           end
           -- Show the stored value on screen
-          screen.text(grid_table[col][row])
+          screen.text(grid_state[col][row])
         end
 
         --screen.text(highlight_grid[row][colum])
@@ -493,11 +521,60 @@ function gate_low(output)
   
 end
 
-function undo()
- print("Undo")
+
+
+
+function pop_undo_lifo()
+ print("pop_undo_lifo")
 end
 
-function redo()
-  print("Redo")
+function push_undo_lifo()
+  print("push_undo_lifo")
  end
 
+ function pop_redo_lifo()
+  print("pop_redo_lifo")
+ end
+ 
+ function push_redo_lifo()
+   print("push_redo_lifo")
+  end
+
+
+
+
+
+
+--  FIFO (queue)
+
+--  You can simply implement FIFO by using table.insert to add new items, and table.remove to remove the first one, like this:
+ 
+ 
+--  t = {}
+ 
+--  table.insert (t, "a")  --> insert an item
+--  table.insert (t, "b")  --> insert another
+ 
+--  x = table.remove (t, 1)  --> remove first item
+--  print (x)  --> a
+ 
+--  x = table.remove (t, 1)  --> remove first item
+--  print (x)  --> b
+ 
+ 
+--  LIFO (stack)
+ 
+--  A small change implements last in, first out:
+ 
+ 
+--  t = {}
+ 
+--  table.insert (t, "a")  --> insert an item
+--  table.insert (t, "b")  --> insert another
+ 
+--  x = table.remove (t)  --> remove last item
+--  print (x)  --> b
+ 
+--  x = table.remove (t)  --> remove last item
+--  print (x)  --> a
+ 
