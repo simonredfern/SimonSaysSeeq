@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 
-version = 0.1
+version = 0.2
 
 local volts = 0
 local slew = 0
@@ -224,6 +224,12 @@ function init()
 --  params:set("clock_source",4)
   
   
+
+    -- last in first out
+  undo_lifo = {}
+  redo_lifo = {}
+  
+  
   print ("before init_table")
   init_table()
     
@@ -277,6 +283,16 @@ end
   end)
 
 
+
+
+function load_grid_state()
+  
+  grid_state = Tab.load (GRID_STATE_FILE)
+  print("Result of table load is:")
+  print (grid_state)
+  return grid_state
+end
+  
  
 
 
@@ -285,9 +301,12 @@ function init_table()
   print ("Hello from init_table")
   
   -- Try to load the table
-  grid_state = Tab.load (GRID_STATE_FILE)
-  print("Result of table load is:")
-  print (grid_state)
+  
+  if pcall(load_grid_state) then
+    print ("seems we got an error")
+    else
+      print ("seems ok")
+    end  
   
   -- if it doesn't exist
   if grid_state == nil then
@@ -314,6 +333,9 @@ function init_table()
   else
     print ("I already have a table")
   end
+  
+
+  
   
   print ("Bye from init_table")
   
@@ -358,6 +380,7 @@ if z == 1 then
     -- TODO check memory / count of states?
     table.insert (undo_lifo, table.shallow_copy(grid_state))
 
+    --table.insert (undo_lifo, grid_state)
     rough_undo_lifo_count = rough_undo_lifo_count + 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
 
@@ -366,14 +389,16 @@ if z == 1 then
 
   
   
-  if (x == 1 and y == 6) then
+  if (x == 1 and y == 8) then
     -- UNDO
-    print ("Pressed 1,6: UNDO")
+    print ("Pressed 1,8: UNDO")
     
     -- In order to Undo we: 
     
     -- 1) Push the current state to the redo_lifo so we can get back to it.
     table.insert (redo_lifo, table.shallow_copy(grid_state))
+    -- table.insert (redo_lifo, grid_state)
+    
     rough_redo_lifo_count = rough_redo_lifo_count + 1
     print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
 
@@ -382,6 +407,8 @@ if z == 1 then
     grid_state = table.remove (undo_lifo)
     rough_undo_lifo_count = rough_undo_lifo_count - 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+    
+    refresh_grid()
 
     -- Thus if A through G are all the states we've seen, and E is the current state, we'd have the following:
     
@@ -398,12 +425,15 @@ if z == 1 then
 
   end 
   
-    if (x == 2 and y == 6) then
+    if (x == 2 and y == 8) then
     -- REDO  
-    print ("Pressed 2,6: REDO")
+    print ("Pressed 2,8: REDO")
 
     -- 1) Push the current state to the undo_lifo so we can get back to it.
     table.insert (undo_lifo, table.shallow_copy(grid_state))
+    
+    --table.insert (undo_lifo, grid_state)
+    
     rough_undo_lifo_count = rough_undo_lifo_count + 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
 
@@ -413,6 +443,8 @@ if z == 1 then
     grid_state = table.remove (redo_lifo) 
     rough_redo_lifo_count = rough_redo_lifo_count - 1
     print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
+    
+    refresh_grid()
 
   end
   
@@ -429,7 +461,8 @@ end
 
 function refresh_grid()
   
-  -- print ("Hello from refresh_grid")
+  print ("Hello from refresh_grid for grid at:")
+  print ( grid_state)
   
   screen.clear()
   screen.move(1,1)
