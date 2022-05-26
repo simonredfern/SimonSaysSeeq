@@ -327,13 +327,8 @@ function init_table()
         end
       end
     end
-    
     Tab.save(grid_state, GRID_STATE_FILE)
-    grid_state = Tab.load (GRID_STATE_FILE)
-    
- 
-    
-    
+    grid_state = Tab.load (GRID_STATE_FILE)  
   else
     print ("I already have a grid_state table, no need to generate one")
   end
@@ -461,7 +456,9 @@ if z == 1 then
 
   
   if (x == 1 and y == 8) then
-    -- UNDO
+    ----------
+    -- UNDO --
+    ----------
     print ("Pressed 1,8: UNDO")
     
     -- In order to Undo we: 
