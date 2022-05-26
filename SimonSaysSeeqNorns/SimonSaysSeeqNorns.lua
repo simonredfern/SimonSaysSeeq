@@ -406,13 +406,10 @@ end
 
 
 function pop_redo()
-
       -- 2) Pop the redo_lifo into the current state.
       grid_state = table.remove (redo_lifo) 
       rough_redo_lifo_count = rough_redo_lifo_count - 1
       print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
-
-
 end  
 
 
@@ -438,10 +435,8 @@ if z == 1 then
 
   -- As long as not touching "control rows" save the state so we can undo.
   if y < 6 then
-    -- Every time we change state of rows less than 6, record the new state in the undo_lifo
-
+    -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
    push_undo()
-
   end   
 
   
@@ -451,27 +446,21 @@ if z == 1 then
     print ("Pressed 1,8: UNDO")
     
     -- In order to Undo we: 
-    
     push_redo()
-
     pop_undo()
-
- 
     refresh_grid()
-
-
+    print ("grid_state is:")
+    print (grid_state)
   end 
   
     if (x == 2 and y == 8) then
     -- REDO  
     print ("Pressed 2,8: REDO")
-
     push_undo()
-
     pop_redo()
-
     refresh_grid()
-
+    print ("grid_state is:")
+    print (grid_state)
   end
   
   
@@ -487,14 +476,19 @@ end
 
 function refresh_grid()
   
-  --print ("Hello from refresh_grid for grid at:")
-  --print ( grid_state)
+  print ("Hello from refresh_grid for grid at:")
+  print (grid_state)
   
+
+  tally = ""
+
   screen.clear()
   screen.move(1,1)
   
     for col = 1,COLS do 
       for row = 1,ROWS do
+        tally = tally .. grid_state[col][row]
+
         screen.move(col * 7,row * 7)
         --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
         
@@ -543,8 +537,10 @@ function refresh_grid()
 
   my_grid:refresh()
   
-  -- print ("Bye from refresh_grid")
+  print ("Bye from refresh_grid tally is:" .. tally)
   
+  return tally
+
 end  
 
 
