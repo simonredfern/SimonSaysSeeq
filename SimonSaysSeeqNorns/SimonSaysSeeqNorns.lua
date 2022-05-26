@@ -326,8 +326,8 @@ function init_table()
     Tab.save(grid_state, GRID_STATE_FILE)
     grid_state = Tab.load (GRID_STATE_FILE)
     
-    
-
+    -- Push Undo so we can get back to initial state
+    push_undo()
     
     
   else
