@@ -363,6 +363,9 @@ function push_undo()
 
   print("push_undo says hello. Store Undo LIFO")
   -- TODO check memory / count of states?
+
+  -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
+  -- Inserts in the last position of the table (push)
   table.insert (undo_lifo, table.shallow_copy(grid_state))
 
   --table.insert (undo_lifo, grid_state)
@@ -374,6 +377,7 @@ end
 function pop_undo()
 
     -- 2) Pop from the undo_lifo to the current state.
+    -- Removes from the last element of the table (pop)
     grid_state = table.remove (undo_lifo)
     rough_undo_lifo_count = rough_undo_lifo_count - 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
@@ -397,6 +401,8 @@ end
 
 function push_redo()
     -- 1) Push the current state to the redo_lifo so we can get back to it.
+    -- Similarly we want to *copy* the grid_state (not reference) 
+    -- so any subsequent changes to the grid_state are not reflected in the redo_lifo
     table.insert (redo_lifo, table.shallow_copy(grid_state))
     -- table.insert (redo_lifo, grid_state)
     
@@ -439,7 +445,6 @@ if z == 1 then
    push_undo()
   end   
 
-  
   
   if (x == 1 and y == 8) then
     -- UNDO
