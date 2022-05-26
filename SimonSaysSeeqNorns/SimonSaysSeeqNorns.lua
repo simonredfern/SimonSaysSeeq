@@ -302,11 +302,16 @@ function init_table()
   
   -- Try to load the table
   
-  if pcall(load_grid_state) then
-    print ("seems we got an error")
-    else
-      print ("seems ok")
-    end  
+
+  local status, err = pcall(load_grid_state)
+
+  if status then
+    print ("load grid state seems ok. grid_state is:")
+    print (grid_state)
+  else
+    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: " .. err)
+    grid_state = nil
+  end  
   
   -- if it doesn't exist
   if grid_state == nil then
@@ -326,16 +331,16 @@ function init_table()
     Tab.save(grid_state, GRID_STATE_FILE)
     grid_state = Tab.load (GRID_STATE_FILE)
     
-    -- Push Undo so we can get back to initial state
-    push_undo()
+ 
     
     
   else
-    print ("I already have a table")
+    print ("I already have a grid_state table, no need to generate one")
   end
   
 
-  
+  -- Push Undo so we can get back to initial state
+  push_undo()
   
   print ("Bye from init_table")
   
@@ -482,8 +487,8 @@ end
 
 function refresh_grid()
   
-  print ("Hello from refresh_grid for grid at:")
-  print ( grid_state)
+  --print ("Hello from refresh_grid for grid at:")
+  --print ( grid_state)
   
   screen.clear()
   screen.move(1,1)
