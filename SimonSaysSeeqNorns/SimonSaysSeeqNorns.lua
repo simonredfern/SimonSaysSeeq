@@ -378,7 +378,10 @@ function pop_undo()
 
     -- 2) Pop from the undo_lifo to the current state.
     -- Removes from the last element of the table (pop)
-    grid_state = table.remove (undo_lifo)
+    local undo_state = table.remove (undo_lifo)
+
+    grid_state = table.shallow_copy(undo_state)
+
     rough_undo_lifo_count = rough_undo_lifo_count - 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
     
@@ -413,7 +416,11 @@ end
 
 function pop_redo()
       -- 2) Pop the redo_lifo into the current state.
-      grid_state = table.remove (redo_lifo) 
+      --grid_state = table.remove (redo_lifo) 
+
+      local redo_state = table.remove (redo_lifo) -- doesn't make sense to copy because we remove it 
+      grid_state = table.shallow_copy(redo_state)
+
       rough_redo_lifo_count = rough_redo_lifo_count - 1
       print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
 end  
@@ -441,6 +448,13 @@ if z == 1 then
 
   -- As long as not touching "control rows" save the state so we can undo.
   if y < 6 then
+
+    local tally = refresh_grid()
+    print ("grid_state less than 6 row press")
+    print (grid_state)
+    print ("tally is:" .. tally)
+
+
     -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
    push_undo()
   end   
@@ -451,8 +465,30 @@ if z == 1 then
     print ("Pressed 1,8: UNDO")
     
     -- In order to Undo we: 
+
+
+    local tally = refresh_grid()
+    print ("grid_state BEFORE push_redo is:")
+    print (grid_state)
+    print ("tally is:" .. tally)
+
     push_redo()
+
+    local tally = refresh_grid()
+    print ("grid_state BEFORE pop_undo is:")
+    print (grid_state)
+    print ("tally is:" .. tally)
+
+
+
     pop_undo()
+
+    local tally = refresh_grid()
+    print ("grid_state AFTER pop_undo is:")
+    print (grid_state)
+    print ("tally is:" .. tally)
+
+
     refresh_grid()
     print ("grid_state is:")
     print (grid_state)
@@ -461,11 +497,22 @@ if z == 1 then
     if (x == 2 and y == 8) then
     -- REDO  
     print ("Pressed 2,8: REDO")
-    push_undo()
-    pop_redo()
-    refresh_grid()
-    print ("grid_state is:")
+    local tally = refresh_grid()
+    print ("grid_state BEFORE push_undo is:")
     print (grid_state)
+    print ("tally is:" .. tally)
+    push_undo()
+
+    local tally = refresh_grid()
+    print ("grid_state BEFORE pop_redo is:")
+    print (grid_state)
+    print ("tally is:" .. tally)
+    pop_redo()
+
+    local tally = refresh_grid()
+    print ("grid_state AFTER pop_redo is:")
+    print (grid_state)
+    print ("tally is:" .. tally)
   end
   
   
@@ -481,8 +528,8 @@ end
 
 function refresh_grid()
   
-  print ("Hello from refresh_grid for grid at:")
-  print (grid_state)
+  --print ("Hello from refresh_grid for grid at:")
+  --print (grid_state)
   
 
   tally = ""
@@ -542,7 +589,7 @@ function refresh_grid()
 
   my_grid:refresh()
   
-  print ("Bye from refresh_grid tally is:" .. tally)
+  -- print ("Bye from refresh_grid tally is:" .. tally)
   
   return tally
 
