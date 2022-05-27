@@ -477,67 +477,65 @@ if z == 1 then
     -- In order to Undo we: 
 
 
-    local tally = refresh_grid()
-    print ("grid_state BEFORE push_redo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    -- local tally = refresh_grid()
+    -- print ("grid_state BEFORE push_redo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
 
     push_redo()
 
-    local tally = refresh_grid()
-    print ("grid_state BEFORE pop_undo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    -- local tally = refresh_grid()
+    -- print ("grid_state BEFORE pop_undo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
 
 
 
     pop_undo()
 
-    local tally = refresh_grid()
-    print ("grid_state AFTER pop_undo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    -- local tally = refresh_grid()
+    -- print ("grid_state AFTER pop_undo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
 
 
     refresh_grid()
-    print ("grid_state is:")
-    print (grid_state)
+    -- print ("grid_state is:")
+    -- print (grid_state)
   end 
   
   if (x == 2 and y == 8) then
     -- REDO  
-    print ("Pressed 2,8: REDO")
-    local tally = refresh_grid()
-    print ("grid_state BEFORE push_undo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    -- print ("Pressed 2,8: REDO")
+    -- local tally = refresh_grid()
+    -- print ("grid_state BEFORE push_undo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
     push_undo()
 
-    local tally = refresh_grid()
-    print ("grid_state BEFORE pop_redo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    -- local tally = refresh_grid()
+    -- print ("grid_state BEFORE pop_redo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
     pop_redo()
 
-    local tally = refresh_grid()
-    print ("grid_state AFTER pop_redo is:")
-    print (grid_state)
-    print ("tally is:" .. tally)
+    refresh_grid()
+
+    -- local tally = refresh_grid()
+    -- print ("grid_state AFTER pop_redo is:")
+    -- print (grid_state)
+    -- print ("tally is:" .. tally)
   end
   
   
   if (x == 15 and y == 8) then
-    -- list  UNDO
-
+    -- List the UNDO LIFO
     print("here comes undo_lifo")
-
     for key, value in pairs(undo_lifo) do
       print(key, " -- ", value)
       -- the values in undo_lifo are tables.
       print (get_tally(value))
     end
-
-
   end  
 
 
@@ -549,34 +547,30 @@ end
 end
 
 
-function get_tally(my_grid)
+function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
   local tally = ""
   for col = 1,COLS do 
     for row = 1,ROWS do
-      tally = tally .. my_grid[col][row]
+      tally = tally .. input_grid[col][row]
     end 
   end
   return tally
 end  
 
 
-function get_copy_of_grid(my_grid)
-  -- For creating copies of our grid for undo and probably other things.
-
-  print ("input grid is" .. get_tally(my_grid))
-
-  local copy_of_grid = create_grid() -- this returns a grid with the dimensions we expect
-  --print ("COLS:" .. COLS .. " ROWS:" .. ROWS)
-
-
+function get_copy_of_grid(input_grid)
+  -- For creating copies of a grid for Undo and probably other things.
+  print ("input_grid is" .. get_tally(input_grid))
+  local output_grid = create_grid() -- this returns a grid with the dimensions we expect
+  -- copy all the values 
   for col = 1,COLS do 
     for row = 1,ROWS do
       --print ("col:" .. col .. " row:" .. row)
-      copy_of_grid[col][row] = my_grid[col][row]
+      output_grid[col][row] = input_grid[col][row]
     end 
   end
-  return copy_of_grid
+  return output_grid
 end  
 
 
