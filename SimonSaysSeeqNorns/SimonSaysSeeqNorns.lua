@@ -294,7 +294,20 @@ function load_grid_state()
 end
   
  
-
+function create_grid()
+  local fresh_grid = {}
+  for col = 1, COLS do 
+    fresh_grid[col] = {} -- create a table for each col
+    for row = 1, ROWS do
+      if col == row then -- eg. if coordinate is (3,3)
+        fresh_grid[col][row] = 1
+      else -- eg. if coordinate is (3,2)
+        fresh_grid[col][row] = 0
+      end
+    end
+  end
+  return fresh_grid
+end  
 
 function init_table()
   
@@ -316,17 +329,11 @@ function init_table()
   -- if it doesn't exist
   if grid_state == nil then
     print ("No table, I will generate a structure and save that")
-    grid_state = {}
-    for col = 1, COLS do 
-      grid_state[col] = {} -- create a table for each col
-      for row = 1, ROWS do
-        if col == row then -- eg. if coordinate is (3,3)
-          grid_state[col][row] = 1
-        else -- eg. if coordinate is (3,2)
-          grid_state[col][row] = 0
-        end
-      end
-    end
+
+    grid_state = create_grid()
+
+
+
     Tab.save(grid_state, GRID_STATE_FILE)
     grid_state = Tab.load (GRID_STATE_FILE)  
   else
@@ -361,7 +368,7 @@ function push_undo()
 
   -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
   -- Inserts in the last position of the table (push)
-  table.insert (undo_lifo, table.shallow_copy(grid_state))
+  table.insert (undo_lifo, get_copy_of_grid(grid_state))
 
   --table.insert (undo_lifo, grid_state)
   rough_undo_lifo_count = rough_undo_lifo_count + 1
@@ -375,7 +382,7 @@ function pop_undo()
     -- Removes from the last element of the table (pop)
     local undo_state = table.remove (undo_lifo)
 
-    grid_state = table.shallow_copy(undo_state)
+    grid_state = get_copy_of_grid(undo_state)
 
     rough_undo_lifo_count = rough_undo_lifo_count - 1
     print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
@@ -401,7 +408,7 @@ function push_redo()
     -- 1) Push the current state to the redo_lifo so we can get back to it.
     -- Similarly we want to *copy* the grid_state (not reference) 
     -- so any subsequent changes to the grid_state are not reflected in the redo_lifo
-    table.insert (redo_lifo, table.shallow_copy(grid_state))
+    table.insert (redo_lifo, get_copy_of_grid(grid_state))
     -- table.insert (redo_lifo, grid_state)
     
     rough_redo_lifo_count = rough_redo_lifo_count + 1
@@ -414,7 +421,7 @@ function pop_redo()
       --grid_state = table.remove (redo_lifo) 
 
       local redo_state = table.remove (redo_lifo) -- doesn't make sense to copy because we remove it 
-      grid_state = table.shallow_copy(redo_state)
+      grid_state = get_copy_of_grid(redo_state)
 
       rough_redo_lifo_count = rough_redo_lifo_count - 1
       print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
@@ -544,18 +551,32 @@ end
 
 function get_tally(my_grid)
   -- A helper debug function to show the state of a grid
-
-local tally = ""
-
+  local tally = ""
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. my_grid[col][row]
-
     end 
   end
-  
   return tally
+end  
 
+
+function get_copy_of_grid(my_grid)
+  -- For creating copies of our grid for undo and probably other things.
+
+  print ("input grid is" .. get_tally(my_grid))
+
+  local copy_of_grid = create_grid() -- this returns a grid with the dimensions we expect
+  --print ("COLS:" .. COLS .. " ROWS:" .. ROWS)
+
+
+  for col = 1,COLS do 
+    for row = 1,ROWS do
+      --print ("col:" .. col .. " row:" .. row)
+      copy_of_grid[col][row] = my_grid[col][row]
+    end 
+  end
+  return copy_of_grid
 end  
 
 
