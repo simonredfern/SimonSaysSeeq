@@ -452,6 +452,12 @@ if z == 1 then
 
     -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
    push_undo()
+
+
+    -- So we save the table to file
+    -- (don't bother with control rows)
+    grid_state_dirty = true
+
   end   
 
   
@@ -491,7 +497,7 @@ if z == 1 then
     print (grid_state)
   end 
   
-    if (x == 2 and y == 8) then
+  if (x == 2 and y == 8) then
     -- REDO  
     print ("Pressed 2,8: REDO")
     local tally = refresh_grid()
@@ -513,8 +519,21 @@ if z == 1 then
   end
   
   
-  -- So we save the table to file
-  grid_state_dirty = true
+  if (x == 15 and y == 8) then
+    -- list  UNDO
+
+    print("here comes undo_lifo")
+
+    for key, value in pairs(undo_lifo) do
+      print(key, " -- ", value)
+      -- the values in undo_lifo are tables.
+      print (get_tally(value))
+    end
+
+
+  end  
+
+
 end
 
 --print(x .. ","..y .. " value after change " .. grid_state[x][y])
@@ -523,13 +542,31 @@ end
 end
 
 
+function get_tally(my_grid)
+  -- A helper debug function to show the state of a grid
+
+local tally = ""
+
+  for col = 1,COLS do 
+    for row = 1,ROWS do
+      tally = tally .. my_grid[col][row]
+
+    end 
+  end
+  
+  return tally
+
+end  
+
+
+
 function refresh_grid()
   
   --print ("Hello from refresh_grid for grid at:")
   --print (grid_state)
   
 
-  tally = ""
+  local tally = ""
 
   screen.clear()
   screen.move(1,1)
