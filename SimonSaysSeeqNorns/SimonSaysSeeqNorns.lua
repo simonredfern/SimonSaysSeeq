@@ -482,6 +482,12 @@ if z == 1 then
     -- UNDO --
     ----------
     print ("Pressed 1,8: UNDO")
+
+
+    -- Only do this if we know we can pop from undo 
+    if (table_populated(undo_lifo)) then
+
+      print ("undo_lifo is populated")
     
     -- In order to Undo we: 
 
@@ -511,8 +517,19 @@ if z == 1 then
     refresh_grid()
     -- print ("grid_state is:")
     -- print (grid_state)
+
+    else
+      print ("undo_lifo is NOT populated")
+
+    end
+
+
   end 
   
+
+
+
+
   if (x == 2 and y == 8) then
     -- REDO  
     -- print ("Pressed 2,8: REDO")
@@ -520,23 +537,34 @@ if z == 1 then
     -- print ("grid_state BEFORE push_undo is:")
     -- print (grid_state)
     -- print ("tally is:" .. tally)
-    push_undo()
 
-    -- local tally = refresh_grid()
-    -- print ("grid_state BEFORE pop_redo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
-    pop_redo()
+        -- Only do this if we know we can pop from undo 
+    if (table_populated(redo_lifo)) then
+      print ("redo_lifo is populated")
 
-    refresh_grid()
+      push_undo()
 
-    -- local tally = refresh_grid()
-    -- print ("grid_state AFTER pop_redo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
+      -- local tally = refresh_grid()
+      -- print ("grid_state BEFORE pop_redo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+      pop_redo()
+
+      refresh_grid()
+
+      -- local tally = refresh_grid()
+      -- print ("grid_state AFTER pop_redo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+    else
+      print ("redo_lifo is NOT populated")
+
+
   end
+
+end
   
-  
+  -- For debugging help
   if (x == 15 and y == 8) then
     -- List the UNDO LIFO
     print("here comes undo_lifo")
@@ -558,6 +586,8 @@ end
 
 function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
+  -- A grid is a table with known dimensions
+  -- Used for debugging
   local tally = ""
   for col = 1,COLS do 
     for row = 1,ROWS do
@@ -566,6 +596,27 @@ function get_tally(input_grid)
   end
   return tally
 end  
+
+
+function table_populated(input_table)
+  local count  = 0 
+  for key, value in pairs(input_table) do
+    --print(key, " -- ", value)
+    count = count + 1
+    -- No need to loop through whole table.
+    if count > 0 then
+      break
+    end
+  end
+
+  if count > 0 then
+    return true
+  else 
+    return false
+  end  
+
+end
+
 
 
 function get_copy_of_grid(input_grid)
