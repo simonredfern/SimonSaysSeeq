@@ -42,6 +42,9 @@ print (my_grid)
 out_midi = midi.connect(1)
 
 
+last_implicit_push_undo = os.clock()
+
+
 
 -- system clock tick
 -- this function is started by init() and runs forever
@@ -458,12 +461,18 @@ if z == 1 then
 
 
     -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
-   push_undo()
+    -- Actually, we want to wait some time interval before we push so we don't capture transitions
+    -- TODO intead of using seconds, maybe use number of beats
 
+    if os.clock() - last_implicit_push_undo > 10 then
+      push_undo()
+      last_implicit_push_undo = os.clock()
+    end  
 
     -- So we save the table to file
     -- (don't bother with control rows)
     grid_state_dirty = true
+
 
   end   
 
