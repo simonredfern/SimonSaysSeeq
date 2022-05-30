@@ -77,6 +77,7 @@ function midi_watcher()
 end
 
 function grid_state_popularity_watcher()
+  -- get some idea of how much a particular grid is used
   while true do
     clock.sync(1) -- do this every beat
     grid_state["gspc"] = grid_state["gspc"] + 1
@@ -187,12 +188,6 @@ function request_midi_stop()
   -- can stop the midi clock at any time.
      out_midi:stop ()
 end  
-
-
-
-
-
-
 
 
 function enc(n,d)
@@ -327,7 +322,7 @@ function create_grid()
  -- math.randomseed( os.time() )
   
 
-  fresh_grid["id"]=math.random()*10
+  fresh_grid["id"]=math.random(1,99999999999999)
   fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
   for col = 1, COLS do 
     fresh_grid[col] = {} -- create a table for each col
@@ -384,7 +379,7 @@ end
 function push_undo()
 
   print("push_undo says hello. Store Undo LIFO")
-  -- TODO check memory / count of states?
+  -- TODO check memory / count of states? - if this gets very large, truncate from the other side
 
   -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
   -- Inserts in the last position of the table (push)
@@ -395,6 +390,8 @@ function push_undo()
 end  
 
 function pop_undo()
+
+  if lifo_size(undo_lifo) > 1 then
 
     -- 2) Pop from the undo_lifo to the current state.
     -- Removes from the last element of the table (pop)
@@ -416,6 +413,9 @@ function pop_undo()
     --    B
     --    A 
 
+  else 
+    print ("Not poping last undo_lifo because its size is 1 or less ")  
+  end
 end 
 
 
@@ -432,6 +432,9 @@ end
 
 
 function pop_redo()
+
+  if lifo_size(redo_lifo) > 1 then
+
       -- 2) Pop the redo_lifo into the current state.
 
       -- TODO need to copy this?
@@ -439,6 +442,9 @@ function pop_redo()
       grid_state = get_copy_of_grid(redo_state)
 
       print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+    else 
+      print ("Not poping last redo_lifo because its size is 1 or less ")  
+    end
 
 end  
 
@@ -461,19 +467,14 @@ my_grid.key = function(x,y,z)
   
   -- Capture key down event only  
   if z == 1 then
-    if grid_state[x][y] == 1 then
-      grid_state[x][y] = 0
-    else 
-      grid_state[x][y] = 1
-    end
 
 
-    -- As long as not touching "control rows" save the state so we can undo.
+    -- Order is important here. 
+    -- We want to save the current state *before* we push a copy of the grid to the undo lifo
+    -- But only do this if we are not touching the control rows (7 & 8)
     if y < 6 then
-      print ("grid_state less than 6 row press")
-      print (grid_state)
-      local tally = get_tally(grid_state)
-      print ("tally is:" .. tally)
+      print ("non control button pressed")
+      print ("grid_state:" .. get_tally(grid_state))
 
       -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
       push_undo()
@@ -481,11 +482,18 @@ my_grid.key = function(x,y,z)
       -- So we save the table to file
       -- (don't bother with control rows)
       grid_state_dirty = true
-
-
     end   
 
+    -- Order is important here. 
+    -- Change the state of the grid *after* we have pushed to undo lifo
+    if grid_state[x][y] == 1 then
+      grid_state[x][y] = 0
+    else 
+      grid_state[x][y] = 1
+    end
     
+
+    -- Buttons in a Control row 
     if (x == 1 and y == 8) then
       ----------
       -- UNDO --
@@ -496,36 +504,36 @@ my_grid.key = function(x,y,z)
       -- Only do this if we know we can pop from undo 
       if (lifo_populated(undo_lifo)) then
 
-        print ("undo_lifo is populated")
+        --print ("undo_lifo is populated")
       
-      -- In order to Undo we: 
+        -- In order to Undo we: 
 
 
-      -- local tally = refresh_grid()
-      -- print ("grid_state BEFORE push_redo is:")
-      -- print (grid_state)
-      -- print ("tally is:" .. tally)
+        -- local tally = refresh_grid()
+        -- print ("grid_state BEFORE push_redo is:")
+        -- print (grid_state)
+        -- print ("tally is:" .. tally)
 
-      push_redo()
+        push_redo()
 
-      -- local tally = refresh_grid()
-      -- print ("grid_state BEFORE pop_undo is:")
-      -- print (grid_state)
-      -- print ("tally is:" .. tally)
-
-
-
-      pop_undo()
-
-      -- local tally = refresh_grid()
-      -- print ("grid_state AFTER pop_undo is:")
-      -- print (grid_state)
-      -- print ("tally is:" .. tally)
+        -- local tally = refresh_grid()
+        -- print ("grid_state BEFORE pop_undo is:")
+        -- print (grid_state)
+        -- print ("tally is:" .. tally)
 
 
-     -- refresh_grid()
-      -- print ("grid_state is:")
-      -- print (grid_state)
+
+        pop_undo()
+
+        -- local tally = refresh_grid()
+        -- print ("grid_state AFTER pop_undo is:")
+        -- print (grid_state)
+        print ("grid_state: " .. get_tally(grid_state))
+
+
+     
+        -- print ("grid_state is:")
+        -- print (grid_state)
 
       else
         print ("undo_lifo is NOT populated")
@@ -545,7 +553,7 @@ my_grid.key = function(x,y,z)
 
           -- Only do this if we know we can pop from undo 
       if (lifo_populated(redo_lifo)) then
-        print ("redo_lifo is populated")
+        -- print ("redo_lifo is populated")
 
         push_undo()
 
@@ -561,6 +569,8 @@ my_grid.key = function(x,y,z)
         -- print ("grid_state AFTER pop_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
+
+        print ("grid_state: " .. get_tally(grid_state))
       else
         print ("redo_lifo is NOT populated")
 
@@ -667,7 +677,7 @@ function get_copy_of_grid(input_grid)
   --print ("input_grid is" .. get_tally(input_grid))
   local output_grid = create_grid() -- this returns a grid with the dimensions we expect
   -- copy all the key values except the ID 
-  output_grid["id"] = math.random()*10
+  output_grid["id"] = math.random(1,99999999999999)
   output_grid["gspc"] = input_grid["gspc"]
   
 
