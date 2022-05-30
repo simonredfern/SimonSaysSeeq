@@ -26,6 +26,8 @@ GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
 
+
+
 current_step = 1
 
 
@@ -41,7 +43,11 @@ print (my_grid)
 
 out_midi = midi.connect(1)
 
-
+-- psudo random for our grid ids
+math.randomseed( os.time() )
+math.random()
+math.random() 
+math.random()
 
 
 
@@ -73,8 +79,8 @@ end
 function grid_state_popularity_watcher()
   while true do
     clock.sync(1) -- do this every beat
-    grid_state["grid_state_popularity_counter"] = grid_state["grid_state_popularity_counter"] + 1
-    --print ("grid_state.grid_state_popularity_counter is: " .. grid_state["grid_state_popularity_counter"])
+    grid_state["gspc"] = grid_state["gspc"] + 1
+    --print ("grid_state.gspc is: " .. grid_state["gspc"])
   end
 end
 
@@ -304,17 +310,25 @@ function load_grid_state()
   
   grid_state = Tab.load (GRID_STATE_FILE)
   
-  grid_state["grid_state_popularity_counter"]=0 -- Reset this (apart from anything this assures the key is there)
+  -- grid state popularity counter
+  grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
 
   print("Result of table load is:")
   print (grid_state)
+  print (get_tally(grid_state))
+
   return grid_state
 end
   
  
 function create_grid()
   local fresh_grid = {}
-  fresh_grid["grid_state_popularity_counter"]=0 -- we can increment this to see how popular this grid is
+
+ -- math.randomseed( os.time() )
+  
+
+  fresh_grid["id"]=math.random()*10
+  fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
   for col = 1, COLS do 
     fresh_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
@@ -601,7 +615,7 @@ function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
   -- A grid is a table with known dimensions
   -- Used for debugging
-  local tally = "grid_state_popularity_counter:" .. input_grid["grid_state_popularity_counter"] .. "-"
+  local tally = "id:" ..input_grid["id"] .. " gspc:" .. input_grid["gspc"] .. " colsXrows:"
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. input_grid[col][row]
@@ -652,8 +666,12 @@ function get_copy_of_grid(input_grid)
   -- For creating copies of a grid for Undo and probably other things.
   --print ("input_grid is" .. get_tally(input_grid))
   local output_grid = create_grid() -- this returns a grid with the dimensions we expect
-  -- copy all the key values 
-  output_grid["grid_state_popularity_counter"] = input_grid["grid_state_popularity_counter"]
+  -- copy all the key values except the ID 
+  output_grid["id"] = math.random()*10
+  output_grid["gspc"] = input_grid["gspc"]
+  
+
+
   for col = 1,COLS do 
     for row = 1,ROWS do
       --print ("col:" .. col .. " row:" .. row)
