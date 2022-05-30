@@ -74,7 +74,7 @@ function grid_state_popularity_watcher()
   while true do
     clock.sync(1) -- do this every beat
     grid_state["grid_state_popularity_counter"] = grid_state["grid_state_popularity_counter"] + 1
-    print ("grid_state.grid_state_popularity_counter is: " .. grid_state["grid_state_popularity_counter"])
+    --print ("grid_state.grid_state_popularity_counter is: " .. grid_state["grid_state_popularity_counter"])
   end
 end
 
@@ -376,11 +376,7 @@ function push_undo()
   -- Inserts in the last position of the table (push)
   table.insert (undo_lifo, get_copy_of_grid(grid_state))
 
-  undo_is_dirty = false
-
-  --table.insert (undo_lifo, grid_state)
-  rough_undo_lifo_count = rough_undo_lifo_count + 1
-  print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+  print ("undo_lifo size is: ".. lifo_size(undo_lifo))
 
 end  
 
@@ -392,8 +388,7 @@ function pop_undo()
 
     grid_state = get_copy_of_grid(undo_state)
 
-    rough_undo_lifo_count = rough_undo_lifo_count - 1
-    print ("rough_undo_lifo_count is: ".. rough_undo_lifo_count)
+    print ("undo_lifo size is: ".. lifo_size(undo_lifo))
     
     -- Thus if A through G are all the states we've seen, and E is the current state, we'd have the following:
     
@@ -417,22 +412,20 @@ function push_redo()
     -- Similarly we want to *copy* the grid_state (not reference) 
     -- so any subsequent changes to the grid_state are not reflected in the redo_lifo
     table.insert (redo_lifo, get_copy_of_grid(grid_state))
-    -- table.insert (redo_lifo, grid_state)
     
-    rough_redo_lifo_count = rough_redo_lifo_count + 1
-    print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
+    print ("redo_lifo size is: ".. lifo_size(redo_lifo))
 end  
 
 
 function pop_redo()
       -- 2) Pop the redo_lifo into the current state.
-      --grid_state = table.remove (redo_lifo) 
 
-      local redo_state = table.remove (redo_lifo) -- doesn't make sense to copy because we remove it 
+      -- TODO need to copy this?
+      local redo_state = table.remove (redo_lifo) 
       grid_state = get_copy_of_grid(redo_state)
 
-      rough_redo_lifo_count = rough_redo_lifo_count - 1
-      print ("rough_redo_lifo_count is: ".. rough_redo_lifo_count)
+      print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+
 end  
 
 
@@ -452,165 +445,156 @@ my_grid.key = function(x,y,z)
 --print("--------------------------------------------------------------")
 --print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[x][y])
   
--- Capture key down event only  
-if z == 1 then
-  if grid_state[x][y] == 1 then
-    grid_state[x][y] = 0
-  else 
-    grid_state[x][y] = 1
-  end
-
-
-  -- As long as not touching "control rows" save the state so we can undo.
-  if y < 6 then
-
-    local tally = refresh_grid()
-    print ("grid_state less than 6 row press")
-    print (grid_state)
-    print ("tally is:" .. tally)
-
-
-    -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
-    push_undo()
-
-    -- So we save the table to file
-    -- (don't bother with control rows)
-    grid_state_dirty = true
-
-
-  end   
-
-  
-  if (x == 1 and y == 8) then
-    ----------
-    -- UNDO --
-    ----------
-    print ("Pressed 1,8: UNDO")
-
-
-    -- Only do this if we know we can pop from undo 
-    if (lifo_populated(undo_lifo)) then
-
-      print ("undo_lifo is populated")
-    
-    -- In order to Undo we: 
-
-
-    -- local tally = refresh_grid()
-    -- print ("grid_state BEFORE push_redo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
-
-    push_redo()
-
-    -- local tally = refresh_grid()
-    -- print ("grid_state BEFORE pop_undo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
-
-
-
-    pop_undo()
-
-    -- local tally = refresh_grid()
-    -- print ("grid_state AFTER pop_undo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
-
-
-    refresh_grid()
-    -- print ("grid_state is:")
-    -- print (grid_state)
-
-    else
-      print ("undo_lifo is NOT populated")
-
+  -- Capture key down event only  
+  if z == 1 then
+    if grid_state[x][y] == 1 then
+      grid_state[x][y] = 0
+    else 
+      grid_state[x][y] = 1
     end
 
 
-  end 
-  
+    -- As long as not touching "control rows" save the state so we can undo.
+    if y < 6 then
+      print ("grid_state less than 6 row press")
+      print (grid_state)
+      local tally = get_tally(grid_state)
+      print ("tally is:" .. tally)
 
-
-
-
-  if (x == 2 and y == 8) then
-    -- REDO  
-    -- print ("Pressed 2,8: REDO")
-    -- local tally = refresh_grid()
-    -- print ("grid_state BEFORE push_undo is:")
-    -- print (grid_state)
-    -- print ("tally is:" .. tally)
-
-        -- Only do this if we know we can pop from undo 
-    if (lifo_populated(redo_lifo)) then
-      print ("redo_lifo is populated")
-
+      -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
       push_undo()
 
+      -- So we save the table to file
+      -- (don't bother with control rows)
+      grid_state_dirty = true
+
+
+    end   
+
+    
+    if (x == 1 and y == 8) then
+      ----------
+      -- UNDO --
+      ----------
+      print ("Pressed 1,8: UNDO")
+
+
+      -- Only do this if we know we can pop from undo 
+      if (lifo_populated(undo_lifo)) then
+
+        print ("undo_lifo is populated")
+      
+      -- In order to Undo we: 
+
+
       -- local tally = refresh_grid()
-      -- print ("grid_state BEFORE pop_redo is:")
+      -- print ("grid_state BEFORE push_redo is:")
       -- print (grid_state)
       -- print ("tally is:" .. tally)
-      pop_redo()
 
-      refresh_grid()
+      push_redo()
 
       -- local tally = refresh_grid()
-      -- print ("grid_state AFTER pop_redo is:")
+      -- print ("grid_state BEFORE pop_undo is:")
       -- print (grid_state)
       -- print ("tally is:" .. tally)
-    else
-      print ("redo_lifo is NOT populated")
 
+
+
+      pop_undo()
+
+      -- local tally = refresh_grid()
+      -- print ("grid_state AFTER pop_undo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+
+
+     -- refresh_grid()
+      -- print ("grid_state is:")
+      -- print (grid_state)
+
+      else
+        print ("undo_lifo is NOT populated")
+
+      end
+
+
+    end 
+    
+    if (x == 2 and y == 8) then
+      -- REDO  
+      -- print ("Pressed 2,8: REDO")
+      -- local tally = refresh_grid()
+      -- print ("grid_state BEFORE push_undo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+
+          -- Only do this if we know we can pop from undo 
+      if (lifo_populated(redo_lifo)) then
+        print ("redo_lifo is populated")
+
+        push_undo()
+
+        -- local tally = refresh_grid()
+        -- print ("grid_state BEFORE pop_redo is:")
+        -- print (grid_state)
+        -- print ("tally is:" .. tally)
+        pop_redo()
+
+      --  refresh_grid()
+
+        -- local tally = refresh_grid()
+        -- print ("grid_state AFTER pop_redo is:")
+        -- print (grid_state)
+        -- print ("tally is:" .. tally)
+      else
+        print ("redo_lifo is NOT populated")
+
+
+    end
 
   end
-
-end
-  
- -- For debugging purposes / so we can remove entries
-  if (x == 15 and y == 8) then
-    -- List the UNDO LIFO
-    print("here comes undo_lifo")
-    for key, value in pairs(undo_lifo) do
-      print(key, " -- ", value)
-      -- the values in undo_lifo are tables.
-      print (get_tally(value))
-    end
-
-
-    print("Now, remove an entry from the redo_lifo")
-    pop_undo()
-
-
-
-  end  
-
-
+    
   -- For debugging purposes / so we can remove entries
-  if (x == 16 and y == 8) then
-    -- List the REDO LIFO
-    print("here comes redo_lifo")
-    for key, value in pairs(redo_lifo) do
-      print(key, " -- ", value)
-      -- the values in undo_lifo are tables.
-      print (get_tally(value))
-    end
+    if (x == 15 and y == 8) then
+      -- List the UNDO LIFO
+      print("here comes undo_lifo")
+      for key, value in pairs(undo_lifo) do
+        print(key, " -- ", value)
+        -- the values in undo_lifo are tables.
+        print (get_tally(value))
+      end
 
-    print("Now, remove an entry from the redo_lifo")
-    pop_redo()
-
-  end 
-
+      print("Now, remove an entry from the redo_lifo")
+      pop_undo()
+    end  
 
 
+    -- For debugging purposes / so we can remove entries
+    if (x == 16 and y == 8) then
+      -- List the REDO LIFO
+      print("here comes redo_lifo")
+      for key, value in pairs(redo_lifo) do
+        print(key, " -- ", value)
+        -- the values in undo_lifo are tables.
+        print (get_tally(value))
+      end
 
-end
+      print("Now, remove an entry from the redo_lifo")
+      pop_redo()
+    end 
 
---print(x .. ","..y .. " value after change " .. grid_state[x][y])
---print("--------------------------------------------------------------")
 
-end
+
+    -- Always do this else results are not obvious to user.
+    refresh_grid()
+  end -- End of key down test
+
+  --print(x .. ","..y .. " value after change " .. grid_state[x][y])
+  --print("--------------------------------------------------------------")
+
+
+end -- End of function definition
 
 
 function get_tally(input_grid)
@@ -646,6 +630,21 @@ function lifo_populated(input_lifo)
   end  
 
 end
+
+function lifo_size(input_lifo)
+  local count  = 0
+  -- We expect only tables in the lifo. Other keys will confuse this count.
+  for key, value in pairs(input_lifo) do
+    --print(key, " -- ", value)
+    count = count + 1
+  end
+
+  return count
+end
+
+
+
+
 
 
 
