@@ -42,7 +42,7 @@ print (my_grid)
 out_midi = midi.connect(1)
 
 
-last_implicit_push_undo = os.clock()
+
 
 
 
@@ -67,6 +67,14 @@ function midi_watcher()
       out_midi:start()
       need_to_start_midi = false
     end
+  end
+end
+
+function grid_state_popularity_watcher()
+  while true do
+    clock.sync(1) -- do this every beat
+    grid_state["grid_state_popularity_counter"] = grid_state["grid_state_popularity_counter"] + 1
+    print ("grid_state.grid_state_popularity_counter is: " .. grid_state["grid_state_popularity_counter"])
   end
 end
 
@@ -136,10 +144,8 @@ end
 function clock.transport.start()
 
   print("transport.start")
-  --tick_id = clock.run(tick)
+
   transport_active = true
-  
-  --current_step = 1
   
   screen.move(90,63)
   screen.text("Start")
@@ -160,7 +166,7 @@ function clock.transport.stop()
   print("transport.stop")
   current_step = 1
 
-  --clock.cancel(tick_id)
+
   transport_active = false
   screen.move(80,80)
   screen.text("STOP")
@@ -231,6 +237,8 @@ function init()
     -- last in first out
   undo_lifo = {}
   redo_lifo = {}
+
+ 
   
   
   print ("before init_table")
@@ -265,6 +273,10 @@ end
  
  clock.run(midi_watcher) 
 
+ clock.run(grid_state_popularity_watcher) 
+
+ 
+
   clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
     while true do
       clock.sleep(1/15)
@@ -291,6 +303,9 @@ end
 function load_grid_state()
   
   grid_state = Tab.load (GRID_STATE_FILE)
+  
+  grid_state["grid_state_popularity_counter"]=0 -- Reset this (apart from anything this assures the key is there)
+
   print("Result of table load is:")
   print (grid_state)
   return grid_state
@@ -299,6 +314,7 @@ end
  
 function create_grid()
   local fresh_grid = {}
+  fresh_grid["grid_state_popularity_counter"]=0 -- we can increment this to see how popular this grid is
   for col = 1, COLS do 
     fresh_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
@@ -317,8 +333,6 @@ function init_table()
   print ("Hello from init_table")
   
   -- Try to load the table
-  
-
   local status, err = pcall(load_grid_state)
 
   if status then
@@ -346,23 +360,12 @@ function init_table()
 
   -- Push Undo so we can get back to initial state
   push_undo()
+
   
   print ("Bye from init_table")
   
 
 end
-
--- this copies a table but not too deeply
-function table.shallow_copy(t)
-  local t2 = {}
-  for k,v in pairs(t) do
-    t2[k] = v
-  end
-  return t2
-end
-
--- copy = table.shallow_copy(a)
-
 
 function push_undo()
 
@@ -372,6 +375,8 @@ function push_undo()
   -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
   -- Inserts in the last position of the table (push)
   table.insert (undo_lifo, get_copy_of_grid(grid_state))
+
+  undo_is_dirty = false
 
   --table.insert (undo_lifo, grid_state)
   rough_undo_lifo_count = rough_undo_lifo_count + 1
@@ -432,6 +437,11 @@ end
 
 
 
+
+
+
+
+
 -- Handle key presses on the grid
 my_grid.key = function(x,y,z)
 -- x is the row
@@ -461,13 +471,7 @@ if z == 1 then
 
 
     -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
-    -- Actually, we want to wait some time interval before we push so we don't capture transitions
-    -- TODO intead of using seconds, maybe use number of beats
-
-    if os.clock() - last_implicit_push_undo > 10 then
-      push_undo()
-      last_implicit_push_undo = os.clock()
-    end  
+    push_undo()
 
     -- So we save the table to file
     -- (don't bother with control rows)
@@ -485,7 +489,7 @@ if z == 1 then
 
 
     -- Only do this if we know we can pop from undo 
-    if (table_populated(undo_lifo)) then
+    if (lifo_populated(undo_lifo)) then
 
       print ("undo_lifo is populated")
     
@@ -539,7 +543,7 @@ if z == 1 then
     -- print ("tally is:" .. tally)
 
         -- Only do this if we know we can pop from undo 
-    if (table_populated(redo_lifo)) then
+    if (lifo_populated(redo_lifo)) then
       print ("redo_lifo is populated")
 
       push_undo()
@@ -564,7 +568,7 @@ if z == 1 then
 
 end
   
-  -- For debugging help
+ -- For debugging purposes / so we can remove entries
   if (x == 15 and y == 8) then
     -- List the UNDO LIFO
     print("here comes undo_lifo")
@@ -573,7 +577,32 @@ end
       -- the values in undo_lifo are tables.
       print (get_tally(value))
     end
+
+
+    print("Now, remove an entry from the redo_lifo")
+    pop_undo()
+
+
+
   end  
+
+
+  -- For debugging purposes / so we can remove entries
+  if (x == 16 and y == 8) then
+    -- List the REDO LIFO
+    print("here comes redo_lifo")
+    for key, value in pairs(redo_lifo) do
+      print(key, " -- ", value)
+      -- the values in undo_lifo are tables.
+      print (get_tally(value))
+    end
+
+    print("Now, remove an entry from the redo_lifo")
+    pop_redo()
+
+  end 
+
+
 
 
 end
@@ -588,7 +617,7 @@ function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
   -- A grid is a table with known dimensions
   -- Used for debugging
-  local tally = ""
+  local tally = "grid_state_popularity_counter:" .. input_grid["grid_state_popularity_counter"] .. "-"
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. input_grid[col][row]
@@ -598,9 +627,10 @@ function get_tally(input_grid)
 end  
 
 
-function table_populated(input_table)
-  local count  = 0 
-  for key, value in pairs(input_table) do
+function lifo_populated(input_lifo)
+  local count  = 0
+  -- We consider the lifo populated if it contains a single key (a grid state table) 
+  for key, value in pairs(input_lifo) do
     --print(key, " -- ", value)
     count = count + 1
     -- No need to loop through whole table.
@@ -621,9 +651,10 @@ end
 
 function get_copy_of_grid(input_grid)
   -- For creating copies of a grid for Undo and probably other things.
-  print ("input_grid is" .. get_tally(input_grid))
+  --print ("input_grid is" .. get_tally(input_grid))
   local output_grid = create_grid() -- this returns a grid with the dimensions we expect
-  -- copy all the values 
+  -- copy all the key values 
+  output_grid["grid_state_popularity_counter"] = input_grid["grid_state_popularity_counter"]
   for col = 1,COLS do 
     for row = 1,ROWS do
       --print ("col:" .. col .. " row:" .. row)
