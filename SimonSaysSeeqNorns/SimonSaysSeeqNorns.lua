@@ -487,24 +487,28 @@ my_grid.key = function(x,y,z)
 -- i.e. sequence rows toggle
 -- control rows are momentary press 
 
-  -- Capture key down event only  
+-- We treat sequence rows and control rows different.
+
+-- SEQUENCE ROWS
+if y < 5 then
+  -- For sequence rows we only want to capture key down event only  
   if z == 1 then
 
 
     -- Order is important here. 
     -- We want to save the current state *before* we push a copy of the grid to the undo lifo
     -- But only do this if we are not touching the control rows (7 & 8)
-    if y < 6 then
-      print ("non control button pressed")
-      print ("grid_state:" .. get_tally(grid_state))
 
-      -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
-      push_undo()
+    print ("Sequence button pressed")
+    print ("grid_state:" .. get_tally(grid_state))
 
-      -- So we save the table to file
-      -- (don't bother with control rows)
-      grid_state_dirty = true
-    end   
+    -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
+    push_undo()
+
+    -- So we save the table to file
+    -- (don't bother with control rows)
+    grid_state_dirty = true
+  
 
     -- Order is important here. 
     -- Change the state of the grid *after* we have pushed to undo lifo
@@ -514,6 +518,20 @@ my_grid.key = function(x,y,z)
       grid_state[x][y] = 1
     end
     
+
+  end -- End of key down test
+
+  --print(x .. ","..y .. " value after change " .. grid_state[x][y])
+  --print("--------------------------------------------------------------")
+
+
+
+
+else
+
+  -- CONTROL ROWS
+
+    -- CONTROL UNDO
 
     -- Buttons in a Control row 
     if (x == 1 and y == 8) then
@@ -553,18 +571,18 @@ my_grid.key = function(x,y,z)
         print ("grid_state: " .. get_tally(grid_state))
 
 
-     
+    
         -- print ("grid_state is:")
         -- print (grid_state)
 
       else
         print ("undo_lifo is NOT populated")
-
       end
 
 
-    end 
-    
+    end -- End of UNDO
+
+    -- CONTROL REDO    
     if (x == 2 and y == 8) then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
@@ -595,13 +613,12 @@ my_grid.key = function(x,y,z)
         print ("grid_state: " .. get_tally(grid_state))
       else
         print ("redo_lifo is NOT populated")
+      end  
+    end -- End of REDO
 
 
-    end
 
-  end
-    
-  -- For debugging purposes / so we can remove entries
+    -- Pop UNDO For debugging purposes / so we can remove entries
     if (x == 15 and y == 8) then
       -- List the UNDO LIFO
       print("here comes undo_lifo")
@@ -613,10 +630,10 @@ my_grid.key = function(x,y,z)
 
       print("Now, remove an entry from the redo_lifo")
       pop_undo()
-    end  
+    end  -- End of Pop UNDO 
 
 
-    -- For debugging purposes / so we can remove entries
+    -- Pop REDO For debugging purposes / so we can remove entries
     if (x == 16 and y == 8) then
       -- List the REDO LIFO
       print("here comes redo_lifo")
@@ -628,16 +645,12 @@ my_grid.key = function(x,y,z)
 
       print("Now, remove an entry from the redo_lifo")
       pop_redo()
-    end 
+    end -- End of Pop REDO
 
+  end  -- End of Sequence / Control
 
-
-    -- Always do this else results are not shown to user.
-    refresh_grid()
-  end -- End of key down test
-
-  --print(x .. ","..y .. " value after change " .. grid_state[x][y])
-  --print("--------------------------------------------------------------")
+  -- Always do this else results are not shown to user.
+  refresh_grid()
 
 
 end -- End of function definition
@@ -815,10 +828,20 @@ function gate_high(output_port, gate_type)
     print("RATCHET")
     -- crow.output[output_port].action = "times( 4, {pulse(0.003,10,1)})" 
     -- not working
-    crow.output[output_port].action = "pulse(0.003,10,1)"
-    crow.output[output_port].execute()  
-    crow.output[output_port].action = "pulse(0.003,10,1)"
-    crow.output[output_port].execute() 
+
+    --crow.output[output_port].volts = 10.0
+    -- crow.output[output_port].volts = 0.0
+    -- crow.output[output_port].volts = 10.0
+    -- crow.output[output_port].volts = 0.0
+    -- crow.output[output_port].volts = 10.0
+    -- crow.output[output_port].volts = 0.0
+
+    -- crow.output[output_port].action = "pulse(0.003,10,1)"
+    -- crow.output[output_port].execute()  
+    -- crow.output[output_port].action = "pulse(0.003,10,1)"
+    -- crow.output[output_port].execute() 
+    -- crow.output[output_port].action = "pulse(0.003,10,1)"
+    -- crow.output[output_port].execute() 
     crow.output[output_port].action = "pulse(0.003,10,1)"
     crow.output[output_port].execute() 
     crow.output[output_port].action = "pulse(0.003,10,1)"
@@ -826,6 +849,9 @@ function gate_high(output_port, gate_type)
   end
 
   if gate_type == "NORMAL" then
+    -- crow.output[output_port].volts = 10.0
+    --crow.output[output_port].volts = 0.0
+
     crow.output[output_port].action = "pulse(0.003,10,1)"
     crow.output[output_port].execute()  
   end
@@ -837,5 +863,7 @@ function gate_low(output)
   -- causes error message
   --crow.output[output_port].volts = 0
   --crow.output[output_port].execute()
+
+  --crow.output[output_port].volts = 0.0
   
 end
