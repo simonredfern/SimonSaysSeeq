@@ -143,24 +143,26 @@ function advance_step()
   
   
   for output = 1, CROW_OUTPUTS do
-    if grid_state[current_step][output] == 1 then
+    if grid_state[current_step][output] ~= 0 then -- could be 1 or 2 (ratchet) or...
 
       -- Get the type of output (ratchet)
       -- For now, only for output 2
 
-      if output == 2 then -- open high hat
+      --if output == 2 then -- open high hat
        -- check row 5 of the current step, if its 1 let's ratched open hi hat.
-       if grid_state[current_step][RATCHET_LANE_A] == 1 then
-        gate_type = "RATCHET"
-       end
-      end
+       --if grid_state[current_step][RATCHET_LANE_A] == 1 then
+      --  gate_type = "RATCHET"
+      -- end
+      --end
 
-      gate_high(output, gate_type)
+      
+
+      gate_high(output, grid_state[current_step][output] )
 
     elseif grid_state[current_step][output] == 0 then
       gate_low(output)
-    end
-  end
+    end -- end non zero
+  end -- end for
   
 end
   
@@ -791,17 +793,17 @@ function refresh_grid()
             my_grid:led(col,row,12) 
           elseif (grid_state[col][row] == 1) then 
             -- If current step and key is on, highlight it.
-            my_grid:led(col,row,11) 
+            my_grid:led(col,row,9) 
           else
             -- Else use scrolling brightness
-            my_grid:led(col,row,6)
+            my_grid:led(col,row,4)
           end
         else
           if (grid_state[col][row] == 2) then
-            my_grid:led(col,row,10) -- ratchet
+            my_grid:led(col,row,8) -- ratchet
           elseif (grid_state[col][row] == 1) then
              -- Not current step but Grid square is On
-            my_grid:led(col,row,9)
+            my_grid:led(col,row,5)
           else 
              -- Not current step and key is off
             my_grid:led(col,row,0)
@@ -861,7 +863,7 @@ function gate_high(output_port, gate_type)
 
 --  "times( 4, { to(0,0), to(5,0.1), to(1,2) } )"
 
-  if gate_type == "RATCHET" then
+  if gate_type == 2 then -- ratchet
     print("gate_high: " .. output_port)
     print("RATCHET")
     -- crow.output[output_port].action = "times( 4, {pulse(0.003,10,1)})" 
@@ -882,11 +884,12 @@ function gate_high(output_port, gate_type)
     -- crow.output[output_port].execute() 
     crow.output[output_port].action = "pulse(0.003,10,1)"
     crow.output[output_port].execute() 
+    -- probably need to sleep here or something?
     crow.output[output_port].action = "pulse(0.003,10,1)"
     crow.output[output_port].execute() 
   end
 
-  if gate_type == "NORMAL" then
+  if gate_type == 1 then -- normal
     -- crow.output[output_port].volts = 10.0
     --crow.output[output_port].volts = 0.0
 
