@@ -487,6 +487,18 @@ my_grid.key = function(x,y,z)
 -- i.e. sequence rows toggle
 -- control rows are momentary press 
 
+
+
+print(x .. ","..y .. " z is " .. z)
+
+if x == 16 and y == 7 then
+  print ("RATCHET button pressed: " .. z)
+  ratchet_button = z
+  grid_state[x][y] = z
+end  
+
+
+
 -- We treat sequence rows and control rows different.
 
 -- SEQUENCE ROWS
@@ -495,7 +507,7 @@ if y < 5 then
   if z == 1 then
 
 
-    -- Order is important here. 
+    -- *Order is important here*. 
     -- We want to save the current state *before* we push a copy of the grid to the undo lifo
     -- But only do this if we are not touching the control rows (7 & 8)
 
@@ -510,12 +522,19 @@ if y < 5 then
     grid_state_dirty = true
   
 
-    -- Order is important here. 
+
+
+    -- *Order is important here*. 
     -- Change the state of the grid *after* we have pushed to undo lifo
-    if grid_state[x][y] == 1 then
+    -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
+    if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
       grid_state[x][y] = 0
     else 
-      grid_state[x][y] = 1
+      if ratchet_button == 1 then
+        grid_state[x][y] = 2 -- set the state to some kind of ratchet
+      else  
+        grid_state[x][y] = 1
+      end
     end
     
 
@@ -530,6 +549,15 @@ if y < 5 then
 else
 
   -- CONTROL ROWS
+
+
+-- direct assignement of control rows.
+    -- if the button is pressed it should be lit etc.
+    -- we need to modifiy the code so grid_state control rows doesn't get set by undo
+    grid_state[x][y] = z
+
+
+
 
     -- CONTROL UNDO
 
@@ -649,6 +677,12 @@ else
 
   end  -- End of Sequence / Control
 
+
+
+
+
+
+
   -- Always do this else results are not shown to user.
   refresh_grid()
 
@@ -752,18 +786,22 @@ function refresh_grid()
            -- This is the scrolling cursor
            screen.text("*")
           
-          
-          if (grid_state[col][row] == 1) then 
+          if (grid_state[col][row] == 2) then -- ratchet 
             -- If current step and key is on, highlight it.
-            my_grid:led(col,row,15) 
+            my_grid:led(col,row,12) 
+          elseif (grid_state[col][row] == 1) then 
+            -- If current step and key is on, highlight it.
+            my_grid:led(col,row,11) 
           else
             -- Else use scrolling brightness
             my_grid:led(col,row,6)
           end
         else
-          if (grid_state[col][row] == 1) then
+          if (grid_state[col][row] == 2) then
+            my_grid:led(col,row,10) -- ratchet
+          elseif (grid_state[col][row] == 1) then
              -- Not current step but Grid square is On
-            my_grid:led(col,row,12)
+            my_grid:led(col,row,9)
           else 
              -- Not current step and key is off
             my_grid:led(col,row,0)
