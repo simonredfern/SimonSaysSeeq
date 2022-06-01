@@ -22,6 +22,8 @@ rough_redo_lifo_count = 0
 -- Crow Outputs
 CROW_OUTPUTS = 4
 
+RATCHET_LANE_A = 5
+
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
@@ -45,7 +47,7 @@ out_midi = midi.connect(1)
 
 -- psudo random for our grid ids
 math.randomseed( os.time() )
-math.random()
+math.random() -- call a few times so it gets more random (apparently)
 math.random() 
 math.random()
 
@@ -78,6 +80,8 @@ end
 
 function grid_state_popularity_watcher()
   -- get some idea of how much a particular grid is used
+  -- the idea is to use this on a fast forward backward undo / redo that just scrolls through the popular states
+  -- (i.e. states that have been used for a long time)
   while true do
     clock.sync(1) -- do this every beat
     grid_state["gspc"] = grid_state["gspc"] + 1
@@ -133,12 +137,26 @@ function advance_step()
   --  current_step = 1
   --end
   
+  local gate_type = "NORMAL" -- default
+
   current_step = util.wrap(current_step + 1, 1, COLS)
   
   
   for output = 1, CROW_OUTPUTS do
     if grid_state[current_step][output] == 1 then
-      gate_high(output)
+
+      -- Get the type of output (ratchet)
+      -- For now, only for output 2
+
+      if output == 2 then -- open high hat
+       -- check row 5 of the current step, if its 1 let's ratched open hi hat.
+       if grid_state[current_step][RATCHET_LANE_A] == 1 then
+        gate_type = "RATCHET"
+       end
+      end
+
+      gate_high(output, gate_type)
+
     elseif grid_state[current_step][output] == 0 then
       gate_low(output)
     end
@@ -465,6 +483,10 @@ my_grid.key = function(x,y,z)
 --print("--------------------------------------------------------------")
 --print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[x][y])
   
+-- TODO will want to treat sequence rows and control rows differently in terms of button presses.
+-- i.e. sequence rows toggle
+-- control rows are momentary press 
+
   -- Capture key down event only  
   if z == 1 then
 
@@ -610,7 +632,7 @@ my_grid.key = function(x,y,z)
 
 
 
-    -- Always do this else results are not obvious to user.
+    -- Always do this else results are not shown to user.
     refresh_grid()
   end -- End of key down test
 
@@ -780,11 +802,34 @@ end
 
 
 
-function gate_high(output_port)
+function gate_high(output_port, gate_type)
   --print("gate_high: " .. output_port)
   --crow.output[output_port].action = "pulse(time,level,polarity)"
-  crow.output[output_port].action = "pulse(0.003,10,1)"
-  crow.output[output_port].execute()
+
+-- See if we want to ratchet based on a certain row / config.
+
+--  "times( 4, { to(0,0), to(5,0.1), to(1,2) } )"
+
+  if gate_type == "RATCHET" then
+    print("gate_high: " .. output_port)
+    print("RATCHET")
+    -- crow.output[output_port].action = "times( 4, {pulse(0.003,10,1)})" 
+    -- not working
+    crow.output[output_port].action = "pulse(0.003,10,1)"
+    crow.output[output_port].execute()  
+    crow.output[output_port].action = "pulse(0.003,10,1)"
+    crow.output[output_port].execute() 
+    crow.output[output_port].action = "pulse(0.003,10,1)"
+    crow.output[output_port].execute() 
+    crow.output[output_port].action = "pulse(0.003,10,1)"
+    crow.output[output_port].execute() 
+  end
+
+  if gate_type == "NORMAL" then
+    crow.output[output_port].action = "pulse(0.003,10,1)"
+    crow.output[output_port].execute()  
+  end
+  
 end
 
 function gate_low(output)
@@ -794,47 +839,3 @@ function gate_low(output)
   --crow.output[output_port].execute()
   
 end
-
-
-
-
-
-
-
-
-
-
-
---  FIFO (queue)
-
---  You can simply implement FIFO by using table.insert to add new items, and table.remove to remove the first one, like this:
- 
- 
---  t = {}
- 
---  table.insert (t, "a")  --> insert an item
---  table.insert (t, "b")  --> insert another
- 
---  x = table.remove (t, 1)  --> remove first item
---  print (x)  --> a
- 
---  x = table.remove (t, 1)  --> remove first item
---  print (x)  --> b
- 
- 
---  LIFO (stack)
- 
---  A small change implements last in, first out:
- 
- 
---  t = {}
- 
---  table.insert (t, "a")  --> insert an item
---  table.insert (t, "b")  --> insert another
- 
---  x = table.remove (t)  --> remove last item
---  print (x)  --> b
- 
---  x = table.remove (t)  --> remove last item
---  print (x)  --> a
- 
