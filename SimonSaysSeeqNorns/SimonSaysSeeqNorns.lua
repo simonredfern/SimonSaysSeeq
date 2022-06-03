@@ -14,10 +14,10 @@ transport_active = true
 COLS = 16
 ROWS = 8
 
+ratchet_button = 0
 
-
-rough_undo_lifo_count = 0
-rough_redo_lifo_count = 0
+--rough_undo_lifo_count = 0
+--rough_redo_lifo_count = 0
 
 -- Crow Outputs
 CROW_OUTPUTS = 4
@@ -553,9 +553,12 @@ if y < 5 then
 
     -- So we save the table to file
     -- (don't bother with control rows)
+    print ("Before set grid_state_dirty = true")
     grid_state_dirty = true
   
 
+    print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
+    print ("ratchet_button is: " .. ratchet_button)
 
 
     -- *Order is important here*. 
@@ -571,6 +574,9 @@ if y < 5 then
       end
     end
     
+    print ("After changing grid_state for sequence rows based on key press and ratchet button.")
+
+    print ("End of key down test")
 
   end -- End of key down test
 
