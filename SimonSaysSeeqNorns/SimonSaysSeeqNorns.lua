@@ -28,7 +28,7 @@ GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
 
-
+MIDI_CHANNEL_OFFSET = 0
 
 current_step = 1
 
@@ -155,12 +155,20 @@ function advance_step()
       -- end
       --end
 
-      
+      -- direct relation between value on grid at count of pulses we will get
+      pulses(output, grid_state[current_step][output])
 
-      gate_high(output, grid_state[current_step][output] )
+
+      
+      --gate_high(output, grid_state[current_step][output] )
+
+
+
+      --gate_low(output)
 
     elseif grid_state[current_step][output] == 0 then
-      gate_low(output)
+
+      --gate_low(output)
     end -- end non zero
   end -- end for
   
@@ -209,6 +217,16 @@ function request_midi_stop()
      out_midi:stop ()
 end  
 
+function send_midi_note_on(note, vel, ch)
+  print("send_midi_note_on")
+  out_midi:note_on (note, vel, ch)
+end  
+
+function send_midi_note_off(note, vel, ch)
+  print("send_midi_note_off")
+  out_midi:note_off (note, vel, ch)
+end  
+
 
 function enc(n,d)
   if n==3 then
@@ -221,7 +239,7 @@ function key(n,z)
   
   -- since MIDI and Link offer their own start/stop messages,
   -- we'll only need to manually start if using internal or crow clock sources:
-  if params:string("clock_source") == "internal" or params:string("clock_source") == "crow" then
+  if params:string("clock_source") == "internal" then
 
     if n == 2 and z == 1 then
       if transport_active then
@@ -250,7 +268,7 @@ end
 
 function init()
   
---  crow.clear()
+
 --  params:set("clock_source",4)
   
   
@@ -278,9 +296,7 @@ function init()
   print("my_grid.cols is: " .. my_grid.cols)
   print("my_grid.rows is: " .. my_grid.rows)
   
-  -- What does this do?
-  crow.reset()
-  
+
   -- Set the starting tempo. Can be changed with right kno
   -- TODO store and retreive this
   params:set("clock_tempo",136)
@@ -855,56 +871,66 @@ end
 
 
 
+
+function pulses(output_port, count)
+  if count > 1 then
+    print("this is supposed to be a ratchet")
+  end 
+
+  for i=1,count do
+    print("before do pulse")
+    send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
+    send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
+    print("after do pulse")
+    clock.sync( 1/32 )
+    print("after sync") 
+  end
+
+end  
+
+
 function gate_high(output_port, gate_type)
   --print("gate_high: " .. output_port)
-  --crow.output[output_port].action = "pulse(time,level,polarity)"
 
 -- See if we want to ratchet based on a certain row / config.
 
---  "times( 4, { to(0,0), to(5,0.1), to(1,2) } )"
+if gate_type == 1 then -- normal
 
-  if gate_type == 2 then -- ratchet
+  send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
+  gate_low(output_port)
+
+elseif gate_type == 2 then -- ratchet
     print("gate_high: " .. output_port)
     print("RATCHET")
-    -- crow.output[output_port].action = "times( 4, {pulse(0.003,10,1)})" 
-    -- not working
 
-    --crow.output[output_port].volts = 10.0
-    -- crow.output[output_port].volts = 0.0
-    -- crow.output[output_port].volts = 10.0
-    -- crow.output[output_port].volts = 0.0
-    -- crow.output[output_port].volts = 10.0
-    -- crow.output[output_port].volts = 0.0
 
-    -- crow.output[output_port].action = "pulse(0.003,10,1)"
-    -- crow.output[output_port].execute()  
-    -- crow.output[output_port].action = "pulse(0.003,10,1)"
-    -- crow.output[output_port].execute() 
-    -- crow.output[output_port].action = "pulse(0.003,10,1)"
-    -- crow.output[output_port].execute() 
-    crow.output[output_port].action = "pulse(0.003,10,1)"
-    crow.output[output_port].execute() 
-    -- probably need to sleep here or something?
-    crow.output[output_port].action = "pulse(0.003,10,1)"
-    crow.output[output_port].execute() 
+    clock.run(ratchet)
+
+
+    --send_midi_note_on(45, 127, MIDI_CHANNEL_OFFSET + output_port)
+    --gate_low(output_port)
+    
+
   end
 
-  if gate_type == 1 then -- normal
-    -- crow.output[output_port].volts = 10.0
-    --crow.output[output_port].volts = 0.0
 
-    crow.output[output_port].action = "pulse(0.003,10,1)"
-    crow.output[output_port].execute()  
-  end
   
 end
 
-function gate_low(output)
+function gate_low(output_port)
   --print("gate_low " .. output)
-  -- causes error message
-  --crow.output[output_port].volts = 0
-  --crow.output[output_port].execute()
-
-  --crow.output[output_port].volts = 0.0
-  
+  send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
 end
+
+function ratchet()
+  for i=1,4 do
+    print("before ratchet clock sync")
+    clock.sleep(1)
+    print("after ratchet clock sync")
+
+    
+    
+  end
+end
+
+
