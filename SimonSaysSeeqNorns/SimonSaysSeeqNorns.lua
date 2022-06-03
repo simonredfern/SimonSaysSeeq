@@ -509,25 +509,46 @@ my_grid.key = function(x,y,z)
 
 print(x .. ","..y .. " z is " .. z)
 
-if x == 16 and y == 7 then
-  print ("RATCHET button pressed: " .. z)
-  ratchet_button = 2
-elseif x == 15 and y == 7 then
-  print ("RATCHET button pressed: " .. z)
-  ratchet_button = 3
-elseif x == 14 and y == 7 then
-  print ("RATCHET button pressed: " .. z)
-  ratchet_button = 4
-elseif x == 13 and y == 7 then
-  print ("RATCHET button pressed: " .. z)
-  ratchet_button = 5
-elseif x == 12 and y == 7 then
-  print ("RATCHET button pressed: " .. z)
-  ratchet_button = 6
-else
-  print ("RATCHET button NOT pressed: " .. z)
-  ratchet_button = 0
-end 
+
+  if x == 16 and y == 7 then
+    print ("RATCHET button pressed: " .. z)
+    if z == 1 then 
+      ratchet_button = 2
+    else
+      ratchet_button = 0
+    end
+  elseif x == 15 and y == 7 then
+    print ("RATCHET button pressed: " .. z)
+    if z == 1 then 
+      ratchet_button = 3
+    else
+      ratchet_button = 0
+    end
+  elseif x == 14 and y == 7 then
+    print ("RATCHET button pressed: " .. z)
+    if z == 1 then 
+      ratchet_button = 4
+    else
+      ratchet_button = 0
+    end
+  elseif x == 13 and y == 7 then
+    print ("RATCHET button pressed: " .. z)
+    if z == 1 then 
+      ratchet_button = 5
+    else
+      ratchet_button = 0
+    end
+  elseif x == 12 and y == 7 then
+    print ("RATCHET button pressed: " .. z)
+    if z == 1 then 
+      ratchet_button = 6
+    else
+      ratchet_button = 0
+    end
+  end 
+
+
+
 
 
 -- We treat sequence rows and control rows different.
