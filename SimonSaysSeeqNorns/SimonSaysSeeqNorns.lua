@@ -144,31 +144,11 @@ function advance_step()
   
   for output = 1, CROW_OUTPUTS do
     if grid_state[current_step][output] ~= 0 then -- could be 1 or 2 (ratchet) or...
-
-      -- Get the type of output (ratchet)
-      -- For now, only for output 2
-
-      --if output == 2 then -- open high hat
-       -- check row 5 of the current step, if its 1 let's ratched open hi hat.
-       --if grid_state[current_step][RATCHET_LANE_A] == 1 then
-      --  gate_type = "RATCHET"
-      -- end
-      --end
-
       -- direct relation between value on grid at count of pulses we will get
       pulses(output, grid_state[current_step][output])
 
-
-      
-      --gate_high(output, grid_state[current_step][output] )
-
-
-
-      --gate_low(output)
-
     elseif grid_state[current_step][output] == 0 then
 
-      --gate_low(output)
     end -- end non zero
   end -- end for
   
@@ -218,12 +198,12 @@ function request_midi_stop()
 end  
 
 function send_midi_note_on(note, vel, ch)
-  print("send_midi_note_on")
+  --print("send_midi_note_on")
   out_midi:note_on (note, vel, ch)
 end  
 
 function send_midi_note_off(note, vel, ch)
-  print("send_midi_note_off")
+  --print("send_midi_note_off")
   out_midi:note_off (note, vel, ch)
 end  
 
@@ -354,11 +334,7 @@ end
  
 function create_grid()
   local fresh_grid = {}
-
- -- math.randomseed( os.time() )
-  
-
-  fresh_grid["id"]=math.random(1,99999999999999)
+  fresh_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
   fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
   for col = 1, COLS do 
     fresh_grid[col] = {} -- create a table for each col
@@ -402,6 +378,12 @@ function init_table()
     print ("I already have a grid_state table, no need to generate one")
   end
   
+ print ("grid tally is: " .. get_tally(grid_state))
+
+ print ("clock.get_tempo() is: " .. clock.get_tempo())
+ 
+ 
+
 
   -- Push Undo so we can get back to initial state
   push_undo()
@@ -908,16 +890,16 @@ end
 
 function pulses(output_port, count)
   if count > 1 then
-    print("this is supposed to be a ratchet")
+    --print("this is supposed to be a ratchet")
   end 
 
   for i=1,count do
-    print("before do pulse")
+    --print("before do pulse")
     send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
     send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
-    print("after do pulse")
+    --print("after do pulse")
     clock.sync( 1/32 )
-    print("after sync") 
+    --print("after sync") 
   end
 
 end  
