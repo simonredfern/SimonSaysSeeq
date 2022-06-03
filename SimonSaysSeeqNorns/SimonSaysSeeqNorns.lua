@@ -396,14 +396,14 @@ end
 
 function push_undo()
 
-  print("push_undo says hello. Store Undo LIFO")
+  --print("push_undo says hello. Store Undo LIFO")
   -- TODO check memory / count of states? - if this gets very large, truncate from the other side
 
   -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
   -- Inserts in the last position of the table (push)
   table.insert (undo_lifo, get_copy_of_grid(grid_state))
 
-  print ("undo_lifo size is: ".. lifo_size(undo_lifo))
+  --print ("undo_lifo size is: ".. lifo_size(undo_lifo))
 
 end  
 
@@ -417,7 +417,7 @@ function pop_undo()
 
     grid_state = get_copy_of_grid(undo_state)
 
-    print ("undo_lifo size is: ".. lifo_size(undo_lifo))
+    --print ("undo_lifo size is: ".. lifo_size(undo_lifo))
     
     -- Thus if A through G are all the states we've seen, and E is the current state, we'd have the following:
     
@@ -445,7 +445,7 @@ function push_redo()
     -- so any subsequent changes to the grid_state are not reflected in the redo_lifo
     table.insert (redo_lifo, get_copy_of_grid(grid_state))
     
-    print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+    --print ("redo_lifo size is: ".. lifo_size(redo_lifo))
 end  
 
 
@@ -459,7 +459,7 @@ function pop_redo()
       local redo_state = table.remove (redo_lifo) 
       grid_state = get_copy_of_grid(redo_state)
 
-      print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+      --print ("redo_lifo size is: ".. lifo_size(redo_lifo))
     else 
       print ("Not poping last redo_lifo because its size is 1 or less ")  
     end
@@ -489,39 +489,39 @@ my_grid.key = function(x,y,z)
 
 
 
-print(x .. ","..y .. " z is " .. z)
+--print(x .. ","..y .. " z is " .. z)
 
 
   if x == 16 and y == 7 then
-    print ("RATCHET button pressed: " .. z)
+    --print ("RATCHET button pressed: " .. z)
     if z == 1 then 
       ratchet_button = 2
     else
       ratchet_button = 0
     end
   elseif x == 15 and y == 7 then
-    print ("RATCHET button pressed: " .. z)
+    --print ("RATCHET button pressed: " .. z)
     if z == 1 then 
       ratchet_button = 3
     else
       ratchet_button = 0
     end
   elseif x == 14 and y == 7 then
-    print ("RATCHET button pressed: " .. z)
+    --print ("RATCHET button pressed: " .. z)
     if z == 1 then 
       ratchet_button = 4
     else
       ratchet_button = 0
     end
   elseif x == 13 and y == 7 then
-    print ("RATCHET button pressed: " .. z)
+    --print ("RATCHET button pressed: " .. z)
     if z == 1 then 
       ratchet_button = 5
     else
       ratchet_button = 0
     end
   elseif x == 12 and y == 7 then
-    print ("RATCHET button pressed: " .. z)
+    --print ("RATCHET button pressed: " .. z)
     if z == 1 then 
       ratchet_button = 6
     else
@@ -545,20 +545,20 @@ if y < 5 then
     -- We want to save the current state *before* we push a copy of the grid to the undo lifo
     -- But only do this if we are not touching the control rows (7 & 8)
 
-    print ("Sequence button pressed")
-    print ("grid_state:" .. get_tally(grid_state))
+    --print ("Sequence button pressed")
+    --print ("grid_state:" .. get_tally(grid_state))
 
     -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
     push_undo()
 
     -- So we save the table to file
     -- (don't bother with control rows)
-    print ("Before set grid_state_dirty = true")
+    --print ("Before set grid_state_dirty = true")
     grid_state_dirty = true
   
 
-    print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
-    print ("ratchet_button is: " .. ratchet_button)
+    --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
+    --print ("ratchet_button is: " .. ratchet_button)
 
 
     -- *Order is important here*. 
@@ -574,9 +574,9 @@ if y < 5 then
       end
     end
     
-    print ("After changing grid_state for sequence rows based on key press and ratchet button.")
+    --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
-    print ("End of key down test")
+    --print ("End of key down test")
 
   end -- End of key down test
 
@@ -606,7 +606,7 @@ else
       ----------
       -- UNDO --
       ----------
-      print ("Pressed 1,8: UNDO")
+      --print ("Pressed 1,8: UNDO")
 
 
       -- Only do this if we know we can pop from undo 
@@ -636,7 +636,7 @@ else
         -- local tally = refresh_grid()
         -- print ("grid_state AFTER pop_undo is:")
         -- print (grid_state)
-        print ("grid_state: " .. get_tally(grid_state))
+        --print ("grid_state: " .. get_tally(grid_state))
 
 
     
@@ -678,7 +678,7 @@ else
         -- print (grid_state)
         -- print ("tally is:" .. tally)
 
-        print ("grid_state: " .. get_tally(grid_state))
+        --print ("grid_state: " .. get_tally(grid_state))
       else
         print ("redo_lifo is NOT populated")
       end  
@@ -689,14 +689,14 @@ else
     -- Pop UNDO For debugging purposes / so we can remove entries
     if (x == 15 and y == 8) then
       -- List the UNDO LIFO
-      print("here comes undo_lifo")
+      --print("here comes undo_lifo")
       for key, value in pairs(undo_lifo) do
         print(key, " -- ", value)
         -- the values in undo_lifo are tables.
         print (get_tally(value))
       end
 
-      print("Now, remove an entry from the redo_lifo")
+      --print("Now, remove an entry from the redo_lifo")
       pop_undo()
     end  -- End of Pop UNDO 
 
@@ -704,14 +704,14 @@ else
     -- Pop REDO For debugging purposes / so we can remove entries
     if (x == 16 and y == 8) then
       -- List the REDO LIFO
-      print("here comes redo_lifo")
+      --print("here comes redo_lifo")
       for key, value in pairs(redo_lifo) do
         print(key, " -- ", value)
         -- the values in undo_lifo are tables.
         print (get_tally(value))
       end
 
-      print("Now, remove an entry from the redo_lifo")
+      --print("Now, remove an entry from the redo_lifo")
       pop_redo()
     end -- End of Pop REDO
 
@@ -911,33 +911,33 @@ function pulses(output_port, count)
 end  
 
 
-function gate_high(output_port, gate_type)
-  --print("gate_high: " .. output_port)
+-- function gate_high(output_port, gate_type)
+--   --print("gate_high: " .. output_port)
 
--- See if we want to ratchet based on a certain row / config.
+-- -- See if we want to ratchet based on a certain row / config.
 
-if gate_type == 1 then -- normal
+-- if gate_type == 1 then -- normal
 
-  send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
-  gate_low(output_port)
+--   send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
+--   gate_low(output_port)
 
-elseif gate_type == 2 then -- ratchet
-    print("gate_high: " .. output_port)
-    print("RATCHET")
-
-
-    clock.run(ratchet)
+-- elseif gate_type == 2 then -- ratchet
+--     print("gate_high: " .. output_port)
+--     print("RATCHET")
 
 
-    --send_midi_note_on(45, 127, MIDI_CHANNEL_OFFSET + output_port)
-    --gate_low(output_port)
+--     clock.run(ratchet)
+
+
+--     --send_midi_note_on(45, 127, MIDI_CHANNEL_OFFSET + output_port)
+--     --gate_low(output_port)
     
 
-  end
+--end
 
 
   
-end
+--end
 
 function gate_low(output_port)
   --print("gate_low " .. output)
