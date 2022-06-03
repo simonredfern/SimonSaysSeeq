@@ -511,10 +511,23 @@ print(x .. ","..y .. " z is " .. z)
 
 if x == 16 and y == 7 then
   print ("RATCHET button pressed: " .. z)
-  ratchet_button = z
-  grid_state[x][y] = z
-end  
-
+  ratchet_button = 2
+elseif x == 15 and y == 7 then
+  print ("RATCHET button pressed: " .. z)
+  ratchet_button = 3
+elseif x == 14 and y == 7 then
+  print ("RATCHET button pressed: " .. z)
+  ratchet_button = 4
+elseif x == 13 and y == 7 then
+  print ("RATCHET button pressed: " .. z)
+  ratchet_button = 5
+elseif x == 12 and y == 7 then
+  print ("RATCHET button pressed: " .. z)
+  ratchet_button = 6
+else
+  print ("RATCHET button NOT pressed: " .. z)
+  ratchet_button = 0
+end 
 
 
 -- We treat sequence rows and control rows different.
@@ -543,13 +556,13 @@ if y < 5 then
 
 
     -- *Order is important here*. 
-    -- Change the state of the grid *after* we have pushed to undo lifo
+    -- Change the state of the grid *AFTER  * we have pushed to undo lifo
     -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
     if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
       grid_state[x][y] = 0
     else 
-      if ratchet_button == 1 then
-        grid_state[x][y] = 2 -- set the state to some kind of ratchet
+      if ratchet_button ~= 0 then
+        grid_state[x][y] = ratchet_button -- set the state to some kind of ratchet
       else  
         grid_state[x][y] = 1
       end
@@ -804,7 +817,7 @@ function refresh_grid()
            -- This is the scrolling cursor
            screen.text("*")
           
-          if (grid_state[col][row] == 2) then -- ratchet 
+          if (grid_state[col][row] >= 2) then -- ratchet 
             -- If current step and key is on, highlight it.
             my_grid:led(col,row,12) 
           elseif (grid_state[col][row] == 1) then 
@@ -815,7 +828,7 @@ function refresh_grid()
             my_grid:led(col,row,4)
           end
         else
-          if (grid_state[col][row] == 2) then
+          if (grid_state[col][row] >= 2) then
             my_grid:led(col,row,8) -- ratchet
           elseif (grid_state[col][row] == 1) then
              -- Not current step but Grid square is On
