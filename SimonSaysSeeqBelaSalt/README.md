@@ -65,3 +65,85 @@ crontab -e
 # m h  dom mon dow   command
 * * * * * /root/bin/SimonSaysSeeq/midi_usb_info.job
 ```
+
+To work with a monome grids:
+
+https://github.com/padenot/bela-utils/blob/master/bela-setup-monome.sh
+
+
+To enable network for bela to mac:
+
+vi /etc/network/interfaces
+
+systemctl restart networking.service
+
+
+ping 8.8.8.8
+
+root@bela:~# cat /etc/resolv.conf 
+nameserver 192.168.3.1
+nameserver 8.8.8.8
+
+========
+
+Follow the instructions (including various hacks to files)
+https://forum.bela.io/d/240-monome-grid-bela/24
+
+#!/bin/bash
+
+# Install all that is required to use a monome device on a vanilla bela board,
+# start the serialosc daemon on boot using systemd.
+# Requires an internet connection to use apt and git.
+
+(
+sudo apt-get update -y
+
+sudo apt-get install -y libudev-dev
+)
+
+
+sudo apt install libudev-dev liblo-dev libavahi-compat-libdnssd-dev 
+
+git clone https://github.com/monome/libmonome.git
+./waf configure
+./waf
+sudo ./waf install
+cd ..
+
+git clone https://github.com/monome/serialosc.git
+cd serialosc
+git submodule init
+git submodule update
+./waf configure
+./waf
+sudo ./waf install
+cd ..
+
+cat << EOF > serialoscd.service
+[Unit]
+Description=serialosc daemon
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/serialoscd
+PIDFile=/var/run/serialoscd.pid
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+[Install]
+WantedBy=multi-user.target
+EOF
+
+chmod 777 serialoscd.service
+mv serialoscd.service /lib/systemd/system/serialoscd.service
+ln -s /lib/systemd/system/serialoscd.service /etc/systemd/system/multi-user.target.wants/serialoscd.service
+ldconfig
+
+
+
+now try: 
+
+systemctl start serialoscd
+
+Learn to code to serialosc
+
+http://daniel-bytes.github.io/serialosc_example/

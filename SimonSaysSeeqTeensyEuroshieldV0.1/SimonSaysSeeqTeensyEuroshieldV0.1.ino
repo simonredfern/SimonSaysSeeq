@@ -10,10 +10,11 @@
 // We use: https://github.com/PaulStoffregen/Audio See https://www.pjrc.com/teensy/gui/index.html
 // This file is programmed to use a: https://1010music.com/euroshield-user-guide (unfortuanatly discontinued) 
 // Please see the README for more info. 
+/////////////////////////////////
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.26; 
+const float simon_says_seq_version = 0.28; 
 
 
 #include <Audio.h>
@@ -29,7 +30,7 @@ AudioEffectMultiply      multiply1;
 AudioEffectMultiply      multiply2;
 
 AudioAmplifier amp_1_object;
- 
+AudioAmplifier amp_for_monitor_object; 
 
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
@@ -39,7 +40,7 @@ AudioAnalyzeRMS          gate_monitor;
 
 //////////////////////////
 // GATE Output and Monitor
-AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> Upper Audio Out
+AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> UPPER Audio Out
 AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
 
 //////////////
@@ -56,12 +57,15 @@ AudioConnection          patchCord13(external_modulator_object, 0, multiply2, 0)
 
 
 // CV Output (via multiply) and Monitor
-AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> Lower Audio Out
-AudioConnection          patchCord2(amp_1_object, cv_monitor); // CV -> monitor (for LED)
+AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> LOWER Audio Out
 
-//AudioConnection          patchCord11(multiply1, 0, amp_1_object, 0); // CV -> Lower Audio Out
+AudioConnection          patchCord2(amp_1_object, amp_for_monitor_object);
 
-AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // CV -> Lower Audio Out
+AudioConnection          patchCord14(amp_for_monitor_object, cv_monitor); // CV -> monitor (for LED)
+
+ 
+
+AudioConnection          patchCord11(multiply2, 0, amp_1_object, 0); // For CV output to be "multed" internally
 
 
 AudioAnalyzePeak     peak_L;
@@ -207,7 +211,8 @@ uint8_t FUZZINESS_AMOUNT = 100;
 unsigned int cv_waveform_a_frequency_raw;
 float cv_waveform_a_frequency;
 
-  boolean reset_cv_lfo_at_FIRST_STEP = false;
+// set this to true for guaranteed reset of lfo
+boolean reset_cv_lfo_at_FIRST_STEP = true;
 
 // Amplitude of the LFO
 unsigned int cv_waveform_a_amplitude_raw;
@@ -887,10 +892,21 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
 
  
-   float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
+   //float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
+
+   float amp_1_gain = 0.2;  // let external ofset / gain set this higher
+   
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
-   amp_1_object.gain(amp_1_gain); // setting-
+
+// Hmm why are we setting this gain based on the left_peak_level? (jan 19 2021)
+
+   amp_1_object.gain(amp_1_gain); 
+   
+   amp_for_monitor_object.gain(1.0);
+
+   
+   // setting-
    //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
 
 
@@ -912,7 +928,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
 
-  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1.
+  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1. // This could be the case anyway (see value of reset_cv_lfo_at_FIRST_STEP above)
   if (cv_waveform_b_frequency_raw > CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - 20){
     reset_cv_lfo_at_FIRST_STEP = true;
     //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
@@ -1048,7 +1064,7 @@ void OnStep(){
   
 
     if (step_count == FIRST_STEP) {
-      SyncAndResetCv();
+      ConditionalSyncAndResetCv();
     } else {
       ChangeCvWaveformBAmplitude();
     }
@@ -1089,8 +1105,10 @@ void GateLow(){
 }
 
 
+
+// HERE
 // Kind of syncs the CV 
-void SyncAndResetCv(){
+void ConditionalSyncAndResetCv(){
   //Serial.println(String("CV Pulse On") );
    
   cv_waveform_a_object.phase(90); // Sine wave has maximum at 90 degrees
@@ -1098,20 +1116,21 @@ void SyncAndResetCv(){
     // Used to modulate CV. This signal is multiplied by cv_waveform 
 
   // Allow the amplitude to fall to zero before we lift it back up. (if it indeed gets to zero)
+  // or if reset_cv_lfo_at_FIRST_STEP
   
   if (RampIsPositive()){
-    if (cv_waveform_b_amplitude == 1) {
+    if (cv_waveform_b_amplitude == 1 || reset_cv_lfo_at_FIRST_STEP == 1) {
       cv_waveform_b_amplitude = 0;
-      Serial.println(String("SyncAndResetCv : 0") );
+      Serial.println(String("ConditionalSyncAndResetCv : 0") );
       
       SetWaveformBObjectAmplitude ();
     }
 
   } else {
-    if (cv_waveform_b_amplitude == 0) {
+    if (cv_waveform_b_amplitude == 0 || reset_cv_lfo_at_FIRST_STEP == 1) {
       cv_waveform_b_amplitude = 1;
 
-       Serial.println(String("SyncAndResetCv : 1") );
+       Serial.println(String("ConditionalSyncAndResetCv : 1") );
       
       SetWaveformBObjectAmplitude ();
     }

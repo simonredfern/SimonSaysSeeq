@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.34-BelaSalt";
+const char version[16]= "v0.35-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -67,6 +67,8 @@ The Bela software is distributed under the GNU Lesser General Public License
 // du -ah $dir | sort -n -r | head -n $num
 // du -hs /var/*
 
+// Can apparently delete /var/cache/apt
+
 
 // Add this to your /etc/init.d
 
@@ -98,14 +100,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 
 
-// https://monome.org/docs/serialosc/raspbian/
-// but before doing the serialoscd configure: 
-// Changing line 257 of serialosc/wscript to
-// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
-// Serialosc will compile but serialoscd is not found
-// with https://github.com/monome/serialosc/issues/53
 
-// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
 
 
 #include <Bela.h>
@@ -115,7 +110,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <libraries/Scope/Scope.h>
 
-#include <libraries/ADSR/ADSR.h>
+#include <libraries/ADSR/ADSR.h> // See https://www.earlevel.com/main/2013/06/03/envelope-generators-adsr-code/
 
 
 
@@ -128,13 +123,206 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <cstdlib>
 
-#include <libraries/UdpClient/UdpClient.h>
+//#include <libraries/UdpClient/UdpClient.h>
 
-UdpClient myUdpClient;
+// see below
+//#include <serialosc_example/serialosc_example/SerialOsc.h>
+
+
+
+// Monome Grid
+// To install serialosc from sources on linux follow: 
+// // https://monome.org/docs/serialosc/raspbian/
+// (copied from above)
+// raspberry pi os
+// precompiled packages
+// monome software packages from the ubuntu ppa work great on raspberry pi os. to install them on raspbian stretch, add the repository signing key first:
+
+// gpg --keyserver keyserver.ubuntu.com --recv DD9300F1
+// gpg --export --armor DD9300F1 | sudo apt-key add -
+// then add the repository url to your sources.list:
+
+// echo "deb http://ppa.launchpad.net/artfwo/monome/ubuntu bionic main" | sudo tee /etc/apt/sources.list.d/monome.list
+// finally run:
+
+// sudo apt update
+// sudo apt install serialosc
+// the package is configured to start serialosc automatically on boot and save the grid state under /var/lib/serialosc. to disable this behaviour, simply run:
+
+// sudo systemctl disable serialosc.service
+// compiling from source
+// while this build script is specific to raspberry pi os (for the raspberry pi), there’s a good change it’ll work with other embedded linux distributions and devices.
+
+// this script will install libmonome and serialosc. these are essential for communicating with grids and arcs on linux.
+
+// sudo apt-get install liblo-dev
+// git clone https://github.com/monome/libmonome.git
+// cd libmonome
+// ./waf configure
+// ./waf
+// sudo ./waf install
+// cd ..
+
+// sudo apt-get install libudev-dev libavahi-compat-libdnssd-dev libuv1-dev
+// git clone https://github.com/monome/serialosc.git
+// cd serialosc
+// git submodule init && git submodule update
+// ./waf configure --enable-system-libuv
+// ./waf
+// sudo ./waf install
+// cd ..
+// to run serialosc, execute serialoscd.
+// (end copy)
+
+// To get serialosc_example on the bela 
+// cd /root/Bela/projects/SimonSaysSeeqBela
+
+// git clone https://github.com/daniel-bytes/serialosc_example.git
+
+
+// SerialOsc is expecting certain files under osc
+
+// cd /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example
+// and create some symbolic links there
+
+// To mitigate error:
+// In file serialosc_example/serialosc_example/osckpack/ip/posix/NetworkingUtils.cpp: 'ip/NetworkingUtils.h' file not found column: 10, line: 37
+
+
+// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/osc osc
+
+//        source                                                                            link
+// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip/posix/ip
+
+// Get rid of win32
+///Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip# rmdir  win32
+
+
+
+
+// From https://monome.org/docs/serialosc/linux/
+
+
+// root@bela:~# cat /etc/*release 
+// PRETTY_NAME="Debian GNU/Linux 9 (stretch)"
+// NAME="Debian GNU/Linux"
+// VERSION_ID="9"
+// VERSION="9 (stretch)"
+// VERSION_CODENAME=stretch
+// ID=debian
+// HOME_URL="https://www.debian.org/"
+// SUPPORT_URL="https://www.debian.org/support"
+// BUG_REPORT_URL="https://bugs.debian.org/"
+
+
+// This doesn't work....
+// sudo apt-get install dirmngr
+// sudo apt install software-properties-common
+// sudo add-apt-repository ppa:artfwo/monome
+
+// OR
+// Add the following to:
+///etc/apt/sources.list
+
+
+//deb http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
+//deb-src http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
+
+//https://monome.org/docs/serialosc/raspbian/
+
+// sudo apt-get update
+// sudo apt-get install libmonome
+// sudo apt-get install serialosc
+
+
+
+
+
+/////////
+// https://forum.bela.io/d/863-monome-grid-osc_bank-bela/5
+// https://monome.org/docs/serialosc/raspbian/
+// but before doing the serialoscd configure: 
+// Changing line 257 of serialosc/wscript to
+// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
+// Serialosc will compile but serialoscd is not found
+// with https://github.com/monome/serialosc/issues/53
+
+// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
+
+// https://monome.org/docs/serialosc/setup/
+// https://monome.org/docs/serialosc/serial.txt
+// note have to generate auto_conf file by ./waf configure and move it into correct directory
+// serialosc.h refers to files in the folder serialosc so put them directly under Bela i.e. here:
+
+// Create a folder serialosc_helpers in the Bela folder and copy the following files / folders 
+// https://github.com/daniel-bytes/serialosc_example/tree/master/serialosc_example
+// Note the folder renames since SerialOsc is looking for specific folder names it seems
+//root@bela:~/Bela/serialosc_helpers# ls
+//MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
+
+
+
+
+
+//UdpClient myUdpClient;
 
 // ...
 
+//
+// Example serial osc data handler.
+// 
+/*
 
+class MonomeDemo
+	: public SerialOsc::Listener
+{
+public:
+	MonomeDemo(SerialOsc *osc)
+		: osc(osc)
+	{
+		osc->start(this);
+	}
+
+public:
+	virtual void deviceFound(const MonomeDevice * const device)
+	{
+		std::cout << "Found device " << device->id << " (type " << device->type << ")." << std::endl;
+		osc->sendDeviceLedAllCommand(device, false);
+	}
+
+	virtual void deviceRemoved(const std::string &id)
+	{
+		std::cout << "Device " << id << " removed." << std::endl;
+	}
+	
+	virtual void buttonPressMessageReceived(MonomeDevice *device, int x, int y, bool state)
+	{
+		std::cout << "Button press from " << device->id << " received. Prefix = " << device->prefix << ",  x = " << x << ", y = " << y << ", state = " << state << std::endl;
+		osc->sendDeviceLedCommand(device, x, y, state);
+	}
+
+private:
+	SerialOsc *osc;
+};
+
+
+//int main(int argc, const char* argv[])
+int main()
+{
+	std::string input;
+	SerialOsc osc("test", 13000);
+	MonomeDemo device(&osc);
+
+	while (input != "q") {
+		std::cout << "type 'q' to quit." << std::endl;
+		std::getline(std::cin, input);
+	}
+
+	osc.stop();
+
+	return 0;
+}
+*/
 
 
 Scope scope;
@@ -268,10 +456,11 @@ AuxiliaryTask gSendUdpMessage;
 int gNumOscillators = 2; // was 500
 int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
-OscillatorBank osc;
+OscillatorBank osc_bank;
 
 Oscillator oscillator_2_audio;
 Oscillator lfo_a_analog;
+Oscillator lfo_b_analog;
 
 
 int gAudioChannelNum; // number of audio channels to iterate over
@@ -347,8 +536,6 @@ void print_binary(unsigned int number)
 
 
 
-// Set the analog channels to read from
-//const int CLOCK_INPUT_ANALOG_IN_PIN = 0;
 
 // Salt Pinouts salt pinouts are here: https://github.com/BelaPlatform/Bela/wiki/Salt
 // e.g. CV I/O 1-8	analog channel 0-7	dac~/adc~ 3-10
@@ -357,6 +544,8 @@ void print_binary(unsigned int number)
 
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
+const int RESET_A_INPUT_DIGITAL_PIN = 14; //T2/SWITCH2 in	digital channel 14
+const int RESET_B_INPUT_DIGITAL_PIN = 17; // TODO CONFIRM PIN
 
 ////////////////////////////////
 // Digital Outputs
@@ -366,14 +555,16 @@ const int SEQUENCE_A_DIGITAL_OUT_PIN = 0;
 const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 
 
-//const int CLOCK_OUTPUT_DIGITAL_PIN = 0;
+
+
+// TODO Add a reset (on a digital pin?)
 
 // CV I/O 1-8	ANALOG channel 0-7
 const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
 
 const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
-const int ADSR_RELEASE_INPUT_PIN = 3; // CV 4 input
+const int ADSR_SETTING_INPUT_PIN = 3; // CV 4 input
 
 
 const int SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN = 4; // CV 5 (SALT+) was COARSE-_DELAY_TIME_INPUT_PIN
@@ -492,7 +683,15 @@ unsigned int lfo_b_frequency_input_at_button_change;
 
 int new_digital_clock_in_state;
 int current_digital_clock_in_state;
-float analog_clock_in_level;
+
+int new_reset_a_in_state;
+int current_reset_a_in_state;
+
+int new_reset_b_in_state;
+int current_reset_b_in_state;
+
+
+float analog_clock_in_level; // unused?
 float right_peak_level;
 
 float external_modulator_object_level;
@@ -1082,19 +1281,22 @@ int temp_count = 0;
 
 // for ADSR
 
-ADSR audio_adsr_a; 
-ADSR step_triggered_adsr_b;
-ADSR sequence_triggered_adsr_c;
+ADSR per_sequence_adsr_a; 
+ADSR per_sequence_adsr_b;
+ADSR per_sequence_adsr_c;
 
-float audio_adsr_a_level = 0;
-float analog_step_triggered_adsr_b_level = 0;
-float analog_sequence_triggered_adsr_c_level = 0;
+float analog_per_sequence_adsr_a_level = 0;
+float analog_per_sequence_adsr_b_level = 0;
+float analog_per_sequence_adsr_c_level = 0;
 
 
-float envelope_1_attack = 0.0001; // audio_adsr_a attack (seconds)
+float envelope_1_attack = 0.0001; // per_sequence_adsr_a attack (seconds)
 float envelope_1_decay = 0.1; // envelope_1 decay (seconds)
-float envelope_1_sustain = 0.9; // envelope_1 sustain level
-float envelope_1_release = 0.5; // INITIAL value only envelope_1 release (seconds). This is set by a pot.
+float envelope_1_sustain = 0.1; // envelope_1 sustain level
+float envelope_1_release = 0.5; 
+// A setting that's used to set various attack / decay
+float envelope_1_setting = 0.5; // INITIAL value only This is set by a pot. (seconds)
+
 
 float analog_out_1;
 float analog_out_2;
@@ -1108,18 +1310,18 @@ float analog_out_8;
 
 
 float audio_osc_1_result;
+
 float lfo_a_result_analog;
+float lfo_b_result_analog;
+
 float analog_osc_3_result;
 
-// float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
-// float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
-// float envelope_2_sustain = 0.9; // envelope_2 sustain level
-// float envelope_2_release = 0.5; // envelope_2 release (seconds)
+float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
+float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
+float envelope_2_sustain = 0.9; // envelope_2 sustain level
+float envelope_2_release = 0.5; // envelope_2 release (seconds)
 
-// float sequence_triggered_adsr_c_attack = 0.0001; // envelope_2 attack (seconds)
-// float sequence_triggered_adsr_c_decay = 0.25; // envelope_2 decay (seconds)
-// float sequence_triggered_adsr_c_sustain = 0.9; // envelope_2 sustain level
-// float sequence_triggered_adsr_c_release = 0.5; // envelope_2 release (seconds)
+
 
 
 
@@ -1154,9 +1356,16 @@ void ResetSequenceACounters(){
   step_a_count = FIRST_STEP;
 
   lfo_a_analog.setPhase(0.0);
+  lfo_b_analog.setPhase(90.0);
   
+  per_sequence_adsr_a.reset();
+  per_sequence_adsr_a.gate(true);
+ 
+  per_sequence_adsr_b.reset(); 
+  per_sequence_adsr_b.gate(true);
   
-  sequence_triggered_adsr_c.gate(true);
+  per_sequence_adsr_c.reset();
+  per_sequence_adsr_c.gate(true);
 
   previous_sequence_reset_frame = last_sequence_reset_frame; // The last time the sequence A was reset
   last_sequence_reset_frame = frame_timer; // Now
@@ -1169,7 +1378,7 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-  //rt_printf("ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
+  rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
 
@@ -1255,7 +1464,7 @@ void printStatus(void*){
 		
 		// rt_printf("new_button_1_state is: %d \n", new_button_1_state);
 		//rt_printf("new_button_2_state is: %d \n", new_button_2_state);
-		rt_printf("new_button_3_state is: %d \n", new_button_3_state);
+	//	rt_printf("new_button_3_state is: %d \n", new_button_3_state);
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
@@ -1264,9 +1473,9 @@ void printStatus(void*){
 		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
-    rt_printf("\n==== MIDI ======= \n");
+    //rt_printf("\n==== MIDI ======= \n");
 
-	  rt_printf("current_midi_lane is: %d \n", current_midi_lane);
+	  //rt_printf("current_midi_lane is: %d \n", current_midi_lane);
 
 		
         // Sequence derived results 
@@ -1285,14 +1494,14 @@ void printStatus(void*){
     	
     	rt_printf("\n==== Sequence A ======= \n");
     	
-    	rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
+    	//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
     	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
 
-    	rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
-    	rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
+    	//rt_printf("current_sequence_a_length_in_steps is: %d \n", current_sequence_a_length_in_steps);
+    	//rt_printf("new_sequence_a_length_in_ticks is: %d \n", new_sequence_a_length_in_ticks);
     	
     	
-    	rt_printf("the_sequence_a is: %d \n", the_sequence_a);
+    	//rt_printf("the_sequence_a is: %d \n", the_sequence_a);
 	    print_binary(the_sequence_a);
 		rt_printf("%c \n", 'B');
 
@@ -1302,44 +1511,55 @@ void printStatus(void*){
     	
     	rt_printf("step_a_count is: %d \n", step_a_count);
     	
+    	/*
     	if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
     	} else {
     		rt_printf("other step A \n");
     	}
-
+		*/
 
 		rt_printf("\n==== Sequence B ======= \n");
 
-    	rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
+    	//rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
     	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
     	
-		rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
-		rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
-		rt_printf("the_sequence_b is: %d \n", the_sequence_b);
+		//rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
+		//rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
+		//rt_printf("the_sequence_b is: %d \n", the_sequence_b);
 	    print_binary(the_sequence_b);
 		rt_printf("%c \n", 'B');
 		
 		
-		rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
-    	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
+		//rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
+    //	rt_printf("loop_timing_b.tick_count_since_start is: %d \n", loop_timing_b.tick_count_since_start);
 
-		rt_printf("step_b_count is: %d \n", step_b_count);
+		//rt_printf("step_b_count is: %d \n", step_b_count);
 
-        if (step_b_count == FIRST_STEP) {
+/*
+      if (step_b_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP B \n");
     	} else {
     		rt_printf("other step B \n");
     	}
+  */  	
     	
-    	
+
+
+
+
+		rt_printf("envelope_1_setting is: %f \n", envelope_1_setting);
+
+    	rt_printf("analog_per_sequence_adsr_a_level is: %f \n", analog_per_sequence_adsr_a_level);
+    	rt_printf("analog_per_sequence_adsr_b_level is: %f \n", analog_per_sequence_adsr_b_level);
+    	rt_printf("analog_per_sequence_adsr_c_level is: %f \n", analog_per_sequence_adsr_c_level);
+
+
     	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
     	
     	
-    	rt_printf("audio_adsr_a_level is: %f \n", audio_adsr_a_level);
-    	rt_printf("analog_step_triggered_adsr_b_level is: %f \n", analog_step_triggered_adsr_b_level);
-    	rt_printf("analog_sequence_triggered_adsr_c_level is: %f \n", analog_sequence_triggered_adsr_c_level);
+
     	*/
 
 
@@ -1361,13 +1581,13 @@ void printStatus(void*){
 		
 		
 		
-		rt_printf("analog_out_5 is: %f \n", analog_out_5);
-		rt_printf("analog_out_6 is: %f \n", analog_out_6);
-		rt_printf("analog_out_7 is: %f \n", analog_out_7);
-		rt_printf("analog_out_8 is: %f \n", analog_out_8);
+	//	rt_printf("analog_out_5 is: %f \n", analog_out_5);
+	//	rt_printf("analog_out_6 is: %f \n", analog_out_6);
+	//	rt_printf("analog_out_7 is: %f \n", analog_out_7);
+	//	rt_printf("analog_out_8 is: %f \n", analog_out_8);
 		
 		
-			rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
+	//		rt_printf("draw_buf_write_pointer is: %d \n", draw_buf_write_pointer);
 					
 		
 
@@ -1568,10 +1788,7 @@ void GateAHigh(){
 
 
 
-    
-  audio_adsr_a.gate(true);
-  step_triggered_adsr_b.gate(true);
-
+  
 
   // TODO UDP ENABLE FLAG Bela_scheduleAuxiliaryTask(gSendUdpMessage);
 
@@ -1588,10 +1805,9 @@ void GateALow(){
   
   target_led_1_state = false; 
   
-  audio_adsr_a.gate(false);
-  step_triggered_adsr_b.gate(false);
-  
-  sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_b.gate(false); // always reset it here but not trigger it
+  //per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
   
 }
 
@@ -1602,13 +1818,12 @@ void GateBHigh(){
   //rt_printf("Gate HIGH at tick_count_since_start: %d ", loop_timing_a.tick_count_since_start);
   
   target_analog_gate_b_out_state = true;
-
+  
   target_digital_gate_b_out_state = true;
 
   target_led_3_state = true; 
     
-  //audio_adsr_a.gate(true);
-  //step_triggered_adsr_b.gate(true);
+
 }
 
 
@@ -1624,10 +1839,6 @@ void GateBLow(){
 
   target_led_3_state = false; 
   
-  //audio_adsr_a.gate(false);
-  //step_triggered_adsr_b.gate(false);
-  
-  //sequence_triggered_adsr_c.gate(false); // always reset it here but not trigger it
   
 }
 
@@ -2806,29 +3017,28 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
    //Serial.println();
    
    
-   // TODO only do this if the value changes?
-   
-        audio_adsr_a.setAttackRate(envelope_1_attack * audio_sample_rate);
-        audio_adsr_a.setDecayRate(envelope_1_decay * audio_sample_rate);
-        audio_adsr_a.setSustainLevel(envelope_1_sustain);
-        audio_adsr_a.setReleaseRate(envelope_1_release * audio_sample_rate);
-        
-        step_triggered_adsr_b.setAttackRate(envelope_1_attack * analog_sample_rate);
-        step_triggered_adsr_b.setDecayRate(envelope_1_decay * analog_sample_rate);
-        step_triggered_adsr_b.setReleaseRate(envelope_1_release * analog_sample_rate);
-        step_triggered_adsr_b.setSustainLevel(envelope_1_sustain);
 
-        sequence_triggered_adsr_c.setAttackRate(envelope_1_attack * audio_sample_rate);
-        sequence_triggered_adsr_c.setDecayRate(envelope_1_decay * audio_sample_rate);
-        sequence_triggered_adsr_c.setReleaseRate(envelope_1_release * audio_sample_rate);
-        sequence_triggered_adsr_c.setSustainLevel(envelope_1_sustain);
+   // Modify Attack
+   per_sequence_adsr_a.setAttackRate(envelope_1_setting * analog_sample_rate);
+
+   // Modifiy Attack and Decay
+   per_sequence_adsr_b.setAttackRate(envelope_1_setting * analog_sample_rate);
+   per_sequence_adsr_b.setDecayRate(envelope_1_setting * analog_sample_rate);
+
+   // Modify Decay
+   per_sequence_adsr_c.setDecayRate(envelope_1_setting * analog_sample_rate);
+
         
 
 	    
 	    audio_osc_2_frequency = lfo_osc_1_frequency * 8.0;
 
 
-    	lfo_a_analog.setFrequency(lfo_osc_1_frequency); // lower freq
+      lfo_a_analog.setFrequency(lfo_osc_1_frequency); 
+      lfo_b_analog.setFrequency(lfo_osc_1_frequency * 3.0 /2.0);
+
+
+
 		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
 		
 		
@@ -2947,14 +3157,19 @@ bool setup(BelaContext *context, void *userData){
 	
 	last_function = 42396;
 	
+	//main();
+	
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 	
   InitAudioBuffer();
 
-	scope.setup(4, context->audioSampleRate);
+	scope.setup(4, context->analogSampleRate);
 
-	lfo_a_analog.setup(context->analogSampleRate);	
+	lfo_a_analog.setup(context->analogSampleRate);
+  lfo_b_analog.setup(context->analogSampleRate);
+
+
 	oscillator_2_audio.setup(context->audioSampleRate);
 
 	
@@ -3018,11 +3233,11 @@ bool setup(BelaContext *context, void *userData){
         
         //rt_printf("Creating an oscilator in Setup. \n");
         
-        osc.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
+        osc_bank.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
         // Fill in the wavetable with one period of your waveform
-        float* wavetable = osc.getWavetable();
-        for(int n = 0; n < osc.getWavetableLength() + 1; n++){
-                wavetable[n] = sinf(2.0 * M_PI * (float)n / (float)osc.getWavetableLength());
+        float* wavetable = osc_bank.getWavetable();
+        for(int n = 0; n < osc_bank.getWavetableLength() + 1; n++){
+                wavetable[n] = sinf(2.0 * M_PI * (float)n / (float)osc_bank.getWavetableLength());
         }
         
         // Initialise frequency and amplitude
@@ -3031,14 +3246,14 @@ bool setup(BelaContext *context, void *userData){
         for(int n = 0; n < gNumOscillators; n++) {
                 if(context->analogFrames == 0) {
                         // Random frequencies when used without analogInputs
-                        osc.setFrequency(n, kMinimumFrequency + (kMaximumFrequency - kMinimumFrequency) * ((float)random() / (float)RAND_MAX));
+                        osc_bank.setFrequency(n, kMinimumFrequency + (kMaximumFrequency - kMinimumFrequency) * ((float)random() / (float)RAND_MAX));
                 }
                 else {
                         // Constant spread of frequencies when used with analogInputs
-                        osc.setFrequency(n, freq);
+                        osc_bank.setFrequency(n, freq);
                         freq += increment;
                 }
-                osc.setAmplitude(n, (float)random() / (float)RAND_MAX / (float)gNumOscillators);
+                osc_bank.setAmplitude(n, (float)random() / (float)RAND_MAX / (float)gNumOscillators);
         }
         increment = 0;
         freq = 440.0;
@@ -3048,7 +3263,7 @@ bool setup(BelaContext *context, void *userData){
                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
                 float newFreq = freq * randScale;
                 // For efficiency, frequency is expressed in change in wavetable position per sample, not Hz or radians
-                osc.setFrequency(n, newFreq);
+                osc_bank.setFrequency(n, newFreq);
                 freq += increment;
         }
         // Initialise auxiliary tasks
@@ -3061,23 +3276,30 @@ bool setup(BelaContext *context, void *userData){
         analog_sample_rate = context->analogSampleRate;
 
 
-        // Set ADSR parameters
-        audio_adsr_a.setAttackRate(envelope_1_attack * context->audioSampleRate);
-        audio_adsr_a.setDecayRate(envelope_1_decay * context->audioSampleRate);
-        audio_adsr_a.setReleaseRate(envelope_1_release * context->audioSampleRate);
-        audio_adsr_a.setSustainLevel(envelope_1_sustain);
+        // SETUP ADSR (these are modified in Change Sequence)
+         // This envelope triggers at the start of each sequence
+         // Attack can be modified
+        per_sequence_adsr_a.setAttackRate(envelope_1_setting * context->analogSampleRate); // resulting times are in seconds
+        per_sequence_adsr_a.setDecayRate(envelope_1_decay * context->analogSampleRate);
+        per_sequence_adsr_a.setSustainLevel(envelope_1_sustain); // Level not time
+        per_sequence_adsr_a.setReleaseRate(envelope_1_release * context->analogSampleRate);
+       
         
-        // This envelope triggers on each step
-        step_triggered_adsr_b.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        step_triggered_adsr_b.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        step_triggered_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        step_triggered_adsr_b.setSustainLevel(envelope_1_sustain);
+        // This envelope triggers at the start of each sequence
+        // Attack and Decay can be modified
+        per_sequence_adsr_b.setAttackRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_b.setDecayRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_b.setSustainLevel(envelope_1_sustain); // Level not time
+        per_sequence_adsr_b.setReleaseRate(envelope_1_release * context->analogSampleRate);
+        
 
-
-        sequence_triggered_adsr_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
-        sequence_triggered_adsr_c.setDecayRate(envelope_1_decay * context->analogSampleRate);
-        sequence_triggered_adsr_c.setReleaseRate(envelope_1_release * context->analogSampleRate);
-        sequence_triggered_adsr_c.setSustainLevel(envelope_1_sustain);
+        // This envelope triggers at the start of each sequence
+        // Decay can be modified
+        per_sequence_adsr_c.setAttackRate(envelope_1_attack  * context->analogSampleRate);
+        per_sequence_adsr_c.setDecayRate(envelope_1_setting * context->analogSampleRate);
+        per_sequence_adsr_c.setSustainLevel(envelope_1_sustain); // Level not time
+        per_sequence_adsr_c.setReleaseRate(envelope_1_release * context->analogSampleRate);
+        
 
 
         // The two buttons on Salt as inputs
@@ -3117,8 +3339,8 @@ bool setup(BelaContext *context, void *userData){
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
-        if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
-                return false;
+        //if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
+        //        return false;
                 
                 
                 
@@ -3164,10 +3386,10 @@ void render(BelaContext *context, void *userData)
   // AUDIO LOOP
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
-		audio_adsr_a_level  = 1.0 * audio_adsr_a.process();
+	
 		
     
-    //audio_osc_1_result = oscillator_2_audio.process() * audio_adsr_a_level;
+
 		
         ////////////////////////////////
 		    // Begin Bela delay example code
@@ -3231,10 +3453,8 @@ void render(BelaContext *context, void *userData)
         // Apply "VCA" to the output.  
 
 
-        // Channel 1 is modulated by the ADSR B
-        audioWrite(context, n, 0, out_l * analog_step_triggered_adsr_b_level);
 
-        // Unmodulated output
+        audioWrite(context, n, 0, out_l);
         audioWrite(context, n, 1, out_r);
 		    // End Bela delay example code
 		    //////////////////////////////
@@ -3248,41 +3468,31 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 
 		// Process analog oscillator	
-		lfo_a_result_analog = lfo_a_analog.process();
-		
-		// Process step triggered analog envelope
-		analog_step_triggered_adsr_b_level  = step_triggered_adsr_b.process();  
-		
-		// Process the sequence triggered (i.e. every 4 - 16 beats) envelope
-		analog_sequence_triggered_adsr_c_level  = env3_amp * sequence_triggered_adsr_c.process();
-		
-
-		
-		
-		// Modulated output
-		analog_out_2 = lfo_a_result_analog * analog_sequence_triggered_adsr_c_level; 
+	//	lfo_a_result_analog = lfo_a_analog.process();
+	//	lfo_b_result_analog = lfo_b_analog.process();
 
 
-		// Using an inverse of the sequence triggered adsr
-		//analog_out_3 = lfo_a_result_analog * (1.0 - analog_sequence_triggered_adsr_c_level); 
-
-    // Bit more complext mod
-    analog_out_3 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + (lfo_a_result_analog * analog_step_triggered_adsr_b_level)) / 2.0;  
+	//  analog_per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
+	//	analog_per_sequence_adsr_b_level  = 1.0 * per_sequence_adsr_b.process();  
+	//	analog_per_sequence_adsr_c_level  = 1.0 * per_sequence_adsr_c.process();
+				
+		// Modulated outputs
+		//analog_out_2 = lfo_a_result_analog; // * analog_per_sequence_adsr_a_level;
+		//analog_out_2 = per_sequence_adsr_a.process();
+    	//analog_out_3 = analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = analog_per_sequence_adsr_c_level;
 
 		
-		// Bit more complex add
-		analog_out_4 = ((lfo_a_result_analog * analog_sequence_triggered_adsr_c_level) + analog_step_triggered_adsr_b_level) / 2.0; 
+    	//analog_out_3 = lfo_a_result_analog * analog_per_sequence_adsr_b_level; 
+		//analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
+		
+		
 		
 		
 
-
-
-
-
-
-
-
-
+  //  analog_out_6 = lfo_b_result_analog * analog_per_sequence_adsr_a_level;
+  //  analog_out_7 = lfo_b_result_analog * analog_per_sequence_adsr_b_level; 
+  //  analog_out_8 = lfo_b_result_analog * analog_per_sequence_adsr_c_level;
 		
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
@@ -3314,24 +3524,15 @@ void render(BelaContext *context, void *userData)
         	sequence_b_pattern_input_raw = analogRead(context, n, SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN);
 		 }
 
-		// Begin Bela delay example code
-		//    float analog_out_7 = 0;
-        //float analog_out_8 = 0;
 
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 10);
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 10);
 		  }
 
-
-
-        
-
-
-
-		  if (ch == ADSR_RELEASE_INPUT_PIN){
-		  	// TODO use an oscillator here instead. why actually?
-		  	envelope_1_release = map(analogRead(context, n, ADSR_RELEASE_INPUT_PIN), 0, 1, 0.01, 5.0);
+	  if (ch == ADSR_SETTING_INPUT_PIN){
+		  	// used for various ADSR settings
+		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
 		  }
 		    
 		  
@@ -3368,7 +3569,7 @@ void render(BelaContext *context, void *userData)
 		        	
 		        }     
 		
-				// Write output
+				    // Write output Draw Output
 		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
 
 
@@ -3392,6 +3593,16 @@ void render(BelaContext *context, void *userData)
 	      // CV 2
 	      if (ch == SEQUENCE_CV_OUTPUT_2_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	//////
+	      	
+
+	      	analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
+	      	
+	      	lfo_a_result_analog = lfo_a_analog.process();
+	      	
+	      	// PRODUCT LFO A * ADSR A 
+	      	analog_out_2 = lfo_a_result_analog * analog_per_sequence_adsr_a_level;
+	 
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
 
@@ -3399,12 +3610,25 @@ void render(BelaContext *context, void *userData)
 	      // CV 3 - This is below the left hand LED so should be related to the Length of the Sequence (Simple decaying envelope)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	
+	      	
+	      	// SUM LFO A + ADSR A
+	      	analog_out_3 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_a_level;
+	      	
+	      	
+	      	
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
 	      // CV 4
 	      if (ch == SEQUENCE_CV_OUTPUT_4_PIN){
 	      	//rt_printf("amp is: %f", amp);
+	      	
+	      	 analog_per_sequence_adsr_b_level = per_sequence_adsr_b.process();
+	      	
+	      	// PRODUCT LFO A * ADSR B
+	      	analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_b_level;
+	      	
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
 	      
@@ -3416,9 +3640,44 @@ void render(BelaContext *context, void *userData)
 	      	}
 	      	analogWrite(context, n, ch, analog_out_5);
 	      }
+
+
+
+	      // CV 6
+	      if (ch == SEQUENCE_CV_OUTPUT_6_PIN){
+	      	//rt_printf("amp is: %f", amp);
+	      	
+
+	      	
+	      	lfo_b_result_analog = lfo_b_analog.process();
+	      	
+	      	analog_out_6 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_b_level;
+	      	
+	      	
+	      	analogWrite(context, n, ch, analog_out_6);
+	      }
+
+
+	      // CV 7 
+	      if (ch == SEQUENCE_CV_OUTPUT_7_PIN){
+	      	//rt_printf("amp is: %f", amp);
+	      	
+	      	
+	      	 analog_per_sequence_adsr_c_level = per_sequence_adsr_c.process();
+	      	
+	      	analog_out_7 = (lfo_a_result_analog + lfo_b_result_analog) * analog_per_sequence_adsr_c_level / 3.0;
+	      	
+	      	
+	      	analogWrite(context, n, ch, analog_out_7);
+	      }
 	      
-	      
-	      
+	      // CV 8 -- See above, Draw CV
+	      //if (ch == SEQUENCE_CV_OUTPUT_8_PIN){
+	      //	//rt_printf("amp is: %f", amp);
+	      //	analogWrite(context, n, ch, analog_out_8);
+	      //}
+
+ 
 	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
 
 		}
@@ -3439,6 +3698,8 @@ void render(BelaContext *context, void *userData)
         	// Next state
         	new_digital_clock_in_state = digitalRead(context, m, CLOCK_INPUT_DIGITAL_PIN);
         	
+        	new_reset_a_in_state = digitalRead(context, m, RESET_A_INPUT_DIGITAL_PIN);
+        	new_reset_b_in_state = digitalRead(context, m, RESET_B_INPUT_DIGITAL_PIN);
         	
         	
         	old_button_1_state = new_button_1_state;
@@ -3521,7 +3782,7 @@ void render(BelaContext *context, void *userData)
         	// Do similar for another PIN for if (step_a_count == FIRST_STEP)
         	
 
-
+            // CLOCK RISE
             // If detect a rising clock edge
             if ((new_digital_clock_in_state == HIGH) && (current_digital_clock_in_state == LOW)){
               
@@ -3535,6 +3796,8 @@ void render(BelaContext *context, void *userData)
               
             } 
             
+            
+            // CLOCK FALL
             // If detect a Falling clock edge
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
@@ -3548,7 +3811,35 @@ void render(BelaContext *context, void *userData)
             	
             	// currently a constant 
             	//clock_patience = clock_width * 100;
-            } 
+            }
+            
+            
+            // RESET A RISE
+            if ((new_reset_a_in_state == HIGH) && (current_reset_a_in_state == LOW)){
+              current_reset_a_in_state = HIGH;
+              // Do reset A
+              ResetSequenceACounters();
+            }
+            
+            // RESET A FALL
+            if ((new_reset_a_in_state == LOW) && (current_reset_a_in_state == HIGH)){
+              current_reset_a_in_state = LOW;
+            }
+            
+            // RESET B RISE
+            if ((new_reset_b_in_state == HIGH) && (current_reset_b_in_state == LOW)){
+              current_reset_b_in_state = HIGH;
+              // Do reset A
+              ResetSequenceBCounters();
+            }
+            
+            // RESET B FALL
+            if ((new_reset_b_in_state == LOW) && (current_reset_b_in_state == HIGH)){
+              current_reset_b_in_state = LOW;
+            }
+            
+            
+            
       }
       
      
@@ -3639,7 +3930,7 @@ void recalculate_frequencies(void*)
                 // to avoid weird phase effects
                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
                 float newFreq = freq * randScale;
-                osc.setFrequency(n, newFreq);
+                osc_bank.setFrequency(n, newFreq);
                 freq += increment;
         }
 }
