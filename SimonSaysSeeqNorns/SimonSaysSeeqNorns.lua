@@ -43,7 +43,10 @@ grid_state_dirty = false
 
 print (my_grid)
 
-out_midi = midi.connect(1)
+midi_out_port_1 = midi.connect(1)
+
+midi_out_port_2 = midi.connect(2)
+
 
 -- psudo random for our grid ids
 math.randomseed( os.time() )
@@ -72,7 +75,8 @@ function midi_watcher()
     clock.sync(1/4)
     if need_to_start_midi == true then
       -- we only want to start midi clock at the right time!
-      out_midi:start()
+      midi_out_port_1:start()
+      midi_out_port_2:start()
       need_to_start_midi = false
     end
   end
@@ -194,17 +198,20 @@ function request_midi_stop()
   print("request_midi_stop")
   need_to_start_midi = false
   -- can stop the midi clock at any time.
-     out_midi:stop ()
+     midi_out_port_1:stop ()
+     midi_out_port_2:stop ()
 end  
 
 function send_midi_note_on(note, vel, ch)
   --print("send_midi_note_on")
-  out_midi:note_on (note, vel, ch)
+  midi_out_port_1:note_on (note, vel, ch)
+  midi_out_port_2:note_on (note, vel, ch)
 end  
 
 function send_midi_note_off(note, vel, ch)
   --print("send_midi_note_off")
-  out_midi:note_off (note, vel, ch)
+  midi_out_port_1:note_off (note, vel, ch)
+  midi_out_port_2:note_off (note, vel, ch)
 end  
 
 
@@ -911,34 +918,6 @@ function pulses(output_port, count)
 end  
 
 
--- function gate_high(output_port, gate_type)
---   --print("gate_high: " .. output_port)
-
--- -- See if we want to ratchet based on a certain row / config.
-
--- if gate_type == 1 then -- normal
-
---   send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
---   gate_low(output_port)
-
--- elseif gate_type == 2 then -- ratchet
---     print("gate_high: " .. output_port)
---     print("RATCHET")
-
-
---     clock.run(ratchet)
-
-
---     --send_midi_note_on(45, 127, MIDI_CHANNEL_OFFSET + output_port)
---     --gate_low(output_port)
-    
-
---end
-
-
-  
---end
-
 function gate_low(output_port)
   --print("gate_low " .. output)
   send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
@@ -948,10 +927,7 @@ function ratchet()
   for i=1,4 do
     print("before ratchet clock sync")
     clock.sleep(1)
-    print("after ratchet clock sync")
-
-    
-    
+    print("after ratchet clock sync")    
   end
 end
 
