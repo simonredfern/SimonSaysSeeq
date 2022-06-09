@@ -15,6 +15,8 @@ COLS = 16
 ROWS = 8
 
 ratchet_button = 0
+preset_button = 0
+
 
 SEQUENCE_OUTPUTS = 4
 
@@ -553,8 +555,8 @@ else
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
     grid_state[x][y] = z
 
-    -- CONTROL UNDO
-
+    -- RATCHETS
+    -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
     if x == 16 and y == 7 then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
@@ -586,10 +588,44 @@ else
     end 
   
 
+-- Preset buttons WIP
+-- These buttons are used to put a preset on one of the sequence rows
+
+if x == 12 and y == 7 then
+  --print ("Preset button pressed: " .. z)
+  if z == 1 then 
+    preset_button = 2
+  else
+    preset_button = 0
+  end
+elseif x == 11 and y == 7 then
+  --print ("Preset button pressed: " .. z)
+  if z == 1 then 
+    preset_button = 3
+  else
+    preset_button = 0
+  end
+elseif x == 10 and y == 7 then
+  --print ("Preset button pressed: " .. z)
+  if z == 1 then 
+    preset_button = 4
+  else
+    preset_button = 0
+  end
+elseif x == 9 and y == 7 then
+  --print ("Preset button pressed: " .. z)
+  if z == 1 then 
+    preset_button = 5
+  else
+    preset_button = 0
+  end
+end 
 
 
 
-    -- Buttons in a Control row 
+--
+
+    -- UNDO
     if (x == 1 and y == 8) then
       ----------
       -- UNDO --
