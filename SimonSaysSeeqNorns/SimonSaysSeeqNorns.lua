@@ -525,6 +525,9 @@ if y <= SEQUENCE_OUTPUTS then
 
       -- Any button pressed on row 1
       if x == 1 then
+
+        print ("row is: " .. x) 
+
         grid_state[x][1] = 1
         grid_state[x][2] = 0
         grid_state[x][3] = 0
@@ -546,6 +549,8 @@ if y <= SEQUENCE_OUTPUTS then
         grid_state[x][16] = 0
 
       elseif x == 2 then
+
+        print ("row is: " .. x) 
 
         grid_state[x][1] = 0
         grid_state[x][2] = 0
@@ -569,6 +574,8 @@ if y <= SEQUENCE_OUTPUTS then
 
       elseif x == 3 then
 
+        print ("row is: " .. x) 
+
         grid_state[x][1] = 1
         grid_state[x][2] = 1
         grid_state[x][3] = 0
@@ -590,6 +597,8 @@ if y <= SEQUENCE_OUTPUTS then
         grid_state[x][16] = 1
 
       elseif x == 4 then
+
+        print ("row is: " .. x) 
 
         grid_state[x][1] = 1
         grid_state[x][2] = 1
