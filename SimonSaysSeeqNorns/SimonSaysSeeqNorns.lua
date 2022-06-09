@@ -16,13 +16,7 @@ ROWS = 8
 
 ratchet_button = 0
 
---rough_undo_lifo_count = 0
---rough_redo_lifo_count = 0
-
--- Crow Outputs
-CROW_OUTPUTS = 4
-
-RATCHET_LANE_A = 5
+SEQUENCE_OUTPUTS = 4
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -86,6 +80,7 @@ function grid_state_popularity_watcher()
   -- get some idea of how much a particular grid is used
   -- the idea is to use this on a fast forward backward undo / redo that just scrolls through the popular states
   -- (i.e. states that have been used for a long time)
+  -- WIP The idea is to have a separate undo / redo that only uses hi popularity states
   while true do
     clock.sync(1) -- do this every beat
     grid_state["gspc"] = grid_state["gspc"] + 1
@@ -146,7 +141,7 @@ function advance_step()
   current_step = util.wrap(current_step + 1, 1, COLS)
   
   
-  for output = 1, CROW_OUTPUTS do
+  for output = 1, SEQUENCE_OUTPUTS do
     if grid_state[current_step][output] ~= 0 then -- could be 1 or 2 (ratchet) or...
       -- direct relation between value on grid at count of pulses we will get
       pulses(output, grid_state[current_step][output])
@@ -156,7 +151,7 @@ function advance_step()
     end -- end non zero
   end -- end for
   
-end
+end -- end function
   
   
 
@@ -221,6 +216,8 @@ function enc(n,d)
   end
 end 
 
+
+-- Norns (Shield) key presses
 function key(n,z)
   print("key pressed.  n:" .. n ..  " z:" .. z )
   
@@ -258,15 +255,11 @@ function init()
 
 --  params:set("clock_source",4)
   
-  
-
-    -- last in first out
+    -- Last In First Out (LIFO) tables for Undo and Redo of grid state functionality
   undo_lifo = {}
   redo_lifo = {}
 
  
-  
-  
   print ("before init_table")
   init_table()
     
@@ -284,7 +277,7 @@ function init()
   print("my_grid.rows is: " .. my_grid.rows)
   
 
-  -- Set the starting tempo. Can be changed with right kno
+  -- Set the starting tempo. Can be changed with right knob
   -- TODO store and retreive this
   params:set("clock_tempo",136)
   
@@ -479,7 +472,7 @@ end
 
 
 
-
+-- Grid Key Presses
 -- Handle key presses on the grid
 my_grid.key = function(x,y,z)
 -- x is the row
@@ -489,52 +482,9 @@ my_grid.key = function(x,y,z)
 
 --print("--------------------------------------------------------------")
 --print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[x][y])
-  
--- TODO will want to treat sequence rows and control rows differently in terms of button presses.
--- i.e. sequence rows toggle
--- control rows are momentary press 
-
-
-
 --print(x .. ","..y .. " z is " .. z)
 
 
-  if x == 16 and y == 7 then
-    --print ("RATCHET button pressed: " .. z)
-    if z == 1 then 
-      ratchet_button = 2
-    else
-      ratchet_button = 0
-    end
-  elseif x == 15 and y == 7 then
-    --print ("RATCHET button pressed: " .. z)
-    if z == 1 then 
-      ratchet_button = 3
-    else
-      ratchet_button = 0
-    end
-  elseif x == 14 and y == 7 then
-    --print ("RATCHET button pressed: " .. z)
-    if z == 1 then 
-      ratchet_button = 4
-    else
-      ratchet_button = 0
-    end
-  elseif x == 13 and y == 7 then
-    --print ("RATCHET button pressed: " .. z)
-    if z == 1 then 
-      ratchet_button = 5
-    else
-      ratchet_button = 0
-    end
-  elseif x == 12 and y == 7 then
-    --print ("RATCHET button pressed: " .. z)
-    if z == 1 then 
-      ratchet_button = 6
-    else
-      ratchet_button = 0
-    end
-  end 
 
 
 
@@ -543,7 +493,7 @@ my_grid.key = function(x,y,z)
 -- We treat sequence rows and control rows different.
 
 -- SEQUENCE ROWS
-if y < 5 then
+if y <= SEQUENCE_OUTPUTS then
   -- For sequence rows we only want to capture key down event only  
   if z == 1 then
 
@@ -603,10 +553,41 @@ else
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
     grid_state[x][y] = z
 
-
-
-
     -- CONTROL UNDO
+
+    if x == 16 and y == 7 then
+      --print ("RATCHET button pressed: " .. z)
+      if z == 1 then 
+        ratchet_button = 2
+      else
+        ratchet_button = 0
+      end
+    elseif x == 15 and y == 7 then
+      --print ("RATCHET button pressed: " .. z)
+      if z == 1 then 
+        ratchet_button = 3
+      else
+        ratchet_button = 0
+      end
+    elseif x == 14 and y == 7 then
+      --print ("RATCHET button pressed: " .. z)
+      if z == 1 then 
+        ratchet_button = 4
+      else
+        ratchet_button = 0
+      end
+    elseif x == 13 and y == 7 then
+      --print ("RATCHET button pressed: " .. z)
+      if z == 1 then 
+        ratchet_button = 5
+      else
+        ratchet_button = 0
+      end
+    end 
+  
+
+
+
 
     -- Buttons in a Control row 
     if (x == 1 and y == 8) then
