@@ -501,13 +501,13 @@ if y <= SEQUENCE_OUTPUTS then
 
 
     -- *Order is important here*. 
-    -- We want to save the current state *before* we push a copy of the grid to the undo lifo
+    -- We want to save the current state *BEFORE* we push a copy of the grid to the undo lifo
     -- But only do this if we are not touching the control rows (7 & 8)
 
     --print ("Sequence button pressed")
     --print ("grid_state:" .. get_tally(grid_state))
 
-    -- Every time we change state of rows less than 6 (non control rows), record the new state in the undo_lifo
+    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_lifo
     push_undo()
 
     -- So we save the table to file
@@ -516,26 +516,129 @@ if y <= SEQUENCE_OUTPUTS then
     grid_state_dirty = true
   
 
-    --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
-    --print ("ratchet_button is: " .. ratchet_button)
 
 
-    -- *Order is important here*. 
-    -- Change the state of the grid *AFTER  * we have pushed to undo lifo
-    -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-    if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-      grid_state[x][y] = 0
+
+    if preset_button ~= 0 then
+      print ("preset_button is: " .. preset_button) 
+
+
+      -- Any button pressed on row 1
+      if x == 1 then
+        grid_state[x][1] = 1
+        grid_state[x][2] = 0
+        grid_state[x][3] = 0
+        grid_state[x][4] = 0
+
+        grid_state[x][5] = 1
+        grid_state[x][6] = 0
+        grid_state[x][7] = 0
+        grid_state[x][8] = 0
+
+        grid_state[x][9]  = 1
+        grid_state[x][10] = 0
+        grid_state[x][11] = 0
+        grid_state[x][12] = 0
+
+        grid_state[x][13] = 1
+        grid_state[x][14] = 0
+        grid_state[x][15] = 0
+        grid_state[x][16] = 0
+
+      elseif x == 2 then
+
+        grid_state[x][1] = 0
+        grid_state[x][2] = 0
+        grid_state[x][3] = 1
+        grid_state[x][4] = 0
+
+        grid_state[x][5] = 0
+        grid_state[x][6] = 0
+        grid_state[x][7] = 1
+        grid_state[x][8] = 0
+
+        grid_state[x][9]  = 0
+        grid_state[x][10] = 0
+        grid_state[x][11] = 1
+        grid_state[x][12] = 0
+
+        grid_state[x][13] = 0
+        grid_state[x][14] = 0
+        grid_state[x][15] = 1
+        grid_state[x][16] = 0
+
+      elseif x == 3 then
+
+        grid_state[x][1] = 1
+        grid_state[x][2] = 1
+        grid_state[x][3] = 0
+        grid_state[x][4] = 1
+
+        grid_state[x][5] = 1
+        grid_state[x][6] = 1
+        grid_state[x][7] = 0
+        grid_state[x][8] = 1
+
+        grid_state[x][9]  = 1
+        grid_state[x][10] = 1
+        grid_state[x][11] = 0
+        grid_state[x][12] = 1
+
+        grid_state[x][13] = 1
+        grid_state[x][14] = 1
+        grid_state[x][15] = 0
+        grid_state[x][16] = 1
+
+      elseif x == 4 then
+
+        grid_state[x][1] = 1
+        grid_state[x][2] = 1
+        grid_state[x][3] = 0
+        grid_state[x][4] = 1
+
+        grid_state[x][5] = 1
+        grid_state[x][6] = 1
+        grid_state[x][7] = 0
+        grid_state[x][8] = 1
+
+        grid_state[x][9]  = 1
+        grid_state[x][10] = 1
+        grid_state[x][11] = 0
+        grid_state[x][12] = 1
+
+        grid_state[x][13] = 1
+        grid_state[x][14] = 1
+        grid_state[x][15] = 0
+        grid_state[x][16] = 1
+
+
+      end  
+
     else 
-      if ratchet_button ~= 0 then
-        grid_state[x][y] = ratchet_button -- set the state to some kind of ratchet
-      else  
-        grid_state[x][y] = 1
-      end
-    end
-    
-    --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
-    --print ("End of key down test")
+      --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
+      --print ("ratchet_button is: " .. ratchet_button)
+
+        -- *Order is important here*. 
+        -- Change the state of the grid *AFTER* we have pushed to undo lifo
+        -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
+        if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+          grid_state[x][y] = 0
+        else 
+          if ratchet_button ~= 0 then
+            grid_state[x][y] = ratchet_button -- set the state to some kind of ratchet
+          else  
+            grid_state[x][y] = 1
+          end
+        end
+        
+        --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
+
+    
+
+    end -- preset_button test
+
+--print ("End of key down test")
 
   end -- End of key down test
 
@@ -562,7 +665,7 @@ else
       if z == 1 then 
         ratchet_button = 2
       else
-        ratchet_button = 0
+        ratchet_button = 0 -- Reset ratchet_button with a key up
       end
     elseif x == 15 and y == 7 then
       --print ("RATCHET button pressed: " .. z)
@@ -596,7 +699,7 @@ if x == 12 and y == 7 then
   if z == 1 then 
     preset_button = 2
   else
-    preset_button = 0
+    preset_button = 0 -- Reset preset_button with a key up
   end
 elseif x == 11 and y == 7 then
   --print ("Preset button pressed: " .. z)
