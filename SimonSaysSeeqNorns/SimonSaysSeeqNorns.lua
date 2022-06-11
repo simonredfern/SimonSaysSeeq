@@ -524,7 +524,7 @@ if y <= SEQUENCE_OUTPUTS then
 
 
       -- Any button pressed on row 1
-      if x == 1 then
+      if y == 1 then
 
         print ("Setting preset for row: " .. x) 
 
@@ -548,7 +548,7 @@ if y <= SEQUENCE_OUTPUTS then
         grid_state[15][y] = 0
         grid_state[16][y] = 0
 
-      elseif x == 2 then
+      elseif y == 2 then
 
         print ("Setting preset for row: " .. x) 
 
@@ -572,7 +572,7 @@ if y <= SEQUENCE_OUTPUTS then
         grid_state[15][y] = 1
         grid_state[16][y] = 0
 
-      elseif x == 3 then
+      elseif y == 3 then
 
         print ("Setting preset for row: " .. x) 
 
@@ -596,7 +596,7 @@ if y <= SEQUENCE_OUTPUTS then
         grid_state[15][y] = 0
         grid_state[16][y] = 1
 
-      elseif x == 4 then
+      elseif y == 4 then
 
         print ("Setting preset for row: " .. x) 
 
@@ -705,9 +705,11 @@ else
 
 if x == 12 and y == 7 then
   --print ("Preset button pressed: " .. z)
-  if z == 1 then 
+  if z == 1 then
+    print ("Preset button pressed: " .. z) 
     preset_button = 2
   else
+    print ("Preset button RESET: " .. z) 
     preset_button = 0 -- Reset preset_button with a key up
   end
 elseif x == 11 and y == 7 then
