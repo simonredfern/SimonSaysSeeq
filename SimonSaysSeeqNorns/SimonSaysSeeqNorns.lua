@@ -631,13 +631,13 @@ if y <= SEQUENCE_OUTPUTS then
         -- *Order is important here*. 
         -- Change the state of the grid *AFTER* we have pushed to undo lifo
         -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-        if grid_state[y][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-          grid_state[y][y] = 0
+        if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+          grid_state[x][y] = 0
         else 
           if ratchet_button ~= 0 then
-            grid_state[y][y] = ratchet_button -- set the state to some kind of ratchet
+            grid_state[x][y] = ratchet_button -- set the state to some kind of ratchet
           else  
-            grid_state[y][y] = 1
+            grid_state[x][y] = 1
           end
         end
         
@@ -665,7 +665,7 @@ else
 -- direct assignement of control rows.
     -- if the button is pressed it should be lit etc.
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
-    grid_state[y][y] = z
+    grid_state[x][y] = z
 
     -- RATCHETS
     -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
