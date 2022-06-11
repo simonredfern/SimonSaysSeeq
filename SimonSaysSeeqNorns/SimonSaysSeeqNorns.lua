@@ -483,7 +483,7 @@ my_grid.key = function(x,y,z)
 -- We want to capture the key down event and toggle the state of the key in the grid.
 
 --print("--------------------------------------------------------------")
---print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[x][y])
+--print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 --print(x .. ","..y .. " z is " .. z)
 
 
@@ -520,105 +520,105 @@ if y <= SEQUENCE_OUTPUTS then
 
 
     if preset_button ~= 0 then
-      print ("preset_button is: " .. preset_button) 
+      print ("preset_button is: " .. preset_button .. ", x is: " .. x .. ", y is: " .. y) 
 
 
       -- Any button pressed on row 1
       if x == 1 then
 
-        print ("row is: " .. x) 
+        print ("Setting preset for row: " .. x) 
 
-        grid_state[x][1] = 1
-        grid_state[x][2] = 0
-        grid_state[x][3] = 0
-        grid_state[x][4] = 0
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-        grid_state[x][5] = 1
-        grid_state[x][6] = 0
-        grid_state[x][7] = 0
-        grid_state[x][8] = 0
+        grid_state[5][y] = 1
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-        grid_state[x][9]  = 1
-        grid_state[x][10] = 0
-        grid_state[x][11] = 0
-        grid_state[x][12] = 0
+        grid_state[9][y]  = 1
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
 
-        grid_state[x][13] = 1
-        grid_state[x][14] = 0
-        grid_state[x][15] = 0
-        grid_state[x][16] = 0
+        grid_state[13][y] = 1
+        grid_state[14][y] = 0
+        grid_state[15][y] = 0
+        grid_state[16][y] = 0
 
       elseif x == 2 then
 
-        print ("row is: " .. x) 
+        print ("Setting preset for row: " .. x) 
 
-        grid_state[x][1] = 0
-        grid_state[x][2] = 0
-        grid_state[x][3] = 1
-        grid_state[x][4] = 0
+        grid_state[1][y] = 0
+        grid_state[2][y] = 0
+        grid_state[3][y] = 1
+        grid_state[4][y] = 0
 
-        grid_state[x][5] = 0
-        grid_state[x][6] = 0
-        grid_state[x][7] = 1
-        grid_state[x][8] = 0
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 1
+        grid_state[8][y] = 0
 
-        grid_state[x][9]  = 0
-        grid_state[x][10] = 0
-        grid_state[x][11] = 1
-        grid_state[x][12] = 0
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 1
+        grid_state[12][y] = 0
 
-        grid_state[x][13] = 0
-        grid_state[x][14] = 0
-        grid_state[x][15] = 1
-        grid_state[x][16] = 0
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
 
       elseif x == 3 then
 
-        print ("row is: " .. x) 
+        print ("Setting preset for row: " .. x) 
 
-        grid_state[x][1] = 1
-        grid_state[x][2] = 1
-        grid_state[x][3] = 0
-        grid_state[x][4] = 1
+        grid_state[1][y] = 1
+        grid_state[2][y] = 1
+        grid_state[3][y] = 0
+        grid_state[4][y] = 1
 
-        grid_state[x][5] = 1
-        grid_state[x][6] = 1
-        grid_state[x][7] = 0
-        grid_state[x][8] = 1
+        grid_state[5][y] = 1
+        grid_state[6][y] = 1
+        grid_state[7][y] = 0
+        grid_state[8][y] = 1
 
-        grid_state[x][9]  = 1
-        grid_state[x][10] = 1
-        grid_state[x][11] = 0
-        grid_state[x][12] = 1
+        grid_state[9][y]  = 1
+        grid_state[10][y] = 1
+        grid_state[11][y] = 0
+        grid_state[12][y] = 1
 
-        grid_state[x][13] = 1
-        grid_state[x][14] = 1
-        grid_state[x][15] = 0
-        grid_state[x][16] = 1
+        grid_state[13][y] = 1
+        grid_state[14][y] = 1
+        grid_state[15][y] = 0
+        grid_state[16][y] = 1
 
       elseif x == 4 then
 
-        print ("row is: " .. x) 
+        print ("Setting preset for row: " .. x) 
 
-        grid_state[x][1] = 1
-        grid_state[x][2] = 1
-        grid_state[x][3] = 0
-        grid_state[x][4] = 1
+        grid_state[1][y] = 0
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-        grid_state[x][5] = 1
-        grid_state[x][6] = 1
-        grid_state[x][7] = 0
-        grid_state[x][8] = 1
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-        grid_state[x][9]  = 1
-        grid_state[x][10] = 1
-        grid_state[x][11] = 0
-        grid_state[x][12] = 1
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
 
-        grid_state[x][13] = 1
-        grid_state[x][14] = 1
-        grid_state[x][15] = 0
-        grid_state[x][16] = 1
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
 
 
       end  
@@ -631,13 +631,13 @@ if y <= SEQUENCE_OUTPUTS then
         -- *Order is important here*. 
         -- Change the state of the grid *AFTER* we have pushed to undo lifo
         -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-        if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-          grid_state[x][y] = 0
+        if grid_state[y][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+          grid_state[y][y] = 0
         else 
           if ratchet_button ~= 0 then
-            grid_state[x][y] = ratchet_button -- set the state to some kind of ratchet
+            grid_state[y][y] = ratchet_button -- set the state to some kind of ratchet
           else  
-            grid_state[x][y] = 1
+            grid_state[y][y] = 1
           end
         end
         
@@ -651,7 +651,7 @@ if y <= SEQUENCE_OUTPUTS then
 
   end -- End of key down test
 
-  --print(x .. ","..y .. " value after change " .. grid_state[x][y])
+  --print(x .. ","..y .. " value after change " .. grid_state[y][y])
   --print("--------------------------------------------------------------")
 
 
@@ -665,7 +665,7 @@ else
 -- direct assignement of control rows.
     -- if the button is pressed it should be lit etc.
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
-    grid_state[x][y] = z
+    grid_state[y][y] = z
 
     -- RATCHETS
     -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
