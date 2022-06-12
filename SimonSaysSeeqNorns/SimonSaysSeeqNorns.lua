@@ -18,13 +18,19 @@ ratchet_button = 0
 preset_button = 0
 
 
-SEQUENCE_ROWS = 4
+TOTAL_SEQUENCE_ROWS = 6
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 Tab = require "lib/tabutil"
 
-MIDI_CHANNEL_OFFSET = 0
+MIDI_CHANNEL_A_OFFSET = 0
+MIDI_CHANNEL_B_OFFSET = -4 -- negative offset becuase both betweeners will listen on change 1 - 4
+
+MIDI_NOTE_NUMBER_FOR_GATE = 50
+MIDI_NOTE_ON_VELOCITY = 127
+MIDI_NOTE_OFF_VELOCITY = 0
+
 
 current_step = 1
 
@@ -39,9 +45,9 @@ grid_state_dirty = false
 
 print (my_grid)
 
-midi_out_port_1 = midi.connect(1)
-
-midi_out_port_2 = midi.connect(2)
+midi_out_a = midi.connect(1)
+midi_out_b = midi.connect(2)
+-- midi_out_clock_only = midi.connect(3)
 
 
 -- psudo random for our grid ids
@@ -71,8 +77,8 @@ function midi_watcher()
     clock.sync(1/4)
     if need_to_start_midi == true then
       -- we only want to start midi clock at the right time!
-      midi_out_port_1:start()
-      midi_out_port_2:start()
+      midi_out_a:start()
+      midi_out_b:start()
       need_to_start_midi = false
     end
   end
@@ -143,7 +149,7 @@ function advance_step()
   current_step = util.wrap(current_step + 1, 1, COLS)
   
   
-  for output = 1, SEQUENCE_ROWS do
+  for output = 1, TOTAL_SEQUENCE_ROWS do
     if grid_state[current_step][output] ~= 0 then -- could be 1 or 2 (ratchet) or...
       -- direct relation between value on grid at count of pulses we will get
       pulses(output, grid_state[current_step][output])
@@ -195,21 +201,21 @@ function request_midi_stop()
   print("request_midi_stop")
   need_to_start_midi = false
   -- can stop the midi clock at any time.
-     midi_out_port_1:stop ()
-     midi_out_port_2:stop ()
+     midi_out_a:stop ()
+     midi_out_b:stop ()
 end  
 
-function send_midi_note_on(note, vel, ch)
-  --print("send_midi_note_on")
-  midi_out_port_1:note_on (note, vel, ch)
-  midi_out_port_2:note_on (note, vel, ch)
-end  
+-- function send_midi_note_on(note, vel, ch)
+--   --print("send_midi_note_on")
+--   midi_out_a:note_on (note, vel, ch)
+--   midi_out_b:note_on (note, vel, ch)
+-- end  
 
-function send_midi_note_off(note, vel, ch)
-  --print("send_midi_note_off")
-  midi_out_port_1:note_off (note, vel, ch)
-  midi_out_port_2:note_off (note, vel, ch)
-end  
+-- function send_midi_note_off(note, vel, ch)
+--   --print("send_midi_note_off")
+--   midi_out_a:note_off (note, vel, ch)
+--   midi_out_b:note_off (note, vel, ch)
+-- end  
 
 
 function enc(n,d)
@@ -495,7 +501,7 @@ my_grid.key = function(x,y,z)
 -- We treat sequence rows and control rows different.
 
 -- SEQUENCE ROWS
-if y <= SEQUENCE_ROWS then
+if y <= TOTAL_SEQUENCE_ROWS then
   -- For sequence rows we only want to capture key down event only  
   if z == 1 then
 
@@ -1030,15 +1036,32 @@ end
 
 
 
-function pulses(output_port, count)
+function pulses(sequence_row, count)
+
+
+
   if count > 1 then
     --print("this is supposed to be a ratchet")
   end 
 
   for i=1,count do
-    --print("before do pulse")
-    send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + output_port)
-    send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
+    print("before do pulse")
+
+    -- Since each betweener can only output 4 gates we need to split across the devices
+    if sequence_row >= 1 and sequence_row <= 4 then
+
+      print ("A ON MIDI_NOTE_NUMBER_FOR_GATE" .. MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_A_OFFSET " .. sequence_row + MIDI_CHANNEL_A_OFFSET)
+      midi_out_a:note_on (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_A_OFFSET)
+     
+      print ("A OFF MIDI_NOTE_NUMBER_FOR_GATE" .. MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_A_OFFSET " .. sequence_row + MIDI_CHANNEL_A_OFFSET)
+      midi_out_a:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_A_OFFSET)
+    elseif sequence_row >= 5 and sequence_row <= 8 then 
+      midi_out_b:note_on (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
+      midi_out_b:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
+    end
+
+    --send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + sequence_row)
+    --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
     --print("after do pulse")
     clock.sync( 1/32 )
     --print("after sync") 
@@ -1047,9 +1070,16 @@ function pulses(output_port, count)
 end  
 
 
-function gate_low(output_port)
+function gate_low(sequence_row)
   --print("gate_low " .. output)
-  send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + output_port)
+  --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
+
+  if sequence_row >= 1 and sequence_row <= 4 then
+    midi_out_a:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_A_OFFSET)
+  elseif sequence_row >= 5 and sequence_row <= TOTAL_SEQUENCE_ROWS then 
+    midi_out_b:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
+  end
+
 end
 
 function ratchet()
