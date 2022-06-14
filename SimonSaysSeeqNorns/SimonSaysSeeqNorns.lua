@@ -722,28 +722,28 @@ else
 
     -- RATCHETS
     -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
-    if x == 16 and y == 7 then
+    if x == 14 and y == 8 then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 2
       else
         ratchet_button = 0 -- Reset ratchet_button with a key up
       end
-    elseif x == 15 and y == 7 then
+    elseif x == 13 and y == 8 then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 3
       else
         ratchet_button = 0
       end
-    elseif x == 14 and y == 7 then
+    elseif x == 12 and y == 8 then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 4
       else
         ratchet_button = 0
       end
-    elseif x == 13 and y == 7 then
+    elseif x == 11 and y == 8 then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 5
@@ -756,7 +756,7 @@ else
 -- Preset buttons WIP
 -- These buttons are used to put a preset on one of the sequence rows
 
-if x == 12 and y == 7 then
+if x == 10 and y == 8 then
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
@@ -765,21 +765,21 @@ if x == 12 and y == 7 then
     print ("Preset button RESET: " .. z) 
     preset_button = 0 -- Reset preset_button with a key up
   end
-elseif x == 11 and y == 7 then
+elseif x == 9 and y == 8 then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 3
   else
     preset_button = 0
   end
-elseif x == 10 and y == 7 then
+elseif x == 4 and y == 8 then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 4
   else
     preset_button = 0
   end
-elseif x == 9 and y == 7 then
+elseif x == 3 and y == 8 then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 5
