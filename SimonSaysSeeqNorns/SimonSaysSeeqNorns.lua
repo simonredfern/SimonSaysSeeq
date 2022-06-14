@@ -16,6 +16,7 @@ ROWS = 8
 
 ratchet_button = 0
 preset_button = 0
+alter_clock_button = 0
 
 
 TOTAL_SEQUENCE_ROWS = 6
@@ -45,12 +46,41 @@ grid_state_dirty = false
 
 print (my_grid)
 
+-- Note the *ports*
+-- midi.devices are:
+-- 1	 -- 	table: 0x52be78
+--   id	 -- 	1
+--   dev	 -- 	userdata: 0x3f15a0
+--   name	 -- 	virtual
+-- 3	 -- 	table: 0x53fe78
+--   id	 -- 	3
+--   name	 -- 	Teensy MIDI
+--   dev	 -- 	userdata: 0x554ea0
+--   port	 -- 	1
+-- 4	 -- 	table: 0x554ca0
+--   id	 -- 	4
+--   name	 -- 	USB MIDI Interface
+--   dev	 -- 	userdata: 0x5557a8
+--   port	 -- 	3
+-- 5	 -- 	table: 0x52c338
+--   id	 -- 	5
+--   name	 -- 	Teensy MIDI 2
+--   dev	 -- 	userdata: 0x555d08
+--   port	 -- 	2
 
-MIDI_A_PORT = 1
-MIDI_B_PORT = 2
 
-midi_gates_out_a = midi.connect(MIDI_A_PORT)
-midi_gates_out_b = midi.connect(MIDI_B_PORT)
+
+
+-- TODO make parameters so we can change in the UI
+MIDI_GATES_A_PORT = 1
+MIDI_GATES_B_PORT = 2
+MIDI_NORMAL_PORT = 3
+
+
+midi_gates_out_a = midi.connect(MIDI_GATES_A_PORT)
+midi_gates_out_b = midi.connect(MIDI_GATES_B_PORT)
+midi_normal = midi.connect(MIDI_NORMAL_PORT)
+
 -- midi_out_clock_only = midi.connect(3)
 
 
@@ -76,13 +106,14 @@ function tick()
 end
 
 
-function midi_watcher()
+function midi_start_on_bar()
   while true do
-    clock.sync(1/4)
+    clock.sync(4) -- This makes this run every 4 crotchets / quarter notes e.g. every 4/4 bar.
     if need_to_start_midi == true then
       -- we only want to start midi clock at the right time!
       midi_gates_out_a:start()
       midi_gates_out_b:start()
+      midi_normal:start()
       need_to_start_midi = false
     end
   end
@@ -207,6 +238,7 @@ function request_midi_stop()
   -- can stop the midi clock at any time.
      midi_gates_out_a:stop ()
      midi_gates_out_b:stop ()
+     midi_normal:stop ()
 end  
 
 -- function send_midi_note_on(note, vel, ch)
@@ -306,14 +338,14 @@ end
   -- TODO store and retreive this
   params:set("clock_tempo",136)
   
-  --midi_watcher_id = clock.run(midi_watcher)
+  --midi_start_on_bar_id = clock.run(midi_start_on_bar)
   
 end
 
 
  clock.run(tick)       -- start the sequencer
  
- clock.run(midi_watcher) 
+ clock.run(midi_start_on_bar) 
 
  clock.run(grid_state_popularity_watcher) 
 
@@ -756,6 +788,28 @@ elseif x == 9 and y == 7 then
   end
 end 
 
+
+
+-- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
+if x == 5 and y == 8 then
+  if z == 1 then 
+    alter_clock_button = 1
+  else
+    alter_clock_button = 0
+  end
+end
+
+if x == 7 and y == 8 then
+  if z == 1 and alter_clock_button == 1 then 
+    request_midi_stop()
+  end
+end
+
+if x == 8 and y == 8 then
+  if z == 1 and alter_clock_button == 1 then 
+    need_to_start_midi = true
+  end
+end
 
 
 --
