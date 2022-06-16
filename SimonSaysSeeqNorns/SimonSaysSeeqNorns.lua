@@ -33,6 +33,31 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 
+PRESET_GRID_BUTTON = {x=1, y=2}
+
+BUTTONS = {}
+table.insert(BUTTONS, {name = "Preset2", x = 10, y = 8})
+table.insert(BUTTONS, {name = "Preset3", x = 9, y = 8})
+table.insert(BUTTONS, {name = "Preset4", x = 4, y = 8})
+table.insert(BUTTONS, {name = "Preset5", x = 3, y = 8})
+
+table.insert(BUTTONS, {name = "Ratchet2", x = 14, y = 8})
+table.insert(BUTTONS, {name = "Ratchet3", x = 13, y = 8})
+table.insert(BUTTONS, {name = "Ratchet4", x = 12, y = 8})
+table.insert(BUTTONS, {name = "Ratchet5", x = 11, y = 8})
+
+
+table.insert(BUTTONS, {name = "MidiClockArm", x = 5, y = 8})
+table.insert(BUTTONS, {name = "MidiClockStop", x = 7, y = 8})
+table.insert(BUTTONS, {name = "MidiClockStart", x = 8, y = 8})
+
+table.insert(BUTTONS, {name = "Undo", x = 1, y = 8})
+table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
+
+table.insert(BUTTONS, {name = "PopUndo", x = 15, y = 8})
+table.insert(BUTTONS, {name = "PopRedo", x = 16, y = 8})
+
+
 current_step = 1
 
 
@@ -89,6 +114,8 @@ math.randomseed( os.time() )
 math.random() -- call a few times so it gets more random (apparently)
 math.random() 
 math.random()
+
+
 
 
 
@@ -293,6 +320,58 @@ end
 
 
 
+function button_function_name (x,y)
+
+  local ret = "NOT_FOUND"
+
+  --print ("-------------------- BEGIN -----------------")
+
+
+  -- BUTTONS is a table of tables
+  -- Loop through each button definition   
+  for key, value in pairs(BUTTONS) do
+    local found = 0
+    local name = "NAME_NOT_FOUND"
+    --print(key, " -- ", value) 
+    -- Each inner table contains an "x" (grid column), "y" (grid row) and "name"
+    -- "name" describes the button function
+    -- Loop through the definition trying to find the x and y requested so we can return the "name"
+    -- We must match both x and y so we only use the name if found == 2
+    for sub_key, sub_value in pairs(value) do
+      --print("  " .. sub_key, " -- ", sub_value)
+
+      if sub_key == "x" and sub_value == x then
+        --print ("x found")
+        found = found + 1
+      end 
+      
+      if sub_key == "y" and sub_value == y then
+        --print ("y found")
+        found = found + 1
+      end 
+      
+      if sub_key == "name" then
+        name = sub_value
+      end 
+
+    end -- end sub loop
+
+    if found == 2 then
+       ret = name
+       --print ("will BREAK and ret is " .. ret)
+       break -- break out of inner loop
+    end  
+
+    if found == 2 then
+      break -- break out of outer loop
+    end  
+
+  end -- end outer loop
+
+  print ("button_function_name will return: " .. ret)
+  return ret
+
+end -- end function definition
 
 function init()
   
@@ -339,6 +418,12 @@ end
   params:set("clock_tempo",136)
   
   --midi_start_on_bar_id = clock.run(midi_start_on_bar)
+
+  -- print ("******START***************")
+  -- print(button_function_name (11,8))
+  -- print(button_function_name (2,1))
+  -- print ("========END============")
+
   
 end
 
@@ -449,7 +534,7 @@ function init_table()
   print ("Bye from init_table")
   
 
-end
+end -- end init_table
 
 function push_undo()
 
@@ -722,41 +807,45 @@ else
 
     -- RATCHETS
     -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
-    if x == 14 and y == 8 then
+    
+    print ("Some CONTROL ROW BUTTON PRESSED " .. z)
+    
+
+    if button_function_name(x,y) == "Ratchet2" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 2
       else
         ratchet_button = 0 -- Reset ratchet_button with a key up
       end
-    elseif x == 13 and y == 8 then
+    elseif button_function_name(x,y) == "Ratchet3" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 3
       else
         ratchet_button = 0
       end
-    elseif x == 12 and y == 8 then
+    elseif button_function_name(x,y) == "Ratchet4" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 4
       else
         ratchet_button = 0
       end
-    elseif x == 11 and y == 8 then
+    elseif button_function_name(x,y) == "Ratchet5" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 5
       else
         ratchet_button = 0
       end
-    end 
+    
   
 
 -- Preset buttons WIP
 -- These buttons are used to put a preset on one of the sequence rows
 
-if x == 10 and y == 8 then
+  elseif button_function_name(x,y) == "Preset2" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
@@ -765,57 +854,59 @@ if x == 10 and y == 8 then
     print ("Preset button RESET: " .. z) 
     preset_button = 0 -- Reset preset_button with a key up
   end
-elseif x == 9 and y == 8 then
+elseif button_function_name(x,y) == "Preset3" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 3
   else
     preset_button = 0
   end
-elseif x == 4 and y == 8 then
+elseif button_function_name(x,y) == "Preset4" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 4
   else
     preset_button = 0
   end
-elseif x == 3 and y == 8 then
+elseif button_function_name(x,y) == "Preset5" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 5
   else
     preset_button = 0
   end
-end 
+
 
 
 
 -- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
-if x == 5 and y == 8 then
+
+-- here button_function_name
+elseif button_function_name (x,y) == "MidiClockArm" then
   if z == 1 then 
     alter_clock_button = 1
   else
     alter_clock_button = 0
   end
-end
 
-if x == 7 and y == 8 then
+
+elseif button_function_name (x,y) == "MidiClockStop" then
   if z == 1 and alter_clock_button == 1 then 
     request_midi_stop()
   end
-end
 
-if x == 8 and y == 8 then
+
+elseif button_function_name (x,y) == "MidiClockStart" then
   if z == 1 and alter_clock_button == 1 then 
     need_to_start_midi = true
   end
-end
+
 
 
 --
 
     -- UNDO
-    if (x == 1 and y == 8) then
+  elseif button_function_name (x,y) == "Undo" then
       ----------
       -- UNDO --
       ----------
@@ -861,10 +952,10 @@ end
       end
 
 
-    end -- End of UNDO
+     -- End of UNDO
 
     -- CONTROL REDO    
-    if (x == 2 and y == 8) then
+    elseif button_function_name (x,y) == "Redo" then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid()
@@ -895,12 +986,12 @@ end
       else
         print ("redo_lifo is NOT populated")
       end  
-    end -- End of REDO
+    --end -- End of REDO
 
 
 
     -- Pop UNDO For debugging purposes / so we can remove entries
-    if (x == 15 and y == 8) then
+    elseif button_function_name (x,y) == "PopUndo" then
       -- List the UNDO LIFO
       --print("here comes undo_lifo")
       for key, value in pairs(undo_lifo) do
@@ -911,11 +1002,11 @@ end
 
       --print("Now, remove an entry from the redo_lifo")
       pop_undo()
-    end  -- End of Pop UNDO 
+    --end  -- End of Pop UNDO 
 
 
     -- Pop REDO For debugging purposes / so we can remove entries
-    if (x == 16 and y == 8) then
+  elseif button_function_name (x,y) == "PopRedo" then
       -- List the REDO LIFO
       --print("here comes redo_lifo")
       for key, value in pairs(redo_lifo) do
