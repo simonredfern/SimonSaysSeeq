@@ -133,18 +133,18 @@ function tick()
 end
 
 
-function midi_start_on_bar()
-  while true do
-    clock.sync(4) -- This makes this run every 4 crotchets / quarter notes e.g. every 4/4 bar.
-    if need_to_start_midi == true then
-      -- we only want to start midi clock at the right time!
-      midi_gates_out_a:start()
-      midi_gates_out_b:start()
-      midi_normal:start()
-      need_to_start_midi = false
-    end
-  end
-end
+-- function midi_start_on_bar()
+--   while true do
+--     clock.sync(4) -- This makes this run every 4 crotchets / quarter notes e.g. every 4/4 bar.
+--     if need_to_start_midi == true then
+--       -- we only want to start midi clock at the right time!
+--       midi_gates_out_a:start()
+--       midi_gates_out_b:start()
+--       midi_normal:start()
+--       need_to_start_midi = false
+--     end
+--   end
+-- end
 
 function grid_state_popularity_watcher()
   -- get some idea of how much a particular grid is used
@@ -209,6 +209,20 @@ function advance_step()
   local gate_type = "NORMAL" -- default
 
   current_step = util.wrap(current_step + 1, 1, COLS)
+
+  if current_step == 1 then
+
+    if need_to_start_midi == true then
+      -- we only want to start midi clock at the right time!
+      print ("Send MIDI Start")
+      midi_gates_out_a:start()
+      midi_gates_out_b:start()
+      midi_normal:start()
+      need_to_start_midi = false
+    end
+
+   end
+
   
   
   for output = 1, TOTAL_SEQUENCE_ROWS do
@@ -430,7 +444,7 @@ end
 
  clock.run(tick)       -- start the sequencer
  
- clock.run(midi_start_on_bar) 
+
 
  clock.run(grid_state_popularity_watcher) 
 
