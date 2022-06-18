@@ -128,7 +128,7 @@ math.random()
 function tick()
   while true do
     clock.sync(1/4)
-    if transport_active then advance_step() end
+    if transport_active then do_and_advance_step() end
   end
 end
 
@@ -197,28 +197,28 @@ end
 
 
 
-function advance_step()
-  --print ("advance_step")
-  
+function do_and_advance_step()
+  --print ("do_and_advance_step")
 
-  --current_step = current_step + 1
-  --if (current_step > COLS) then
-  --  current_step = 1
-  --end
   
   local gate_type = "NORMAL" -- default
 
-  current_step = util.wrap(current_step + 1, 1, COLS)
 
-  if current_step == 1 then
 
-    if need_to_start_midi == true then
+  if need_to_start_midi == true then
+  
+    if current_step == 1 then
+
       -- we only want to start midi clock at the right time!
-      print ("Send MIDI Start")
+      print ("Send MIDI Start current_step is: " .. current_step)
       midi_gates_out_a:start()
       midi_gates_out_b:start()
       midi_normal:start()
       need_to_start_midi = false
+
+    else
+      print ("Waiting to MIDI Start current_step is: " .. current_step)
+
     end
 
    end
@@ -234,6 +234,10 @@ function advance_step()
 
     end -- end non zero
   end -- end for
+
+  -- advance step
+  current_step = util.wrap(current_step + 1, 1, COLS)
+
   
 end -- end function
   
@@ -242,6 +246,8 @@ end -- end function
 function clock.transport.start()
 
   print("transport.start")
+
+  current_step = 1
 
   transport_active = true
   
