@@ -901,7 +901,6 @@ elseif button_function_name(x,y) == "Preset5" then
 
 -- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
 
--- here button_function_name
 elseif button_function_name (x,y) == "MidiClockArm" then
   if z == 1 then 
     alter_clock_button = 1
@@ -1186,7 +1185,20 @@ function refresh_grid()
   
   --  ..  params:get("step_div")
   
-  status_text = current_tempo .. " BPM. Step " .. current_step
+
+  -- here
+
+
+
+
+if need_to_start_midi == true then
+  midi_start_text = "Pending Start.."
+else
+  midi_start_text = ""
+end
+
+
+  status_text = current_tempo .. " BPM. Step " .. current_step .. " " .. midi_start_text
   
   screen.move(1,63)   
   screen.text(status_text)
