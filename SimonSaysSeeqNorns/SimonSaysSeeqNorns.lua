@@ -343,7 +343,7 @@ end
 
 
 
-function button_function_name (x,y)
+function grid_button_function_name (x,y)
 
   local ret = "NOT_FOUND"
 
@@ -391,7 +391,7 @@ function button_function_name (x,y)
 
   end -- end outer loop
 
-  print ("button_function_name will return: " .. ret)
+  print ("grid_button_function_name will return: " .. ret)
   return ret
 
 end -- end function definition
@@ -443,8 +443,8 @@ end
   --midi_start_on_bar_id = clock.run(midi_start_on_bar)
 
   -- print ("******START***************")
-  -- print(button_function_name (11,8))
-  -- print(button_function_name (2,1))
+  -- print(grid_button_function_name (11,8))
+  -- print(grid_button_function_name (2,1))
   -- print ("========END============")
 
   
@@ -838,28 +838,28 @@ else
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
 
-    if button_function_name(x,y) == "Ratchet2" then
+    if grid_button_function_name(x,y) == "Ratchet2" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 2
       else
         ratchet_button = 0 -- Reset ratchet_button with a key up
       end
-    elseif button_function_name(x,y) == "Ratchet3" then
+    elseif grid_button_function_name(x,y) == "Ratchet3" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 3
       else
         ratchet_button = 0
       end
-    elseif button_function_name(x,y) == "Ratchet4" then
+    elseif grid_button_function_name(x,y) == "Ratchet4" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 4
       else
         ratchet_button = 0
       end
-    elseif button_function_name(x,y) == "Ratchet5" then
+    elseif grid_button_function_name(x,y) == "Ratchet5" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         ratchet_button = 5
@@ -872,7 +872,7 @@ else
 -- Preset buttons WIP
 -- These buttons are used to put a preset on one of the sequence rows
 
-  elseif button_function_name(x,y) == "Preset2" then
+  elseif grid_button_function_name(x,y) == "Preset2" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
@@ -881,21 +881,21 @@ else
     print ("Preset button RESET: " .. z) 
     preset_button = 0 -- Reset preset_button with a key up
   end
-elseif button_function_name(x,y) == "Preset3" then
+elseif grid_button_function_name(x,y) == "Preset3" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 3
   else
     preset_button = 0
   end
-elseif button_function_name(x,y) == "Preset4" then
+elseif grid_button_function_name(x,y) == "Preset4" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 4
   else
     preset_button = 0
   end
-elseif button_function_name(x,y) == "Preset5" then
+elseif grid_button_function_name(x,y) == "Preset5" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_button = 5
@@ -908,7 +908,7 @@ elseif button_function_name(x,y) == "Preset5" then
 
 -- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
 
-elseif button_function_name (x,y) == "MidiClockArm" then
+elseif grid_button_function_name (x,y) == "MidiClockArm" then
   if z == 1 then 
     alter_clock_button = 1
   else
@@ -916,13 +916,13 @@ elseif button_function_name (x,y) == "MidiClockArm" then
   end
 
 
-elseif button_function_name (x,y) == "MidiClockStop" then
+elseif grid_button_function_name (x,y) == "MidiClockStop" then
   if z == 1 and alter_clock_button == 1 then 
     request_midi_stop()
   end
 
 
-elseif button_function_name (x,y) == "MidiClockStart" then
+elseif grid_button_function_name (x,y) == "MidiClockStart" then
   if z == 1 and alter_clock_button == 1 then 
     need_to_start_midi = true
   end
@@ -932,7 +932,7 @@ elseif button_function_name (x,y) == "MidiClockStart" then
 --
 
     -- UNDO
-  elseif button_function_name (x,y) == "Undo" then
+  elseif grid_button_function_name (x,y) == "Undo" then
       ----------
       -- UNDO --
       ----------
@@ -981,7 +981,7 @@ elseif button_function_name (x,y) == "MidiClockStart" then
      -- End of UNDO
 
     -- CONTROL REDO    
-    elseif button_function_name (x,y) == "Redo" then
+    elseif grid_button_function_name (x,y) == "Redo" then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid()
@@ -1017,7 +1017,7 @@ elseif button_function_name (x,y) == "MidiClockStart" then
 
 
     -- Pop UNDO For debugging purposes / so we can remove entries
-    elseif button_function_name (x,y) == "PopUndo" then
+    elseif grid_button_function_name (x,y) == "PopUndo" then
       -- List the UNDO LIFO
       --print("here comes undo_lifo")
       for key, value in pairs(undo_lifo) do
@@ -1032,7 +1032,7 @@ elseif button_function_name (x,y) == "MidiClockStart" then
 
 
     -- Pop REDO For debugging purposes / so we can remove entries
-  elseif button_function_name (x,y) == "PopRedo" then
+  elseif grid_button_function_name (x,y) == "PopRedo" then
       -- List the REDO LIFO
       --print("here comes redo_lifo")
       for key, value in pairs(redo_lifo) do
