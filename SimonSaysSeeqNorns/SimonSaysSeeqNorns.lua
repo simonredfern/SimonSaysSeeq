@@ -247,7 +247,7 @@ function clock.transport.start()
 
   print("transport.start")
 
-  current_step = 1
+  --current_step = 1
 
   transport_active = true
   
@@ -268,7 +268,7 @@ end
 function clock.transport.stop()
 
   print("transport.stop")
-  current_step = 1
+ -- current_step = 1
 
 
   transport_active = false
@@ -321,6 +321,9 @@ function key(n,z)
         
         clock.transport.stop()
         request_midi_stop()
+      else 
+        current_step = 1 -- effectively we press this again.
+
       end
       
       screen_dirty = true
@@ -470,8 +473,12 @@ end
     while true do
       clock.sleep(5)
         if (grid_state_dirty == true) then
-          Tab.save(grid_state, GRID_STATE_FILE)
-          grid_state_dirty = false
+
+           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
+
+            Tab.save(grid_state, GRID_STATE_FILE)
+            grid_state_dirty = false
+           end
         end
     end
   end)
