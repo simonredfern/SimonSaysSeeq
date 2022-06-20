@@ -133,28 +133,35 @@ math.random()
 -- instead of tick = function()
 function tick()
   while true do
-    clock.sync(1/16) -- this is quite fast
+    clock.sync(1/4) -- this is quite fast
 
     tick_count = util.wrap(tick_count + 1, 1, 16)
     step_on_one = util.wrap(step_on_one + 1, 1, 4)
 
 
-    screen.move(80,63)
-    screen.text(tick_text)
-    screen.update()   
-    if tick_text == "." then
-      tick_text = ".."
-    elseif tick_text == ".." then   
-      tick_text = "..."
-    elseif tick_text == "..." then   
-      tick_text = "...."
-    elseif tick_text == "...." then   
-      tick_text = "."  
-    end
 
-    if step_on_one == 1 then 
-      if transport_active then do_and_advance_step() end
-    end
+
+    --if step_on_one == 1 then 
+      if transport_active then 
+        do_and_advance_step() 
+      else
+  
+        if tick_text == "." then
+          tick_text = ".."
+        elseif tick_text == ".." then   
+          tick_text = "..."
+        elseif tick_text == "..." then   
+          tick_text = "...."
+        elseif tick_text == "...." then   
+          tick_text = "."  
+        end
+
+        tick_text = "bla"
+        screen.move(80,63)
+        screen.text(tick_text)
+        screen.update()       
+      end
+    --end
 
     redraw()
 
@@ -1224,13 +1231,24 @@ function refresh_grid_and_screen()
   
 
 if need_to_start_midi == true then
-  midi_start_text = "Pending Start.."
+  end_of_line_text = "Pending.."
 else
-  midi_start_text = ""
+  end_of_line_text = ""
 end
 
+if current_step <= 4 then
+  start_of_line_text = "__"
+elseif current_step <= 8 then
+  start_of_line_text = "["
+elseif current_step <= 12 then
+  start_of_line_text = "^"
+elseif  current_step <= 16 then 
+  start_of_line_text = "]"
+end    
 
-  status_text = current_tempo .. " BPM. Step " .. current_step .. " " .. midi_start_text
+
+
+  status_text = start_of_line_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
   
   screen.move(1,63)   
   screen.text(status_text)
@@ -1260,7 +1278,6 @@ function redraw()
     refresh_grid_and_screen()
   end
   
-  -- screen.update()
 end
 
 
