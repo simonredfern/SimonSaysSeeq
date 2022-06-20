@@ -121,7 +121,7 @@ math.random() -- call a few times so it gets more random (apparently)
 math.random() 
 math.random()
 
-
+engine.name = 'PolyPerc'
 
 
 
@@ -240,11 +240,15 @@ function do_and_advance_step()
   
   local gate_type = "NORMAL" -- default
 
+  --engine.hz(math.random(100,600))
 
+  engine.hz(400)
 
   if need_to_start_midi == true then
   
     if current_step == 1 then
+
+      engine.hz(800)
 
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
