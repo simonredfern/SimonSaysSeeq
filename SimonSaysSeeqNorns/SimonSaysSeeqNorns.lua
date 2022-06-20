@@ -450,17 +450,13 @@ function init()
   print("my_grid.rows is: " .. my_grid.rows)
   
 
-print ("midi.devices are:")
-for key, value in pairs(midi.devices) do
-  print(key, " -- ", value)
-
-
-  for sub_key, sub_value in pairs(value) do
-    print("  " .. sub_key, " -- ", sub_value)
-  end
-
-
-end
+  print ("midi.devices are:")
+  for key, value in pairs(midi.devices) do
+    print(key, " -- ", value)
+    for sub_key, sub_value in pairs(value) do
+      print("  " .. sub_key, " -- ", sub_value)
+    end
+  end -- end loop of midi devices
 
 
   -- Set the starting tempo. Can be changed with right knob
@@ -474,11 +470,13 @@ end
   -- print(grid_button_function_name (2,1))
   -- print ("========END============")
 
-  
-end
+
+   clock.run(tick)       -- start the sequencer
+
+  end -- end init
 
 
- clock.run(tick)       -- start the sequencer
+
  
 
 
