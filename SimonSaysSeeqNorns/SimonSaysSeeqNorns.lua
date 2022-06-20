@@ -1241,9 +1241,9 @@ if current_step <= 4 then
 elseif current_step <= 8 then
   start_of_line_text = "["
 elseif current_step <= 12 then
-  start_of_line_text = "^"
+  start_of_line_text = " ]"
 elseif  current_step <= 16 then 
-  start_of_line_text = "]"
+  start_of_line_text = "^^"
 end    
 
 
