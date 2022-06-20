@@ -155,6 +155,9 @@ function tick()
     if step_on_one == 1 then 
       if transport_active then do_and_advance_step() end
     end
+
+    redraw()
+
   end
 end
 
@@ -188,6 +191,8 @@ end
 
 function greetings()
   
+  screen.clear()
+
   screen.move(10,10)
   screen.text("Hello, I am SimonSaysSeeq")
   screen.move(20,20)
@@ -211,10 +216,9 @@ function greetings()
   screen.move(20,60)   
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
 
+  screen.update()
+  
 
-  
-  
-  
   clock.sleep(8)
   --print("now awake")
   greetings_done = true
@@ -275,6 +279,8 @@ function clock.transport.start() -- when is this called?
 
   --current_step = 1
 
+  screen.clear()
+
   transport_active = true
   
   screen.move(90,63)
@@ -296,6 +302,7 @@ function clock.transport.stop()
   print("transport.stop")
  -- current_step = 1
 
+  screen.clear()
 
   transport_active = false
   screen.move(80,80)
@@ -473,6 +480,14 @@ function init()
 
    clock.run(tick)       -- start the sequencer
 
+
+  --  clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
+  --   while true do
+  --     clock.sleep(1/15)
+  --     redraw()
+  --   end
+  -- end)
+
   end -- end init
 
 
@@ -480,33 +495,27 @@ function init()
  
 
 
- clock.run(grid_state_popularity_watcher) 
+ --clock.run(grid_state_popularity_watcher) 
 
  
 
-  clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
-    while true do
-      clock.sleep(1/15)
-      redraw()
-      --gridredraw()
-    end
-  end)
+
 
 
   -- Periodically check if we need to save the grid state to file.
-  clock.run(function()
-    while true do
-      clock.sleep(5)
-        if (grid_state_dirty == true) then
+  -- clock.run(function()
+  --   while true do
+  --     clock.sleep(5)
+  --       if (grid_state_dirty == true) then
 
-           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
+  --          if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
 
-            Tab.save(grid_state, GRID_STATE_FILE)
-            grid_state_dirty = false
-           end
-        end
-    end
-  end)
+  --           Tab.save(grid_state, GRID_STATE_FILE)
+  --           grid_state_dirty = false
+  --          end
+  --       end
+  --   end
+  -- end)
 
 
 
@@ -1205,23 +1214,14 @@ function refresh_grid()
           screen.text(grid_state[col][row])
         end
 
-        --screen.text(highlight_grid[row][colum])
-        
-        screen.update()
+
+    
       end
     end
   
   
     current_tempo = clock.get_tempo()
   
-  
-  --  ..  params:get("step_div")
-  
-
-  -- here
-
-
-
 
 if need_to_start_midi == true then
   midi_start_text = "Pending Start.."
@@ -1235,6 +1235,8 @@ end
   screen.move(1,63)   
   screen.text(status_text)
 
+  screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
+
   my_grid:refresh()
   
   -- print ("Bye from refresh_grid tally is:" .. tally)
@@ -1244,9 +1246,10 @@ end
 end  
 
 
--- redraw gets called by the norns implicitly sometimes and explicitly by us too.
-function redraw()
+-- NOTE redraw gets called by the norns implicitly sometimes and explicitly by us too.
+function redraw() -- DO NOT RENAME THIS
 
+  screen.clear()
 
   if (greetings_done == false) then
     --print("i will do greetings becuase not done yet")
