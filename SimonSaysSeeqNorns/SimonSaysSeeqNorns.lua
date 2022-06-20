@@ -61,6 +61,12 @@ table.insert(BUTTONS, {name = "PopRedo", x = 16, y = 8})
 current_step = 1
 
 
+tick_text = "."
+
+tick_count = 1
+step_on_one = 1
+
+
 greetings_done = false
 
 
@@ -127,8 +133,28 @@ math.random()
 -- instead of tick = function()
 function tick()
   while true do
-    clock.sync(1/4)
-    if transport_active then do_and_advance_step() end
+    clock.sync(1/16) -- this is quite fast
+
+    tick_count = util.wrap(tick_count + 1, 1, 16)
+    step_on_one = util.wrap(step_on_one + 1, 1, 4)
+
+
+    screen.move(80,63)
+    screen.text(tick_text)
+    screen.update()   
+    if tick_text == "." then
+      tick_text = ".."
+    elseif tick_text == ".." then   
+      tick_text = "..."
+    elseif tick_text == "..." then   
+      tick_text = "...."
+    elseif tick_text == "...." then   
+      tick_text = "."  
+    end
+
+    if step_on_one == 1 then 
+      if transport_active then do_and_advance_step() end
+    end
   end
 end
 
@@ -186,7 +212,7 @@ function greetings()
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
 
 
-  screen.update()
+  
   
   
   clock.sleep(8)
@@ -198,7 +224,7 @@ end
 
 
 function do_and_advance_step()
-  --print ("do_and_advance_step")
+  print ("do_and_advance_step current_step is:  " .. current_step)
 
   
   local gate_type = "NORMAL" -- default
@@ -243,7 +269,7 @@ end -- end function
   
   
 
-function clock.transport.start()
+function clock.transport.start() -- when is this called?
 
   print("transport.start")
 
@@ -316,12 +342,12 @@ function key(n,z)
   -- we'll only need to manually start if using internal or crow clock sources:
   if params:string("clock_source") == "internal" then
 
+    -- left button pressed 
     if n == 2 and z == 1 then
-      if transport_active then
-        
+      if transport_active then -- currently running so Stop     
         clock.transport.stop()
         request_midi_stop()
-      else 
+      else -- Not currently running so reset. 
         current_step = 1 -- effectively we press this again.
 
       end
@@ -329,10 +355,11 @@ function key(n,z)
       screen_dirty = true
     end
     
+    -- Right button pressed
     if n == 3 and z == 1 then
       if not transport_active then
         clock.transport.start()
-        request_midi_start()
+        request_midi_start() -- Just send MIDI start instead of requesting?
       end
       
       screen_dirty = true
