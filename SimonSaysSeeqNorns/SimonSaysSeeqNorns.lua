@@ -443,7 +443,7 @@ function init()
   print ("before init_table")
   init_table()
     
-  refresh_grid()
+  refresh_grid_and_screen()
 
   print("hello")
   my_grid:all(2)
@@ -981,14 +981,14 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
         -- In order to Undo we: 
 
 
-        -- local tally = refresh_grid()
+        -- local tally = refresh_grid_and_screen()
         -- print ("grid_state BEFORE push_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
 
         push_redo()
 
-        -- local tally = refresh_grid()
+        -- local tally = refresh_grid_and_screen()
         -- print ("grid_state BEFORE pop_undo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
@@ -997,7 +997,7 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
         pop_undo()
 
-        -- local tally = refresh_grid()
+        -- local tally = refresh_grid_and_screen()
         -- print ("grid_state AFTER pop_undo is:")
         -- print (grid_state)
         --print ("grid_state: " .. get_tally(grid_state))
@@ -1018,7 +1018,7 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
     elseif grid_button_function_name (x,y) == "Redo" then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
-      -- local tally = refresh_grid()
+      -- local tally = refresh_grid_and_screen()
       -- print ("grid_state BEFORE push_undo is:")
       -- print (grid_state)
       -- print ("tally is:" .. tally)
@@ -1029,15 +1029,15 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
         push_undo()
 
-        -- local tally = refresh_grid()
+        -- local tally = refresh_grid_and_screen()
         -- print ("grid_state BEFORE pop_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
         pop_redo()
 
-      --  refresh_grid()
+      --  refresh_grid_and_screen()
 
-        -- local tally = refresh_grid()
+        -- local tally = refresh_grid_and_screen()
         -- print ("grid_state AFTER pop_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
@@ -1088,7 +1088,7 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
 
   -- Always do this else results are not shown to user.
-  refresh_grid()
+  refresh_grid_and_screen()
 
 
 end -- End of function definition
@@ -1166,9 +1166,9 @@ end
 
 
 
-function refresh_grid()
+function refresh_grid_and_screen()
   
-  --print ("Hello from refresh_grid for grid at:")
+  --print ("Hello from refresh_grid_and_screen for grid at:")
   --print (grid_state)
   
 
@@ -1239,7 +1239,7 @@ end
 
   my_grid:refresh()
   
-  -- print ("Bye from refresh_grid tally is:" .. tally)
+  -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
   
   return tally
 
@@ -1247,7 +1247,8 @@ end
 
 
 -- NOTE redraw gets called by the norns implicitly sometimes and explicitly by us too.
-function redraw() -- DO NOT RENAME THIS
+-- Do NOT rename this function else we might have problems navigating to param screens etc.
+function redraw() 
 
   screen.clear()
 
@@ -1256,10 +1257,10 @@ function redraw() -- DO NOT RENAME THIS
     clock.run(greetings)
   else 
     --print ("i will print table because greetings done")
-    refresh_grid()
+    refresh_grid_and_screen()
   end
   
-  screen.update()
+  -- screen.update()
 end
 
 
