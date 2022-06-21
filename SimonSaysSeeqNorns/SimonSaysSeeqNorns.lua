@@ -250,7 +250,7 @@ function do_and_advance_step()
 
   if need_to_start_midi == true then
   
-    if current_step == 1 then
+    if current_step == first_step then
 
       engine.hz(800)
 
