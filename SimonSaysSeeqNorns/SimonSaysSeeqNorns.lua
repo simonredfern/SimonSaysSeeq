@@ -20,7 +20,7 @@ last_step = COLS
 
 ratchet_button = 0
 preset_button = 0
-alter_clock_button = 0
+arm_clock_button = 0
 
 
 TOTAL_SEQUENCE_ROWS = 6
@@ -958,20 +958,20 @@ elseif grid_button_function_name(x,y) == "Preset5" then
 
 elseif grid_button_function_name (x,y) == "MidiClockArm" then
   if z == 1 then 
-    alter_clock_button = 1
+    arm_clock_button = 1
   else
-    alter_clock_button = 0
+    arm_clock_button = 0
   end
 
 
 elseif grid_button_function_name (x,y) == "MidiClockStop" then
-  if z == 1 and alter_clock_button == 1 then 
+  if z == 1 and arm_clock_button == 1 then 
     request_midi_stop()
   end
 
 
 elseif grid_button_function_name (x,y) == "MidiClockStart" then
-  if z == 1 and alter_clock_button == 1 then 
+  if z == 1 and arm_clock_button == 1 then 
     need_to_start_midi = true
   end
 
