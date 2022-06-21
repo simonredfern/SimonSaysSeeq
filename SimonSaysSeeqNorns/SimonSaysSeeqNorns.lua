@@ -23,6 +23,10 @@ preset_button = 0
 arm_clock_button = 0
 
 
+arm_first_step_button = 0
+arm_last_step_button = 0
+
+
 TOTAL_SEQUENCE_ROWS = 6
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
@@ -1091,9 +1095,24 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
       --print("Now, remove an entry from the redo_lifo")
       pop_redo()
-    end -- End of Pop REDO
 
-  end  -- End of Sequence / Control
+  elseif grid_button_function_name (x,y) == "ArmFirstStep" then
+    if z == 1 then 
+      arm_first_step_button = 1
+    else
+      arm_first_step_button = 0
+    end
+
+  elseif grid_button_function_name (x,y) == "ArmLastStep" then
+    if z == 1 then 
+      arm_last_step_button = 1
+    else
+      arm_last_step_button = 0
+    end
+
+  end -- end of grid_button_function_name tests
+
+end  -- End of Sequence / Control
 
 
 
