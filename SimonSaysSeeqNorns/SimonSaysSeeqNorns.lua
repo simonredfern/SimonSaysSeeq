@@ -513,27 +513,27 @@ function init()
  
 
 
- --clock.run(grid_state_popularity_watcher) 
+ clock.run(grid_state_popularity_watcher) 
 
  
 
 
 
 
-  -- Periodically check if we need to save the grid state to file.
-  -- clock.run(function()
-  --   while true do
-  --     clock.sleep(5)
-  --       if (grid_state_dirty == true) then
+ -- Periodically check if we need to save the grid state to file.
+  clock.run(function()
+    while true do
+      clock.sleep(5)
+        if (grid_state_dirty == true) then
 
-  --          if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
+           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
 
-  --           Tab.save(grid_state, GRID_STATE_FILE)
-  --           grid_state_dirty = false
-  --          end
-  --       end
-  --   end
-  -- end)
+            Tab.save(grid_state, GRID_STATE_FILE)
+            grid_state_dirty = false
+           end
+        end
+    end
+  end)
 
 
 
