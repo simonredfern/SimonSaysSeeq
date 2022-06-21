@@ -62,7 +62,7 @@ table.insert(BUTTONS, {name = "PopUndo", x = 15, y = 8})
 table.insert(BUTTONS, {name = "PopRedo", x = 16, y = 8})
 
 
-current_step = 1
+current_step = first_step
 
 
 tick_text = "."
@@ -292,8 +292,6 @@ function clock.transport.start() -- when is this called?
 
   print("transport.start")
 
-  --current_step = 1
-
   screen.clear()
 
   transport_active = true
@@ -315,7 +313,6 @@ end
 function clock.transport.stop()
 
   print("transport.stop")
- -- current_step = 1
 
   screen.clear()
 
@@ -370,7 +367,7 @@ function key(n,z)
         clock.transport.stop()
         request_midi_stop()
       else -- Not currently running so reset. 
-        current_step = 1 -- effectively we press this again.
+        current_step = first_step -- effectively we press this again.
 
       end
       
