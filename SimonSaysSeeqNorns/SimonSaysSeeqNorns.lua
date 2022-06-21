@@ -14,6 +14,10 @@ transport_active = true
 COLS = 16
 ROWS = 8
 
+
+first_step = 1
+last_step = COLS
+
 ratchet_button = 0
 preset_button = 0
 alter_clock_button = 0
@@ -277,7 +281,7 @@ function do_and_advance_step()
   end -- end for
 
   -- advance step
-  current_step = util.wrap(current_step + 1, 1, COLS)
+  current_step = util.wrap(current_step + 1, first_step, last_step)
 
   
 end -- end function
