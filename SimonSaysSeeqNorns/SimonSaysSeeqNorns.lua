@@ -40,26 +40,28 @@ MIDI_NOTE_OFF_VELOCITY = 0
 PRESET_GRID_BUTTON = {x=1, y=2}
 
 BUTTONS = {}
-table.insert(BUTTONS, {name = "Preset2", x = 10, y = 8})
-table.insert(BUTTONS, {name = "Preset3", x = 9, y = 8})
-table.insert(BUTTONS, {name = "Preset4", x = 4, y = 8})
-table.insert(BUTTONS, {name = "Preset5", x = 3, y = 8})
-
-table.insert(BUTTONS, {name = "Ratchet2", x = 14, y = 8})
-table.insert(BUTTONS, {name = "Ratchet3", x = 13, y = 8})
-table.insert(BUTTONS, {name = "Ratchet4", x = 12, y = 8})
-table.insert(BUTTONS, {name = "Ratchet5", x = 11, y = 8})
-
+table.insert(BUTTONS, {name = "Undo", x = 1, y = 8})
+table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
+table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
+table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 
 table.insert(BUTTONS, {name = "MidiClockArm", x = 5, y = 8})
+-- Gap
 table.insert(BUTTONS, {name = "MidiClockStop", x = 7, y = 8})
 table.insert(BUTTONS, {name = "MidiClockStart", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "Undo", x = 1, y = 8})
-table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
+table.insert(BUTTONS, {name = "Ratchet2", x = 9, y = 8})
+table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
+table.insert(BUTTONS, {name = "Ratchet4", x = 11, y = 8})
+table.insert(BUTTONS, {name = "Ratchet5", x = 12, y = 8})
 
+table.insert(BUTTONS, {name = "Preset2", x = 13, y = 8})
+table.insert(BUTTONS, {name = "Preset3", x = 14, y = 8})
 table.insert(BUTTONS, {name = "PopUndo", x = 15, y = 8})
 table.insert(BUTTONS, {name = "PopRedo", x = 16, y = 8})
+
+
+
 
 
 current_step = first_step
