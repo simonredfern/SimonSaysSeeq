@@ -1138,88 +1138,98 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
  -- Set first_step
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button1" )  then
-    first_step = 1
+    set_first_step(1)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button2" )  then
-    first_step = 2
+    set_first_step(2)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button3" )  then
-    first_step = 3
+    set_first_step(3)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button4" )  then
-    first_step = 4
+    set_first_step(4)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button5" )  then
-    first_step = 5
+    set_first_step(5)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button6" )  then
-    first_step = 6
+    set_first_step(6)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button7" )  then
-    first_step = 7
+    set_first_step(7)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button8" )  then
-    first_step = 8
+    set_first_step(8)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button9" )  then
-    first_step = 9
+    set_first_step(9)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button10" )  then
-    first_step = 10
+    set_first_step(10)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button11" )  then
-    first_step = 11             
+    set_first_step(11)             
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button12" )  then
-    first_step = 12
+    set_first_step(12)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button13" )  then
-    first_step = 13
+    set_first_step(13)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button14" )  then
-    first_step = 14
+    set_first_step(14)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button15" )  then
-    first_step = 15
+    set_first_step(15)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button16" )  then
-    first_step = 16
+    set_first_step(16)
     
   -- Set last_step
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button1" )  then
-    last_step = 1
+    set_last_step(1)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button2" )  then
-    last_step = 2
+    set_last_step(2)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button3" )  then
-    last_step = 3
+    set_last_step(3)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button4" )  then
-    last_step = 4
+    set_last_step(4)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button5" )  then
-    last_step = 5
+    set_last_step(5)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button6" )  then
-    last_step = 6
+    set_last_step(6)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button7" )  then
-    last_step = 7
+    set_last_step(7)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button8" )  then
-    last_step = 8
+    set_last_step(8)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button9" )  then
-    last_step = 9
+    set_last_step(9)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button10" )  then
-    last_step = 10
+    set_last_step(10)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button11" )  then
-    last_step = 11             
+    set_last_step(11)             
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button12" )  then
-    last_step = 12
+    set_last_step(12)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button13" )  then
-    last_step = 13
+    set_last_step(13)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button14" )  then
-    last_step = 14
+    set_last_step(14)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button15" )  then
-    last_step = 15
+    set_last_step(15)
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button16" )  then
-    last_step = 16  
+    set_last_step(16) 
 
 
   end -- end of grid_button_function_name tests
 
 end  -- End of Sequence / Control
 
-
-
-
-
-
-
   -- Always do this else results are not shown to user.
   refresh_grid_and_screen()
 
 
 end -- End of function definition
+
+function set_first_step(step)
+  if step <= last_step then
+    first_step = step 
+  else 
+    print ("No can do. First step would be after last step. " .. step)
+  end
+end  
+
+function set_last_step(step)
+  if step >= first_step then
+    last_step = step 
+  else 
+    print ("No can do. Last step would be before first step. " .. step) 
+  end
+end  
 
 
 function get_tally(input_grid)
