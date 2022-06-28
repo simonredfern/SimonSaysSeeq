@@ -303,68 +303,11 @@ function do_and_advance_step()
     -- on the current step...
     gate_mode = grid_state[current_step][output]
 
-    if gate_mode == 1 then -- could be 1 or 2 (ratchet) or...
-      -- direct relation between value on grid at count of send_gates we will get
+    --process_step(output, gate_mode)
 
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
+    -- process step should then run indep
+    clock.run(process_step, output, gate_mode)
 
-    elseif gate_mode == 2 then
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-      
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-    elseif gate_mode == 3 then
-
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-      
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-
-    elseif gate_mode == 4 then
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-      
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-      
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-      clock.sync(1/64)
-      
-      gate_on(output)
-      clock.sync(1/64)
-      gate_off(output)
-
-
-    end -- end non zero
   end -- end for
 
   -- advance step
@@ -372,6 +315,94 @@ function do_and_advance_step()
 
   
 end -- end function
+
+
+function process_step (output, gate_mode)
+
+  -- local count = mode
+  -- local timing = 1/32
+
+  -- if mode == 2 then  
+  --   timing = 1/32
+  -- elseif mode == 3 then
+  --   timing = 3/32
+  -- elseif mode == 4 then
+  --   timing = 3/64
+  -- end 
+
+
+
+  if gate_mode == 1 then -- could be 1 or 2 (ratchet) or...
+    -- direct relation between value on grid at count of send_gates we will get
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+  elseif gate_mode == 2 then
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+  elseif gate_mode == 3 then
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+
+  elseif gate_mode == 4 then
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+
+  end -- end non zero
+
+ 
+  
+end  
+
+
+
+
+
  
 function gate_on(output)
        --print ("A ON MIDI_NOTE_NUMBER_FOR_GATE" .. MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_A_OFFSET " .. sequence_row + MIDI_CHANNEL_A_OFFSET)
@@ -1536,57 +1567,6 @@ end
 ---
 
 
-function send_new_gate(sequence_row)
-  -- This function sends a gate or multiple gates for the row 
-  -- The ratchet level / timing is determined by mode.
-  -- Experimental so far.
-
-  -- Mode == 1 means a normal gate
-  
-
-  local count = mode
-  local timing = 1/32
-
-  if mode == 2 then  
-    timing = 1/32
-  elseif mode == 3 then
-    timing = 3/32
-  elseif mode == 4 then
-    timing = 3/64
-  end  
-
-  if mode > 1 then
-    --print("this is supposed to be a ratchet")
-  end 
-
-  --for i=1,count do
-    --print("before do pulse")
-
-    -- Since each betweener can only output 4 gates we need to split across the devices
-    if sequence_row >= 1 and sequence_row <= 4 then
-
-      --print ("A ON MIDI_NOTE_NUMBER_FOR_GATE" .. MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_A_OFFSET " .. sequence_row + MIDI_CHANNEL_A_OFFSET)
-      midi_gates_out_a:note_on (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_A_OFFSET)
-     
-      --print ("A OFF MIDI_NOTE_NUMBER_FOR_GATE" .. MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_A_OFFSET " .. sequence_row + MIDI_CHANNEL_A_OFFSET)
-      midi_gates_out_a:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_A_OFFSET)
-    elseif sequence_row >= 5 and sequence_row <= 8 then 
-      midi_gates_out_b:note_on (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
-      midi_gates_out_b:note_off (MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
-    end
-
-    --send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + sequence_row)
-    --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
-    --print("after do pulse")
-
-    -- if mode ~= 1 then
-    --   clock.sync( timing )
-    -- end
-    --print("after sync") 
-  --end
-
-end 
-
 
 function gate_low(sequence_row)
   --print("gate_low " .. output)
@@ -1600,12 +1580,5 @@ function gate_low(sequence_row)
 
 end
 
--- function ratchet()
---   for i=1,4 do
---     print("before ratchet clock sync")
---     clock.sleep(1)
---     print("after ratchet clock sync")    
---   end
--- end
 
 
