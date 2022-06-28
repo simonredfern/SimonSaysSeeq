@@ -275,15 +275,13 @@ function do_and_advance_step()
   
   local gate_type = "NORMAL" -- default
 
-  --engine.hz(math.random(100,600))
-
-  engine.hz(400)
+  engine.hz(400) -- just to give some audible sign for debugging timing
 
   if need_to_start_midi == true then
   
     if current_step == first_step then
 
-      engine.hz(800)
+      engine.hz(800) -- just to give some audible sign for debugging timing
 
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
@@ -300,13 +298,15 @@ function do_and_advance_step()
    end
 
   
-  
+  -- For each sequence row...
   for output = 1, TOTAL_SEQUENCE_ROWS do
+    -- on the current step...
     if grid_state[current_step][output] ~= 0 then -- could be 1 or 2 (ratchet) or...
-      -- direct relation between value on grid at count of pulses we will get
-      pulses(output, grid_state[current_step][output])
+      -- direct relation between value on grid at count of send_gates we will get
+      send_gates(output, grid_state[current_step][output])
 
     elseif grid_state[current_step][output] == 0 then
+      -- doing nothing
 
     end -- end non zero
   end -- end for
@@ -1416,11 +1416,26 @@ end
 
 
 
-function pulses(sequence_row, count)
+function send_gates(sequence_row, mode)
+  -- This function sends a gate or multiple gates for the row 
+  -- The ratchet level / timing is determined by mode.
+  -- Experimental so far.
+  
+  -- Mode == 1 means a normal gate
+  
 
+  local count = mode
+  local timing = 1/32
 
+  if mode == 2 then  
+    timing = 1/32
+  elseif mode == 3 then
+    timing = 3/32
+  elseif mode == 4 then
+    timing = 3/64
+  end  
 
-  if count > 1 then
+  if mode > 1 then
     --print("this is supposed to be a ratchet")
   end 
 
@@ -1443,7 +1458,10 @@ function pulses(sequence_row, count)
     --send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + sequence_row)
     --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
     --print("after do pulse")
-    clock.sync( 1/32 )
+
+    if mode ~= 1 then
+      clock.sync( timing )
+    end
     --print("after sync") 
   end
 
@@ -1462,12 +1480,12 @@ function gate_low(sequence_row)
 
 end
 
-function ratchet()
-  for i=1,4 do
-    print("before ratchet clock sync")
-    clock.sleep(1)
-    print("after ratchet clock sync")    
-  end
-end
+-- function ratchet()
+--   for i=1,4 do
+--     print("before ratchet clock sync")
+--     clock.sleep(1)
+--     print("after ratchet clock sync")    
+--   end
+-- end
 
 
