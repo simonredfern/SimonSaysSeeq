@@ -270,7 +270,7 @@ end
 
 
 function do_and_advance_step()
-  print ("do_and_advance_step current_step is:  " .. current_step)
+  --print ("do_and_advance_step current_step is:  " .. current_step)
 
   
   local gate_type = "NORMAL" -- default
@@ -1124,16 +1124,16 @@ elseif grid_button_function_name (x,y) == "MidiClockStart" then
 
   elseif grid_button_function_name (x,y) == "ArmFirstStep" then
     if z == 1 then 
-      arm_first_step_button = 1
+      arm_first_step_button = true
     else
-      arm_first_step_button = 0
+      arm_first_step_button = false
     end
 
   elseif grid_button_function_name (x,y) == "ArmLastStep" then
     if z == 1 then 
-      arm_last_step_button = 1
+      arm_last_step_button = true
     else
-      arm_last_step_button = 0
+      arm_last_step_button = false
     end
 
  -- Set first_step
@@ -1217,6 +1217,7 @@ end -- End of function definition
 
 function set_first_step(step)
   if step <= last_step then
+    print ("Setting first_step to: " .. step)
     first_step = step 
   else 
     print ("No can do. First step would be after last step. " .. step)
@@ -1225,6 +1226,7 @@ end
 
 function set_last_step(step)
   if step >= first_step then
+    print ("Setting last_step to: " .. step)
     last_step = step 
   else 
     print ("No can do. Last step would be before first step. " .. step) 
