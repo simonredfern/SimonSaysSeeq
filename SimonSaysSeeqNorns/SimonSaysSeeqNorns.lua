@@ -36,7 +36,10 @@ Tab = require "lib/tabutil"
 MIDI_CHANNEL_GATES = 1
 --MIDI_CHANNEL_B_OFFSET = -4 -- negative offset becuase both betweeners will listen on change 1 - 4
 
-LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 48
+-- This works well with Flame MGTV factory default settings. 
+--  http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
+LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 47 -- at least 1 will be added to this.
+
 MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
