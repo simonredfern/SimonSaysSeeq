@@ -142,15 +142,13 @@ print (my_grid)
 
 -- TODO make parameters so we can change in the UI
 MIDI_GATES_PORT = 1
---MIDI_GATES_B_PORT = 2
 MIDI_NORMAL_PORT = 2
 
 
 midi_gates_out = midi.connect(MIDI_GATES_PORT)
---midi_gates_out_b = midi.connect(MIDI_GATES_B_PORT)
 midi_normal = midi.connect(MIDI_NORMAL_PORT)
 
--- midi_out_clock_only = midi.connect(3)
+
 
 
 -- psudo random for our grid ids
@@ -190,16 +188,14 @@ function tick()
           tick_text = "..."
         elseif tick_text == "..." then   
           tick_text = "...."
-        elseif tick_text == "...." then   
+        else
           tick_text = "."  
         end
 
-        tick_text = "bla"
         screen.move(80,63)
         screen.text(tick_text)
         screen.update()       
       end
-    --end
 
     redraw()
 
@@ -289,7 +285,6 @@ function do_and_advance_step()
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
       midi_gates_out:start()
-      --midi_gates_out_b:start()
       midi_normal:start()
       need_to_start_midi = false
 
@@ -420,7 +415,6 @@ end
 
 
 function clock.transport.start() -- when is this called?
-
   print("transport.start")
 
   screen.clear()
@@ -430,19 +424,16 @@ function clock.transport.start() -- when is this called?
   screen.move(90,63)
   screen.text("Start")
   screen.update()
-
 end
 
 function request_midi_start()
   print("request_midi_start")
   need_to_start_midi = true
- 
 end  
  
 
 
 function clock.transport.stop()
-
   print("transport.stop")
 
   screen.clear()
