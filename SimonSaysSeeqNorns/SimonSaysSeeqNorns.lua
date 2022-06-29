@@ -234,17 +234,13 @@ function greetings()
   
   screen.clear()
 
-  screen.move(10,10)
-  screen.text("Hello, I am SimonSaysSeeq")
-  screen.move(20,20)
-  screen.text("on Norns v" .. version)
+  screen.move(1,10)
+  screen.text("SimonSaysSeeq on Norns v" .. version)
   
-  screen.move(10,30)
+  screen.move(1,20)
   
   
   grid_text = "Unknown"
-  
-  --screen.move(20,40)
   
   if (not my_grid) then
     grid_text = "Grid NOT CONNECTED"
@@ -254,13 +250,56 @@ function greetings()
   
   screen.text(grid_text)
   
-  screen.move(20,60)   
+  screen.move(1,30)   
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
+
+
+local y_position = 40
+
+ 
+
+  print ("midi.devices are:")
+
+  for key, value in pairs(midi.devices) do
+    -- midi_text = midi_text .. " " .. key
+
+    local midi_text = ""
+
+    print(key, " -- ", value)
+    for sub_key, sub_value in pairs(value) do
+      print("  " .. sub_key, " -- ", sub_value)
+
+      
+      
+      if sub_key == "port" then
+        midi_text = midi_text .. "Port " .. sub_value 
+      end
+
+      if sub_key == "name" then
+        midi_text = midi_text .. ": " .. sub_value
+      end
+
+    end
+
+
+    screen.move(1,y_position)  
+
+    screen.text(midi_text)
+
+    print ("midi_text is: " .. midi_text)
+
+    y_position = y_position + 10
+
+    screen.update()
+  
+  end -- end loop of midi devices
+
+
 
   screen.update()
   
 
-  clock.sleep(8)
+  clock.sleep(20)
   --print("now awake")
   greetings_done = true
 end
