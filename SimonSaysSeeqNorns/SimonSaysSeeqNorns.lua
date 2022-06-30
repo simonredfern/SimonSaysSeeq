@@ -284,7 +284,7 @@ function greetings()
   end -- end loop of midi devices
 
   screen.update()
-  clock.sleep(20)
+  clock.sleep(4)
   --print("now awake")
   greetings_done = true
 end
@@ -387,7 +387,7 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
 
     gate_on(output)
-    clock.sync(1/64)
+    clock.sync(1/50)
     gate_off(output)
 
 
@@ -405,6 +405,17 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     
     gate_on(output)
+    clock.sync(1/50)
+    gate_off(output)
+
+    clock.sync(1/50)
+    
+    gate_on(output)
+    clock.sync(1/32)
+    gate_off(output)
+
+  elseif gate_mode == 5 then
+    gate_on(output)
     clock.sync(1/64)
     gate_off(output)
 
@@ -413,6 +424,26 @@ function process_step (output, gate_mode)
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
+
+    clock.sync(1/64)
+    
+    gate_on(output)
+    clock.sync(1/50)
+    gate_off(output)
+
+    clock.sync(1/50)
+    
+    gate_on(output)
+    clock.sync(1/32)
+    gate_off(output)
+
+
+    clock.sync(1/40)
+
+    gate_on(output)
+    clock.sync(1/32)
+    gate_off(output)
+
 
 
   end -- end non zero
