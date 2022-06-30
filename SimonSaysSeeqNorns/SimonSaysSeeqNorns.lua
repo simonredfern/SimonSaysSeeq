@@ -253,23 +253,17 @@ function greetings()
   screen.move(1,30)   
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
 
-
-local y_position = 40
-
- 
+  local y_position = 40
 
   print ("midi.devices are:")
 
   for key, value in pairs(midi.devices) do
-    -- midi_text = midi_text .. " " .. key
 
     local midi_text = ""
 
     print(key, " -- ", value)
     for sub_key, sub_value in pairs(value) do
       print("  " .. sub_key, " -- ", sub_value)
-
-      
       
       if sub_key == "port" then
         midi_text = midi_text .. "Port " .. sub_value 
@@ -281,24 +275,15 @@ local y_position = 40
 
     end
 
-
     screen.move(1,y_position)  
-
     screen.text(midi_text)
-
     print ("midi_text is: " .. midi_text)
-
     y_position = y_position + 10
-
-    screen.update()
+    -- screen.update()
   
   end -- end loop of midi devices
 
-
-
   screen.update()
-  
-
   clock.sleep(20)
   --print("now awake")
   greetings_done = true
@@ -490,22 +475,8 @@ function request_midi_stop()
   need_to_start_midi = false
   -- can stop the midi clock at any time.
      midi_gates_out:stop ()
-     midi_gates_out_b:stop ()
      midi_normal:stop ()
 end  
-
--- function send_midi_note_on(note, vel, ch)
---   --print("send_midi_note_on")
---   midi_gates_out:note_on (note, vel, ch)
---   midi_gates_out_b:note_on (note, vel, ch)
--- end  
-
--- function send_midi_note_off(note, vel, ch)
---   --print("send_midi_note_off")
---   midi_gates_out:note_off (note, vel, ch)
---   midi_gates_out_b:note_off (note, vel, ch)
--- end  
-
 
 function enc(n,d)
   if n==3 then
