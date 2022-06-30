@@ -419,46 +419,20 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/8)
     
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/32)
     
     gate_on(output)
     clock.sync(1/62)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/32)
     
-    gate_on(output)
-    clock.sync(1/64)
-    gate_off(output)
-
-
-    clock.sync(1/64)
-
-    gate_on(output)
-    clock.sync(1/64)
-    gate_off(output)
-
-    clock.sync(1/64)
-
-    gate_on(output)
-    clock.sync(1/64)
-    gate_off(output)
-
-
-    clock.sync(1/64)
-
-    gate_on(output)
-    clock.sync(1/64)
-    gate_off(output)
-
-    clock.sync(1/64)
-
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
