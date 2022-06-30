@@ -169,7 +169,7 @@ engine.name = 'PolyPerc'
 -- instead of tick = function()
 function tick()
   while true do
-    clock.sync(1/4) -- this is quite fast
+    clock.sync(1/4) 
 
     tick_count = util.wrap(tick_count + 1, 1, 16)
     step_on_one = util.wrap(step_on_one + 1, 1, 4)
@@ -366,7 +366,7 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/8)
     
     gate_on(output)
     clock.sync(1/64)
@@ -378,16 +378,16 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/16)
     
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
+    clock.sync(1/32)
 
     gate_on(output)
-    clock.sync(1/50)
+    clock.sync(1/64)
     gate_off(output)
 
 
@@ -396,22 +396,22 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-    clock.sync(1/64)
-    
-    gate_on(output)
-    clock.sync(1/64)
-    gate_off(output)
-
-    clock.sync(1/64)
-    
-    gate_on(output)
-    clock.sync(1/50)
-    gate_off(output)
-
-    clock.sync(1/50)
-    
-    gate_on(output)
     clock.sync(1/32)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/32)
+    
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/32)
+    
+    gate_on(output)
+    clock.sync(1/64)
     gate_off(output)
 
   elseif gate_mode == 5 then
@@ -428,23 +428,40 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     
     gate_on(output)
-    clock.sync(1/50)
+    clock.sync(1/62)
     gate_off(output)
 
-    clock.sync(1/50)
+    clock.sync(1/64)
     
     gate_on(output)
-    clock.sync(1/32)
+    clock.sync(1/64)
     gate_off(output)
 
 
-    clock.sync(1/40)
+    clock.sync(1/64)
 
     gate_on(output)
-    clock.sync(1/32)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+
+    gate_on(output)
+    clock.sync(1/64)
     gate_off(output)
 
 
+    clock.sync(1/64)
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+    clock.sync(1/64)
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
 
   end -- end non zero
 
