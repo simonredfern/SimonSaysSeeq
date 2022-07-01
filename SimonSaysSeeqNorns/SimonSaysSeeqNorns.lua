@@ -77,10 +77,10 @@ table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
 table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 
-table.insert(BUTTONS, {name = "MidiClockArm", x = 5, y = 8})
--- Gap
-table.insert(BUTTONS, {name = "MidiClockStop", x = 7, y = 8})
-table.insert(BUTTONS, {name = "MidiClockStart", x = 8, y = 8})
+table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
+table.insert(BUTTONS, {name = "ArmSwing", x = 5, y = 8})
+table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
+table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
 table.insert(BUTTONS, {name = "Ratchet2", x = 9, y = 8})
 table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
@@ -163,11 +163,20 @@ engine.name = 'PolyPerc'
 
 
 
--- system clock tick
--- this function is started by init() and runs forever
--- if transport_active is on, it steps forward on each clock tick
--- tempo is controlled via the global clock, which can be set in the PARAMETERS menu 
--- instead of tick = function()
+
+function Set (list)
+  local set = {}
+  for _, l in ipairs(list) do set[l] = true end
+  return set
+end
+
+SWING_STEPS = Set { 3, 7, 11, 15 }
+
+
+
+
+
+
 function tick()
   while true do
     clock.sync(1/4) 
@@ -318,15 +327,22 @@ function do_and_advance_step()
 
     end
 
-   end
+   end -- End check midi start
 
+
+  if swing_mode ~= 0 then
+
+    if SWING_STEPS[current_step] then
+      clock.sync(1/16)
+    end
+
+    
+  end  
   
   -- For each sequence row...
   for output = 1, TOTAL_SEQUENCE_ROWS do
     -- on the current step...
     ratchet_mode = grid_state[current_step][output]
-
-    --process_step(output, ratchet_mode)
 
     -- process step should then run indep
     clock.run(process_step, output, ratchet_mode)
@@ -1110,7 +1126,7 @@ elseif grid_button_function_name(x,y) == "Preset5" then -- currently no button f
 
 -- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
 
-elseif grid_button_function_name (x,y) == "MidiClockArm" then
+elseif grid_button_function_name (x,y) == "ArmMidiCommand" then
   if z == 1 then 
     arm_clock_button = 1
   else
@@ -1118,13 +1134,13 @@ elseif grid_button_function_name (x,y) == "MidiClockArm" then
   end
 
 
-elseif grid_button_function_name (x,y) == "MidiClockStop" then
+elseif grid_button_function_name (x,y) == "DoMidiStop" then
   if z == 1 and arm_clock_button == 1 then 
     request_midi_stop()
   end
 
 
-elseif grid_button_function_name (x,y) == "MidiClockStart" then
+elseif grid_button_function_name (x,y) == "DoMidiStart" then
   if z == 1 and arm_clock_button == 1 then 
     need_to_start_midi = true
   end
