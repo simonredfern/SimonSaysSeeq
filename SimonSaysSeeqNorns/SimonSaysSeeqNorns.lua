@@ -26,6 +26,9 @@ arm_clock_button = 0
 arm_first_step_button = 0
 arm_last_step_button = 0
 
+
+arm_swing_button = 0
+
 swing_mode = 0
 
 TOTAL_SEQUENCE_ROWS = 6
@@ -78,7 +81,7 @@ table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
 table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 
 table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
-table.insert(BUTTONS, {name = "ArmSwing", x = 5, y = 8})
+table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
 table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
 table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
@@ -332,7 +335,12 @@ function do_and_advance_step()
 
   if swing_mode ~= 0 then
 
+    print ("swing_mode is: " .. swing_mode)
+
+    
+
     if SWING_STEPS[current_step] then
+      print ("swinging step " .. current_step)
       clock.sync(1/16)
     end
 
@@ -1276,6 +1284,14 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       arm_last_step_button = false
     end
 
+  elseif grid_button_function_name (x,y) == "ArmSwing" then
+    if z == 1 then 
+      arm_swing_button = true
+    else
+      arm_swing_button = false
+    end
+
+
  -- Set first_step
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button1" )  then
     set_first_step(1)
@@ -1344,6 +1360,11 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
   elseif (arm_last_step_button == true and grid_button_function_name (x,y) == "Button16" )  then
     set_last_step(16) 
 
+  -- Set Swing
+  elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button1" )  then
+    swing_mode = 0 
+  elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button16" )  then
+    swing_mode = 16 
 
   end -- end of grid_button_function_name tests
 
