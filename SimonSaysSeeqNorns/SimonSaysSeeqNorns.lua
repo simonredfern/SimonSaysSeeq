@@ -26,6 +26,7 @@ arm_clock_button = 0
 arm_first_step_button = 0
 arm_last_step_button = 0
 
+swing_mode = 0
 
 TOTAL_SEQUENCE_ROWS = 6
 
@@ -296,7 +297,7 @@ function do_and_advance_step()
   --print ("do_and_advance_step current_step is:  " .. current_step)
 
   
-  local gate_mode = 1 -- default is 1 but it will be set
+  local ratchet_mode = 1 -- default is 1 but it will be set
 
   engine.hz(400) -- just to give some audible sign for debugging timing
 
@@ -323,12 +324,12 @@ function do_and_advance_step()
   -- For each sequence row...
   for output = 1, TOTAL_SEQUENCE_ROWS do
     -- on the current step...
-    gate_mode = grid_state[current_step][output]
+    ratchet_mode = grid_state[current_step][output]
 
-    --process_step(output, gate_mode)
+    --process_step(output, ratchet_mode)
 
     -- process step should then run indep
-    clock.run(process_step, output, gate_mode)
+    clock.run(process_step, output, ratchet_mode)
 
   end -- end for
 
@@ -339,7 +340,7 @@ function do_and_advance_step()
 end -- end function
 
 
-function process_step (output, gate_mode)
+function process_step (output, ratchet_mode)
 
   -- local count = mode
   -- local timing = 1/32
@@ -354,14 +355,14 @@ function process_step (output, gate_mode)
 
 
 
-  if gate_mode == 1 then -- could be 1 or 2 (ratchet) or...
+  if ratchet_mode == 1 then -- could be 1 or 2 (ratchet) or...
     -- direct relation between value on grid at count of send_gates we will get
 
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
 
-  elseif gate_mode == 2 then
+  elseif ratchet_mode == 2 then
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
@@ -372,7 +373,7 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-  elseif gate_mode == 3 then
+  elseif ratchet_mode == 3 then
 
     gate_on(output)
     clock.sync(1/64)
@@ -391,7 +392,7 @@ function process_step (output, gate_mode)
     gate_off(output)
 
 
-  elseif gate_mode == 4 then
+  elseif ratchet_mode == 4 then
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
@@ -414,7 +415,7 @@ function process_step (output, gate_mode)
     clock.sync(1/64)
     gate_off(output)
 
-  elseif gate_mode == 5 then
+  elseif ratchet_mode == 5 then
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
