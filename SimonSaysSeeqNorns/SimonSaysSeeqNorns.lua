@@ -341,10 +341,18 @@ function do_and_advance_step()
 
     if SWING_STEPS[current_step] then
       print ("swinging step " .. current_step)
-      clock.sync(1/16)
-    end
 
-    
+
+      if swing_mode == 13 then 
+        clock.sync(1/64)
+      elseif swing_mode == 14 then
+        clock.sync(1/32)
+      elseif swing_mode == 15 then
+        clock.sync(1/16)
+      elseif swing_mode == 16 then
+        clock.sync(3/16)
+      end 
+    end    
   end  
   
   -- For each sequence row...
@@ -1363,6 +1371,12 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
   -- Set Swing
   elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button1" )  then
     swing_mode = 0 
+  elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button13" )  then
+    swing_mode = 13 
+  elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button14" )  then
+    swing_mode = 14 
+  elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button15" )  then
+    swing_mode = 15   
   elseif (arm_swing_button == true and grid_button_function_name (x,y) == "Button16" )  then
     swing_mode = 16 
 
