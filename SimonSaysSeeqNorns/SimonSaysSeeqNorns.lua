@@ -322,6 +322,9 @@ function do_and_advance_step()
 
       engine.hz(800) -- just to give some audible sign for debugging timing
 
+      crow.output[1].volts = 3.33
+      crow.output[1].slew = 0.1
+
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
       midi_gates_out:start()
@@ -330,6 +333,9 @@ function do_and_advance_step()
 
     else
       print ("Waiting to MIDI Start current_step is: " .. current_step)
+
+      crow.output[1].volts = 0.0
+      crow.output[1].slew = 0.1
 
     end
 
