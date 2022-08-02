@@ -173,8 +173,11 @@ function Set (list)
   return set
 end
 
-SWING_STEPS = Set { 3, 7, 11, 15 }
+-- swing 8ths
+-- SWING_STEPS = Set { 3, 7, 11, 15 }
 
+-- swing 16
+SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 
 
 
@@ -344,13 +347,13 @@ function do_and_advance_step()
 
 
       if swing_mode == 13 then 
-        clock.sync(1/64)
+        clock.sync(2/64)
       elseif swing_mode == 14 then
-        clock.sync(1/32)
+        clock.sync(3/64)
       elseif swing_mode == 15 then
         clock.sync(1/16)
       elseif swing_mode == 16 then
-        clock.sync(3/16)
+        clock.sync(1/8)
       end 
     end    
   end  
