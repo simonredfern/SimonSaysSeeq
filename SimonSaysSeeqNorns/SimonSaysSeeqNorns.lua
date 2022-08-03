@@ -880,15 +880,58 @@ function pop_redo()
 end  
 
 
-
+-- probably not used
 midi_gates_device.event = function(data)
-
-  print("----------------------GATE midi ---------------------------------------")
+  print("---------------------- midi_gates_device IN ---------------------------------------")
 end
 
-normal_midi_device.event = function(data)
 
-  print("-----------------NORMAL midi ---------------------------------------------")
+
+captured_normal_midi_note_in = -1
+
+
+-- Capture MIDI IN
+normal_midi_device.event = function(data)
+  print("Hello from normal_midi_device")
+
+  -- print (data)
+
+ for key, value in pairs(data) do
+    print(key, " -- ", value)
+ end
+
+ -- defaults
+ normal_midi_note_on = false
+ normal_midi_note_off = false
+ normal_midi_note_in = -1
+ captured_normal_midi_note_in = -1
+
+
+  -- If NOTE ON
+  if data[1] == 144 and data[3] ~= 0 then
+    normal_midi_note_on = true
+    normal_midi_note_in = data[2]
+    captured_normal_midi_note_in = data[2]
+  end
+
+  -- NOTE OFF  
+  if data[1] == 128 or data[3] == 0 then
+    normal_midi_note_off = true
+    normal_midi_note_in = data[2]
+    captured_normal_midi_note_in = -1
+  end 
+
+
+  if normal_midi_note_on == true then
+    print ("NOTE ON: " .. captured_normal_midi_note_in)
+  end  
+
+
+  if normal_midi_note_off == true then
+    print ("NOTE OFF: " .. normal_midi_note_in)
+  end 
+
+
 end   
 
 
