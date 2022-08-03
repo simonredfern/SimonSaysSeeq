@@ -576,17 +576,7 @@ end
 
 
 
-function on_normal_midi_event(data)
-  
-  print ("got normal midi event.")
 
-end -- end on_normal_midi_event   
-
-function on_midi_gates_event(data)
-  
-  print ("on_midi_gates_event.")
-
-end -- end on_midi_gates_event 
 
 
 
@@ -694,8 +684,7 @@ function init()
 -- here
 crow.output[1].scale = {0,7,2,9}
 
-midi_gates_device.event = on_midi_gates_event(data)
-normal_midi_device.event = on_normal_midi_event(data)
+
 
 
    clock.run(tick)       -- start the sequencer
@@ -892,7 +881,15 @@ end
 
 
 
+midi_gates_device.event = function(data)
 
+  print("----------------------GATE midi ---------------------------------------")
+end
+
+normal_midi_device.event = function(data)
+
+  print("-----------------NORMAL midi ---------------------------------------------")
+end   
 
 
 
@@ -1409,7 +1406,7 @@ end  -- End of Sequence / Control
   refresh_grid_and_screen()
 
 
-end -- End of function definition
+end -- End of my_grid.key function definition
 
 function set_first_step(step)
   if step <= last_step then
