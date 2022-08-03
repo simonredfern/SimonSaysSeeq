@@ -190,8 +190,8 @@ function tick()
     tick_count = util.wrap(tick_count + 1, 1, 16)
     step_on_one = util.wrap(step_on_one + 1, 1, 4)
 
-    crow.output[1].volts = tick_count
-    crow.output[1].slew = tick_count / 10
+--    crow.output[1].volts = tick_count
+ --   crow.output[1].slew = tick_count / 10
 
 
     --if step_on_one == 1 then 
@@ -682,7 +682,7 @@ function init()
   -- print ("========END============")
 
 -- here
-crow.output[1].scale = {0,7,2,9}
+--crow.output[1].scale = {0,7,2,9}
 
 
 
@@ -907,7 +907,7 @@ normal_midi_device.event = function(data)
  captured_normal_midi_note_in = -1
 
 
-  -- If NOTE ON
+  -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
   if data[1] == 144 and data[3] ~= 0 then
     normal_midi_note_on = true
     normal_midi_note_in = data[2]
@@ -922,8 +922,15 @@ normal_midi_device.event = function(data)
   end 
 
 
+-- here
+
   if normal_midi_note_on == true then
     print ("NOTE ON: " .. captured_normal_midi_note_in)
+
+    crow.output[1].volts = captured_normal_midi_note_in / 12
+    --crow.output[1].slew = tick_count / 10
+
+
   end  
 
 
