@@ -35,6 +35,9 @@ TOTAL_SEQUENCE_ROWS = 6
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
+MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
+
+
 Tab = require "lib/tabutil"
 
 MIDI_CHANNEL_GATES = 1
@@ -644,8 +647,8 @@ function init()
   redo_lifo = {}
 
  
-  print ("before init_table")
-  init_table()
+  print ("before init_grid_state_table")
+  init_grid_state_table()
     
   refresh_grid_and_screen()
 
@@ -721,6 +724,10 @@ function init()
            if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
 
             Tab.save(grid_state, GRID_STATE_FILE)
+
+            -- for now do mozart at the same time.
+            Tab.save(mozart_state, MOZART_STATE_FILE)
+
             grid_state_dirty = false
            end
         end
@@ -733,9 +740,12 @@ function init()
 function load_grid_state()
   
   grid_state = Tab.load (GRID_STATE_FILE)
+
+
   
   -- grid state popularity counter
   grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+
 
   print("Result of table load is:")
   print (grid_state)
@@ -744,7 +754,31 @@ function load_grid_state()
   return grid_state
 end
   
+
+
+function load_mozart_state()
+  
+
+
+  mozart_state = Tab.load (MOZART_STATE_FILE) 
+
+
+  mozart_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+
+  print("Result of table load is:")
+  print (mozart_state)
+  print (get_tally(mozart_state))
+
+  return mozart_state
+end
+
+
+
+
+
+
  
+-- grid is for storing our gates / ratches
 function create_grid()
   local fresh_grid = {}
   fresh_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
@@ -762,9 +796,34 @@ function create_grid()
   return fresh_grid
 end  
 
-function init_table()
+
+-- mozart is for storing our midi notes
+function create_mozart()
+  local fresh_mozart = {}
+  fresh_mozart["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  fresh_mozart["gspc"]=0 -- we can increment this to see how popular this mozart is
+  for col = 1, COLS do 
+    fresh_mozart[col] = {} -- create a table for each col
+    for row = 1, ROWS do
+      if col == row then -- eg. if coordinate is (3,3)
+        fresh_mozart[col][row] = 1
+      else -- eg. if coordinate is (3,2)
+        fresh_mozart[col][row] = 0
+      end
+    end
+  end
+  return fresh_mozart
+end 
+
+
+
+
+
+
+
+function init_grid_state_table()
   
-  print ("Hello from init_table")
+  print ("Hello from init_grid_state_table")
   
   -- Try to load the table
   local status, err = pcall(load_grid_state)
@@ -802,10 +861,62 @@ function init_table()
   push_undo()
 
   
-  print ("Bye from init_table")
+  print ("Bye from init_grid_state_table")
   
 
-end -- end init_table
+end -- end init_grid_state_table
+
+
+----
+
+function init_mozart_state_table()
+  
+  print ("Hello from init_mozart_state_table")
+  
+  -- Try to load the table
+  local status, err = pcall(load_mozart_state)
+
+  if status then
+    print ("load mozart state seems ok. mozart_state is:")
+    print (mozart_state)
+  else
+    print ("Seems we got an error - setting mozart_state to nil so we will create it and save it: " .. err)
+    mozart_state = nil
+  end  
+  
+  -- if it doesn't exist
+  if mozart_state == nil then
+    print ("No table, I will generate a structure and save that")
+
+    mozart_state = create_mozart()
+
+
+
+    Tab.save(mozart_state, MOZART_STATE_FILE)
+    mozart_state = Tab.load (MOZART_STATE_FILE)  
+  else
+    print ("I already have a mozart_state table, no need to generate one")
+  end
+  
+ print ("tally is: " .. get_tally(mozart_state))
+
+ print ("clock.get_tempo() is: " .. clock.get_tempo())
+ 
+ 
+
+
+  
+  print ("Bye from init_mozart_state_table")
+  
+
+end -- end init_mozart_state_table
+
+
+
+
+
+
+-----
 
 function push_undo()
 
@@ -926,6 +1037,10 @@ normal_midi_device.event = function(data)
 
   if normal_midi_note_on == true then
     print ("NOTE ON: " .. captured_normal_midi_note_in)
+
+
+    -- To quote dan_dirks, "any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)"
+    -- https://llllllll.co/t/frequencies-and-cv-converting-back-and-forth-in-lua-math-math-math/50984
 
     crow.output[1].volts = captured_normal_midi_note_in / 12
     --crow.output[1].slew = tick_count / 10
