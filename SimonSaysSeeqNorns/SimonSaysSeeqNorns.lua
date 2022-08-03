@@ -146,11 +146,11 @@ print (my_grid)
 
 -- TODO make parameters so we can change in the UI
 MIDI_GATES_PORT = 1
-MIDI_NORMAL_PORT = 2
+NORMAL_MIDI_PORT = 2
 
 
-midi_gates_out = midi.connect(MIDI_GATES_PORT)
-midi_normal = midi.connect(MIDI_NORMAL_PORT)
+midi_gates_device = midi.connect(MIDI_GATES_PORT)
+normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
 
 
 
@@ -190,7 +190,8 @@ function tick()
     tick_count = util.wrap(tick_count + 1, 1, 16)
     step_on_one = util.wrap(step_on_one + 1, 1, 4)
 
-
+    crow.output[1].volts = tick_count
+    crow.output[1].slew = tick_count / 10
 
 
     --if step_on_one == 1 then 
@@ -219,18 +220,7 @@ function tick()
 end
 
 
--- function midi_start_on_bar()
---   while true do
---     clock.sync(4) -- This makes this run every 4 crotchets / quarter notes e.g. every 4/4 bar.
---     if need_to_start_midi == true then
---       -- we only want to start midi clock at the right time!
---       midi_gates_out:start()
---       midi_gates_out_b:start()
---       midi_normal:start()
---       need_to_start_midi = false
---     end
---   end
--- end
+
 
 function grid_state_popularity_watcher()
   -- get some idea of how much a particular grid is used
@@ -322,20 +312,20 @@ function do_and_advance_step()
 
       engine.hz(800) -- just to give some audible sign for debugging timing
 
-      crow.output[1].volts = 3.33
-      crow.output[1].slew = 0.1
+      --crow.output[1].volts = 3.33
+      --crow.output[1].slew = 0.1
 
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
-      midi_gates_out:start()
-      midi_normal:start()
+      midi_gates_device:start()
+      normal_midi_device:start()
       need_to_start_midi = false
 
     else
       print ("Waiting to MIDI Start current_step is: " .. current_step)
 
-      crow.output[1].volts = 0.0
-      crow.output[1].slew = 0.1
+      --crow.output[1].volts = 0.0
+      --crow.output[1].slew = 0.1
 
     end
 
@@ -492,12 +482,12 @@ end
  
 function gate_on(output)
        --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-  midi_gates_out:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY, MIDI_CHANNEL_GATES)
+  midi_gates_device:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY, MIDI_CHANNEL_GATES)
 end 
   
 function gate_off(output)
   --print ("A OFF LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-  midi_gates_out:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY, MIDI_CHANNEL_GATES)
+  midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY, MIDI_CHANNEL_GATES)
 end 
 
 
@@ -538,8 +528,8 @@ function request_midi_stop()
   print("request_midi_stop")
   need_to_start_midi = false
   -- can stop the midi clock at any time.
-     midi_gates_out:stop ()
-     midi_normal:stop ()
+     midi_gates_device:stop ()
+     normal_midi_device:stop ()
 end  
 
 function enc(n,d)
@@ -582,6 +572,22 @@ function key(n,z)
     
   end
 end
+
+
+
+
+function on_normal_midi_event(data)
+  
+  print ("got normal midi event.")
+
+end -- end on_normal_midi_event   
+
+function on_midi_gates_event(data)
+  
+  print ("on_midi_gates_event.")
+
+end -- end on_midi_gates_event 
+
 
 
 
@@ -684,6 +690,12 @@ function init()
   -- print(grid_button_function_name (11,8))
   -- print(grid_button_function_name (2,1))
   -- print ("========END============")
+
+-- here
+crow.output[1].scale = {0,7,2,9}
+
+midi_gates_device.event = on_midi_gates_event(data)
+normal_midi_device.event = on_normal_midi_event(data)
 
 
    clock.run(tick)       -- start the sequencer
@@ -1626,22 +1638,11 @@ function send_gates(sequence_row, mode)
   for i=1,count do
     --print("before do pulse")
 
-    -- Since each betweener can only output 4 gates we need to split across the devices
-    if sequence_row >= 1 and sequence_row <= 4 then
-
       --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-      midi_gates_out:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
+      midi_gates_device:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
      
       --print ("A OFF LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-      midi_gates_out:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
-    elseif sequence_row >= 5 and sequence_row <= 8 then 
-      midi_gates_out_b:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
-      midi_gates_out_b:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
-    end
-
-    --send_midi_note_on(50, 127, MIDI_CHANNEL_OFFSET + sequence_row)
-    --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
-    --print("after do pulse")
+      midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
 
     if mode ~= 1 then
       clock.sync( timing )
@@ -1657,14 +1658,7 @@ end
 
 function gate_low(sequence_row)
   --print("gate_low " .. output)
-  --send_midi_note_off(45, 0, MIDI_CHANNEL_OFFSET + sequence_row)
-
-  if sequence_row >= 1 and sequence_row <= 4 then
-    midi_gates_out:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
-  elseif sequence_row >= 5 and sequence_row <= TOTAL_SEQUENCE_ROWS then 
-    midi_gates_out_b:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_B_OFFSET)
-  end
-
+    midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
 end
 
 
