@@ -373,6 +373,26 @@ function do_and_advance_step()
     -- process step should then run indep
     clock.run(process_step, output, ratchet_mode)
 
+    -- Sent appropriate midi note out as cv
+    
+    -- To quote dan_dirks, "any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)"
+    -- https://llllllll.co/t/frequencies-and-cv-converting-back-and-forth-in-lua-math-math-math/50984
+
+    -- Send the midi note number as CV we have previously captured (this currently sends even if the step is not active)
+    if output == 4 then
+      crow.output[1].volts = mozart_state[current_step][output] / 12
+    elseif output == 5 then
+      crow.output[2].volts = mozart_state[current_step][output] / 12
+    elseif output == 6 then
+      crow.output[3].volts = mozart_state[current_step][output] / 12    
+    end  
+
+    -- The fourth crow output is currently user 
+
+
+
+
+
   end -- end for
 
   -- advance step
@@ -1055,7 +1075,7 @@ normal_midi_device.event = function(data)
     -- To quote dan_dirks, "any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)"
     -- https://llllllll.co/t/frequencies-and-cv-converting-back-and-forth-in-lua-math-math-math/50984
 
-    crow.output[1].volts = captured_normal_midi_note_in / 12
+   -- crow.output[1].volts = captured_normal_midi_note_in / 12
     --crow.output[1].slew = tick_count / 10
 
 
@@ -1246,6 +1266,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
        if captured_normal_midi_note_in ~= -1 then
         print ("I would place MIDI note " .. captured_normal_midi_note_in .. "on x: " .. x .. " y: " .. y )
+
+        -- Store the latest captured midi note in the mozart table
         mozart_state[x][y] = captured_normal_midi_note_in
         
        else  
