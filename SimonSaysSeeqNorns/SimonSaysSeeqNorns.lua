@@ -650,6 +650,11 @@ function init()
   print ("before init_grid_state_table")
   init_grid_state_table()
     
+
+  print ("before init_mozart_state_table")
+  init_mozart_state_table()
+
+
   refresh_grid_and_screen()
 
   print("hello")
@@ -1003,13 +1008,12 @@ captured_normal_midi_note_in = -1
 
 -- Capture MIDI IN
 normal_midi_device.event = function(data)
-  print("Hello from normal_midi_device")
-
-  -- print (data)
-
- for key, value in pairs(data) do
-    print(key, " -- ", value)
- end
+  
+  -- Something is sending lots of midi messages. is it the USB to DIN adapter?
+  --print("Hello from normal_midi_device")
+-- for key, value in pairs(data) do
+--    print(key, " -- ", value)
+-- end
 
  -- defaults
  normal_midi_note_on = false
@@ -1029,7 +1033,7 @@ normal_midi_device.event = function(data)
   if data[1] == 128 or data[3] == 0 then
     normal_midi_note_off = true
     normal_midi_note_in = data[2]
-    captured_normal_midi_note_in = -1
+    captured_normal_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
   end 
 
 
