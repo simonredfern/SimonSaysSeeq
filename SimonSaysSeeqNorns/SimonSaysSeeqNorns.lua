@@ -1023,12 +1023,9 @@ normal_midi_device.event = function(data)
     --print("Noisy MIDI normal_midi_device")
 
   else  
-    for key, value in pairs(data) do
-      print(key, " -- ", value)
-    end
-
-
-
+    --for key, value in pairs(data) do
+    --  print(key, " -- ", value)
+    --end
 
 
   -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
@@ -1248,7 +1245,9 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
 
        if captured_normal_midi_note_in ~= -1 then
-        print ("I would place this midi note on something " .. captured_normal_midi_note_in) 
+        print ("I would place MIDI note " .. captured_normal_midi_note_in .. "on x: " .. x .. " y: " .. y )
+        mozart_state[x][y] = captured_normal_midi_note_in
+        
        else  
         print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
        end      
