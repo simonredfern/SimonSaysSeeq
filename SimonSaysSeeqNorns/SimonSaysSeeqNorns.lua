@@ -51,6 +51,10 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 
+
+
+
+
 PRESET_GRID_BUTTON = {x=1, y=2}
 
 BUTTONS = {}
@@ -156,7 +160,11 @@ midi_gates_device = midi.connect(MIDI_GATES_PORT)
 normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
 
 
-
+ -- defaults
+ normal_midi_note_on = false
+ normal_midi_note_off = false
+ normal_midi_note_in = -1
+ captured_normal_midi_note_in = -1
 
 -- psudo random for our grid ids
 math.randomseed( os.time() )
@@ -1008,32 +1016,36 @@ captured_normal_midi_note_in = -1
 
 -- Capture MIDI IN
 normal_midi_device.event = function(data)
-  
-  -- Something is sending lots of midi messages. is it the USB to DIN adapter?
-  --print("Hello from normal_midi_device")
--- for key, value in pairs(data) do
---    print(key, " -- ", value)
--- end
 
- -- defaults
- normal_midi_note_on = false
- normal_midi_note_off = false
- normal_midi_note_in = -1
- captured_normal_midi_note_in = -1
+    -- Something is sending lots of midi messages. is it the USB to DIN adapter?
+  if data[1] == 254 then
+    -- Ignore this MIDI message 
+    --print("Noisy MIDI normal_midi_device")
+
+  else  
+    for key, value in pairs(data) do
+      print(key, " -- ", value)
+    end
+
+
+
 
 
   -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
   if data[1] == 144 and data[3] ~= 0 then
     normal_midi_note_on = true
+    normal_midi_note_off = false
     normal_midi_note_in = data[2]
     captured_normal_midi_note_in = data[2]
   end
 
   -- NOTE OFF  
   if data[1] == 128 or data[3] == 0 then
+    normal_midi_note_on = false
     normal_midi_note_off = true
     normal_midi_note_in = data[2]
     captured_normal_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
+                                      -- Also, we ONLY want note off to reset this.    
   end 
 
 
@@ -1057,6 +1069,7 @@ normal_midi_device.event = function(data)
     print ("NOTE OFF: " .. normal_midi_note_in)
   end 
 
+end -- end test for 254
 
 end   
 
@@ -1065,8 +1078,8 @@ end
 -- Grid Key Presses
 -- Handle key presses on the grid
 my_grid.key = function(x,y,z)
--- x is the row
--- y is the column
+-- x is the column
+-- y is the row
 -- z == 1 means key down, z == 0 means key up
 -- We want to capture the key down event and toggle the state of the key in the grid.
 
@@ -1082,7 +1095,7 @@ my_grid.key = function(x,y,z)
 
 -- We treat sequence rows and control rows different.
 
--- SEQUENCE ROWS
+-- If one of the SEQUENCE ROWS (not the bottom control rows)
 if y <= TOTAL_SEQUENCE_ROWS then
   -- For sequence rows we only want to capture key down event only  
   if z == 1 then
@@ -1107,7 +1120,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
       print ("preset_button is: " .. preset_button .. ", x is: " .. x .. ", y is: " .. y) 
 
 
-      -- Any button pressed on row 1
+      -- Any button pressed on this row (1)
       if y == 1 then
 
         print ("Setting preset for row: " .. x) 
@@ -1132,6 +1145,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
         grid_state[15][y] = 0
         grid_state[16][y] = 0
 
+       -- Any button pressed on this row (2)  
       elseif y == 2 then
 
         print ("Setting preset for row: " .. x) 
@@ -1204,6 +1218,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
         grid_state[15][y] = 1
         grid_state[16][y] = 0
 
+      -- TODO make the preset affect rows 5 and 6 as well
+
 
       end  
 
@@ -1229,6 +1245,13 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
         --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
+
+
+       if captured_normal_midi_note_in ~= -1 then
+        print ("I would place this midi note on something " .. captured_normal_midi_note_in) 
+       else  
+        print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
+       end      
     
 
     end -- preset_button test
