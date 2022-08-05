@@ -386,32 +386,38 @@ function do_and_advance_step()
     -- https://llllllll.co/t/frequencies-and-cv-converting-back-and-forth-in-lua-math-math-math/50984
 
     -- Send the midi note number as CV we have previously captured (this currently sends even if the step is not active)
-    if output == 4 then
+
+    -- We have 4 outputs on crow
+    -- Here we check the slide and set the voltage to the pitch accordingly.
+
+    if output == 3 then
       if slide_state[current_step][output] == 1 then
         crow.output[1].slew = 0.1
       else
         crow.output[1].slew = 0
       end  
-
       crow.output[1].volts = mozart_state[current_step][output] / 12
-    elseif output == 5 then
-
+    elseif output == 4 then
       if slide_state[current_step][output] == 1 then
         crow.output[2].slew = 0.1
       else
         crow.output[2].slew = 0
       end  
-
       crow.output[2].volts = mozart_state[current_step][output] / 12
-    elseif output == 6 then
-
+    elseif output == 5 then
       if slide_state[current_step][output] == 1 then
         crow.output[3].slew = 0.1
       else
         crow.output[3].slew = 0
       end  
-
       crow.output[3].volts = mozart_state[current_step][output] / 12    
+    elseif output == 6 then
+      if slide_state[current_step][output] == 1 then
+        crow.output[4].slew = 0.1
+      else
+        crow.output[4].slew = 0
+      end  
+      crow.output[4].volts = mozart_state[current_step][output] / 12  
     end  
 
     -- The fourth crow output is currently user 
