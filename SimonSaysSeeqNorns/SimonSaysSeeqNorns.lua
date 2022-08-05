@@ -387,10 +387,30 @@ function do_and_advance_step()
 
     -- Send the midi note number as CV we have previously captured (this currently sends even if the step is not active)
     if output == 4 then
+      if slide_state[current_step][output] == 1 then
+        crow.output[1].slew = 0.1
+      else
+        crow.output[1].slew = 0
+      end  
+
       crow.output[1].volts = mozart_state[current_step][output] / 12
     elseif output == 5 then
+
+      if slide_state[current_step][output] == 1 then
+        crow.output[2].slew = 0.1
+      else
+        crow.output[2].slew = 0
+      end  
+
       crow.output[2].volts = mozart_state[current_step][output] / 12
     elseif output == 6 then
+
+      if slide_state[current_step][output] == 1 then
+        crow.output[3].slew = 0.1
+      else
+        crow.output[3].slew = 0
+      end  
+
       crow.output[3].volts = mozart_state[current_step][output] / 12    
     end  
 
