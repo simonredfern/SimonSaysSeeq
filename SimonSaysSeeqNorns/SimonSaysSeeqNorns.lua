@@ -27,6 +27,10 @@ arm_first_step_button = 0
 arm_last_step_button = 0
 
 
+arm_put_slide_on = 0
+arm_take_slide_off = 0
+
+
 arm_swing_button = 0
 
 swing_mode = 0
@@ -36,6 +40,9 @@ TOTAL_SEQUENCE_ROWS = 6
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
+
+SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
+
 
 
 Tab = require "lib/tabutil"
@@ -99,8 +106,8 @@ table.insert(BUTTONS, {name = "Ratchet5", x = 12, y = 8})
 
 table.insert(BUTTONS, {name = "Preset2", x = 13, y = 8})
 table.insert(BUTTONS, {name = "Preset3", x = 14, y = 8})
-table.insert(BUTTONS, {name = "PopUndo", x = 15, y = 8})
-table.insert(BUTTONS, {name = "PopRedo", x = 16, y = 8})
+table.insert(BUTTONS, {name = "ArmSlideOff", x = 15, y = 8})
+table.insert(BUTTONS, {name = "ArmSlideOn", x = 16, y = 8})
 
 
 
@@ -570,7 +577,7 @@ function enc(n,d)
 end 
 
 
--- Norns (Shield) key presses
+-- Norns (Shield) key presses - (not the monome grid )
 function key(n,z)
   print("key pressed.  n:" .. n ..  " z:" .. z )
   
@@ -682,6 +689,10 @@ function init()
   print ("before init_mozart_state_table")
   init_mozart_state_table()
 
+  print ("before init_slide_state_table")
+  init_slide_state_table()
+
+
 
   refresh_grid_and_screen()
 
@@ -761,6 +772,10 @@ function init()
             -- for now do mozart at the same time.
             Tab.save(mozart_state, MOZART_STATE_FILE)
 
+            -- for now do mozart at the same time.
+            Tab.save(slide_state, SLIDE_STATE_FILE)
+
+
             grid_state_dirty = false
            end
         end
@@ -806,7 +821,18 @@ function load_mozart_state()
 end
 
 
+function load_slide_state()
 
+  slide_state = Tab.load (SLIDE_STATE_FILE) 
+
+  slide_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+
+  print("Result of table load is:")
+  print (slide_state)
+  print (get_tally(slide_state))
+
+  return slide_state
+end
 
 
 
@@ -848,7 +874,23 @@ function create_mozart()
   return fresh_mozart
 end 
 
-
+-- mozart is for storing our midi notes
+function create_slide()
+  local fresh_slide = {}
+  fresh_slide["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  fresh_slide["gspc"]=0 -- we can increment this to see how popular this mozart is
+  for col = 1, COLS do 
+    fresh_slide[col] = {} -- create a table for each col
+    for row = 1, ROWS do
+      if col == row then -- eg. if coordinate is (3,3)
+        fresh_slide[col][row] = 1
+      else -- eg. if coordinate is (3,2)
+        fresh_slide[col][row] = 0
+      end
+    end
+  end
+  return fresh_slide
+end 
 
 
 
@@ -935,14 +977,59 @@ function init_mozart_state_table()
 
  print ("clock.get_tempo() is: " .. clock.get_tempo())
  
- 
 
-
-  
   print ("Bye from init_mozart_state_table")
   
 
 end -- end init_mozart_state_table
+
+
+
+
+function init_slide_state_table()
+  
+  print ("Hello from init_slide_state_table")
+  
+  -- Try to load the table
+  local status, err = pcall(load_slide_state)
+
+  if status then
+    print ("load slide state seems ok. slide_state is:")
+    print (slide_state)
+  else
+    print ("Seems we got an error - setting slide_state to nil so we will create it and save it: " .. err)
+    slide_state = nil
+  end  
+  
+  -- if it doesn't exist
+  if slide_state == nil then
+    print ("No table, I will generate a structure and save that")
+
+    slide_state = create_slide()
+
+
+
+    Tab.save(slide_state, SLIDE_STATE_FILE)
+    slide_state = Tab.load (SLIDE_STATE_FILE)  
+  else
+    print ("I already have a slide_state table, no need to generate one")
+  end
+  
+ print ("tally is: " .. get_tally(slide_state))
+
+ print ("clock.get_tempo() is: " .. clock.get_tempo())
+ 
+ 
+
+
+  
+  print ("Bye from init_slide_state_table")
+  
+
+end -- end init_slide_state_table
+
+
+
 
 
 
@@ -1091,9 +1178,7 @@ end -- end test for 254
 end   
 
 
-
--- Grid Key Presses
--- Handle key presses on the grid
+-- Here we capture monome grid key presses - Grid Key Presses
 my_grid.key = function(x,y,z)
 -- x is the column
 -- y is the row
@@ -1272,7 +1357,16 @@ if y <= TOTAL_SEQUENCE_ROWS then
         
        else  
         print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
-       end      
+       end 
+       
+       
+      if arm_put_slide_on == 1 then
+        slide_state[x][y] = 1
+      end  
+        
+      if arm_take_slide_off == 1 then
+        slide_state[x][y] = 0
+      end 
     
 
     end -- preset_button test
@@ -1481,33 +1575,22 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 
 
 
-    -- Pop UNDO For debugging purposes / so we can remove entries
-    elseif grid_button_function_name (x,y) == "PopUndo" then
-      -- List the UNDO LIFO
-      --print("here comes undo_lifo")
-      for key, value in pairs(undo_lifo) do
-        print(key, " -- ", value)
-        -- the values in undo_lifo are tables.
-        print (get_tally(value))
-      end
+  elseif grid_button_function_name (x,y) == "ArmSlideOn" then
 
-      --print("Now, remove an entry from the redo_lifo")
-      pop_undo()
-    --end  -- End of Pop UNDO 
+    if z == 1 then 
+      arm_put_slide_on = 1
+    else
+      arm_put_slide_on = 0
+    end
 
+elseif grid_button_function_name (x,y) == "ArmSlideOff" then
 
-    -- Pop REDO For debugging purposes / so we can remove entries
-  elseif grid_button_function_name (x,y) == "PopRedo" then
-      -- List the REDO LIFO
-      --print("here comes redo_lifo")
-      for key, value in pairs(redo_lifo) do
-        print(key, " -- ", value)
-        -- the values in undo_lifo are tables.
-        print (get_tally(value))
-      end
+    if z == 1 then 
+      arm_take_slide_off = 1
+    else
+      arm_take_slide_off = 0
+    end
 
-      --print("Now, remove an entry from the redo_lifo")
-      pop_redo()
 
   elseif grid_button_function_name (x,y) == "ArmFirstStep" then
     if z == 1 then 
