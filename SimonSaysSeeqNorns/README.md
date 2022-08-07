@@ -5,7 +5,7 @@
 
 The bottom two rows of buttons are control buttons. You can use them to control the whole sequence or "put something on" one of the steps or one of the sequence rows.
 
--- 8th Row
+-- 8th Row (bottom row) (buttons number from left to right)
 
 1 Undo
 
@@ -40,7 +40,7 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 15 ArmSlideOff
 
-18 ArmSlideOn
+16 ArmSlideOn
 
 The 7th Row of buttons is sometimes used as a modifier for a button on the 8th row. e.g. to add a swing, press ArmSwing (6) and a button on the 7th row.
 
