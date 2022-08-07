@@ -1,6 +1,8 @@
 # SimonSaysSeeq
 
-Simon Says Seeq is a *modeless* (one function per knob / button) **[Gray code](https://en.wikipedia.org/wiki/Gray_code) gate sequencer, triggered CV envelope generator / audio delay / VCA and midi looper**.
+Simon Says Seeq is a *modeless* sequencer (one function per knob / button)
+
+Depending on the platform, it's a [Gray code](https://en.wikipedia.org/wiki/Gray_code) gate sequencer, triggered CV envelope generator / audio delay / VCA and midi looper - step sequencer.
 
 ## Why? 
 
@@ -25,6 +27,8 @@ All the platforms have the Gray code sequencer and CV envelop outs. Some have mi
 * [Betweener](https://github.com/simonredfern/SimonSaysSeeq/tree/master/SimonSaysSeeqTeensyBetweener)
 
 * [Bela Salt](https://github.com/simonredfern/SimonSaysSeeq/tree/master/SimonSaysSeeqBelaSalt)
+
+* [Monome Norns Grid Crow](https://github.com/simonredfern/SimonSaysSeeq/tree/develop/SimonSaysSeeqNorns)
 
 See the README.md in each sub folder for more details
 
