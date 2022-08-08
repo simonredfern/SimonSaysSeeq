@@ -1362,13 +1362,20 @@ if y <= TOTAL_SEQUENCE_ROWS then
       -- Place RATCHET on step
       if ratchet_button ~= 0 then -- We place the ratchet on the step
         grid_state[x][y] = ratchet_button
-      else  -- No ratchet, do normal toggle 
+      end
+
+
+      -- Conditions under which we want to TOGGLE the grid_state
+      -- I.e. we don't want to change the state of the main grid (steps)
+      if ratchet_button == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == false and arm_last_step_button == false and arm_swing_button == false then
+
         -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
         if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
           grid_state[x][y] = 0
         else 
           grid_state[x][y] = 1
         end
+
       end
 
         --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
@@ -1415,6 +1422,7 @@ else
 -- direct assignement of control rows.
     -- if the button is pressed it should be lit etc.
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
+    -- Gives feedback to user - other function? TODO clarify purpose of setting this.
     grid_state[x][y] = z
 
     -- RATCHETS
@@ -1640,7 +1648,9 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
     end
 
 
- -- Set first_step
+ -- Set first_step 
+ -- (TODO first and last step should be independent of row so we can have phasing) 
+ -- (This would require separe step counters)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button1" )  then
     set_first_step(1)
   elseif (arm_first_step_button == true and grid_button_function_name (x,y) == "Button2" )  then
