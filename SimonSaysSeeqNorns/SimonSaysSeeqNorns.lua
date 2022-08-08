@@ -18,7 +18,7 @@ ROWS = 8
 first_step = 1
 last_step = COLS
 
-ratchet_button = 0
+arm_ratchet = 0
 preset_button = 0
 arm_clock_button = 0
 
@@ -1354,20 +1354,20 @@ if y <= TOTAL_SEQUENCE_ROWS then
     else -- preset button is not pressed 
 
       --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
-      --print ("ratchet_button is: " .. ratchet_button)
+      --print ("arm_ratchet is: " .. arm_ratchet)
 
       -- *Order is important here*. 
       -- Change the state of the grid *AFTER* we have pushed to undo lifo
       
       -- Place RATCHET on step
-      if ratchet_button ~= 0 then -- We place the ratchet on the step
-        grid_state[x][y] = ratchet_button
+      if arm_ratchet ~= 0 then -- We place the ratchet on the step
+        grid_state[x][y] = arm_ratchet
       end
 
 
       -- Conditions under which we want to TOGGLE the grid_state
-      -- I.e. we don't want to change the state of the main grid (steps)
-      if ratchet_button == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
+      -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
+      if arm_ratchet == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
 
         -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
         if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
@@ -1434,30 +1434,30 @@ else
     if grid_button_function_name(x,y) == "Ratchet2" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        ratchet_button = 2
+        arm_ratchet = 2
       else
-        ratchet_button = 0 -- Reset ratchet_button with a key up
+        arm_ratchet = 0 -- Reset arm_ratchet with a key up
       end
     elseif grid_button_function_name(x,y) == "Ratchet3" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        ratchet_button = 3
+        arm_ratchet = 3
       else
-        ratchet_button = 0
+        arm_ratchet = 0
       end
     elseif grid_button_function_name(x,y) == "Ratchet4" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        ratchet_button = 4
+        arm_ratchet = 4
       else
-        ratchet_button = 0
+        arm_ratchet = 0
       end
     elseif grid_button_function_name(x,y) == "Ratchet5" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        ratchet_button = 5
+        arm_ratchet = 5
       else
-        ratchet_button = 0
+        arm_ratchet = 0
       end
     
   
