@@ -1362,21 +1362,30 @@ if y <= TOTAL_SEQUENCE_ROWS then
       -- Place RATCHET on step
       if arm_ratchet ~= 0 then -- We place the ratchet on the step
         grid_state[x][y] = arm_ratchet
-      end
+      else
 
 
-      -- Conditions under which we want to TOGGLE the grid_state
-      -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
-      if arm_ratchet == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
+        -- Conditions under which we want to TOGGLE the grid_state
+        -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
+        if arm_ratchet == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
 
-        -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-        if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-          grid_state[x][y] = 0
-        else 
-          grid_state[x][y] = 1
+          -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
+          if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+            grid_state[x][y] = 0
+          else 
+            grid_state[x][y] = 1
+          end
+
+        else -- no arm behaviour active.
+
+          -- it makes sense to turn the step on (if its of) if we're putting a midi note / slide / ratchet on it etc. (only exception might be first / last step but currently they operate on row 7)
+          if grid_state[x][y] == 0 then 
+            grid_state[x][y] = 1
+          end
+
         end
 
-      end
+    end -- ratchet test
 
         --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
