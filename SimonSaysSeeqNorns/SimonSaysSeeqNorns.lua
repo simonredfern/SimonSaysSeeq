@@ -19,7 +19,7 @@ first_step = 1
 last_step = COLS
 
 arm_ratchet = 0
-preset_button = 0
+preset_grid_button = 0
 arm_clock_button = 0
 
 
@@ -104,8 +104,8 @@ table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
 table.insert(BUTTONS, {name = "Ratchet4", x = 11, y = 8})
 table.insert(BUTTONS, {name = "Ratchet5", x = 12, y = 8})
 
-table.insert(BUTTONS, {name = "Preset2", x = 13, y = 8})
-table.insert(BUTTONS, {name = "Preset3", x = 14, y = 8})
+table.insert(BUTTONS, {name = "PresetGrid", x = 13, y = 8})
+table.insert(BUTTONS, {name = "PresetMozart", x = 14, y = 8})
 table.insert(BUTTONS, {name = "ArmSlideOff", x = 15, y = 8})
 table.insert(BUTTONS, {name = "ArmSlideOn", x = 16, y = 8})
 
@@ -1244,8 +1244,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
     --print ("Before set grid_state_dirty = true")
     grid_state_dirty = true
 
-    if preset_button ~= 0 then
-      print ("preset_button is: " .. preset_button .. ", x is: " .. x .. ", y is: " .. y) 
+    if preset_grid_button ~= 0 then
+      print ("preset_grid_button is: " .. preset_grid_button .. ", x is: " .. x .. ", y is: " .. y) 
 
 
       -- Any button pressed on this row (1)
@@ -1346,10 +1346,83 @@ if y <= TOTAL_SEQUENCE_ROWS then
         grid_state[15][y] = 1
         grid_state[16][y] = 0
 
-      -- TODO make the preset affect rows 5 and 6 as well
+
+      elseif y == 5 then
+
+        print ("Setting preset for row: " .. x) 
+
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
+
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
+
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
+
+      elseif y == 6 then
+
+        print ("Setting preset for row: " .. x) 
+
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
+
+        grid_state[5][y] = 0
+        grid_state[6][y] = 1
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
+
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
 
 
       end  
+
+    elseif preset_mozart_button ~= 0 then
+
+      -- set all rows to MIDI note A4 (treat all the sequence rows the same.)
+
+      mozart_state[1][y] = 69
+      mozart_state[2][y] = 69
+      mozart_state[3][y] = 69
+      mozart_state[4][y] = 69
+
+      mozart_state[5][y] = 69
+      mozart_state[6][y] = 69
+      mozart_state[7][y] = 69
+      mozart_state[8][y] = 69
+
+      mozart_state[9][y]  = 69
+      mozart_state[10][y] = 69
+      mozart_state[11][y] = 69
+      mozart_state[12][y] = 69
+
+      mozart_state[13][y] = 69
+      mozart_state[14][y] = 69
+      mozart_state[15][y] = 69
+      mozart_state[16][y] = 69
+
+
 
     else -- preset button is not pressed 
 
@@ -1411,7 +1484,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
       end 
     
 
-    end -- preset_button test
+    end -- preset_grid_button test
 
 --print ("End of key down test")
 
@@ -1474,35 +1547,35 @@ else
 -- Preset buttons
 -- These buttons are used to put a preset on one of the sequence rows
 
-  elseif grid_button_function_name(x,y) == "Preset2" then
+  elseif grid_button_function_name(x,y) == "PresetGrid" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
-    preset_button = 2
+    preset_grid_button = 2
   else
     print ("Preset button RESET: " .. z) 
-    preset_button = 0 -- Reset preset_button with a key up
+    preset_grid_button = 0 -- Reset preset_grid_button with a key up
   end
-elseif grid_button_function_name(x,y) == "Preset3" then
+elseif grid_button_function_name(x,y) == "PresetMozart" then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_button = 3
+    preset_mozart_button = 2
   else
-    preset_button = 0
+    preset_mozart_button = 0
   end
 elseif grid_button_function_name(x,y) == "Preset4" then -- currently no button for this
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_button = 4
+    preset_grid_button = 4
   else
-    preset_button = 0
+    preset_grid_button = 0
   end
 elseif grid_button_function_name(x,y) == "Preset5" then -- currently no button for this
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_button = 5
+    preset_grid_button = 5
   else
-    preset_button = 0
+    preset_grid_button = 0
   end
 
 
