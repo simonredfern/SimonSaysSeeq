@@ -34,9 +34,9 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 12 Ratchet5
 
 
-13 Preset2
+13 PresetGates - sets some simple gate patterns
 
-14 Preset3
+14 PresetNotes - sets MIDI notes to A4
 
 15 ArmSlideOff
 
