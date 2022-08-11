@@ -52,10 +52,11 @@ Example usage (inspired by the TB303):
 
 ![Image 2](https://user-images.githubusercontent.com/485218/183310749-4f248b5b-d14f-4ca8-a46a-7275044307d6.JPG)
 
+Norns (Shield) sends MIDI to create Gates on the Flame.
 
 
 ![IMG_4291_annotate](https://user-images.githubusercontent.com/485218/184129267-07d2316a-3495-4ac0-87ba-c7a0e8a78531.JPG)
 
-
+Norns (Shield) controls Crow over USB to produce CV with glissando / slide.
 
 ![IMG_4290-annotate](https://user-images.githubusercontent.com/485218/184129289-01ab1354-dd41-4740-858d-358702cac016.jpeg)
