@@ -54,4 +54,8 @@ Example usage (inspired by the TB303):
 
 
 
+![IMG_4291_annotate](https://user-images.githubusercontent.com/485218/184129267-07d2316a-3495-4ac0-87ba-c7a0e8a78531.JPG)
 
+
+
+![IMG_4290-annotate](https://user-images.githubusercontent.com/485218/184129289-01ab1354-dd41-4740-858d-358702cac016.jpeg)
