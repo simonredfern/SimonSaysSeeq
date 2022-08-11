@@ -1,5 +1,6 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
+-- Licenced under the AGPL.
 
 version = 0.2
 
