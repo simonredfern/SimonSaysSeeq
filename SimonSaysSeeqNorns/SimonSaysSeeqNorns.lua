@@ -720,6 +720,10 @@ function init()
   init_slide_state_table()
 
 
+  print ("before init_held_state_table")
+  init_held_state_table()
+
+
 
   refresh_grid_and_screen()
 
@@ -901,7 +905,7 @@ function create_mozart()
   return fresh_mozart
 end 
 
--- mozart is for storing our midi notes
+-- slide is for storing our slide / gliss.
 function create_slide()
   local fresh_slide = {}
   fresh_slide["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
@@ -917,6 +921,20 @@ function create_slide()
     end
   end
   return fresh_slide
+end 
+
+
+-- held is for storing grid buttons that are held down 
+function create_held()
+  local fresh_held = {}
+  fresh_held["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  for col = 1, COLS do 
+    fresh_held[col] = {} -- create a table for each col
+    for row = 1, ROWS do
+        fresh_held[col][row] = 0
+    end
+  end
+  return fresh_held
 end 
 
 
@@ -1055,6 +1073,23 @@ function init_slide_state_table()
 
 end -- end init_slide_state_table
 
+--------------
+
+function init_held_state_table()
+  
+  print ("Hello from init_held_state_table")
+  
+  -- Don't want to load or save - always create new
+  held_state = create_held()
+
+  
+ print ("tally is: " .. get_tally(held_state))
+
+  
+  print ("Bye from init_held_state_table")
+  
+
+end -- end init_held_state_table
 
 
 
@@ -1062,7 +1097,7 @@ end -- end init_slide_state_table
 
 
 
-
+--------------
 -----
 
 function push_undo()
@@ -1167,7 +1202,11 @@ normal_midi_device.event = function(data)
     normal_midi_note_on = true
     normal_midi_note_off = false
     normal_midi_note_in = data[2]
-    captured_normal_midi_note_in = data[2]
+    captured_normal_midi_note_in = data[2] -- store this so we can act on a later step press
+    
+    -- Now check if a step button is pressed down
+
+
   end
 
   -- NOTE OFF  
@@ -1463,7 +1502,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
         --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
-
+       -- in this code path, we captured a midi note and then pressed a step button. 
 
        if captured_normal_midi_note_in ~= -1 then
         print ("I would place MIDI note " .. captured_normal_midi_note_in .. "on x: " .. x .. " y: " .. y )
