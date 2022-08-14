@@ -1207,6 +1207,19 @@ normal_midi_device.event = function(data)
     -- Now check if a step button is pressed down
 
 
+    --loop through held_state
+
+    for col = 1,COLS do 
+      for row = 1,ROWS do
+        -- if a step is held, assign the captured midi note to it.
+        if held_state[col][row] == 1 then
+          mozart_state[col][row] = captured_normal_midi_note_in -- Note we don't have any note off
+        end  
+      end 
+    end
+
+
+
   end
 
   -- NOTE OFF  
@@ -1256,7 +1269,12 @@ my_grid.key = function(x,y,z)
 --print(x .. ","..y .. " z is " .. z)
 
 
-
+-- To note the keys that are held down 
+if z == 1 then
+  held_state[x][y] = 1
+else
+  held_state[x][y] = 0  
+end
 
 
 
