@@ -22,6 +22,7 @@ last_step = COLS
 arm_ratchet = 0
 preset_grid_button = 0
 arm_clock_button = 0
+preset_mozart_button = 0
 
 
 arm_first_step_button = 0
@@ -1083,7 +1084,7 @@ function init_held_state_table()
   held_state = create_held()
 
   
- print ("tally is: " .. get_tally(held_state))
+ --print ("tally is: " .. get_tally(held_state))
 
   
   print ("Bye from init_held_state_table")
@@ -1264,9 +1265,14 @@ my_grid.key = function(x,y,z)
 -- z == 1 means key down, z == 0 means key up
 -- We want to capture the key down event and toggle the state of the key in the grid.
 
---print("--------------------------------------------------------------")
---print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
+print("Hello from ----------- my_grid.key = function -----------------")
+print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
+
+print("preset_grid_button is: " .. preset_grid_button .. ", arm_ratchet is: ".. arm_ratchet .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button)
 --print(x .. ","..y .. " z is " .. z)
+
+
+
 
 
 -- To note the keys that are held down 
