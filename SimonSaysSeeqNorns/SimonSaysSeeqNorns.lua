@@ -292,11 +292,21 @@ function greetings()
       print("  " .. sub_key, " -- ", sub_value)
       
       if sub_key == "port" then
-        midi_text = midi_text .. "Port " .. sub_value 
+        midi_text = midi_text .. " P" .. sub_value 
+
+       if sub_value == MIDI_GATES_PORT then
+        midi_text = midi_text .. "GATES"
+       end
+
+       if sub_value == NORMAL_MIDI_PORT then
+        midi_text = midi_text .. "MOZRT"
+       end
+
+
       end
 
       if sub_key == "name" then
-        midi_text = midi_text .. ": " .. sub_value
+        midi_text = midi_text .. " " .. sub_value
       end
 
     end
@@ -310,7 +320,7 @@ function greetings()
   end -- end loop of midi devices
 
   screen.update()
-  clock.sleep(4)
+  clock.sleep(8)
   --print("now awake")
   greetings_done = true
 end
@@ -1529,13 +1539,14 @@ if y <= TOTAL_SEQUENCE_ROWS then
        -- in this code path, we captured a midi note and then pressed a step button. 
 
        if captured_normal_midi_note_in ~= -1 then
-        print ("I would place MIDI note " .. captured_normal_midi_note_in .. "on x: " .. x .. " y: " .. y )
+        print ("Set mozart_state MIDI note " .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
 
         -- Store the latest captured midi note in the mozart table
         mozart_state[x][y] = captured_normal_midi_note_in
         
-       else  
-        print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
+       else
+        print ("Not doing anything to mozart_state")  
+        -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
        end 
        
        
