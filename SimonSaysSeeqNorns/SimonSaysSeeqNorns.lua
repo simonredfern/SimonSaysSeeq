@@ -45,7 +45,8 @@ MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
-
+end_of_line_text = ""
+output_text = ""
 
 Tab = require "lib/tabutil"
 
@@ -200,7 +201,80 @@ end
 SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 
 
+-- 2 at 8 works 
+-- not 29, 40
+-- Most of these fonts don't look good on Norns Shield
+  -- 1 04B_03 (norns default) 
+  -- 2 ALEPH 
+  -- 3 Roboto Thin 
+  -- 4 Roboto Light 
+  -- 5 Roboto Regular 
+  -- 6 Roboto Medium 
+  -- 7 Roboto Bold 
+  -- 8 Roboto Black 
+  -- 9 Roboto Thin Italic 
+  -- 10 Roboto Light Italic 
+  -- 11 Roboto Italic 
+  -- 12 Roboto Medium Italic 
+  -- 13 Roboto Bold Italic 
+  -- 14 Roboto Black Italic 
+  -- 15 VeraBd 
+  -- 16 VeraBI 
+  -- 17 VeraIt 
+  -- 18 VeraMoBd 
+  -- 19 VeraMoBI 
+  -- 20 VeraMoIt 
+  -- 21 VeraMono 
+  -- 22 VeraSeBd 
+  -- 23 VeraSe 
+  -- 24 Vera 
+  -- 25 bmp/tom-thumb 
+  -- 26 creep 
+  -- 27 ctrld-fixed-10b 
+  -- 28 ctrld-fixed-10r 
+  -- 29 ctrld-fixed-13b 
+  -- 30 ctrld-fixed-13b-i 
+  -- 31 ctrld-fixed-13r 
+  -- 32 ctrld-fixed-13r-i 
+  -- 33 ctrld-fixed-16b 
+  -- 34 ctrld-fixed-16b-i 
+  -- 35 ctrld-fixed-16r 
+  -- 36 ctrld-fixed-16r-i 
+  -- 37 scientifica-11 
+  -- 38 scientificaBold-11 
+  -- 39 scientificaItalic-11 
+  -- 40 ter-u12b 
+  -- 41 ter-u12n 
+  -- 42 ter-u14b 
+  -- 43 ter-u14n 
+  -- 44 ter-u14v 
+  -- 45 ter-u16b 
+  -- 46 ter-u16n 
+  -- 47 ter-u16v 
+  -- 48 ter-u18b 
+  -- 49 ter-u18n 
+  -- 50 ter-u20b 
+  -- 51 ter-u20n 
+  -- 52 ter-u22b 
+  -- 53 ter-u22n 
+  -- 54 ter-u24b 
+  -- 55 ter-u24n 
+  -- 56 ter-u28b 
+  -- 57 ter-u28n 
+  -- 58 ter-u32b 
+  -- 59 ter-u32n 
+  -- 60 unscii-16-full.pcf 
+  -- 61 unscii-16.pcf 
+  -- 62 unscii-8-alt.pcf 
+  -- 63 unscii-8-fantasy.pcf 
+  -- 64 unscii-8-mcr.pcf 
+  -- 65 unscii-8.pcf 
+  -- 66 unscii-8-tall.pcf 
+  -- 67 unscii-8-thin.pcf
 
+
+screen.font_face(15)
+screen.font_size(7)
 
 
 function tick()
@@ -295,11 +369,11 @@ function greetings()
         midi_text = midi_text .. " P" .. sub_value 
 
        if sub_value == MIDI_GATES_PORT then
-        midi_text = midi_text .. "GATES"
+        midi_text = midi_text .. "GTES"
        end
 
        if sub_value == NORMAL_MIDI_PORT then
-        midi_text = midi_text .. "MOZRT"
+        midi_text = midi_text .. "MZRT"
        end
 
 
@@ -320,7 +394,7 @@ function greetings()
   end -- end loop of midi devices
 
   screen.update()
-  clock.sleep(8)
+  clock.sleep(16)
   --print("now awake")
   greetings_done = true
 end
@@ -402,13 +476,18 @@ function do_and_advance_step()
     -- We have 4 outputs on crow
     -- Here we check the slide and set the voltage to the pitch accordingly.
 
+  
+
     if output == 3 then
       if slide_state[current_step][output] == 1 then
         crow.output[1].slew = 0.1
       else
         crow.output[1].slew = 0
       end  
-      crow.output[1].volts = mozart_state[current_step][output] / 12
+      crow.output[1].volts = mozart_state[current_step][output] / 12 
+      output_text = output .. mozart_state[current_step][output] -- show on display 
+      
+
     elseif output == 4 then
       if slide_state[current_step][output] == 1 then
         crow.output[2].slew = 0.1
@@ -416,13 +495,21 @@ function do_and_advance_step()
         crow.output[2].slew = 0
       end  
       crow.output[2].volts = mozart_state[current_step][output] / 12
+      
+      output_text = output_text .. " " .. output ..  mozart_state[current_step][output] 
+
+
+
     elseif output == 5 then
       if slide_state[current_step][output] == 1 then
         crow.output[3].slew = 0.1
       else
         crow.output[3].slew = 0
       end  
-      crow.output[3].volts = mozart_state[current_step][output] / 12    
+      crow.output[3].volts = mozart_state[current_step][output] / 12  
+      
+      output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
+
     elseif output == 6 then
       if slide_state[current_step][output] == 1 then
         crow.output[4].slew = 0.1
@@ -430,12 +517,10 @@ function do_and_advance_step()
         crow.output[4].slew = 0
       end  
       crow.output[4].volts = mozart_state[current_step][output] / 12  
+
+      output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
+
     end  
-
-    -- The fourth crow output is currently user 
-
-
-
 
 
   end -- end for
@@ -1225,6 +1310,9 @@ normal_midi_device.event = function(data)
         -- if a step is held, assign the captured midi note to it.
         if held_state[col][row] == 1 then
           mozart_state[col][row] = captured_normal_midi_note_in -- Note we don't have any note off
+
+          -- As we have just "put a midi note on the step", make the step on.
+          grid_state[col][row] = 1
         end  
       end 
     end
@@ -2046,24 +2134,27 @@ function refresh_grid_and_screen()
   
 
 if need_to_start_midi == true then
-  end_of_line_text = "Pending.."
+  end_of_line_text = "Pending CLK.."
 else
-  end_of_line_text = ""
+  end_of_line_text = output_text
 end
 
 if current_step <= 4 then
-  start_of_line_text = "__"
+  conductor_text = "__"
 elseif current_step <= 8 then
-  start_of_line_text = "["
+  conductor_text = "[ "
 elseif current_step <= 12 then
-  start_of_line_text = " ]"
+  conductor_text = " ]"
 elseif  current_step <= 16 then 
-  start_of_line_text = "^^"
+  conductor_text = "^^"
 end    
 
 
-
-  status_text = start_of_line_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
+-- status_text = conductor_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
+-- current_tempo no decimal points
+-- pad current step with a 0 so the display doesn't move about
+-- https://www.cprogramming.com/tutorial/printf-format-strings.html
+  status_text = string.format("%.0f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. end_of_line_text .. " " .. conductor_text 
   
   screen.move(1,63)   
   screen.text(status_text)
