@@ -284,11 +284,7 @@ function tick()
     tick_count = util.wrap(tick_count + 1, 1, 16)
     step_on_one = util.wrap(step_on_one + 1, 1, 4)
 
---    crow.output[1].volts = tick_count
- --   crow.output[1].slew = tick_count / 10
 
-
-    --if step_on_one == 1 then 
       if transport_active then 
         do_and_advance_step() 
       else
@@ -434,6 +430,14 @@ function do_and_advance_step()
     end
 
    end -- End check midi start
+
+
+   -- if midi clock has started, also send a regular gate ouput on 7
+  if need_to_start_midi == false then
+    clock.run(send_tick_as_clock, 7) -- HEREHERE
+    -- send "tick clock"
+    
+  end 
 
 
   if swing_mode ~= 0 then
@@ -636,10 +640,23 @@ function process_step (output, ratchet_mode)
   
 end  
 
+------
+
+function send_tick_as_clock (output)
+
+
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+
+  
+end  
 
 
 
 
+
+------
  
 function gate_on(output)
        --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
@@ -2142,9 +2159,9 @@ end
 if current_step <= 4 then
   conductor_text = "__"
 elseif current_step <= 8 then
-  conductor_text = "[ "
+  conductor_text = "["
 elseif current_step <= 12 then
-  conductor_text = " ]"
+  conductor_text = "]"
 elseif  current_step <= 16 then 
   conductor_text = "^^"
 end    
