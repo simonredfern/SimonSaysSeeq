@@ -124,6 +124,7 @@ tick_text = "."
 
 tick_count = 0
 
+24_PPQN_GATES_ARE_ENABLED = true
 
 
 greetings_done = false
@@ -301,6 +302,8 @@ function tick()
     -- end  
 
 
+    if 24_PPQN_GATES_ARE_ENABLED == true then
+
     if run_conditional_clocks == true then
   
       -- 24 PPQN clock
@@ -339,6 +342,8 @@ function tick()
 
     end -- End conditional clocks check 
 
+  end -- End check for 24 PPQN clocks
+
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
     if tick_count % 12 == 0 then
 
@@ -348,13 +353,12 @@ function tick()
         do_and_advance_step() 
       end
 
+      redraw()
+
     end   
 
-    -- (Unconditionaly increase the tickcount)
+    -- (Unconditionaly) increase the tickcount
     tick_count = tick_count + 1 -- util.wrap(tick_count + 1, 1, 16)
-
-
-    redraw()
 
   end
 end
@@ -462,9 +466,6 @@ function do_and_advance_step()
 
       engine.hz(800) -- just to give some audible sign for debugging timing
 
-      --crow.output[1].volts = 3.33
-      --crow.output[1].slew = 0.1
-
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
       midi_gates_device:start()
@@ -474,10 +475,6 @@ function do_and_advance_step()
 
     else
       print ("Waiting to MIDI Start current_step is: " .. current_step)
-
-      --crow.output[1].volts = 0.0
-      --crow.output[1].slew = 0.1
-
     end
 
    end -- End check midi start
@@ -489,20 +486,21 @@ function do_and_advance_step()
 
     
 
-    if SWING_STEPS[current_step] then
-      print ("swinging step " .. current_step)
+      if SWING_STEPS[current_step] then
+        print ("swinging step " .. current_step)
 
 
-      if swing_mode == 13 then 
-        clock.sync(2/64)
-      elseif swing_mode == 14 then
-        clock.sync(3/64)
-      elseif swing_mode == 15 then
-        clock.sync(1/16)
-      elseif swing_mode == 16 then
-        clock.sync(1/8)
-      end 
-    end    
+        if swing_mode == 13 then 
+          clock.sync(2/64)
+        elseif swing_mode == 14 then
+          clock.sync(3/64)
+        elseif swing_mode == 15 then
+          clock.sync(1/16)
+        elseif swing_mode == 16 then
+          clock.sync(1/8)
+        end 
+
+      end    
   end  
   
   -- For each sequence row...
@@ -683,23 +681,6 @@ function process_step (output, ratchet_mode)
   
 end  
 
-------
-
-function send_tick_as_clock (output)
-
-    gate_off(output)
-    gate_on(output)
-   -- clock.sync(1/64)
-    
-
-  
-end  
-
-
-
-
-
-------
  
 function gate_on(output)
        --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
@@ -751,6 +732,15 @@ function request_midi_stop()
   -- can stop the midi clock at any time.
   midi_gates_device:stop ()
   normal_midi_device:stop ()
+
+  gate_off(6)
+  gate_off(7)
+  gate_off(8)
+  gate_off(9)
+  gate_off(10)
+  gate_off(11) 
+
+
   run_conditional_clocks = false
 end  
 
@@ -2205,7 +2195,7 @@ if current_step <= 4 then
 elseif current_step <= 8 then
   conductor_text = "["
 elseif current_step <= 12 then
-  conductor_text = "]"
+  conductor_text = " ]"
 elseif  current_step <= 16 then 
   conductor_text = "^^"
 end    
