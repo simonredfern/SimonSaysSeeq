@@ -61,8 +61,8 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 
-
-
+need_to_start_midi = true -- Check gate clock situation.
+run_conditional_clocks = false
 
 
 PRESET_GRID_BUTTON = {x=1, y=2}
@@ -122,8 +122,8 @@ current_step = first_step
 
 tick_text = "."
 
-tick_count = 1
-step_on_one = 1
+tick_count = 0
+
 
 
 greetings_done = false
@@ -279,30 +279,80 @@ screen.font_size(7)
 
 function tick()
   while true do
-    clock.sync(1/4) 
 
-    tick_count = util.wrap(tick_count + 1, 1, 16)
-    step_on_one = util.wrap(step_on_one + 1, 1, 4)
+   -- In clock sync, 1 refers to a quarter note so if we clock.sync(1) we will count 4 beats per bar
+   -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
+   -- if we clock.sync(1/24) this is 24PPQN Pulses Per Quarter Note, I.e. standard MIDI clock
 
+   
+ 
+
+    clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
+
+   -- print("tick . " )
+
+
+    -- This is an always-on 24 PPQN clock 
+
+    -- if tick_count % 2 == 0 then
+    --   gate_on(12)
+    -- else
+    --   gate_off(12)
+    -- end  
+
+
+    if run_conditional_clocks == true then
+  
+      -- 24 PPQN clock
+      if tick_count % 2 == 0 then
+        gate_on(11)
+      else
+        gate_off(11)
+      end  
+
+
+      -- Other clock divisions
+      if tick_count % 12 == 0 then
+        gate_on(10)
+      else
+        gate_off(10)
+      end 
+
+      if tick_count % 24 == 0 then
+        gate_on(9)
+      else
+        gate_off(9)
+      end 
+
+      if tick_count % 48 == 0 then
+        gate_on(8)
+      else
+        gate_off(8)
+      end 
+
+      if tick_count % 96 == 0 then
+        gate_on(7)
+      else
+        gate_off(7)
+      end
+
+
+    end -- End conditional clocks check 
+
+    -- Every 12 ticks we want to advance the sequencer (if transport is active) 
+    if tick_count % 12 == 0 then
+
+      -- print("tick_count is: " .. tick_count)
 
       if transport_active then 
         do_and_advance_step() 
-      else
-  
-        if tick_text == "." then
-          tick_text = ".."
-        elseif tick_text == ".." then   
-          tick_text = "..."
-        elseif tick_text == "..." then   
-          tick_text = "...."
-        else
-          tick_text = "."  
-        end
-
-        screen.move(80,63)
-        screen.text(tick_text)
-        screen.update()       
       end
+
+    end   
+
+    -- (Unconditionaly increase the tickcount)
+    tick_count = tick_count + 1 -- util.wrap(tick_count + 1, 1, 16)
+
 
     redraw()
 
@@ -390,7 +440,7 @@ function greetings()
   end -- end loop of midi devices
 
   screen.update()
-  clock.sleep(16)
+  clock.sleep(4)
   --print("now awake")
   greetings_done = true
 end
@@ -419,6 +469,7 @@ function do_and_advance_step()
       print ("Send MIDI Start current_step is: " .. current_step)
       midi_gates_device:start()
       normal_midi_device:start()
+      run_conditional_clocks = true -- so our 24PPQN etc stays on when midi clock is on 
       need_to_start_midi = false
 
     else
@@ -430,14 +481,6 @@ function do_and_advance_step()
     end
 
    end -- End check midi start
-
-
-   -- if midi clock has started, also send a regular gate ouput on 7
-  if need_to_start_midi == false then
-    clock.run(send_tick_as_clock, 7) -- HEREHERE
-    -- send "tick clock"
-    
-  end 
 
 
   if swing_mode ~= 0 then
@@ -644,10 +687,10 @@ end
 
 function send_tick_as_clock (output)
 
-
-    gate_on(output)
-    clock.sync(1/64)
     gate_off(output)
+    gate_on(output)
+   -- clock.sync(1/64)
+    
 
   
 end  
@@ -706,8 +749,9 @@ function request_midi_stop()
   print("request_midi_stop")
   need_to_start_midi = false
   -- can stop the midi clock at any time.
-     midi_gates_device:stop ()
-     normal_midi_device:stop ()
+  midi_gates_device:stop ()
+  normal_midi_device:stop ()
+  run_conditional_clocks = false
 end  
 
 function enc(n,d)
