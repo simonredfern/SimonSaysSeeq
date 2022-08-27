@@ -51,7 +51,6 @@ output_text = ""
 Tab = require "lib/tabutil"
 
 MIDI_CHANNEL_GATES = 1
---MIDI_CHANNEL_B_OFFSET = -4 -- negative offset becuase both betweeners will listen on change 1 - 4
 
 -- This works well with Flame MGTV factory default settings. 
 --  http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
@@ -124,7 +123,7 @@ tick_text = "."
 
 tick_count = 0
 
-24_PPQN_GATES_ARE_ENABLED = true
+PPQN24_GATES_ARE_ENABLED = true
 
 
 greetings_done = false
@@ -302,43 +301,49 @@ function tick()
     -- end  
 
 
-    if 24_PPQN_GATES_ARE_ENABLED == true then
+    if PPQN24_GATES_ARE_ENABLED == true then
 
     if run_conditional_clocks == true then
-  
+
       -- 24 PPQN clock
       if tick_count % 2 == 0 then
-        gate_on(11)
+        gate_on(12)
       else
-        gate_off(11)
+        gate_off(12)
       end  
 
+     -- copy with sligtly different duty cycle.
 
-      -- Other clock divisions
-      if tick_count % 12 == 0 then
-        gate_on(10)
-      else
-        gate_off(10)
+      if tick_count % 2 == 0 then
+        clock.run(process_clock_gate, 11)
       end 
 
+      --------
+   
+      if tick_count % 6 == 0 then
+        clock.run(process_clock_gate, 10)
+      end 
+
+      if tick_count % 12 == 0 then
+        clock.run(process_clock_gate, 9)
+      end  
+
       if tick_count % 24 == 0 then
-        gate_on(9)
-      else
-        gate_off(9)
+        clock.run(process_clock_gate, 8)
       end 
 
       if tick_count % 48 == 0 then
-        gate_on(8)
-      else
-        gate_off(8)
+        clock.run(process_clock_gate, 8)
       end 
 
       if tick_count % 96 == 0 then
-        gate_on(7)
-      else
-        gate_off(7)
-      end
+        clock.run(process_clock_gate, 8)
+      end 
 
+      if tick_count % 192 == 0 then -- since tick_count never reaches 192?
+        print("Modulus 192 tick_count is: " .. tick_count)
+        clock.run(process_clock_gate, 7)
+      end 
 
     end -- End conditional clocks check 
 
@@ -358,7 +363,8 @@ function tick()
     end   
 
     -- (Unconditionaly) increase the tickcount
-    tick_count = tick_count + 1 -- util.wrap(tick_count + 1, 1, 16)
+    tick_count = tick_count + 1 -- 
+    -- util.wrap(tick_count + 1, 0, 192)
 
   end
 end
@@ -680,6 +686,15 @@ function process_step (output, ratchet_mode)
  
   
 end  
+
+-- MUST be run as clock.run(process_clock_gate, output) - so syncs are independent
+function process_clock_gate (output)
+
+  gate_on(output)
+  clock.sync(1/64)
+  gate_off(output)
+ 
+end 
 
  
 function gate_on(output)
