@@ -289,65 +289,54 @@ function tick()
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
 
-   -- print("tick . " )
-
-
-    -- This is an always-on 24 PPQN clock 
-
-    -- if tick_count % 2 == 0 then
-    --   gate_on(12)
-    -- else
-    --   gate_off(12)
-    -- end  
-
-
+  
     if PPQN24_GATES_ARE_ENABLED == true then
 
-    if run_conditional_clocks == true then
+      if run_conditional_clocks == true then
 
-      -- 24 PPQN clock
-      if tick_count % 2 == 0 then
-        gate_on(12)
-      else
-        gate_off(12)
-      end  
+        -- 24 PPQN clock
+        if tick_count % 2 == 0 then
+          gate_on(12)
+        else
+          gate_off(12)
+        end  
 
-     -- copy with sligtly different duty cycle.
+      -- copy with sligtly different duty cycle.
 
-      if tick_count % 2 == 0 then
-        clock.run(process_clock_gate, 11)
-      end 
+        if tick_count % 2 == 0 then
+          clock.run(process_clock_gate, 11)
+        end 
 
-      --------
-   
-      if tick_count % 6 == 0 then
-        clock.run(process_clock_gate, 10)
-      end 
+        --------
+    
+        if tick_count % 6 == 0 then
+          clock.run(process_clock_gate, 10)
+        end 
 
-      if tick_count % 12 == 0 then
-        clock.run(process_clock_gate, 9)
-      end  
+        if tick_count % 12 == 0 then
+          clock.run(process_clock_gate, 9)
+        end  
 
-      if tick_count % 24 == 0 then
-        clock.run(process_clock_gate, 8)
-      end 
+        if tick_count % 24 == 0 then
+          clock.run(process_clock_gate, 8)
+        end 
 
-      if tick_count % 48 == 0 then
-        clock.run(process_clock_gate, 8)
-      end 
+        if tick_count % 48 == 0 then
+          clock.run(process_clock_gate, 8)
+        end 
 
-      if tick_count % 96 == 0 then
-        clock.run(process_clock_gate, 8)
-      end 
+        if tick_count % 96 == 0 then
+          clock.run(process_clock_gate, 8)
+        end 
 
-      if tick_count % 192 == 0 then -- since tick_count never reaches 192?
-        print("Modulus 192 tick_count is: " .. tick_count)
-        clock.run(process_clock_gate, 7)
-      end 
+        if tick_count % 192 == 0 then -- since tick_count never reaches 192, this only fires at 0
+          -- print("Modulus 192 tick_count is: " .. tick_count)
+          clock.run(process_clock_gate, 7)
+        end 
 
-    end -- End conditional clocks check 
+      end -- End conditional clocks check 
 
-  end -- End check for 24 PPQN clocks
+    end -- End check for 24 PPQN clocks
 
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
     if tick_count % 12 == 0 then
@@ -362,9 +351,8 @@ function tick()
 
     end   
 
-    -- (Unconditionaly) increase the tickcount
-    tick_count = tick_count + 1 -- 
-    -- util.wrap(tick_count + 1, 0, 192)
+    -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
+    tick_count =  util.wrap(tick_count + 1, 0, 191) -- clamp tick_count between 0 and 191
 
   end
 end
