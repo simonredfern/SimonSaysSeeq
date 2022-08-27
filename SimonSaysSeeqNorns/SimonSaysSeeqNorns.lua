@@ -294,45 +294,47 @@ function tick()
 
       if run_conditional_clocks == true then
 
-        -- 24 PPQN clock
+        -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
           gate_on(12)
         else
           gate_off(12)
         end  
 
-      -- copy with sligtly different duty cycle.
+      -- this is a narrower width
 
         if tick_count % 2 == 0 then
           clock.run(process_clock_gate, 11)
         end 
 
         --------
+
+        -- This seem to overload Flame sometimes.
     
-        if tick_count % 6 == 0 then
-          clock.run(process_clock_gate, 10)
-        end 
+        -- if tick_count % 6 == 0 then
+        --   clock.run(process_clock_gate, 10)
+        -- end 
 
-        if tick_count % 12 == 0 then
-          clock.run(process_clock_gate, 9)
-        end  
+        -- if tick_count % 12 == 0 then
+        --   clock.run(process_clock_gate, 9)
+        -- end  
 
-        if tick_count % 24 == 0 then
-          clock.run(process_clock_gate, 8)
-        end 
+        -- if tick_count % 24 == 0 then
+        --   clock.run(process_clock_gate, 8)
+        -- end 
 
-        if tick_count % 48 == 0 then
-          clock.run(process_clock_gate, 8)
-        end 
+        -- if tick_count % 48 == 0 then
+        --   clock.run(process_clock_gate, 8)
+        -- end 
 
-        if tick_count % 96 == 0 then
-          clock.run(process_clock_gate, 8)
-        end 
+        -- if tick_count % 96 == 0 then
+        --   clock.run(process_clock_gate, 8)
+        -- end 
 
-        if tick_count % 192 == 0 then -- since tick_count never reaches 192, this only fires at 0
-          -- print("Modulus 192 tick_count is: " .. tick_count)
-          clock.run(process_clock_gate, 7)
-        end 
+        -- if tick_count % 192 == 0 then -- since tick_count never reaches 192, this only fires at 0
+        --   -- print("Modulus 192 tick_count is: " .. tick_count)
+        --   clock.run(process_clock_gate, 7)
+        -- end 
 
       end -- End conditional clocks check 
 
