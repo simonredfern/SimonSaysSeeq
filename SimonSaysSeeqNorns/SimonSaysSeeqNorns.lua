@@ -352,7 +352,11 @@ function tick()
     end   
 
     -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
-    tick_count =  util.wrap(tick_count + 1, 0, 191) -- clamp tick_count between 0 and 191
+    tick_count = tick_count + 1
+
+    if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
+      tick_count = 0
+    end  
 
   end
 end
@@ -572,19 +576,6 @@ end -- end function
 
 
 function process_step (output, ratchet_mode)
-
-  -- local count = mode
-  -- local timing = 1/32
-
-  -- if mode == 2 then  
-  --   timing = 1/32
-  -- elseif mode == 3 then
-  --   timing = 3/32
-  -- elseif mode == 4 then
-  --   timing = 3/64
-  -- end 
-
-
 
   if ratchet_mode == 1 then -- could be 1 or 2 (ratchet) or...
     -- direct relation between value on grid at count of send_gates we will get
@@ -2141,67 +2132,69 @@ function refresh_grid_and_screen()
   screen.clear()
   screen.move(1,1)
   
-    for col = 1,COLS do 
-      for row = 1,ROWS do
-        tally = tally .. grid_state[col][row]
+  for col = 1,COLS do 
+    for row = 1,ROWS do
+      tally = tally .. grid_state[col][row]
 
-        screen.move(col * 7,row * 7)
-        --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
+      screen.move(col * 7,row * 7)
+      --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
+      
+
+      -- Show the scrolling of the steps with the first 6 rows of LEDS. (Others will be used for other controls)
+      if (current_step == col and row <= 6) then
+          -- This is the scrolling cursor
+          screen.text("*")
         
-
-        -- Show the scrolling of the steps with the first 6 rows of LEDS. (Others will be used for other controls)
-        if (current_step == col and row <= 6) then
-           -- This is the scrolling cursor
-           screen.text("*")
-          
-          if (grid_state[col][row] >= 2) then -- ratchet 
-            -- If current step and key is on, highlight it.
-            my_grid:led(col,row,12) 
-          elseif (grid_state[col][row] == 1) then 
-            -- If current step and key is on, highlight it.
-            my_grid:led(col,row,9) 
-          else
-            -- Else use scrolling brightness
-            my_grid:led(col,row,4)
-          end
+        if (grid_state[col][row] >= 2) then -- ratchet 
+          -- If current step and key is on, highlight it.
+          my_grid:led(col,row,12) 
+        elseif (grid_state[col][row] == 1) then 
+          -- If current step and key is on, highlight it.
+          my_grid:led(col,row,9) 
         else
-          if (grid_state[col][row] >= 2) then
-            my_grid:led(col,row,8) -- ratchet
-          elseif (grid_state[col][row] == 1) then
-             -- Not current step but Grid square is On
-            my_grid:led(col,row,5)
-          else 
-             -- Not current step and key is off
-            my_grid:led(col,row,0)
-          end
-          -- Show the stored value on screen
-          screen.text(grid_state[col][row])
+          -- Else use scrolling brightness
+          my_grid:led(col,row,4)
         end
-
-
-    
+      else
+        if (grid_state[col][row] >= 2) then
+          my_grid:led(col,row,8) -- ratchet
+        elseif (grid_state[col][row] == 1) then
+            -- Not current step but Grid square is On
+          my_grid:led(col,row,5)
+        else 
+            -- Not current step and key is off
+          my_grid:led(col,row,0)
+        end
+        -- Show the stored value on screen
+        screen.text(grid_state[col][row])
       end
-    end
+
+
+  
+    end -- end rows loop
+  end -- end cols loop
   
   
     current_tempo = clock.get_tempo()
   
 
-if need_to_start_midi == true then
-  end_of_line_text = "Pending CLK.."
-else
-  end_of_line_text = output_text
-end
+  if need_to_start_midi == true then
+    end_of_line_text = "Pending CLK.."
+  else
+    end_of_line_text = output_text
+  end
 
-if current_step <= 4 then
-  conductor_text = "__"
-elseif current_step <= 8 then
-  conductor_text = "["
-elseif current_step <= 12 then
-  conductor_text = " ]"
-elseif  current_step <= 16 then 
-  conductor_text = "^^"
-end    
+  if current_step <= 4 then
+    conductor_text = "1.."
+  elseif current_step > 4 and current_step <= 8 then
+    conductor_text = "2["
+  elseif current_step > 8 and current_step <= 12 then
+    conductor_text = "3 ]"
+  elseif  current_step > 12 and current_step <= 16 then 
+    conductor_text = "4^^"
+  end  
+  
+  print (conductor_text)
 
 
 -- status_text = conductor_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
@@ -2212,6 +2205,9 @@ end
   
   screen.move(1,63)   
   screen.text(status_text)
+
+  screen.font_face(15)
+screen.font_size(7)
 
   screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
