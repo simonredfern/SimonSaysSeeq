@@ -174,7 +174,12 @@ normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
  normal_midi_note_on = false
  normal_midi_note_off = false
  normal_midi_note_in = -1
+
+
  captured_normal_midi_note_in = -1
+ midi_note_key_pressed = -1
+
+
 
 -- psudo random for our grid ids
 math.randomseed( os.time() )
@@ -1316,6 +1321,23 @@ function pop_redo()
 end  
 
 
+function set_mozart_and_grid_based_on_held_key(midi_note_number)
+  for col = 1,COLS do 
+    for row = 1,ROWS do
+      -- if a step is held, assign the captured midi note to it.
+      if held_state[col][row] == 1 then
+        mozart_state[col][row] = midi_note_number -- Note we don't have any note off
+
+        -- As we have just "put a midi note on the step", make the step on.
+        grid_state[col][row] = 1
+      end  
+    end 
+  end
+end  
+
+
+
+
 -- probably not used
 midi_gates_device.event = function(data)
   print("---------------------- midi_gates_device IN ---------------------------------------")
@@ -1352,17 +1374,23 @@ normal_midi_device.event = function(data)
 
     --loop through held_state
 
-    for col = 1,COLS do 
-      for row = 1,ROWS do
-        -- if a step is held, assign the captured midi note to it.
-        if held_state[col][row] == 1 then
-          mozart_state[col][row] = captured_normal_midi_note_in -- Note we don't have any note off
 
-          -- As we have just "put a midi note on the step", make the step on.
-          grid_state[col][row] = 1
-        end  
-      end 
-    end
+
+    -- for col = 1,COLS do 
+    --   for row = 1,ROWS do
+    --     -- if a step is held, assign the captured midi note to it.
+    --     if held_state[col][row] == 1 then
+    --       mozart_state[col][row] = captured_normal_midi_note_in -- Note we don't have any note off
+
+    --       -- As we have just "put a midi note on the step", make the step on.
+    --       grid_state[col][row] = 1
+    --     end  
+    --   end 
+    -- end
+
+
+        -- replaces the above 
+    set_mozart_and_grid_based_on_held_key(captured_normal_midi_note_in)
 
 
 
@@ -1378,7 +1406,6 @@ normal_midi_device.event = function(data)
   end 
 
 
--- here
 
   if normal_midi_note_on == true then
     print ("NOTE ON: " .. captured_normal_midi_note_in)
@@ -1416,8 +1443,8 @@ print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y]
 print("preset_grid_button is: " .. preset_grid_button .. ", arm_ratchet is: ".. arm_ratchet .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button)
 --print(x .. ","..y .. " z is " .. z)
 
-
-
+-- Reset. It might get set below
+midi_note_key_pressed = -1
 
 
 -- To note the keys that are held down 
@@ -1674,15 +1701,35 @@ if y <= TOTAL_SEQUENCE_ROWS then
        -- in this code path, we captured a midi note and then pressed a step button. 
 
        if captured_normal_midi_note_in ~= -1 then
-        print ("Set mozart_state MIDI note " .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
+        print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
 
         -- Store the latest captured midi note in the mozart table
         mozart_state[x][y] = captured_normal_midi_note_in
         
        else
-        print ("Not doing anything to mozart_state")  
+        print ("Not doing anything to mozart_state via MIDI input")  
         -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
        end 
+
+
+
+      if midi_note_key_pressed ~= -1 then
+        print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
+
+        -- Store the latest captured midi note in the mozart table
+        mozart_state[x][y] = midi_note_key_pressed
+      else
+        print ("Not doing anything to mozart_state via key press")  
+        -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
+      end 
+
+
+
+
+
+
+
+
        
        
       if arm_put_slide_on == 1 then
@@ -2021,6 +2068,57 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
     swing_mode = 15   
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button16" )  then
     swing_mode = 16 
+
+
+
+    -- HEREHEREHERE
+
+
+  -- Place MIDI note on sequence notes
+-- Handles: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
+
+
+elseif (grid_button_function_name (x,y) == "Button1") then
+  print("button" .. 1)
+
+  midi_note_key_pressed = 60
+  set_mozart_and_grid_based_on_held_key(60)
+
+  -- set mozart based on held
+
+
+elseif (grid_button_function_name (x,y) == "Button2") then
+  print("button" .. 2)
+elseif (grid_button_function_name (x,y) == "Button3") then
+  print("button" .. 3)
+elseif (grid_button_function_name (x,y) == "Button4") then
+  print("button" .. 4)
+elseif (grid_button_function_name (x,y) == "Button5") then
+  print("button" .. 5)
+elseif (grid_button_function_name (x,y) == "Button6") then
+  print("button" .. 6)
+elseif (grid_button_function_name (x,y) == "Button7") then
+  print("button" .. 7)
+elseif (grid_button_function_name (x,y) == "Button8") then
+  print("button" .. 8)
+elseif (grid_button_function_name (x,y) == "Button9") then
+  print("button" .. 9)
+elseif (grid_button_function_name (x,y) == "Button10") then
+  print("button" .. 10)
+elseif (grid_button_function_name (x,y) == "Button11") then
+  print("button" .. 11)             
+elseif (grid_button_function_name (x,y) == "Button12") then
+  print("button" .. 12)
+elseif (grid_button_function_name (x,y) == "Button13") then
+  print("button" .. 13)
+elseif (grid_button_function_name (x,y) == "Button14") then
+  print("button" .. 14)
+elseif (grid_button_function_name (x,y) == "Button15") then
+  print("button" .. 15)
+elseif (grid_button_function_name (x,y) == "Button16") then
+  print("button" .. 16) 
+
+
 
   end -- end of grid_button_function_name tests
 
