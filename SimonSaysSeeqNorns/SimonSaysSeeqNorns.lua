@@ -842,7 +842,7 @@ function grid_button_function_name (x,y)
 
   end -- end outer loop
 
-  print ("grid_button_function_name will return: " .. ret)
+  print ("grid_button_function_name says Bye. I will return: " .. ret)
   return ret
 
 end -- end function definition
@@ -1440,11 +1440,11 @@ my_grid.key = function(x,y,z)
 print("Hello from ----------- my_grid.key = function -----------------")
 print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 
-print("preset_grid_button is: " .. preset_grid_button .. ", arm_ratchet is: ".. arm_ratchet .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button)
+print("preset_grid_button is: " .. preset_grid_button .. ", arm_ratchet is: ".. arm_ratchet .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 --print(x .. ","..y .. " z is " .. z)
 
 -- Reset. It might get set below
-midi_note_key_pressed = -1
+-- midi_note_key_pressed = -1
 
 
 -- To note the keys that are held down 
@@ -2075,22 +2075,34 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
 
 
   -- Place MIDI note on sequence notes
--- Handles: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
+-- Handles the following key combination: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
 
 
 elseif (grid_button_function_name (x,y) == "Button1") then
   print("button" .. 1)
-
-  midi_note_key_pressed = 60
-  set_mozart_and_grid_based_on_held_key(60)
-
-  -- set mozart based on held
-
+  if z == 1 then 
+    midi_note_key_pressed = 33
+    set_mozart_and_grid_based_on_held_key(33)
+  else
+    midi_note_key_pressed = -1
+  end  
 
 elseif (grid_button_function_name (x,y) == "Button2") then
   print("button" .. 2)
+  if z == 1 then 
+    midi_note_key_pressed = 34
+    set_mozart_and_grid_based_on_held_key(34)
+  else
+    midi_note_key_pressed = -1
+  end  
 elseif (grid_button_function_name (x,y) == "Button3") then
   print("button" .. 3)
+  if z == 1 then 
+    midi_note_key_pressed = 35
+    set_mozart_and_grid_based_on_held_key(35)
+  else
+    midi_note_key_pressed = -1
+  end 
 elseif (grid_button_function_name (x,y) == "Button4") then
   print("button" .. 4)
 elseif (grid_button_function_name (x,y) == "Button5") then
@@ -2294,7 +2306,7 @@ function refresh_grid_and_screen()
     conductor_text = "4^^"
   end  
   
-  print (conductor_text)
+  -- print (conductor_text)
 
 
 -- status_text = conductor_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
