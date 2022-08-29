@@ -1650,25 +1650,25 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
       -- set all rows to MIDI note A4 (treat all the sequence rows the same.)
 
-      mozart_state[1][y] = 69
-      mozart_state[2][y] = 69
-      mozart_state[3][y] = 69
-      mozart_state[4][y] = 69
+      mozart_state[1][y] = 33 -- A2
+      mozart_state[2][y] = 33
+      mozart_state[3][y] = 33
+      mozart_state[4][y] = 33
 
-      mozart_state[5][y] = 69
-      mozart_state[6][y] = 69
-      mozart_state[7][y] = 69
-      mozart_state[8][y] = 69
+      mozart_state[5][y] = 33
+      mozart_state[6][y] = 33
+      mozart_state[7][y] = 33
+      mozart_state[8][y] = 33
 
-      mozart_state[9][y]  = 69
-      mozart_state[10][y] = 69
-      mozart_state[11][y] = 69
-      mozart_state[12][y] = 69
+      mozart_state[9][y]  = 33
+      mozart_state[10][y] = 33
+      mozart_state[11][y] = 33
+      mozart_state[12][y] = 33
 
-      mozart_state[13][y] = 69
-      mozart_state[14][y] = 69
-      mozart_state[15][y] = 69
-      mozart_state[16][y] = 69
+      mozart_state[13][y] = 33
+      mozart_state[14][y] = 33
+      mozart_state[15][y] = 33
+      mozart_state[16][y] = 33
 
 
 
