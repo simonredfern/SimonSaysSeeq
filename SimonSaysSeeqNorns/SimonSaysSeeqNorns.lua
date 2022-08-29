@@ -1336,7 +1336,19 @@ function set_mozart_and_grid_based_on_held_key(midi_note_number)
 end  
 
 
+function conditional_set_mozart(x, y, z, midi_note_number)
 
+  if z == 1 then 
+    midi_note_key_pressed = midi_note_number
+    set_mozart_and_grid_based_on_held_key(midi_note_number)
+  else
+    midi_note_key_pressed = -1
+  end 
+
+  -- As we have just "put a midi note on the step", make the step on.
+  grid_state[x][y] = 1 -- this not working, something is overriding it
+
+end
 
 -- probably not used
 midi_gates_device.event = function(data)
@@ -2080,58 +2092,52 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
 
 elseif (grid_button_function_name (x,y) == "Button1") then
   print("button" .. 1)
-  if z == 1 then 
-    midi_note_key_pressed = 33
-    set_mozart_and_grid_based_on_held_key(33)
-  else
-    midi_note_key_pressed = -1
-  end  
-
+  conditional_set_mozart(x, y, z, 33)
 elseif (grid_button_function_name (x,y) == "Button2") then
   print("button" .. 2)
-  if z == 1 then 
-    midi_note_key_pressed = 34
-    set_mozart_and_grid_based_on_held_key(34)
-  else
-    midi_note_key_pressed = -1
-  end  
+  conditional_set_mozart(x, y, z, 34)
 elseif (grid_button_function_name (x,y) == "Button3") then
   print("button" .. 3)
-  if z == 1 then 
-    midi_note_key_pressed = 35
-    set_mozart_and_grid_based_on_held_key(35)
-  else
-    midi_note_key_pressed = -1
-  end 
+  conditional_set_mozart(x, y, z, 35)
 elseif (grid_button_function_name (x,y) == "Button4") then
   print("button" .. 4)
+  conditional_set_mozart(x, y, z, 36)
 elseif (grid_button_function_name (x,y) == "Button5") then
   print("button" .. 5)
+  conditional_set_mozart(x, y, z, 37)
 elseif (grid_button_function_name (x,y) == "Button6") then
   print("button" .. 6)
+  conditional_set_mozart(x, y, z, 38)
 elseif (grid_button_function_name (x,y) == "Button7") then
   print("button" .. 7)
+  conditional_set_mozart(x, y, z, 39)
 elseif (grid_button_function_name (x,y) == "Button8") then
   print("button" .. 8)
+  conditional_set_mozart(x, y, z, 40)
 elseif (grid_button_function_name (x,y) == "Button9") then
   print("button" .. 9)
+  conditional_set_mozart(x, y, z, 41)
 elseif (grid_button_function_name (x,y) == "Button10") then
   print("button" .. 10)
+  conditional_set_mozart(x, y, z, 42)
 elseif (grid_button_function_name (x,y) == "Button11") then
   print("button" .. 11)             
+  conditional_set_mozart(x, y, z, 43)
 elseif (grid_button_function_name (x,y) == "Button12") then
   print("button" .. 12)
+  conditional_set_mozart(x, y, z, 44)
 elseif (grid_button_function_name (x,y) == "Button13") then
   print("button" .. 13)
+  conditional_set_mozart(x, y, z, 45)
 elseif (grid_button_function_name (x,y) == "Button14") then
   print("button" .. 14)
+  conditional_set_mozart(x, y, z, 46)
 elseif (grid_button_function_name (x,y) == "Button15") then
   print("button" .. 15)
+  conditional_set_mozart(x, y, z, 47)
 elseif (grid_button_function_name (x,y) == "Button16") then
   print("button" .. 16) 
-
-
-
+  conditional_set_mozart(x, y, z, 48)
   end -- end of grid_button_function_name tests
 
 end  -- End of Sequence / Control
