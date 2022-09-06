@@ -315,9 +315,9 @@ function tick()
           gate_on(12)
 
 
-         audio.tape_play_start()
+         --audio.tape_play_start()
          
-          softcut.position(1,5) -- at 0 seconds there is the transient click but doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
+          softcut.position(1,5) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
         --  softcut.level(1,1)
         --  softcut.play(1,1)
 
@@ -546,13 +546,13 @@ function do_and_advance_step()
 
 
         if swing_mode == 13 then 
-          clock.sync(2/64)
+          clock.sync(1/48)
         elseif swing_mode == 14 then
-          clock.sync(3/64)
+          clock.sync(1/38)
         elseif swing_mode == 15 then
-          clock.sync(1/16)
+          clock.sync(1/32)
         elseif swing_mode == 16 then
-          clock.sync(1/8)
+          clock.sync(1/24)
         end 
 
       end    
@@ -942,7 +942,7 @@ function init()
   softcut.buffer_read_stereo(audio_clock_file, 1, 1, -1)
 
 
-  audio.tape_play_open (audio_clock_file)
+  -- audio.tape_play_open (audio_clock_file)
 
 
   -- enable voice 1
@@ -1832,7 +1832,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
         else -- no arm behaviour active.
 
-          -- it makes sense to turn the step on (if its of) if we're putting a midi note / slide / ratchet on it etc. (only exception might be first / last step but currently they operate on row 7)
+          -- it makes sense to turn the step on (if its off) if we're putting a midi note / slide / ratchet on it etc. (only exception might be first / last step but currently they operate on row 7)
           if grid_state[x][y] == 0 then 
             grid_state[x][y] = 1
           end
