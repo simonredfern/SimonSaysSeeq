@@ -64,6 +64,17 @@ need_to_start_midi = true -- Check gate clock situation.
 run_conditional_clocks = false
 
 
+-- audio_clock_file = _path.dust.."code/softcut-studies/lib/whirl1.aif"
+
+--audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/E-RM_multiclock_sample.wav"
+
+
+audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/0-1-2-3-4-5.wav"
+
+-- audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/hermit_leaves.wav"
+
+-- audio_clock_file = _path.dust.."audio/x0x/606/606-CH.wav"
+
 PRESET_GRID_BUTTON = {x=1, y=2}
 
 BUTTONS = {}
@@ -187,7 +198,7 @@ math.random() -- call a few times so it gets more random (apparently)
 math.random() 
 math.random()
 
-engine.name = 'PolyPerc'
+-- engine.name = 'PolyPerc'
 
 
 
@@ -302,8 +313,33 @@ function tick()
         -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
           gate_on(12)
+
+
+         audio.tape_play_start()
+         
+          softcut.position(1,5) -- at 0 seconds there is the transient click but doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
+        --  softcut.level(1,1)
+        --  softcut.play(1,1)
+
+
+         --engine.hz(440)
+
+
         else
           gate_off(12)
+
+         -- print("POS 1")
+
+          softcut.position(1, 1)-- at this this position (1 second) there should be no sound
+
+          -- softcut.play(1,1)
+
+           -- audio.tape_play_stop()
+
+          -- softcut.level(1,0)
+
+          --engine.hz(1000)
+
         end  
 
       -- this is a narrower width
@@ -351,6 +387,8 @@ function tick()
       -- print("tick_count is: " .. tick_count)
 
       if transport_active then 
+
+        --softcut.play(1,1)
         do_and_advance_step() 
       end
 
@@ -385,7 +423,11 @@ end
 
 
 
+-- Note: This effictively gets called multiple times at boot 
 function greetings()
+
+  -- presumption of success but still seems to get run multiple times.
+  greetings_done = true
   
   screen.clear()
 
@@ -409,6 +451,11 @@ function greetings()
   screen.text(my_grid.cols .. " X " .. my_grid.rows)
 
   local y_position = 40
+
+
+-- local do_print_midi = false
+
+-- if do_print_midi then
 
   print ("midi.devices are:")
 
@@ -452,6 +499,9 @@ function greetings()
   clock.sleep(4)
   --print("now awake")
   greetings_done = true
+
+  print_audio_file_info(audio_clock_file)
+  
 end
 
 
@@ -463,13 +513,13 @@ function do_and_advance_step()
   
   local ratchet_mode = 1 -- default is 1 but it will be set
 
-  engine.hz(400) -- just to give some audible sign for debugging timing
+  --engine.hz(400) -- just to give some audible sign for debugging timing
 
   if need_to_start_midi == true then
   
     if current_step == first_step then
 
-      engine.hz(800) -- just to give some audible sign for debugging timing
+     --engine.hz(800) -- just to give some audible sign for debugging timing
 
       -- we only want to start midi clock at the right time!
       print ("Send MIDI Start current_step is: " .. current_step)
@@ -762,9 +812,16 @@ function key(n,z)
 
     -- left button pressed 
     if n == 2 and z == 1 then
+
+      -- try moving pointer to quiet part of
+
+    -- softcut.tape_play_stop ()
+
       if transport_active then -- currently running so Stop     
         clock.transport.stop()
         request_midi_stop()
+
+        
       else -- Not currently running so reset. 
         current_step = first_step -- effectively we press this again.
 
@@ -775,9 +832,18 @@ function key(n,z)
     
     -- Right button pressed
     if n == 3 and z == 1 then
+
+      -- try moving pointer to loud part of sample
+
+    --  softcut.tape_play_start ()
+
+
       if not transport_active then
         clock.transport.start()
         request_midi_start() -- Just send MIDI start instead of requesting?
+
+        
+
       end
       
       screen_dirty = true
@@ -847,8 +913,71 @@ function grid_button_function_name (x,y)
 
 end -- end function definition
 
+
+-- Originally copied from https://github.com/monome/softcut-studies/blob/master/1-basics.lua
+function print_audio_file_info(file)
+  if util.file_exists(file) == true then
+    local ch, samples, samplerate = audio.file_info(file)
+    local duration = samples/samplerate
+    print("loading file: "..file)
+    print("  channels:\t"..ch)
+    print("  samples:\t"..samples)
+    print("  sample rate:\t"..samplerate.."hz")
+    print("  duration:\t"..duration.." sec")
+  else print "ERROR read_wav(): file not found" end
+end
+
+
+
 function init()
+
+  -- clear buffer
+  softcut.buffer_clear()
+  -- read file into buffer
+  -- buffer_read_mono (file, start_src, start_dst, dur, ch_src, ch_dst)
+  -- softcut.buffer_read_mono(audio_clock_file,0,1,-1,1,1)
   
+
+
+  softcut.buffer_read_stereo(audio_clock_file, 1, 1, -1)
+
+
+  audio.tape_play_open (audio_clock_file)
+
+
+  -- enable voice 1
+  softcut.enable(1,1)
+  -- set voice 1 to buffer 1
+  softcut.buffer(1,1)
+  -- set voice 1 level to 1.0
+  softcut.level(1,1.0)
+  
+  
+  
+  -- voice 1  loop
+   softcut.loop(1,1) -- This MUST be on ??
+  -- set voice 1 loop start to 1
+  softcut.loop_start(1,0)
+  -- set voice 1 loop end to 2
+  softcut.loop_end(1,5)
+  -- set voice 1 position to 0
+  
+  softcut.fade_time(1,0)
+  
+  softcut.position(1,0.0)
+
+  -- set voice 1 rate to 1.0
+  softcut.rate(1,1.0)
+  
+  
+  
+  audio:rev_off ()
+  audio:comp_off ()
+
+  -- enable voice 1 play
+  softcut.play(1,1)
+
+
 
 --  params:set("clock_source",4)
   
@@ -922,6 +1051,10 @@ function init()
   --     redraw()
   --   end
   -- end)
+
+
+  print_audio_file_info(audio_clock_file)
+
 
   end -- end init
 
