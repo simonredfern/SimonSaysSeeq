@@ -306,17 +306,23 @@ function tick()
     swing_amount = 0
 
 
-    if swing_mode == 1 then 
+    -- some kind of swing amount between zero and nearly 1/192 
+    swing_amount = (swing_mode / 18) * (1 / 192) 
+
+    if swing_mode == 1 then
       swing_amount = 0
-    elseif swing_mode == 13 then
-      swing_amount = 1/240
-    elseif swing_mode == 14 then
-      swing_amount = 1/192
-    elseif swing_mode == 15 then
-      swing_amount = 1/144
-    elseif swing_mode == 16 then
-      swing_amount = 1/96
-    end 
+    end  
+
+
+    -- elseif swing_mode == 13 then
+    --   swing_amount = 1/56
+    -- elseif swing_mode == 14 then
+    --   swing_amount = 1/70  
+    -- elseif swing_mode == 15 then
+    --   swing_amount = 1/80
+    -- elseif swing_mode == 16 then
+    --   swing_amount = 1/96
+    -- end 
 
     if swing_mode == 1 then
        -- No swing, normal clock
@@ -658,22 +664,7 @@ end -- end function
 
 
 
--- function process_swing(swing_mode)
--- -- This function must be run by clock.run(process_swing, swing_mode) else the main clock "slows down".
 
---   if swing_mode == 1 then 
---    -- Do nothing
---   elseif swing_mode == 13 then
---     clock.sync(1/48)
---   elseif swing_mode == 14 then
---     clock.sync(1/38)
---   elseif swing_mode == 15 then
---     clock.sync(1/32)
---  elseif swing_mode == 16 then
---   clock.sync(1/4)
---  end 
-
--- end 
 
 
 function process_ratchet (output, ratchet_mode)
@@ -2249,6 +2240,28 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
   -- Set Swing
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button1" )  then
     swing_mode = 1 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button2" )  then
+    swing_mode = 2 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button3" )  then
+    swing_mode = 3 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button4" )  then
+    swing_mode = 4 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button5" )  then
+    swing_mode = 5 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button6" )  then
+    swing_mode = 6   
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button7" )  then
+    swing_mode = 7 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button8" )  then
+    swing_mode = 8 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button9" )  then
+    swing_mode = 9 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button10" )  then
+    swing_mode = 10 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button11" )  then
+    swing_mode = 11 
+  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button12" )  then
+    swing_mode = 12
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button13" )  then
     swing_mode = 13 
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button14" )  then
@@ -2257,11 +2270,6 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
     swing_mode = 15   
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button16" )  then
     swing_mode = 16 
-
-
-
- 
-
 
   -- Place MIDI note on sequence notes
 -- Handles the following key combination: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
