@@ -307,7 +307,7 @@ function tick()
 
 
     -- some kind of swing amount between zero and nearly 1/192 
-    swing_amount = (swing_mode / 18) * (1 / 192) 
+    swing_amount = (swing_mode / 18) * (1 / 480) 
 
     if swing_mode == 1 then
       swing_amount = 0
@@ -1902,13 +1902,6 @@ if y <= TOTAL_SEQUENCE_ROWS then
         print ("Not doing anything to mozart_state via key press")  
         -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
       end 
-
-
-
-
-
-
-
 
        
        
