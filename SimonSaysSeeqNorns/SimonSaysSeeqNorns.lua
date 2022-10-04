@@ -544,16 +544,17 @@ function do_and_advance_step()
       if SWING_STEPS[current_step] then
         print ("swinging step " .. current_step)
 
+        clock.run(process_swing, swing_mode)
 
-        if swing_mode == 13 then 
-          clock.sync(1/48)
-        elseif swing_mode == 14 then
-          clock.sync(1/38)
-        elseif swing_mode == 15 then
-          clock.sync(1/32)
-        elseif swing_mode == 16 then
-          clock.sync(1/24)
-        end 
+        -- if swing_mode == 13 then  
+        --   clock.run(process_swing, swing_mode)
+        -- elseif swing_mode == 14 then
+        --   clock.run(process_swing, swing_mode)
+        -- elseif swing_mode == 15 then
+        --   clock.run(process_swing, swing_mode)
+        -- elseif swing_mode == 16 then
+        --   clock.run(process_swing, swing_mode)
+        -- end 
 
       end    
   end  
@@ -563,8 +564,8 @@ function do_and_advance_step()
     -- on the current step...
     ratchet_mode = grid_state[current_step][output]
 
-    -- process step should then run indep
-    clock.run(process_step, output, ratchet_mode)
+    -- process step should run independently
+    clock.run(process_ratchet, output, ratchet_mode)
 
     -- Sent appropriate midi note out as cv
     
@@ -632,7 +633,26 @@ function do_and_advance_step()
 end -- end function
 
 
-function process_step (output, ratchet_mode)
+
+function process_swing(swing_mode)
+-- This function must be run by clock.run(process_swing, swing_mode) else the main clock "slows down".
+
+  if swing_mode == 1 then 
+   -- Do nothing
+  elseif swing_mode == 13 then
+    clock.sync(1/48)
+  elseif swing_mode == 14 then
+    clock.sync(1/38)
+  elseif swing_mode == 15 then
+    clock.sync(1/32)
+ elseif swing_mode == 16 then
+  clock.sync(1/4)
+ end 
+
+end 
+
+
+function process_ratchet (output, ratchet_mode)
 
   if ratchet_mode == 1 then -- could be 1 or 2 (ratchet) or...
     -- direct relation between value on grid at count of send_gates we will get
