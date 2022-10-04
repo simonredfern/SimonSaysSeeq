@@ -35,7 +35,7 @@ arm_take_slide_off = 0
 
 arm_swing_button = 0
 
-swing_mode = 0
+swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 6
 
@@ -302,8 +302,54 @@ function tick()
 
    
  
+     
+    swing_amount = 0
 
-    clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
+
+    if swing_mode == 1 then 
+      swing_amount = 0
+    elseif swing_mode == 13 then
+      swing_amount = 1/240
+    elseif swing_mode == 14 then
+      swing_amount = 1/192
+    elseif swing_mode == 15 then
+      swing_amount = 1/144
+    elseif swing_mode == 16 then
+      swing_amount = 1/96
+    end 
+
+    if swing_mode == 1 then
+       -- No swing, normal clock
+      clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
+    else   
+      print ("swing_mode is: " .. swing_mode)
+      if SWING_STEPS[current_step] then
+        print ("swinging step " .. current_step)
+
+
+        clock.sync(1/48 + swing_amount)
+
+
+      else
+        -- Non swing step
+        --clock.sync(1/48)
+
+        print ("Not swinging step " .. current_step)
+
+        clock.sync(1/48 - swing_amount)
+  
+      end    
+    end  
+
+
+
+
+
+
+
+
+
+
 
   
     if PPQN24_GATES_ARE_ENABLED == true then
@@ -535,29 +581,7 @@ function do_and_advance_step()
    end -- End check midi start
 
 
-  if swing_mode ~= 0 then
 
-    print ("swing_mode is: " .. swing_mode)
-
-    
-
-      if SWING_STEPS[current_step] then
-        print ("swinging step " .. current_step)
-
-        clock.run(process_swing, swing_mode)
-
-        -- if swing_mode == 13 then  
-        --   clock.run(process_swing, swing_mode)
-        -- elseif swing_mode == 14 then
-        --   clock.run(process_swing, swing_mode)
-        -- elseif swing_mode == 15 then
-        --   clock.run(process_swing, swing_mode)
-        -- elseif swing_mode == 16 then
-        --   clock.run(process_swing, swing_mode)
-        -- end 
-
-      end    
-  end  
   
   -- For each sequence row...
   for output = 1, TOTAL_SEQUENCE_ROWS do
@@ -634,22 +658,22 @@ end -- end function
 
 
 
-function process_swing(swing_mode)
--- This function must be run by clock.run(process_swing, swing_mode) else the main clock "slows down".
+-- function process_swing(swing_mode)
+-- -- This function must be run by clock.run(process_swing, swing_mode) else the main clock "slows down".
 
-  if swing_mode == 1 then 
-   -- Do nothing
-  elseif swing_mode == 13 then
-    clock.sync(1/48)
-  elseif swing_mode == 14 then
-    clock.sync(1/38)
-  elseif swing_mode == 15 then
-    clock.sync(1/32)
- elseif swing_mode == 16 then
-  clock.sync(1/4)
- end 
+--   if swing_mode == 1 then 
+--    -- Do nothing
+--   elseif swing_mode == 13 then
+--     clock.sync(1/48)
+--   elseif swing_mode == 14 then
+--     clock.sync(1/38)
+--   elseif swing_mode == 15 then
+--     clock.sync(1/32)
+--  elseif swing_mode == 16 then
+--   clock.sync(1/4)
+--  end 
 
-end 
+-- end 
 
 
 function process_ratchet (output, ratchet_mode)
@@ -2224,7 +2248,7 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
 
   -- Set Swing
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button1" )  then
-    swing_mode = 0 
+    swing_mode = 1 
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button13" )  then
     swing_mode = 13 
   elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button14" )  then
