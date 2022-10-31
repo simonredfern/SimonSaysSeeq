@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.2
+version = 0.3
 
 local volts = 0
 local slew = 0
@@ -58,6 +58,8 @@ LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 47 -- at least 1 will be added to this.
 
 MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
+
+MOZART_BASE_MIDI_NOTE = 33 -- A1
 
 
 need_to_start_midi = true -- Check gate clock situation.
@@ -122,6 +124,9 @@ table.insert(BUTTONS, {name = "PresetMozart", x = 14, y = 8})
 table.insert(BUTTONS, {name = "ArmSlideOff", x = 15, y = 8})
 table.insert(BUTTONS, {name = "ArmSlideOn", x = 16, y = 8})
 
+
+--MOZART_SCALE_A_MINOR = {}
+--table.insert(MOZART_SCALES, {degree = 1, midi_note = 33})
 
 
 
@@ -329,32 +334,19 @@ function tick()
       clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
     else   
       print ("swing_mode is: " .. swing_mode)
+
+
+      -- note probably better to check on odd / even. in any case they must be balanced. what if changge pattern length?
+
       if SWING_STEPS[current_step] then
         print ("swinging step " .. current_step)
-
-
         clock.sync(1/48 + swing_amount)
-
-
       else
         -- Non swing step
-        --clock.sync(1/48)
-
         print ("Not swinging step " .. current_step)
-
         clock.sync(1/48 - swing_amount)
-  
       end    
     end  
-
-
-
-
-
-
-
-
-
 
 
   
@@ -1549,27 +1541,7 @@ normal_midi_device.event = function(data)
     normal_midi_note_in = data[2]
     captured_normal_midi_note_in = data[2] -- store this so we can act on a later step press
     
-    -- Now check if a step button is pressed down
 
-
-    --loop through held_state
-
-
-
-    -- for col = 1,COLS do 
-    --   for row = 1,ROWS do
-    --     -- if a step is held, assign the captured midi note to it.
-    --     if held_state[col][row] == 1 then
-    --       mozart_state[col][row] = captured_normal_midi_note_in -- Note we don't have any note off
-
-    --       -- As we have just "put a midi note on the step", make the step on.
-    --       grid_state[col][row] = 1
-    --     end  
-    --   end 
-    -- end
-
-
-        -- replaces the above 
     set_mozart_and_grid_based_on_held_key(captured_normal_midi_note_in)
 
 
@@ -2268,54 +2240,56 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
 -- Handles the following key combination: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
 
 
+-- HERE
+
 elseif (grid_button_function_name (x,y) == "Button1") then
   print("button" .. 1)
-  conditional_set_mozart(x, y, z, 33)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 0) -- A
 elseif (grid_button_function_name (x,y) == "Button2") then
   print("button" .. 2)
-  conditional_set_mozart(x, y, z, 34)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B 
 elseif (grid_button_function_name (x,y) == "Button3") then
   print("button" .. 3)
-  conditional_set_mozart(x, y, z, 35)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- C
 elseif (grid_button_function_name (x,y) == "Button4") then
   print("button" .. 4)
-  conditional_set_mozart(x, y, z, 36)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- D
 elseif (grid_button_function_name (x,y) == "Button5") then
   print("button" .. 5)
-  conditional_set_mozart(x, y, z, 37)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- E
 elseif (grid_button_function_name (x,y) == "Button6") then
   print("button" .. 6)
-  conditional_set_mozart(x, y, z, 38)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- F
 elseif (grid_button_function_name (x,y) == "Button7") then
   print("button" .. 7)
-  conditional_set_mozart(x, y, z, 39)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- G
 elseif (grid_button_function_name (x,y) == "Button8") then
   print("button" .. 8)
-  conditional_set_mozart(x, y, z, 40)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- A
 elseif (grid_button_function_name (x,y) == "Button9") then
   print("button" .. 9)
-  conditional_set_mozart(x, y, z, 41)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B
 elseif (grid_button_function_name (x,y) == "Button10") then
   print("button" .. 10)
-  conditional_set_mozart(x, y, z, 42)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- C 
 elseif (grid_button_function_name (x,y) == "Button11") then
   print("button" .. 11)             
-  conditional_set_mozart(x, y, z, 43)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- D 
 elseif (grid_button_function_name (x,y) == "Button12") then
   print("button" .. 12)
-  conditional_set_mozart(x, y, z, 44)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- E 
 elseif (grid_button_function_name (x,y) == "Button13") then
   print("button" .. 13)
-  conditional_set_mozart(x, y, z, 45)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- F
 elseif (grid_button_function_name (x,y) == "Button14") then
   print("button" .. 14)
-  conditional_set_mozart(x, y, z, 46)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- G
 elseif (grid_button_function_name (x,y) == "Button15") then
   print("button" .. 15)
-  conditional_set_mozart(x, y, z, 47)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- A 
 elseif (grid_button_function_name (x,y) == "Button16") then
   print("button" .. 16) 
-  conditional_set_mozart(x, y, z, 48)
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B
   end -- end of grid_button_function_name tests
 
 end  -- End of Sequence / Control
