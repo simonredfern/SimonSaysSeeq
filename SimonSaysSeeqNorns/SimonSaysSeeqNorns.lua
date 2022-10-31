@@ -1486,11 +1486,15 @@ function set_mozart_and_grid_based_on_held_key(midi_note_number)
     for row = 1,ROWS do
       -- if a step is held, assign the captured midi note to it.
       if held_state[col][row] == 1 then
-        mozart_state[col][row] = midi_note_number -- Note we don't have any note off
-        print ("set_mozart_and_grid_based_on_held_key says: Just set  " .. col .. "," ..  row ..  " to midi note: " .. midi_note_number)
+        --mozart_state[col][row] = midi_note_number -- Note we don't have any note off
+        --print ("set_mozart_and_grid_based_on_held_key says: Just set  " .. col .. "," ..  row ..  " to midi note: " .. midi_note_number)
 
         -- As we have just "put a midi note on the step", make the step on.
-        grid_state[col][row] = 1
+        -- grid_state[col][row] = 1
+
+        unconditional_set_mozart(col, row, midi_note_number)
+
+
       end  
     end 
   end
@@ -1509,9 +1513,23 @@ function conditional_set_mozart(x, y, z, midi_note_number)
   end 
 
   -- As we have just "put a midi note on the step", make the step on.
-  grid_state[x][y] = 1 -- this not working, something is overriding it
+  -- grid_state[x][y] = 1 -- this not working, something is overriding it
 
 end
+
+
+function unconditional_set_mozart(x, y, midi_note_number)
+
+  mozart_state[x][y] = midi_note_number -- Note we don't have any note off
+
+  -- As we have just "put a midi note on the step", make the step on.
+  grid_state[x][y] = 1 -- this not working, something is overriding it
+
+  print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
+
+end
+
+
 
 -- probably not used
 midi_gates_device.event = function(data)
@@ -1870,9 +1888,13 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
       if midi_note_key_pressed ~= -1 then
         print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
+  
+      -- Store the latest captured midi note in the mozart table
+        --mozart_state[x][y] = midi_note_key_pressed
 
-        -- Store the latest captured midi note in the mozart table
-        mozart_state[x][y] = midi_note_key_pressed
+        unconditional_set_mozart(x,y, midi_note_key_pressed)
+
+
       else
         print ("Not doing anything to mozart_state via key press")  
         -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
