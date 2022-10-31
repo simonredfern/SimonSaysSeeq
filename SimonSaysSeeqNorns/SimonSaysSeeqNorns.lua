@@ -1487,6 +1487,7 @@ function set_mozart_and_grid_based_on_held_key(midi_note_number)
       -- if a step is held, assign the captured midi note to it.
       if held_state[col][row] == 1 then
         mozart_state[col][row] = midi_note_number -- Note we don't have any note off
+        print ("set_mozart_and_grid_based_on_held_key says: Just set  " .. col .. "," ..  row ..  " to midi note: " .. midi_note_number)
 
         -- As we have just "put a midi note on the step", make the step on.
         grid_state[col][row] = 1
@@ -1497,6 +1498,8 @@ end
 
 
 function conditional_set_mozart(x, y, z, midi_note_number)
+
+  print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
 
   if z == 1 then 
     midi_note_key_pressed = midi_note_number
@@ -2250,46 +2253,46 @@ elseif (grid_button_function_name (x,y) == "Button2") then
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B 
 elseif (grid_button_function_name (x,y) == "Button3") then
   print("button" .. 3)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- C
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 3) -- C
 elseif (grid_button_function_name (x,y) == "Button4") then
   print("button" .. 4)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- D
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 5) -- D
 elseif (grid_button_function_name (x,y) == "Button5") then
   print("button" .. 5)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- E
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 7) -- E
 elseif (grid_button_function_name (x,y) == "Button6") then
   print("button" .. 6)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- F
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 8) -- F
 elseif (grid_button_function_name (x,y) == "Button7") then
   print("button" .. 7)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- G
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 10) -- G
 elseif (grid_button_function_name (x,y) == "Button8") then
   print("button" .. 8)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- A
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 12) -- A
 elseif (grid_button_function_name (x,y) == "Button9") then
   print("button" .. 9)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 14) -- B
 elseif (grid_button_function_name (x,y) == "Button10") then
   print("button" .. 10)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- C 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 15) -- C 
 elseif (grid_button_function_name (x,y) == "Button11") then
   print("button" .. 11)             
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- D 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 17) -- D 
 elseif (grid_button_function_name (x,y) == "Button12") then
   print("button" .. 12)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- E 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 19) -- E 
 elseif (grid_button_function_name (x,y) == "Button13") then
   print("button" .. 13)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 1) -- F
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 20) -- F
 elseif (grid_button_function_name (x,y) == "Button14") then
   print("button" .. 14)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- G
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 22) -- G
 elseif (grid_button_function_name (x,y) == "Button15") then
   print("button" .. 15)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- A 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 24) -- A 
 elseif (grid_button_function_name (x,y) == "Button16") then
   print("button" .. 16) 
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 26) -- B
   end -- end of grid_button_function_name tests
 
 end  -- End of Sequence / Control
