@@ -308,14 +308,19 @@ function tick()
    
  
      
-    swing_amount = 0
+    --swing_amount = 0
 
 
-    -- some kind of swing amount between zero and nearly 1/192 
-    swing_amount = (swing_mode / 18) * (1 / 480) 
+
 
     if swing_mode == 1 then
       swing_amount = 0
+    else
+
+          -- some kind of swing amount between zero and nearly 1/192 
+      swing_amount = (swing_mode / 18) * (1 / 480) 
+
+
     end  
 
 
@@ -329,21 +334,24 @@ function tick()
     --   swing_amount = 1/96
     -- end 
 
+
+    print ("current_step is: " .. current_step .. " tick_count is: " .. tick_count)
+
     if swing_mode == 1 then
        -- No swing, normal clock
       clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
     else   
-      print ("swing_mode is: " .. swing_mode)
+      -- print ("swing_mode is: " .. swing_mode)
 
 
       -- note probably better to check on odd / even. in any case they must be balanced. what if changge pattern length?
 
       if SWING_STEPS[current_step] then
-        print ("swinging step " .. current_step)
+        print ("swinging step " .. current_step .. " amount is: + " .. swing_amount)
         clock.sync(1/48 + swing_amount)
       else
         -- Non swing step
-        print ("Not swinging step " .. current_step)
+        print ("swinging step " .. current_step .. " amount is: - " .. swing_amount)
         clock.sync(1/48 - swing_amount)
       end    
     end  
@@ -433,7 +441,7 @@ function tick()
       if transport_active then 
 
         --softcut.play(1,1)
-        do_and_advance_step() 
+        process_step_and_advance() 
       end
 
       redraw()
@@ -551,8 +559,8 @@ end
 
 
 
-function do_and_advance_step()
-  --print ("do_and_advance_step current_step is:  " .. current_step)
+function process_step_and_advance()
+  --print ("process_step_and_advance current_step is:  " .. current_step)
 
   
   local ratchet_mode = 1 -- default is 1 but it will be set
