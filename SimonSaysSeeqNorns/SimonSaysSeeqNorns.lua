@@ -139,6 +139,8 @@ tick_text = "."
 
 tick_count = 0
 
+blip = 1
+
 PPQN24_GATES_ARE_ENABLED = true
 
 
@@ -335,7 +337,7 @@ function tick()
     -- end 
 
 
-    print ("current_step is: " .. current_step .. " tick_count is: " .. tick_count)
+    print ("current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip is: " .. blip)
 
     if swing_mode == 1 then
        -- No swing, normal clock
@@ -433,14 +435,20 @@ function tick()
 
     end -- End check for 24 PPQN clocks
 
+
+
+    
+
+
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
     if tick_count % 12 == 0 then
 
       -- print("tick_count is: " .. tick_count)
 
-      if transport_active then 
 
-        --softcut.play(1,1)
+      print("blip is: " .. blip)
+
+      if transport_active then 
         process_step_and_advance() 
       end
 
@@ -450,6 +458,10 @@ function tick()
 
     -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
     tick_count = tick_count + 1
+
+    blip = blip + 1
+
+   
 
     if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
       tick_count = 0
@@ -658,6 +670,8 @@ function process_step_and_advance()
 
   -- advance step
   current_step = util.wrap(current_step + 1, first_step, last_step)
+
+  blip = 0
 
   
 end -- end function
