@@ -300,6 +300,7 @@ screen.font_face(15)
 screen.font_size(7)
 
 
+------------- TICK FUNCTION - THIS IS THE MAIN TIMING LOOP ---------------------------
 function tick()
   while true do
 
@@ -307,8 +308,6 @@ function tick()
    -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
    -- if we clock.sync(1/24) this is 24PPQN Pulses Per Quarter Note, I.e. standard MIDI clock
 
-   
- 
      
     --swing_amount = 0
 
@@ -337,26 +336,28 @@ function tick()
     -- end 
 
 
-    print ("current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip is: " .. blip)
+    print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip is: " .. blip)
 
-    if swing_mode == 1 then
-       -- No swing, normal clock
-      clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
-    else   
-      -- print ("swing_mode is: " .. swing_mode)
+    clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
+
+    -- if swing_mode == 1 then
+    --    -- No swing, normal clock
+    --   clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
+    -- else   
+    --   -- print ("swing_mode is: " .. swing_mode)
 
 
-      -- note probably better to check on odd / even. in any case they must be balanced. what if changge pattern length?
+    --   -- note probably better to check on odd / even. in any case they must be balanced. what if changge pattern length?
 
-      if SWING_STEPS[current_step] then
-        print ("swinging step " .. current_step .. " amount is: + " .. swing_amount)
-        clock.sync(1/48 + swing_amount)
-      else
-        -- Non swing step
-        print ("swinging step " .. current_step .. " amount is: - " .. swing_amount)
-        clock.sync(1/48 - swing_amount)
-      end    
-    end  
+    --   if SWING_STEPS[current_step] then
+    --     print ("swinging step " .. current_step .. " amount is: + " .. swing_amount)
+    --     clock.sync(1/48 + swing_amount)
+    --   else
+    --     -- Non swing step
+    --     print ("swinging step " .. current_step .. " amount is: - " .. swing_amount)
+    --     clock.sync(1/48 - swing_amount)
+    --   end    
+    -- end  
 
 
   
@@ -371,12 +372,8 @@ function tick()
 
          --audio.tape_play_start()
          
-          softcut.position(1,5) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
-        --  softcut.level(1,1)
-        --  softcut.play(1,1)
+         -- softcut.position(1,5) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
 
-
-         --engine.hz(440)
 
 
         else
@@ -384,15 +381,8 @@ function tick()
 
          -- print("POS 1")
 
-          softcut.position(1, 1)-- at this this position (1 second) there should be no sound
+         -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
 
-          -- softcut.play(1,1)
-
-           -- audio.tape_play_stop()
-
-          -- softcut.level(1,0)
-
-          --engine.hz(1000)
 
         end  
 
@@ -402,34 +392,6 @@ function tick()
           clock.run(process_clock_gate, 11)
         end 
 
-        --------
-
-        -- This seem to overload Flame sometimes.
-    
-        -- if tick_count % 6 == 0 then
-        --   clock.run(process_clock_gate, 10)
-        -- end 
-
-        -- if tick_count % 12 == 0 then
-        --   clock.run(process_clock_gate, 9)
-        -- end  
-
-        -- if tick_count % 24 == 0 then
-        --   clock.run(process_clock_gate, 8)
-        -- end 
-
-        -- if tick_count % 48 == 0 then
-        --   clock.run(process_clock_gate, 8)
-        -- end 
-
-        -- if tick_count % 96 == 0 then
-        --   clock.run(process_clock_gate, 8)
-        -- end 
-
-        -- if tick_count % 192 == 0 then -- since tick_count never reaches 192, this only fires at 0
-        --   -- print("Modulus 192 tick_count is: " .. tick_count)
-        --   clock.run(process_clock_gate, 7)
-        -- end 
 
       end -- End conditional clocks check 
 
@@ -449,7 +411,14 @@ function tick()
       print("blip is: " .. blip)
 
       if transport_active then 
-        process_step_and_advance() 
+        process_step() 
+
+        -- advance step  
+        current_step = util.wrap(current_step + 1, first_step, last_step)
+        print ("Advanced step to: " .. current_step)
+
+        blip = 0
+
       end
 
       redraw()
@@ -571,8 +540,8 @@ end
 
 
 
-function process_step_and_advance()
-  --print ("process_step_and_advance current_step is:  " .. current_step)
+function process_step()
+  --print ("process_step current_step is:  " .. current_step)
 
   
   local ratchet_mode = 1 -- default is 1 but it will be set
@@ -668,10 +637,7 @@ function process_step_and_advance()
 
   end -- end for
 
-  -- advance step
-  current_step = util.wrap(current_step + 1, first_step, last_step)
 
-  blip = 0
 
   
 end -- end function
@@ -1076,7 +1042,7 @@ function init()
 
   -- Set the starting tempo. Can be changed with right knob
   -- TODO store and retreive this
-  params:set("clock_tempo",136)
+  params:set("clock_tempo",80)
   
   --midi_start_on_bar_id = clock.run(midi_start_on_bar)
 
@@ -1090,16 +1056,8 @@ function init()
 
 
 
-
+   print("init says: Starting main sequencer timing called tick.")
    clock.run(tick)       -- start the sequencer
-
-
-  --  clock.run(function()  -- redraw the screen and grid at 15fps (maybe refresh grid at a different rate?)
-  --   while true do
-  --     clock.sleep(1/15)
-  --     redraw()
-  --   end
-  -- end)
 
 
   print_audio_file_info(audio_clock_file)
@@ -1112,7 +1070,7 @@ function init()
  
 
 
- clock.run(grid_state_popularity_watcher) 
+ --clock.run(grid_state_popularity_watcher) 
 
  
 
@@ -1126,7 +1084,7 @@ function init()
       clock.sleep(5)
         if (grid_state_dirty == true) then
 
-           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this)
+           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
 
             Tab.save(grid_state, GRID_STATE_FILE)
 
