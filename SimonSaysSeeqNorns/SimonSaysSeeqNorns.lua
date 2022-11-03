@@ -139,7 +139,7 @@ tick_text = "."
 
 tick_count = 0
 
-blip = 1
+blip_count = 0
 
 PPQN24_GATES_ARE_ENABLED = true
 
@@ -336,7 +336,7 @@ function tick()
     -- end 
 
 
-    print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip is: " .. blip)
+    print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
 
@@ -408,7 +408,7 @@ function tick()
       -- print("tick_count is: " .. tick_count)
 
 
-      print("blip is: " .. blip)
+      print("blip_count is: " .. blip_count)
 
       if transport_active then 
         process_step() 
@@ -417,7 +417,7 @@ function tick()
         current_step = util.wrap(current_step + 1, first_step, last_step)
         print ("Advanced step to: " .. current_step)
 
-        blip = 0
+        blip_count = 0
 
       end
 
@@ -428,7 +428,7 @@ function tick()
     -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
     tick_count = tick_count + 1
 
-    blip = blip + 1
+    blip_count = blip_count + 1
 
    
 
