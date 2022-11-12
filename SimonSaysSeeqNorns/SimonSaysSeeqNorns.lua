@@ -4,6 +4,8 @@
 
 version = 0.3
 
+bad_count = 0
+
 local volts = 0
 local slew = 0
 
@@ -317,7 +319,15 @@ function tick()
      
     --swing_amount = 0
 
+now_tempo = clock.get_tempo()
 
+
+if (now_tempo <= 139.50 or now_tempo >= 140.50) then
+  bad_count = bad_count + 1
+
+  print ("clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count)
+
+end    
 
 
     if swing_mode == 1 then
@@ -448,21 +458,21 @@ function tick()
 
     if blip_count == 0 then
 
-      print("i would process the step here " .. blip_count)
+      -- print("i would process the step here " .. blip_count)
       -- process_step() 
     end  
 
 
     if tick_count % 12 == 0 then
 
-      print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
+      --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
         -- this will be above 
       process_step() 
 
       -- Always advance the step based on tick_count mod 12.    
       current_step = util.wrap(current_step + 1, first_step, last_step)
-      print ("Advanced step to: " .. current_step)
+      -- print ("Advanced step to: " .. current_step)
       
         
       -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
@@ -497,17 +507,17 @@ end
 
 
 
-function grid_state_popularity_watcher()
-  -- get some idea of how much a particular grid is used
-  -- the idea is to use this on a fast forward backward undo / redo that just scrolls through the popular states
-  -- (i.e. states that have been used for a long time)
-  -- WIP The idea is to have a separate undo / redo that only uses hi popularity states
-  while true do
-    clock.sync(1) -- do this every beat
-    grid_state["gspc"] = grid_state["gspc"] + 1
-    --print ("grid_state.gspc is: " .. grid_state["gspc"])
-  end
-end
+-- function grid_state_popularity_watcher()
+--   -- get some idea of how much a particular grid is used
+--   -- the idea is to use this on a fast forward backward undo / redo that just scrolls through the popular states
+--   -- (i.e. states that have been used for a long time)
+--   -- WIP The idea is to have a separate undo / redo that only uses hi popularity states
+--   while true do
+--     clock.sync(1) -- do this every beat
+--     grid_state["gspc"] = grid_state["gspc"] + 1
+--     --print ("grid_state.gspc is: " .. grid_state["gspc"])
+--   end
+-- end
 
 
 
@@ -878,7 +888,7 @@ function key(n,z)
   
   -- since MIDI and Link offer their own start/stop messages,
   -- we'll only need to manually start if using internal or crow clock sources:
-  if params:string("clock_source") == "internal" then
+ -- if params:string("clock_source") == "internal" then
 
     -- left button pressed 
     if n == 2 and z == 1 then
@@ -919,7 +929,7 @@ function key(n,z)
       screen_dirty = true
     end
     
-  end
+ -- end
 end
 
 
@@ -1151,6 +1161,8 @@ function init()
 
 
             grid_state_dirty = false
+
+            print("I saved tables.")
            end
         end
     end
@@ -1566,9 +1578,9 @@ end
 
 
 
--- probably not used
+-- probably not used (but does get called becuase lots of prints)
 midi_gates_device.event = function(data)
-  print("---------------------- midi_gates_device IN ---------------------------------------")
+  -- print("---------------------- midi_gates_device IN ---------------------------------------")
 end
 
 
@@ -2531,7 +2543,7 @@ function refresh_grid_and_screen()
 -- current_tempo no decimal points
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
-  status_text = string.format("%.0f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. end_of_line_text .. " " .. conductor_text 
+  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. end_of_line_text .. " " .. conductor_text 
   
   screen.move(1,63)   
   screen.text(status_text)
