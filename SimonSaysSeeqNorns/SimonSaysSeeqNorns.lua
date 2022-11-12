@@ -71,7 +71,13 @@ run_conditional_clocks = false
 --audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/E-RM_multiclock_sample.wav"
 
 
-audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/0-1-2-3-4-5.wav"
+-- To copy the file use scp:
+-- (this click file was copied from http://www.makenoisemusic.com/)
+-- scp modular-pulse.wav we@norns.local:/home/we/dust/audio/SimonSaysSeeqAudio
+
+-- audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/0-1-2-3-4-5.wav"
+
+audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/modular-pulse.wav"
 
 -- audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/hermit_leaves.wav"
 
@@ -336,7 +342,7 @@ function tick()
     -- end 
 
 
-    print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
+    --print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
 
@@ -371,9 +377,11 @@ function tick()
 
 
          --audio.tape_play_start()
-         
-         -- softcut.position(1,5) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
 
+         --print("POS 0")
+         
+         softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
+         softcut.play(1,1)
 
 
         else
@@ -382,6 +390,7 @@ function tick()
          -- print("POS 1")
 
          -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
+         softcut.play(1,0)
 
 
         end  
@@ -399,36 +408,82 @@ function tick()
 
 
 
+
+    -- -- Every 12 ticks we want to advance the sequencer (if transport is active) 
+    -- if tick_count % 12 == 0 then
+
+    --   -- print("tick_count is: " .. tick_count)
+
+
+    --   print("blip_count is: " .. blip_count)
+
+    --   if transport_active then 
+    --     process_step() 
+
+    --     -- Always advance the step based on tick_count mod 12.    
+    --     current_step = util.wrap(current_step + 1, first_step, last_step)
+    --     print ("Advanced step to: " .. current_step)
+
+
+    --     blip_count = 0
+
+    --   end
+
+    --   redraw()
+
+    -- end  
+
+
+
+
+
+
     
 
 
+
+
+  if transport_active then 
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
+
+    if blip_count == 0 then
+
+      print("i would process the step here " .. blip_count)
+      -- process_step() 
+    end  
+
+
     if tick_count % 12 == 0 then
 
-      -- print("tick_count is: " .. tick_count)
+      print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
+        -- this will be above 
+      process_step() 
 
-      print("blip_count is: " .. blip_count)
-
-      if transport_active then 
-        process_step() 
-
-        -- advance step  
-        current_step = util.wrap(current_step + 1, first_step, last_step)
-        print ("Advanced step to: " .. current_step)
-
-        blip_count = 0
-
+      -- Always advance the step based on tick_count mod 12.    
+      current_step = util.wrap(current_step + 1, first_step, last_step)
+      print ("Advanced step to: " .. current_step)
+      
+        
+      -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
+      if current_step == 3 then
+        blip_count = 6
+      else   
+        blip_count = 12
       end
 
       redraw()
 
-    end   
+    end
 
-    -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
-    tick_count = tick_count + 1
+    blip_count = blip_count - 1
 
-    blip_count = blip_count + 1
+  end   
+
+  -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
+  tick_count = tick_count + 1
+
+    
 
    
 
@@ -950,11 +1005,11 @@ function init()
   softcut.buffer_clear()
   -- read file into buffer
   -- buffer_read_mono (file, start_src, start_dst, dur, ch_src, ch_dst)
-  -- softcut.buffer_read_mono(audio_clock_file,0,1,-1,1,1)
+  softcut.buffer_read_mono(audio_clock_file,0,0,-1,1,1,1,1)
   
 
 
-  softcut.buffer_read_stereo(audio_clock_file, 1, 1, -1)
+  -- softcut.buffer_read_stereo(audio_clock_file, 0, 0, -1)
 
 
   -- audio.tape_play_open (audio_clock_file)
@@ -970,7 +1025,7 @@ function init()
   
   
   -- voice 1  loop
-   softcut.loop(1,1) -- This MUST be on ??
+   softcut.loop(1,0) -- loop off
   -- set voice 1 loop start to 1
   softcut.loop_start(1,0)
   -- set voice 1 loop end to 2
