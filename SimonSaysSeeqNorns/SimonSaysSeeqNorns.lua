@@ -4,10 +4,11 @@
 
 version = 0.3
 
-bad_count = 0
+unstable_tempo_count = 0
 tempo_sum = 0
 average_tempo = 0
 tempo_is_stable = 1 -- Assume it is to start with
+current_tempo = 120 -- will be almost immediatly changed to the clock
 
 local volts = 0
 local slew = 0
@@ -322,18 +323,26 @@ function tick()
      
     --swing_amount = 0
 
-now_tempo = clock.get_tempo()
+-- now_tempo = clock.get_tempo()
 
+current_tempo = clock.get_tempo()
 
-if (average_tempo - current_tempo > math.abs(0.5) ) then
-  bad_count = bad_count + 1
+if (average_tempo - current_tempo > math.abs(0.05) ) then
+  unstable_tempo_count = unstable_tempo_count + 1
 
   tempo_is_stable = 0
-  tempo_stable_string = "Unstable or changing TEMPO clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count
+  tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
+  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_count
 
-  print (tempo_stable_string)
+
+  print (tempo_status_string_1)
+  print (tempo_status_string_2)
+  print (tempo_status_string_3)
 else
-  tempo_stempo_stable_stringtring = "Tempo seems stable at: " .. current_tempo
+  tempo_status_string_1 = "Tempo seems stable at: " .. current_tempo
+  tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
+  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_count
   tempo_is_stable = 1
 end    
 
@@ -2565,13 +2574,37 @@ function refresh_grid_and_screen()
 else
 
 
-  screen.move(1,1) -- check
-  screen.text(tempo_stable_string)
+  
+
+  screen.clear()
+  screen.update()
+
+  --screen.font_face(6)
+
+  --screen.font_size(10)
+  
+  screen.move(1,7) 
+  screen.text(tempo_status_string_1)
+
+  screen.move(1,14) 
+  screen.text(tempo_status_string_2)
+
+
+  screen.move(1,21) 
+  screen.text(tempo_status_string_3)
+
+  --screen.font_size(10)
+  screen.move(1,50) 
+  
+  screen.text(string.format("%.4f",current_tempo) )
+  screen.update() 
+
+ 
 
 
 end -- stable tempo check
   
-    current_tempo = clock.get_tempo()
+   current_tempo = clock.get_tempo()
   
 
   if need_to_start_midi == true then
