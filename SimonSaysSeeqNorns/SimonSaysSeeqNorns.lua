@@ -5,6 +5,8 @@
 version = 0.3
 
 bad_count = 0
+tempo_sum = 0
+average_tempo = 0
 
 local volts = 0
 local slew = 0
@@ -322,10 +324,10 @@ function tick()
 now_tempo = clock.get_tempo()
 
 
-if (now_tempo <= 139.50 or now_tempo >= 140.50) then
+if (average_tempo - current_tempo > math.abs(0.5) ) then
   bad_count = bad_count + 1
 
-  print ("clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count)
+  print ("Unstable or changing TEMPO clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count)
 
 end    
 
@@ -493,12 +495,29 @@ end
   -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
   tick_count = tick_count + 1
 
-    
+  tempo_sum = tempo_sum + current_tempo 
+
 
    
 
     if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
+
+      screen.clear()
+
+      screen.move(1,10)
+      screen.text("SimonSaysSeeq on Norns v" .. version)
+
+
+   
+
+      average_tempo = tempo_sum / tick_count
+
+      screen.text("Average Tempo" .. tempo_sum / tick_count)
+
       tick_count = 0
+
+      tempo_sum = 0
+
     end  
 
   end
@@ -825,15 +844,19 @@ end
 
 
 
-function clock.transport.start() -- when is this called?
-  print("transport.start")
+function clock.transport.start() 
+  -- This function is maybe called
+  -- 1) Via code attached to the Norns Right Button
+  -- 2) Via the system when midi start is detected. ? check this.
+
+  print("====================== transport.start says Hello ========================")
 
   screen.clear()
 
   transport_active = true
   
   screen.move(90,63)
-  screen.text("Start")
+  screen.text("Transport Start")
   screen.update()
 end
 
@@ -845,14 +868,27 @@ end
 
 
 function clock.transport.stop()
-  print("transport.stop")
 
-  screen.clear()
+  -- This function is maybe called
+  -- 1) Via code attached to the Norns Right Button
+  -- 2) Via the system when midi start is detected. ? check this.
+
+
+  print("================= transport.stop says Hello =======================")
+
+  current_step = first_step
+
+
+--  screen.clear()
 
   transport_active = false
-  screen.move(80,80)
-  screen.text("STOP")
-  screen.update()
+  --screen.move(80,80)
+  --screen.text("Transport STOP")
+  --screen.update()
+
+  refresh_grid_and_screen()
+
+
 end
 
 
@@ -882,7 +918,7 @@ function enc(n,d)
 end 
 
 
--- Norns (Shield) key presses - (not the monome grid )
+-- Norns (Shield) key presses - (This is not the monome grid )
 function key(n,z)
   print("key pressed.  n:" .. n ..  " z:" .. z )
   
