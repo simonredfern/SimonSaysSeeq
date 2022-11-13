@@ -4,7 +4,8 @@
 
 version = 0.3
 
-unstable_tempo_count = 0
+unstable_tempo_ticks = 0
+unstable_tempo_episodes = 0
 tempo_sum = 0
 average_tempo = 0
 tempo_is_stable = 1 -- Assume it is to start with
@@ -328,21 +329,29 @@ function tick()
 current_tempo = clock.get_tempo()
 
 if (average_tempo - current_tempo > math.abs(0.05) ) then
-  unstable_tempo_count = unstable_tempo_count + 1
+  unstable_tempo_ticks = unstable_tempo_ticks + 1
+
+
+  if (tempo_is_stable == 1 ) then
+    unstable_tempo_episodes = unstable_tempo_episodes + 1
+  end  
 
   tempo_is_stable = 0
   tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_count
+  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_ticks
+  tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
 
 
   print (tempo_status_string_1)
   print (tempo_status_string_2)
   print (tempo_status_string_3)
+  print (tempo_status_string_4)
 else
   tempo_status_string_1 = "Tempo seems stable at: " .. current_tempo
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_count
+  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_ticks
+  tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
   tempo_is_stable = 1
 end    
 
@@ -869,8 +878,11 @@ function clock.transport.start()
   screen.clear()
 
   transport_active = true
+
+  unstable_tempo_ticks = 0
+  unstable_tempo_episodes = 0
   
-  screen.move(90,63)
+  screen.move(1,63)
   screen.text("Transport Start")
   screen.update()
 end
@@ -886,10 +898,13 @@ function clock.transport.stop()
 
   -- This function is maybe called
   -- 1) Via code attached to the Norns Right Button
-  -- 2) Via the system when midi start is detected. ? check this.
+  -- 2) Via the system when midi stop is detected. ? check this.
 
 
   print("================= transport.stop says Hello =======================")
+
+  print("unstable_tempo_ticks since last start: " .. unstable_tempo_ticks)
+  print("unstable_tempo_episodes since last start: " .. unstable_tempo_episodes)
 
   current_step = first_step
 
@@ -901,7 +916,12 @@ function clock.transport.stop()
   --screen.text("Transport STOP")
   --screen.update()
 
-  refresh_grid_and_screen()
+  -- refresh_grid_and_screen()
+
+
+  display_tempo_status()
+
+
 
 
 end
@@ -948,15 +968,15 @@ function key(n,z)
 
     -- softcut.tape_play_stop ()
 
-      if transport_active then -- currently running so Stop     
+     -- if transport_active then -- currently running so Stop     
         clock.transport.stop()
         request_midi_stop()
 
         
-      else -- Not currently running so reset. 
+     -- else -- Not currently running so reset. 
         current_step = first_step -- effectively we press this again.
 
-      end
+     -- end
       
       screen_dirty = true
     end
@@ -2513,6 +2533,39 @@ function get_copy_of_grid(input_grid)
 end  
 
 
+function display_tempo_status()
+
+  screen.clear()
+  screen.update()
+
+  --screen.font_face(6)
+
+  --screen.font_size(10)
+  
+  screen.move(1,7) 
+  screen.text(tempo_status_string_1)
+
+  screen.move(1,14) 
+  screen.text(tempo_status_string_2)
+
+
+  screen.move(1,21) 
+  screen.text(tempo_status_string_3)
+
+  screen.move(1,28) 
+  screen.text(tempo_status_string_4)
+
+  --screen.font_size(10)
+  screen.move(1,50) 
+  
+  screen.text(string.format("%.4f",current_tempo) )
+  screen.update() 
+
+ 
+
+
+end  
+
 
 function refresh_grid_and_screen()
   
@@ -2573,33 +2626,10 @@ function refresh_grid_and_screen()
 
 else
 
-
+  display_tempo_status()
   
 
-  screen.clear()
-  screen.update()
-
-  --screen.font_face(6)
-
-  --screen.font_size(10)
   
-  screen.move(1,7) 
-  screen.text(tempo_status_string_1)
-
-  screen.move(1,14) 
-  screen.text(tempo_status_string_2)
-
-
-  screen.move(1,21) 
-  screen.text(tempo_status_string_3)
-
-  --screen.font_size(10)
-  screen.move(1,50) 
-  
-  screen.text(string.format("%.4f",current_tempo) )
-  screen.update() 
-
- 
 
 
 end -- stable tempo check
