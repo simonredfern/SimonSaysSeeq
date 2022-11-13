@@ -339,7 +339,7 @@ if (average_tempo - current_tempo > math.abs(0.05) ) then
   tempo_is_stable = 0
   tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_ticks
+  tempo_status_string_3 = "Unstable Tempo Ticks: " .. unstable_tempo_ticks
   tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
 
 
@@ -350,7 +350,7 @@ if (average_tempo - current_tempo > math.abs(0.05) ) then
 else
   tempo_status_string_1 = "Tempo seems stable at: " .. current_tempo
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Count: " .. unstable_tempo_ticks
+  tempo_status_string_3 = "Unstable Tempo Ticks: " .. unstable_tempo_ticks
   tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
   tempo_is_stable = 1
 end    
@@ -525,6 +525,8 @@ end
    
 
     if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
+
+      -- This means we calculate the average tempo over a fixed period of 192 ticks 
 
       screen.clear()
 
