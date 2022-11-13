@@ -7,6 +7,7 @@ version = 0.3
 bad_count = 0
 tempo_sum = 0
 average_tempo = 0
+tempo_is_stable = 1 -- Assume it is to start with
 
 local volts = 0
 local slew = 0
@@ -327,8 +328,13 @@ now_tempo = clock.get_tempo()
 if (average_tempo - current_tempo > math.abs(0.5) ) then
   bad_count = bad_count + 1
 
-  print ("Unstable or changing TEMPO clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count)
+  tempo_is_stable = 0
+  tempo_stable_string = "Unstable or changing TEMPO clock.get_tempo() is: " .. now_tempo .. " tick_count is: " .. tick_count .. " bad_count is: " .. bad_count
 
+  print (tempo_stable_string)
+else
+  tempo_stempo_stable_stringtring = "Tempo seems stable at: " .. current_tempo
+  tempo_is_stable = 1
 end    
 
 
@@ -2509,6 +2515,9 @@ function refresh_grid_and_screen()
 
   screen.clear()
   screen.move(1,1)
+
+
+  if (tempo_is_stable == 1) then
   
   for col = 1,COLS do 
     for row = 1,ROWS do
@@ -2552,6 +2561,15 @@ function refresh_grid_and_screen()
     end -- end rows loop
   end -- end cols loop
   
+
+else
+
+
+  screen.move(1,1) -- check
+  screen.text(tempo_stable_string)
+
+
+end -- stable tempo check
   
     current_tempo = clock.get_tempo()
   
