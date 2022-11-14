@@ -2,11 +2,20 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.3
+version = 0.5
+
+version_string = "SimonSaysSeeq on Norns v" .. version
+
+
+-- use init_tempo_window instead?
+tempo_window_count_of_ticks = 0
+tempo_sum = 0
+
+
 
 unstable_tempo_ticks = 0
 unstable_tempo_episodes = 0
-tempo_sum = 0
+
 average_tempo = 0
 tempo_is_stable = 1 -- Assume it is to start with
 current_tempo = 120 -- will be almost immediatly changed to the clock
@@ -15,7 +24,7 @@ local volts = 0
 local slew = 0
 
 -- on/off for stepped sequence 
-transport_active = true
+transport_is_active = true
 
 
 -- Dimensions of Grid
@@ -313,6 +322,13 @@ screen.font_face(15)
 screen.font_size(7)
 
 
+function init_tempo_window()
+  tempo_window_count_of_ticks = 0
+  tempo_sum = 0
+end  
+
+
+
 ------------- TICK FUNCTION - THIS IS THE MAIN TIMING LOOP ---------------------------
 function tick()
   while true do
@@ -328,14 +344,21 @@ function tick()
 
 current_tempo = clock.get_tempo()
 
+
 if (average_tempo - current_tempo > math.abs(0.05) ) then
+
+  -- UNSTABLE
   unstable_tempo_ticks = unstable_tempo_ticks + 1
 
-
+  -- Moving from stable to unstable (previous state was stable)
   if (tempo_is_stable == 1 ) then
     unstable_tempo_episodes = unstable_tempo_episodes + 1
+
+    -- As soon as we are stable start a new tempo windown
+    init_tempo_window()
   end  
 
+  -- New state is unstable
   tempo_is_stable = 0
   tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
@@ -348,11 +371,15 @@ if (average_tempo - current_tempo > math.abs(0.05) ) then
   print (tempo_status_string_3)
   print (tempo_status_string_4)
 else
-  tempo_status_string_1 = "Tempo seems stable at: " .. current_tempo
+  -- STABLE
+  tempo_status_string_1 = "Tempo seems stable: " .. current_tempo
   tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
   tempo_status_string_3 = "Unstable Tempo Ticks: " .. unstable_tempo_ticks
   tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
   tempo_is_stable = 1
+
+
+
 end    
 
 
@@ -453,7 +480,7 @@ end
 
     --   print("blip_count is: " .. blip_count)
 
-    --   if transport_active then 
+    --   if transport_is_active then 
     --     process_step() 
 
     --     -- Always advance the step based on tick_count mod 12.    
@@ -479,7 +506,7 @@ end
 
 
 
-  if transport_active then 
+  if transport_is_active then 
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
 
     if blip_count == 0 then
@@ -519,30 +546,49 @@ end
   -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
   tick_count = tick_count + 1
 
+  tempo_window_count_of_ticks = tempo_window_count_of_ticks + 1
   tempo_sum = tempo_sum + current_tempo 
+
+     
+  if tempo_window_count_of_ticks == 192 then -- 
+
+    -- This means we calculate the average tempo over a fixed period of 192 ticks however we start the window again as soon as we have a stable tempo 
+
+    screen.clear()
+    screen.move(1,10)
+    
+    -- We expect the tempo to be a round number, so focus in on that.
+    average_tempo = math.floor(tempo_sum / tempo_window_count_of_ticks)
+
+    screen.text("Average Tempo" .. average_tempo)
+
+    init_tempo_window()
+
+
+  end  
+
+
+
+
+
+
+
 
 
    
 
     if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
 
-      -- This means we calculate the average tempo over a fixed period of 192 ticks 
+      -- This means we calculate the average tempo over a fixed period of 192 ticks  
 
       screen.clear()
 
       screen.move(1,10)
-      screen.text("SimonSaysSeeq on Norns v" .. version)
-
-
-   
-
-      average_tempo = tempo_sum / tick_count
-
-      screen.text("Average Tempo" .. tempo_sum / tick_count)
+      screen.text(version_string)
 
       tick_count = 0
 
-      tempo_sum = 0
+   
 
     end  
 
@@ -575,7 +621,7 @@ function greetings()
   screen.clear()
 
   screen.move(1,10)
-  screen.text("SimonSaysSeeq on Norns v" .. version)
+  screen.text(version_string)
   
   screen.move(1,20)
   
@@ -877,12 +923,15 @@ function clock.transport.start()
 
   print("====================== transport.start says Hello ========================")
 
-  screen.clear()
+  transport_is_active = true
 
-  transport_active = true
+  screen.clear()
 
   unstable_tempo_ticks = 0
   unstable_tempo_episodes = 0
+
+
+  init_tempo_window()
   
   screen.move(1,63)
   screen.text("Transport Start")
@@ -913,7 +962,7 @@ function clock.transport.stop()
 
 --  screen.clear()
 
-  transport_active = false
+  transport_is_active = false
   --screen.move(80,80)
   --screen.text("Transport STOP")
   --screen.update()
@@ -963,14 +1012,14 @@ function key(n,z)
   -- we'll only need to manually start if using internal or crow clock sources:
  -- if params:string("clock_source") == "internal" then
 
-    -- left button pressed 
+    -- STOP left button pressed 
     if n == 2 and z == 1 then
 
       -- try moving pointer to quiet part of
 
     -- softcut.tape_play_stop ()
 
-     -- if transport_active then -- currently running so Stop     
+     -- if transport_is_active then -- currently running so Stop     
         clock.transport.stop()
         request_midi_stop()
 
@@ -983,7 +1032,7 @@ function key(n,z)
       screen_dirty = true
     end
     
-    -- Right button pressed
+    -- START Right button pressed
     if n == 3 and z == 1 then
 
       -- try moving pointer to loud part of sample
@@ -991,7 +1040,7 @@ function key(n,z)
     --  softcut.tape_play_start ()
 
 
-      if not transport_active then
+      if not transport_is_active then
         clock.transport.start()
         request_midi_start() -- Just send MIDI start instead of requesting?
 
@@ -1192,7 +1241,8 @@ function init()
 -- here
 --crow.output[1].scale = {0,7,2,9}
 
-
+current_tempo = clock.get_tempo()
+average_tempo = clock.get_tempo() -- just for initial value
 
    print("init says: Starting main sequencer timing called tick.")
    clock.run(tick)       -- start the sequencer
@@ -1222,7 +1272,7 @@ function init()
       clock.sleep(5)
         if (grid_state_dirty == true) then
 
-           if (transport_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
+           if (transport_is_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
 
             Tab.save(grid_state, GRID_STATE_FILE)
 
@@ -2557,6 +2607,9 @@ function display_tempo_status()
   screen.move(1,28) 
   screen.text(tempo_status_string_4)
 
+  screen.move(1,35) 
+  screen.text(version_string)
+
   --screen.font_size(10)
   screen.move(1,50) 
   
@@ -2581,7 +2634,15 @@ function refresh_grid_and_screen()
   screen.move(1,1)
 
 
+  
+
   if (tempo_is_stable == 1) then
+
+    -- Show min stability info
+    screen.move(1,7)
+    screen.text("U")
+    screen.move(1,14)
+    screen.text(unstable_tempo_episodes)
   
   for col = 1,COLS do 
     for row = 1,ROWS do
