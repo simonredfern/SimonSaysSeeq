@@ -9,22 +9,24 @@ version_string = "SimonSaysSeeq on Norns v" .. version
 
 -- To measure / display tempo instability:
 -- WOW - Big instabillity in Tempo 
-wow_window_size = 192
+wow_window_size = 384 -- this 2 bars of 16 steps at 12 ticks per step.
 wow_window_count_of_ticks = 0 -- how far through the averaging window we are.
 wow_tempo_sum = 0 -- sum of tempo through the window so far
 wow_tempo_ticks = 0 -- ticks we are unstable for
 wow_tempo_episodes = 0 -- number of unstable episodes.
 wow_average_tempo = 0 -- the average tempo over the window
 tempo_wow_is_good = 1 -- All good at the moment, (no wow) (assume it is to start with.)
+wow_threshold = 2.5 -- the difference between current and average tempo (in bpm) that triggers an episode
 
 -- Flutter - Small instability in Tempo
-flutter_window_size = 192
+flutter_window_size = 384 -- this is 2 bars of 16 steps at 12 ticks per step.
 flutter_window_count_of_ticks = 0
 flutter_tempo_sum = 0
 flutter_tempo_ticks = 0
 flutter_tempo_episodes = 0
 flutter_average_tempo = 0
-tempo_flutter_is_good = 1 
+tempo_flutter_is_good = 1
+flutter_threshold = 0.05 
 
 
 
@@ -334,17 +336,17 @@ screen.font_size(7)
 
 
 function init_wow_window()
+  wow_tempo_ticks = 0
   wow_window_count_of_ticks = 0
   wow_tempo_sum = 0
-  tempo_wow_is_good = 1
 end  
 
 
 -- small variations in tempo
 function init_flutter_window()
+  flutter_tempo_ticks = 0
   flutter_window_count_of_ticks = 0
   flutter_tempo_sum = 0
-  tempo_flutter_is_good = 1
 end  
 
 
@@ -367,8 +369,8 @@ function tick()
 
 current_tempo = clock.get_tempo()
 
-
-if (wow_average_tempo - current_tempo > math.abs(0.5) ) then
+-- Check for big differences in tempo from average 
+if (wow_average_tempo - current_tempo > math.abs(wow_threshold) ) then
 
   -- Unstable 
   wow_tempo_ticks = wow_tempo_ticks + 1
@@ -384,10 +386,15 @@ if (wow_average_tempo - current_tempo > math.abs(0.5) ) then
   -- New state is unstable
   tempo_wow_is_good = 0
 
+else
+
+  tempo_wow_is_good = 1
+
+
 end  
 
-
-if (flutter_average_tempo - current_tempo > math.abs(0.05) ) then
+-- Check for small differences in tempo from average 
+if (flutter_average_tempo - current_tempo > math.abs(flutter_threshold) ) then
 
   -- UNSTABLE
   flutter_tempo_ticks = flutter_tempo_ticks + 1
@@ -403,25 +410,30 @@ if (flutter_average_tempo - current_tempo > math.abs(0.05) ) then
   -- New state is unstable
   tempo_flutter_is_good = 0
 
+else
+  tempo_flutter_is_good = 1
+
+
 end
 
 if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
-  tempo_status_string_1 = "UNSTABLE Tempo around: " .. string.format("%.2f",current_tempo) 
+  tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
 else 
   tempo_status_string_1 = "Stable Tempo: " .. string.format("%.2f",current_tempo) 
 end  
 
 
-  tempo_status_string_2 = "Wow / Flutter Av Tempo: " .. string.format("%.2f",wow_average_tempo) .. " / " .. string.format("%.2f",flutter_average_tempo)
-  tempo_status_string_3 = "Wow Episodes: " .. wow_tempo_episodes
-  tempo_status_string_4 = "Flutter Episodes: " .. flutter_tempo_episodes
+  tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f",wow_average_tempo) 
+  tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f",flutter_average_tempo)
+  tempo_status_string_4 = "Wow Episodes: " .. wow_tempo_episodes
+  tempo_status_string_5 = "Flutter Episodes: " .. flutter_tempo_episodes
 
 
   print (tempo_status_string_1)
   print (tempo_status_string_2)
   print (tempo_status_string_3)
   print (tempo_status_string_4)
-  
+  print (tempo_status_string_5)
 
 
     if swing_mode == 1 then
@@ -977,10 +989,8 @@ function clock.transport.start()
 
   screen.clear()
 
-  flutter_tempo_ticks = 0
-  flutter_tempo_episodes = 0
 
-
+  init_wow_window()
   init_flutter_window()
   
   screen.move(1,63)
@@ -2658,10 +2668,14 @@ function display_tempo_status()
   screen.text(tempo_status_string_4)
 
   screen.move(1,35) 
+  screen.text(tempo_status_string_5)
+
+
+  screen.move(1,49) 
   screen.text(version_string)
 
   --screen.font_size(10)
-  screen.move(1,50) 
+  screen.move(1,56) 
   
   screen.text(string.format("%.4f",current_tempo) )
   screen.update() 
@@ -2702,7 +2716,7 @@ function refresh_grid_and_screen()
     for row = 1,ROWS do
       tally = tally .. grid_state[col][row]
 
-      screen.move(col * 7,row * 7)
+      screen.move(10 + (col * 7),row * 7)
       --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
       
 
