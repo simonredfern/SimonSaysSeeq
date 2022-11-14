@@ -7,17 +7,27 @@ version = 0.5
 version_string = "SimonSaysSeeq on Norns v" .. version
 
 
--- use init_tempo_window instead?
-tempo_window_count_of_ticks = 0
-tempo_sum = 0
+-- To measure / display tempo instability:
+-- WOW - Big instabillity in Tempo 
+wow_window_size = 192
+wow_window_count_of_ticks = 0 -- how far through the averaging window we are.
+wow_tempo_sum = 0 -- sum of tempo through the window so far
+wow_tempo_ticks = 0 -- ticks we are unstable for
+wow_tempo_episodes = 0 -- number of unstable episodes.
+wow_average_tempo = 0 -- the average tempo over the window
+tempo_wow_is_good = 1 -- All good at the moment, (no wow) (assume it is to start with.)
+
+-- Flutter - Small instability in Tempo
+flutter_window_size = 192
+flutter_window_count_of_ticks = 0
+flutter_tempo_sum = 0
+flutter_tempo_ticks = 0
+flutter_tempo_episodes = 0
+flutter_average_tempo = 0
+tempo_flutter_is_good = 1 
 
 
 
-unstable_tempo_ticks = 0
-unstable_tempo_episodes = 0
-
-average_tempo = 0
-tempo_is_stable = 1 -- Assume it is to start with
 current_tempo = 120 -- will be almost immediatly changed to the clock
 
 local volts = 0
@@ -322,10 +332,23 @@ screen.font_face(15)
 screen.font_size(7)
 
 
-function init_tempo_window()
-  tempo_window_count_of_ticks = 0
-  tempo_sum = 0
+
+function init_wow_window()
+  wow_window_count_of_ticks = 0
+  wow_tempo_sum = 0
+  tempo_wow_is_good = 1
 end  
+
+
+-- small variations in tempo
+function init_flutter_window()
+  flutter_window_count_of_ticks = 0
+  flutter_tempo_sum = 0
+  tempo_flutter_is_good = 1
+end  
+
+
+
 
 
 
@@ -345,42 +368,60 @@ function tick()
 current_tempo = clock.get_tempo()
 
 
-if (average_tempo - current_tempo > math.abs(0.05) ) then
+if (wow_average_tempo - current_tempo > math.abs(0.5) ) then
 
-  -- UNSTABLE
-  unstable_tempo_ticks = unstable_tempo_ticks + 1
+  -- Unstable 
+  wow_tempo_ticks = wow_tempo_ticks + 1
 
-  -- Moving from stable to unstable (previous state was stable)
-  if (tempo_is_stable == 1 ) then
-    unstable_tempo_episodes = unstable_tempo_episodes + 1
+  -- Moving from stable to unstable
+  if (tempo_wow_is_good == 1 ) then
+    wow_tempo_episodes = wow_tempo_episodes + 1
 
     -- As soon as we are stable start a new tempo windown
-    init_tempo_window()
+    init_wow_window()
   end  
 
   -- New state is unstable
-  tempo_is_stable = 0
-  tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
-  tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Ticks: " .. unstable_tempo_ticks
-  tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
+  tempo_wow_is_good = 0
+
+end  
+
+
+if (flutter_average_tempo - current_tempo > math.abs(0.05) ) then
+
+  -- UNSTABLE
+  flutter_tempo_ticks = flutter_tempo_ticks + 1
+
+  -- Moving from stable to unstable (previous state was stable)
+  if (tempo_flutter_is_good == 1 ) then
+    flutter_tempo_episodes = flutter_tempo_episodes + 1
+
+    -- As soon as we are stable start a new tempo windown
+    init_flutter_window()
+  end  
+
+  -- New state is unstable
+  tempo_flutter_is_good = 0
+
+end
+
+if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
+  tempo_status_string_1 = "UNSTABLE Tempo around: " .. string.format("%.2f",current_tempo) 
+else 
+  tempo_status_string_1 = "Stable Tempo: " .. string.format("%.2f",current_tempo) 
+end  
+
+
+  tempo_status_string_2 = "Wow / Flutter Av Tempo: " .. string.format("%.2f",wow_average_tempo) .. " / " .. string.format("%.2f",flutter_average_tempo)
+  tempo_status_string_3 = "Wow Episodes: " .. wow_tempo_episodes
+  tempo_status_string_4 = "Flutter Episodes: " .. flutter_tempo_episodes
 
 
   print (tempo_status_string_1)
   print (tempo_status_string_2)
   print (tempo_status_string_3)
   print (tempo_status_string_4)
-else
-  -- STABLE
-  tempo_status_string_1 = "Tempo seems stable: " .. current_tempo
-  tempo_status_string_2 = "Average Tempo: " .. string.format("%.2f",average_tempo)
-  tempo_status_string_3 = "Unstable Tempo Ticks: " .. unstable_tempo_ticks
-  tempo_status_string_4 = "Unstable Tempo Episodes: " .. unstable_tempo_episodes
-  tempo_is_stable = 1
-
-
-
-end    
+  
 
 
     if swing_mode == 1 then
@@ -546,36 +587,45 @@ end
   -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
   tick_count = tick_count + 1
 
-  tempo_window_count_of_ticks = tempo_window_count_of_ticks + 1
-  tempo_sum = tempo_sum + current_tempo 
+
+  wow_window_count_of_ticks = wow_window_count_of_ticks + 1
+  wow_tempo_sum = wow_tempo_sum + current_tempo 
+
+
+  flutter_window_count_of_ticks = flutter_window_count_of_ticks + 1
+  flutter_tempo_sum = flutter_tempo_sum + current_tempo 
 
      
-  if tempo_window_count_of_ticks == 192 then -- 
-
+  if wow_window_count_of_ticks == wow_window_size then -- 
     -- This means we calculate the average tempo over a fixed period of 192 ticks however we start the window again as soon as we have a stable tempo 
 
     screen.clear()
     screen.move(1,10)
     
     -- We expect the tempo to be a round number, so focus in on that.
-    average_tempo = math.floor(tempo_sum / tempo_window_count_of_ticks)
+    wow_average_tempo = wow_tempo_sum / wow_window_count_of_ticks
 
-    screen.text("Average Tempo" .. average_tempo)
+    screen.text("Average Wow Tempo" .. wow_average_tempo)
 
-    init_tempo_window()
-
-
+    init_wow_window()
   end  
 
 
+  if flutter_window_count_of_ticks == flutter_window_size then -- 
+    -- This means we calculate the average tempo over a fixed period of 192 ticks however we start the window again as soon as we have a stable tempo 
+
+    screen.clear()
+    screen.move(1,20)
+    
+    -- We expect the tempo to be a round number, so focus in on that. math.floor(
+    flutter_average_tempo = flutter_tempo_sum / flutter_window_count_of_ticks
+
+    screen.text("Average Flutter Tempo" .. flutter_average_tempo)
+
+    init_flutter_window()
+  end  
 
 
-
-
-
-
-
-   
 
     if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
 
@@ -927,11 +977,11 @@ function clock.transport.start()
 
   screen.clear()
 
-  unstable_tempo_ticks = 0
-  unstable_tempo_episodes = 0
+  flutter_tempo_ticks = 0
+  flutter_tempo_episodes = 0
 
 
-  init_tempo_window()
+  init_flutter_window()
   
   screen.move(1,63)
   screen.text("Transport Start")
@@ -954,8 +1004,8 @@ function clock.transport.stop()
 
   print("================= transport.stop says Hello =======================")
 
-  print("unstable_tempo_ticks since last start: " .. unstable_tempo_ticks)
-  print("unstable_tempo_episodes since last start: " .. unstable_tempo_episodes)
+  print("flutter_tempo_ticks since last start: " .. flutter_tempo_ticks)
+  print("flutter_tempo_episodes since last start: " .. flutter_tempo_episodes)
 
   current_step = first_step
 
@@ -1242,7 +1292,7 @@ function init()
 --crow.output[1].scale = {0,7,2,9}
 
 current_tempo = clock.get_tempo()
-average_tempo = clock.get_tempo() -- just for initial value
+flutter_average_tempo = clock.get_tempo() -- just for initial value
 
    print("init says: Starting main sequencer timing called tick.")
    clock.run(tick)       -- start the sequencer
@@ -2634,16 +2684,20 @@ function refresh_grid_and_screen()
   screen.move(1,1)
 
 
-  
-
-  if (tempo_is_stable == 1) then
+  if (tempo_wow_is_good == 1 and tempo_flutter_is_good == 1) then
 
     -- Show min stability info
     screen.move(1,7)
-    screen.text("U")
+    screen.text("W")
     screen.move(1,14)
-    screen.text(unstable_tempo_episodes)
+    screen.text(wow_tempo_episodes)
   
+    screen.move(1,21)
+    screen.text("F")
+    screen.move(1,28)
+    screen.text(flutter_tempo_episodes)
+
+
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. grid_state[col][row]
@@ -2690,9 +2744,6 @@ function refresh_grid_and_screen()
 else
 
   display_tempo_status()
-  
-
-  
 
 
 end -- stable tempo check
