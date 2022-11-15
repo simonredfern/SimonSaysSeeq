@@ -89,9 +89,13 @@ MIDI_NOTE_OFF_VELOCITY = 0
 
 MOZART_BASE_MIDI_NOTE = 33 -- A1
 
+-- WARNING --------------------------
+-- enabling some of these (not sure which) will cause occasional wow and flutter of tempo. 
 enable_midi_clock_out = 0
-enable_analog_clock_out = 0
+enable_analog_clock_out = 0 -- guess this is the culprit because it causes many midi messages (analog clock is sent via midi, crow clock out didn't seem to work)
 enable_audio_clock_out = 0
+-----------------------------
+-- End WARNING --------------
 
 
 need_to_start_midi = true -- Check gate clock situation.
