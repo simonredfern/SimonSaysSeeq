@@ -9,7 +9,7 @@ version_string = "SimonSaysSeeq on Norns v" .. version
 
 -- To measure / display tempo instability:
 -- WOW - Big instabillity in Tempo 
-wow_window_size = 384 -- this 2 bars of 16 steps at 12 ticks per step.
+wow_window_size = 1536 -- This is 8 bars of 16 steps at 12 ticks per step.
 wow_window_count_of_ticks = 0 -- how far through the averaging window we are.
 wow_tempo_sum = 0 -- sum of tempo through the window so far
 wow_tempo_ticks = 0 -- ticks we are unstable for
@@ -26,7 +26,7 @@ flutter_tempo_ticks = 0
 flutter_tempo_episodes = 0
 flutter_average_tempo = 0
 tempo_flutter_is_good = 1
-flutter_threshold = 0.05 
+flutter_threshold = 0.25 
 
 
 
@@ -88,6 +88,10 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 MOZART_BASE_MIDI_NOTE = 33 -- A1
+
+enable_midi_clock_out = 0
+enable_analog_clock_out = 0
+enable_audio_clock_out = 0
 
 
 need_to_start_midi = true -- Check gate clock situation.
@@ -370,7 +374,7 @@ function tick()
 current_tempo = clock.get_tempo()
 
 -- Check for big differences in tempo from average 
-if (wow_average_tempo - current_tempo > math.abs(wow_threshold) ) then
+if (math.abs(wow_average_tempo - current_tempo) > wow_threshold ) then
 
   -- Unstable 
   wow_tempo_ticks = wow_tempo_ticks + 1
@@ -394,7 +398,7 @@ else
 end  
 
 -- Check for small differences in tempo from average 
-if (flutter_average_tempo - current_tempo > math.abs(flutter_threshold) ) then
+if (math.abs(flutter_average_tempo - current_tempo) > flutter_threshold) then
 
   -- UNSTABLE
   flutter_tempo_ticks = flutter_tempo_ticks + 1
@@ -417,9 +421,11 @@ else
 end
 
 if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
-  tempo_status_string_1 = "UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_status_string_1 = "** UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_is_stable = 0
 else 
   tempo_status_string_1 = "Stable Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_is_stable = 1
 end  
 
 
@@ -428,13 +434,15 @@ end
   tempo_status_string_4 = "Wow Episodes: " .. wow_tempo_episodes
   tempo_status_string_5 = "Flutter Episodes: " .. flutter_tempo_episodes
 
+  if (tempo_is_stable == 0) then 
 
-  print (tempo_status_string_1)
-  print (tempo_status_string_2)
-  print (tempo_status_string_3)
-  print (tempo_status_string_4)
-  print (tempo_status_string_5)
+    print (tempo_status_string_1)
+    print (tempo_status_string_2)
+    print (tempo_status_string_3)
+    print (tempo_status_string_4)
+    print (tempo_status_string_5)
 
+  end
 
     if swing_mode == 1 then
       swing_amount = 0
@@ -489,32 +497,40 @@ end
 
         -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
-          gate_on(12)
 
-
+          -- this actually goes via midi    
+          if (enable_analog_clock_out == 1) then
+            gate_on(12)
+          end
          --audio.tape_play_start()
 
          --print("POS 0")
          
-         softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
-         softcut.play(1,1)
-
+         if (enable_audio_clock_out == 1) then
+          softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
+          softcut.play(1,1)
+         end
 
         else
-          gate_off(12)
 
+          if (enable_analog_clock_out == 1) then
+            gate_off(12)
+          end
          -- print("POS 1")
 
          -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
-         softcut.play(1,0)
-
+         if (enable_audio_clock_out == 1) then
+           softcut.play(1,0)
+         end
 
         end  
 
       -- this is a narrower width
 
         if tick_count % 2 == 0 then
-          clock.run(process_clock_gate, 11)
+          if (enable_analog_clock_out == 1) then
+            clock.run(process_clock_gate, 11)
+          end
         end 
 
 
@@ -614,7 +630,7 @@ end
     screen.clear()
     screen.move(1,10)
     
-    -- We expect the tempo to be a round number, so focus in on that.
+   -- Don't floor because we don't want to go down one bpm if we're just under
     wow_average_tempo = wow_tempo_sum / wow_window_count_of_ticks
 
     screen.text("Average Wow Tempo" .. wow_average_tempo)
@@ -629,7 +645,7 @@ end
     screen.clear()
     screen.move(1,20)
     
-    -- We expect the tempo to be a round number, so focus in on that. math.floor(
+    -- Don't floor because we don't want to go down one bpm if we're just under
     flutter_average_tempo = flutter_tempo_sum / flutter_window_count_of_ticks
 
     screen.text("Average Flutter Tempo" .. flutter_average_tempo)
@@ -773,14 +789,23 @@ function process_step()
      --engine.hz(800) -- just to give some audible sign for debugging timing
 
       -- we only want to start midi clock at the right time!
-      print ("Send MIDI Start current_step is: " .. current_step)
-      midi_gates_device:start()
-      normal_midi_device:start()
+
+      if (enable_midi_clock_out == 1 ) then
+        print ("Send MIDI Start current_step is: " .. current_step)
+        midi_gates_device:start()
+        normal_midi_device:start()
+      else
+        print ("NOT Send MIDI Start (disabled) current_step is: " .. current_step)
+      end
       run_conditional_clocks = true -- so our 24PPQN etc stays on when midi clock is on 
       need_to_start_midi = false
 
     else
+      if (enable_midi_clock_out == 1 ) then
       print ("Waiting to MIDI Start current_step is: " .. current_step)
+      else
+        print (" MIDI Clock out disabled")
+      end  
     end
 
    end -- End check midi start
@@ -959,10 +984,12 @@ end
 -- MUST be run as clock.run(process_clock_gate, output) - so syncs are independent
 function process_clock_gate (output)
 
-  gate_on(output)
-  clock.sync(1/64)
-  gate_off(output)
- 
+  if (enable_analog_clock_out == 1) then
+    gate_on(output)
+    clock.sync(1/64)
+    gate_off(output)
+  end 
+
 end 
 
  
@@ -990,8 +1017,13 @@ function clock.transport.start()
   screen.clear()
 
 
+ 
   init_wow_window()
+  wow_tempo_episodes = 0
+
+
   init_flutter_window()
+  flutter_tempo_episodes = 0
   
   screen.move(1,63)
   screen.text("Transport Start")
@@ -1043,8 +1075,13 @@ function request_midi_stop()
   print("request_midi_stop")
   need_to_start_midi = false
   -- can stop the midi clock at any time.
+
+if (enable_midi_clock_out == 1) then
   midi_gates_device:stop ()
   normal_midi_device:stop ()
+end 
+
+if (enable_analog_clock_out == 1) then
 
   gate_off(6)
   gate_off(7)
@@ -1053,6 +1090,7 @@ function request_midi_stop()
   gate_off(10)
   gate_off(11) 
 
+end
 
   run_conditional_clocks = false
 end  
@@ -2870,10 +2908,10 @@ end
 
 
 
-function gate_low(sequence_row)
-  --print("gate_low " .. output)
-    midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
-end
+-- function gate_low(sequence_row)
+--   --print("gate_low " .. output)
+--     midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
+-- end
 
 
 
