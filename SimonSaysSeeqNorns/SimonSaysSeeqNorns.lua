@@ -2,27 +2,31 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.5
+version = 0.6
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
 
--- To measure / display tempo instability:
+-- TODO - add total_wow_tempo_ticks to display
+
+
+-- To measure / display tempo instability
+-- Two windows for averaging the tempo. 
 -- WOW - Big instabillity in Tempo 
-wow_window_size = 1536 -- This is 8 bars of 16 steps at 12 ticks per step.
-wow_window_count_of_ticks = 0 -- how far through the averaging window we are.
+wow_window_size = 192 -- This is 16 steps at 12 ticks per step.
+wow_window_tick_position = 0 -- how far through the averaging window we are.
 wow_tempo_sum = 0 -- sum of tempo through the window so far
-wow_tempo_ticks = 0 -- ticks we are unstable for
+total_wow_tempo_ticks = 0 -- ticks we are unstable for
 wow_tempo_episodes = 0 -- number of unstable episodes.
 wow_average_tempo = 0 -- the average tempo over the window
 tempo_wow_is_good = 1 -- All good at the moment, (no wow) (assume it is to start with.)
-wow_threshold = 2.5 -- the difference between current and average tempo (in bpm) that triggers an episode
+wow_threshold = 3.0 -- the difference between current and average tempo (in bpm) that triggers an episode
 
 -- Flutter - Small instability in Tempo
-flutter_window_size = 384 -- this is 2 bars of 16 steps at 12 ticks per step.
-flutter_window_count_of_ticks = 0
+flutter_window_size = 192 
+flutter_window_tick_position = 0
 flutter_tempo_sum = 0
-flutter_tempo_ticks = 0
+total_flutter_tempo_ticks = 0
 flutter_tempo_episodes = 0
 flutter_average_tempo = 0
 tempo_flutter_is_good = 1
@@ -90,7 +94,7 @@ MIDI_NOTE_OFF_VELOCITY = 0
 MOZART_BASE_MIDI_NOTE = 33 -- A1
 
 -- WARNING --------------------------
--- enabling some of these (not sure which) will cause occasional wow and flutter of tempo. 
+-- enabling some of these (not sure which) will cause noticable occasional wow and flutter of tempo. (search for wow and flutter in this file for more info)
 enable_midi_clock_out = 0
 enable_analog_clock_out = 0 -- guess this is the culprit because it causes many midi messages (analog clock is sent via midi, crow clock out didn't seem to work)
 enable_audio_clock_out = 0
@@ -342,18 +346,24 @@ screen.font_face(15)
 screen.font_size(7)
 
 
+function init_wow_and_flutter_counters()
+  -- use on transport start
+  total_wow_tempo_ticks = 0
+  total_flutter_tempo_ticks = 0
+  wow_tempo_episodes = 0
+  flutter_tempo_episodes = 0
+end 
+
 
 function init_wow_window()
-  wow_tempo_ticks = 0
-  wow_window_count_of_ticks = 0
+  wow_window_tick_position = 0
   wow_tempo_sum = 0
 end  
 
 
 -- small variations in tempo
 function init_flutter_window()
-  flutter_tempo_ticks = 0
-  flutter_window_count_of_ticks = 0
+  flutter_window_tick_position = 0
   flutter_tempo_sum = 0
 end  
 
@@ -380,15 +390,16 @@ current_tempo = clock.get_tempo()
 -- Check for big differences in tempo from average 
 if (math.abs(wow_average_tempo - current_tempo) > wow_threshold ) then
 
-  -- Unstable 
-  wow_tempo_ticks = wow_tempo_ticks + 1
+  -- UNSTABLE WOW
+  -- Track the total number of ticks we have wow since we started the clock
+  total_wow_tempo_ticks = total_wow_tempo_ticks + 1
 
   -- Moving from stable to unstable
   if (tempo_wow_is_good == 1 ) then
     wow_tempo_episodes = wow_tempo_episodes + 1
 
     -- As soon as we are stable start a new tempo windown
-    init_wow_window()
+   -- init_wow_window()
   end  
 
   -- New state is unstable
@@ -405,14 +416,14 @@ end
 if (math.abs(flutter_average_tempo - current_tempo) > flutter_threshold) then
 
   -- UNSTABLE
-  flutter_tempo_ticks = flutter_tempo_ticks + 1
+  total_flutter_tempo_ticks = total_flutter_tempo_ticks + 1
 
   -- Moving from stable to unstable (previous state was stable)
   if (tempo_flutter_is_good == 1 ) then
     flutter_tempo_episodes = flutter_tempo_episodes + 1
 
     -- As soon as we are stable start a new tempo windown
-    init_flutter_window()
+    -- init_flutter_window()
   end  
 
   -- New state is unstable
@@ -425,18 +436,18 @@ else
 end
 
 if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
-  tempo_status_string_1 = "** UNSTABLE Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_status_string_1 = "Current Tempo (UNSTABLE): " .. string.format("%.2f",current_tempo) 
   tempo_is_stable = 0
 else 
-  tempo_status_string_1 = "Stable Tempo: " .. string.format("%.2f",current_tempo) 
+  tempo_status_string_1 = "Current Tempo: " .. string.format("%.2f",current_tempo) 
   tempo_is_stable = 1
 end  
 
 
   tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f",wow_average_tempo) 
   tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f",flutter_average_tempo)
-  tempo_status_string_4 = "Wow Episodes: " .. wow_tempo_episodes
-  tempo_status_string_5 = "Flutter Episodes: " .. flutter_tempo_episodes
+  tempo_status_string_4 = "Wow Epsds: " .. wow_tempo_episodes .. " Ticks: " .. total_wow_tempo_ticks
+  tempo_status_string_5 = "Flutter Epsds: " .. flutter_tempo_episodes .. " Ticks: " .. total_flutter_tempo_ticks
 
   if (tempo_is_stable == 0) then 
 
@@ -620,22 +631,22 @@ end
   tick_count = tick_count + 1
 
 
-  wow_window_count_of_ticks = wow_window_count_of_ticks + 1
+  wow_window_tick_position = wow_window_tick_position + 1
   wow_tempo_sum = wow_tempo_sum + current_tempo 
 
 
-  flutter_window_count_of_ticks = flutter_window_count_of_ticks + 1
+  flutter_window_tick_position = flutter_window_tick_position + 1
   flutter_tempo_sum = flutter_tempo_sum + current_tempo 
 
      
-  if wow_window_count_of_ticks == wow_window_size then -- 
+  if wow_window_tick_position == wow_window_size then -- 
     -- This means we calculate the average tempo over a fixed period of 192 ticks however we start the window again as soon as we have a stable tempo 
 
     screen.clear()
     screen.move(1,10)
     
    -- Don't floor because we don't want to go down one bpm if we're just under
-    wow_average_tempo = wow_tempo_sum / wow_window_count_of_ticks
+    wow_average_tempo = wow_tempo_sum / wow_window_tick_position
 
     screen.text("Average Wow Tempo" .. wow_average_tempo)
 
@@ -643,14 +654,14 @@ end
   end  
 
 
-  if flutter_window_count_of_ticks == flutter_window_size then -- 
+  if flutter_window_tick_position == flutter_window_size then -- 
     -- This means we calculate the average tempo over a fixed period of 192 ticks however we start the window again as soon as we have a stable tempo 
 
     screen.clear()
     screen.move(1,20)
     
     -- Don't floor because we don't want to go down one bpm if we're just under
-    flutter_average_tempo = flutter_tempo_sum / flutter_window_count_of_ticks
+    flutter_average_tempo = flutter_tempo_sum / flutter_window_tick_position
 
     screen.text("Average Flutter Tempo" .. flutter_average_tempo)
 
@@ -1023,11 +1034,10 @@ function clock.transport.start()
 
  
   init_wow_window()
-  wow_tempo_episodes = 0
-
 
   init_flutter_window()
-  flutter_tempo_episodes = 0
+
+  init_wow_and_flutter_counters()
   
   screen.move(1,63)
   screen.text("Transport Start")
@@ -1050,7 +1060,7 @@ function clock.transport.stop()
 
   print("================= transport.stop says Hello =======================")
 
-  print("flutter_tempo_ticks since last start: " .. flutter_tempo_ticks)
+  print("total_flutter_tempo_ticks since last start: " .. total_flutter_tempo_ticks)
   print("flutter_tempo_episodes since last start: " .. flutter_tempo_episodes)
 
   current_step = first_step
@@ -1345,6 +1355,10 @@ function init()
 
 current_tempo = clock.get_tempo()
 flutter_average_tempo = clock.get_tempo() -- just for initial value
+
+init_wow_and_flutter_counters()
+init_wow_window()
+init_flutter_window()
 
    print("init says: Starting main sequencer timing called tick.")
    clock.run(tick)       -- start the sequencer
@@ -2752,6 +2766,16 @@ function refresh_grid_and_screen()
     screen.text("F")
     screen.move(1,28)
     screen.text(flutter_tempo_episodes)
+
+    screen.move(1,35)
+    screen.text("w")
+    screen.move(1,42)
+    screen.text(string.format("%X", total_wow_tempo_ticks * 255))
+
+    screen.move(1,49)
+    screen.text("t")
+    screen.move(1,56)
+    screen.text(string.format("%X", total_flutter_tempo_ticks * 255))
 
 
   for col = 1,COLS do 
