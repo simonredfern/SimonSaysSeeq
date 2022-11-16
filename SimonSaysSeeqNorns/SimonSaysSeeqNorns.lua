@@ -269,6 +269,9 @@ end
 -- swing 16
 SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 
+-- Fonts: Note, we can use the Foundry app to view all the fonts.
+-- Tried to find a fixed font (so strings don't jump around), but currently using the default font
+-- Best approach probably is not to have long strings and instead place short strings at specific locations on the screen.
 
 -- 2 at 8 works 
 -- not 29, 40
@@ -342,8 +345,9 @@ SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
   -- 67 unscii-8-thin.pcf
 
 
-screen.font_face(15)
-screen.font_size(7)
+  -- See notes above
+-- screen.font_face(1)
+-- screen.font_size(7)
 
 
 function init_wow_and_flutter_counters()
@@ -2705,10 +2709,6 @@ function display_tempo_status()
 
   screen.clear()
   screen.update()
-
-  --screen.font_face(6)
-
-  --screen.font_size(10)
   
   screen.move(1,7) 
   screen.text(tempo_status_string_1)
@@ -2770,12 +2770,13 @@ function refresh_grid_and_screen()
     screen.move(1,35)
     screen.text("w")
     screen.move(1,42)
-    screen.text(string.format("%X", total_wow_tempo_ticks * 255))
+    screen.text(total_wow_tempo_ticks)
+    -- screen.text(string.format("%X", total_wow_tempo_ticks * 255))
 
     screen.move(1,49)
     screen.text("t")
     screen.move(1,56)
-    screen.text(string.format("%X", total_flutter_tempo_ticks * 255))
+    screen.text(total_flutter_tempo_ticks)
 
 
   for col = 1,COLS do 
@@ -2859,8 +2860,7 @@ end -- stable tempo check
   screen.move(1,63)   
   screen.text(status_text)
 
-  screen.font_face(15)
-screen.font_size(7)
+
 
   screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
