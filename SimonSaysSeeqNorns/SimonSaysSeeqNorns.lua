@@ -185,9 +185,11 @@ tick_text = "."
 
 tick_count = 0
 
+
+
 blip_count = 0
 
-PPQN24_GATES_ARE_ENABLED = true
+PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 
 
 greetings_done = false
@@ -510,9 +512,14 @@ end
 
 
   
-    if PPQN24_GATES_ARE_ENABLED == true then
 
-      if run_conditional_clocks == true then
+
+
+
+
+        if PPQN24_GATES_ARE_ENABLED == true then
+
+          if run_conditional_clocks == true then
 
         -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
@@ -606,6 +613,37 @@ end
 
     if tick_count % 12 == 0 then
 
+
+
+-- here
+
+
+
+--if run_conditional_clocks == true then
+
+  -- Less frequently triggered gates
+
+    if tick_count % 192 == 0 then
+        clock.run(process_clock_gate, 12)
+    end 
+
+    if tick_count % (192 * 2)  == 0 then
+      clock.run(process_clock_gate, 11)
+     end 
+
+     if tick_count % (192 * 3)  == 0 then
+      clock.run(process_clock_gate, 10)
+     end 
+
+     if tick_count % (192 * 4)  == 0 then
+      clock.run(process_clock_gate, 9)
+     end 
+
+  -- end
+
+
+
+
       --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
         -- this will be above 
@@ -674,7 +712,7 @@ end
 
 
 
-    if tick_count == 192 then -- Reset so we don't have too many numbers on which we do modulus calculations
+    if (tick_count == 192 * 4) then -- Reset so we don't have too many numbers on which we do modulus calculations
 
       -- This means we calculate the average tempo over a fixed period of 192 ticks  
 
@@ -683,7 +721,7 @@ end
       screen.move(1,10)
       screen.text(version_string)
 
-      tick_count = 0
+      init_tick_count()
 
    
 
@@ -707,6 +745,11 @@ end
 --   end
 -- end
 
+
+
+function init_tick_count()
+  tick_count = 0
+end  
 
 
 -- Note: This effictively gets called multiple times at boot 
@@ -1003,11 +1046,11 @@ end
 -- MUST be run as clock.run(process_clock_gate, output) - so syncs are independent
 function process_clock_gate (output)
 
-  if (enable_analog_clock_out == 1) then
+ -- if (enable_analog_clock_out == 1) then
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
-  end 
+ -- end 
 
 end 
 
@@ -1030,6 +1073,8 @@ function clock.transport.start()
   -- 2) Via the system when midi start is detected. ? check this.
 
   print("====================== transport.start says Hello ========================")
+
+  init_tick_count()
 
   transport_is_active = true
 
