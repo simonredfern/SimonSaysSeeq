@@ -155,10 +155,15 @@ table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
 table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 
-table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
-table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
-table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
-table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
+--table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
+--table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
+--table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
+--table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
+
+table.insert(BUTTONS, {name = "Lag2", x = 5, y = 8}) -- note Lag is processed through ratchet
+table.insert(BUTTONS, {name = "Lag3", x = 6, y = 8})
+table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
+table.insert(BUTTONS, {name = "Lag5", x = 8, y = 8})
 
 table.insert(BUTTONS, {name = "Ratchet2", x = 9, y = 8})
 table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
@@ -1036,6 +1041,31 @@ function process_ratchet (output, ratchet_mode)
     gate_on(output)
     clock.sync(1/64)
     gate_off(output)
+
+    -- this is a "lag" (pause before playing) 
+elseif ratchet_mode == 6 then
+  clock.sync(1/32) 
+  gate_on(output)
+  clock.sync(1/64)
+  gate_off(output)
+-- Lag  
+elseif ratchet_mode == 7 then
+  clock.sync(1/16)
+  gate_on(output)
+  clock.sync(1/64)
+  gate_off(output)
+-- Lag  
+elseif ratchet_mode == 8 then
+  clock.sync(1/8)  
+  gate_on(output)
+  clock.sync(1/64)
+  gate_off(output)
+  -- Lag  
+elseif ratchet_mode == 9 then
+  clock.sync(1/6)
+  gate_on(output)
+  clock.sync(1/64)
+  gate_off(output)
 
   end -- end non zero
 
@@ -2304,7 +2334,38 @@ else
         arm_ratchet = 0
       end
     
-  
+-- NOTE treating lag as a type of ratchet
+    elseif grid_button_function_name(x,y) == "Lag2" then
+      --print ("LAG button pressed: " .. z)
+      if z == 1 then 
+        arm_ratchet = 6
+      else
+        arm_ratchet = 0
+      end
+
+    elseif grid_button_function_name(x,y) == "Lag3" then
+      --print ("LAG button pressed: " .. z)
+      if z == 1 then 
+        arm_ratchet = 7
+      else
+        arm_ratchet = 0
+      end
+
+    elseif grid_button_function_name(x,y) == "Lag4" then
+      --print ("LAG button pressed: " .. z)
+      if z == 1 then 
+        arm_ratchet = 8
+      else
+        arm_ratchet = 0
+      end
+
+    elseif grid_button_function_name(x,y) == "Lag5" then
+      --print ("LAG button pressed: " .. z)
+      if z == 1 then 
+        arm_ratchet = 9
+      else
+        arm_ratchet = 0
+      end
 
 -- Preset buttons
 -- These buttons are used to put a preset on one of the sequence rows
@@ -2344,7 +2405,7 @@ elseif grid_button_function_name(x,y) == "Preset5" then -- currently no button f
 
 
 -- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
-
+-- CURRENTLY NOT AVAILABLE IN BUTTON LIST
 elseif grid_button_function_name (x,y) == "ArmMidiCommand" then
   if z == 1 then 
     arm_clock_button = 1
@@ -2353,12 +2414,13 @@ elseif grid_button_function_name (x,y) == "ArmMidiCommand" then
   end
 
 
+  -- CURRENTLY NOT AVAILABLE IN BUTTON LIST
 elseif grid_button_function_name (x,y) == "DoMidiStop" then
   if z == 1 and arm_clock_button == 1 then 
     request_midi_stop()
   end
 
-
+-- CURRENTLY NOT AVAILABLE IN BUTTON LIST
 elseif grid_button_function_name (x,y) == "DoMidiStart" then
   if z == 1 and arm_clock_button == 1 then 
     need_to_start_midi = true
