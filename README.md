@@ -33,6 +33,9 @@ All the platforms have the Gray code sequencer and CV envelop outs. Some have mi
 See the README.md in each sub folder for more details
 
 
+* If you're interested in a course / workshop on programming for eurorack see [Modular Rentals](https://modular.rentals) :-)
+
+
 
 
 
