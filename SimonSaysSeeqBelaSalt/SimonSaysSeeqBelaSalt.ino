@@ -124,206 +124,8 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 #include <cstdlib>
 
-//#include <libraries/UdpClient/UdpClient.h>
-
-// see below
-//#include <serialosc_example/serialosc_example/SerialOsc.h>
 
 
-
-// Monome Grid
-// To install serialosc from sources on linux follow: 
-// // https://monome.org/docs/serialosc/raspbian/
-// (copied from above)
-// raspberry pi os
-// precompiled packages
-// monome software packages from the ubuntu ppa work great on raspberry pi os. to install them on raspbian stretch, add the repository signing key first:
-
-// gpg --keyserver keyserver.ubuntu.com --recv DD9300F1
-// gpg --export --armor DD9300F1 | sudo apt-key add -
-// then add the repository url to your sources.list:
-
-// echo "deb http://ppa.launchpad.net/artfwo/monome/ubuntu bionic main" | sudo tee /etc/apt/sources.list.d/monome.list
-// finally run:
-
-// sudo apt update
-// sudo apt install serialosc
-// the package is configured to start serialosc automatically on boot and save the grid state under /var/lib/serialosc. to disable this behaviour, simply run:
-
-// sudo systemctl disable serialosc.service
-// compiling from source
-// while this build script is specific to raspberry pi os (for the raspberry pi), there’s a good change it’ll work with other embedded linux distributions and devices.
-
-// this script will install libmonome and serialosc. these are essential for communicating with grids and arcs on linux.
-
-// sudo apt-get install liblo-dev
-// git clone https://github.com/monome/libmonome.git
-// cd libmonome
-// ./waf configure
-// ./waf
-// sudo ./waf install
-// cd ..
-
-// sudo apt-get install libudev-dev libavahi-compat-libdnssd-dev libuv1-dev
-// git clone https://github.com/monome/serialosc.git
-// cd serialosc
-// git submodule init && git submodule update
-// ./waf configure --enable-system-libuv
-// ./waf
-// sudo ./waf install
-// cd ..
-// to run serialosc, execute serialoscd.
-// (end copy)
-
-// To get serialosc_example on the bela 
-// cd /root/Bela/projects/SimonSaysSeeqBela
-
-// git clone https://github.com/daniel-bytes/serialosc_example.git
-
-
-// SerialOsc is expecting certain files under osc
-
-// cd /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example
-// and create some symbolic links there
-
-// To mitigate error:
-// In file serialosc_example/serialosc_example/osckpack/ip/posix/NetworkingUtils.cpp: 'ip/NetworkingUtils.h' file not found column: 10, line: 37
-
-
-// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/osc osc
-
-//        source                                                                            link
-// ln -s /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip /root/Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip/posix/ip
-
-// Get rid of win32
-///Bela/projects/SimonSaysSeeq6/serialosc_example/serialosc_example/osckpack/ip# rmdir  win32
-
-
-
-
-// From https://monome.org/docs/serialosc/linux/
-
-
-// root@bela:~# cat /etc/*release 
-// PRETTY_NAME="Debian GNU/Linux 9 (stretch)"
-// NAME="Debian GNU/Linux"
-// VERSION_ID="9"
-// VERSION="9 (stretch)"
-// VERSION_CODENAME=stretch
-// ID=debian
-// HOME_URL="https://www.debian.org/"
-// SUPPORT_URL="https://www.debian.org/support"
-// BUG_REPORT_URL="https://bugs.debian.org/"
-
-
-// This doesn't work....
-// sudo apt-get install dirmngr
-// sudo apt install software-properties-common
-// sudo add-apt-repository ppa:artfwo/monome
-
-// OR
-// Add the following to:
-///etc/apt/sources.list
-
-
-//deb http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
-//deb-src http://ppa.launchpad.net/artfwo/monome/ubuntu stretch main 
-
-//https://monome.org/docs/serialosc/raspbian/
-
-// sudo apt-get update
-// sudo apt-get install libmonome
-// sudo apt-get install serialosc
-
-
-
-
-
-/////////
-// https://forum.bela.io/d/863-monome-grid-osc_bank-bela/5
-// https://monome.org/docs/serialosc/raspbian/
-// but before doing the serialoscd configure: 
-// Changing line 257 of serialosc/wscript to
-// conf.env.append_unique("CFLAGS", ["-std=c99", "-Wall", "-Wno-error"])
-// Serialosc will compile but serialoscd is not found
-// with https://github.com/monome/serialosc/issues/53
-
-// to test serialoscd (maybe plug a monome grid in? use ./serialoscd)
-
-// https://monome.org/docs/serialosc/setup/
-// https://monome.org/docs/serialosc/serial.txt
-// note have to generate auto_conf file by ./waf configure and move it into correct directory
-// serialosc.h refers to files in the folder serialosc so put them directly under Bela i.e. here:
-
-// Create a folder serialosc_helpers in the Bela folder and copy the following files / folders 
-// https://github.com/daniel-bytes/serialosc_example/tree/master/serialosc_example
-// Note the folder renames since SerialOsc is looking for specific folder names it seems
-//root@bela:~/Bela/serialosc_helpers# ls
-//MonomeDevice.h  SerialOsc.cpp  SerialOsc.h  ip  osc
-
-
-
-
-
-//UdpClient myUdpClient;
-
-// ...
-
-//
-// Example serial osc data handler.
-// 
-/*
-
-class MonomeDemo
-	: public SerialOsc::Listener
-{
-public:
-	MonomeDemo(SerialOsc *osc)
-		: osc(osc)
-	{
-		osc->start(this);
-	}
-
-public:
-	virtual void deviceFound(const MonomeDevice * const device)
-	{
-		std::cout << "Found device " << device->id << " (type " << device->type << ")." << std::endl;
-		osc->sendDeviceLedAllCommand(device, false);
-	}
-
-	virtual void deviceRemoved(const std::string &id)
-	{
-		std::cout << "Device " << id << " removed." << std::endl;
-	}
-	
-	virtual void buttonPressMessageReceived(MonomeDevice *device, int x, int y, bool state)
-	{
-		std::cout << "Button press from " << device->id << " received. Prefix = " << device->prefix << ",  x = " << x << ", y = " << y << ", state = " << state << std::endl;
-		osc->sendDeviceLedCommand(device, x, y, state);
-	}
-
-private:
-	SerialOsc *osc;
-};
-
-
-//int main(int argc, const char* argv[])
-int main()
-{
-	std::string input;
-	SerialOsc osc("test", 13000);
-	MonomeDemo device(&osc);
-
-	while (input != "q") {
-		std::cout << "type 'q' to quit." << std::endl;
-		std::getline(std::cin, input);
-	}
-
-	osc.stop();
-
-	return 0;
-}
-*/
 
 
 Scope scope;
@@ -459,7 +261,7 @@ int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
 OscillatorBank osc_bank;
 
-Oscillator oscillator_2_audio;
+//Oscillator oscillator_2_audio;
 Oscillator lfo_a_analog;
 Oscillator lfo_b_analog;
 
@@ -564,8 +366,8 @@ const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
 
-const int OSC_FREQUENCY_INPUT_PIN = 1; // CV 2 input
-const int ADSR_SETTING_INPUT_PIN = 3; // CV 4 input
+const int LFO_OSC_1_FREQUENCY_INPUT_PIN = 1; // CV 2 input
+const int LFO_OSC_2_FREQUENCY_INPUT_PIN = 3; // CV 4 input
 
 
 const int SEQUENCE_B_PATTERN_ANALOG_INPUT_PIN = 4; // CV 5 (SALT+) was COARSE-_DELAY_TIME_INPUT_PIN
@@ -665,8 +467,9 @@ unsigned int sequence_b_pattern_input_at_button_change;
 
 float lfo_a_frequency_input_raw;
 float lfo_osc_1_frequency;
+float lfo_osc_2_frequency;
 float frequency_2;
-float audio_osc_2_frequency;
+//float audio_osc_2_frequency;
 
 
 unsigned int lfo_a_frequency_input = 20;
@@ -1357,7 +1160,7 @@ void ResetSequenceACounters(){
   step_a_count = FIRST_STEP;
 
   lfo_a_analog.setPhase(0.0);
-  lfo_b_analog.setPhase(90.0);
+  lfo_b_analog.setPhase(0.0);
   
   per_sequence_adsr_a.reset();
   per_sequence_adsr_a.gate(true);
@@ -1548,13 +1351,13 @@ void printStatus(void*){
 
 
 
-
+/*
 		rt_printf("envelope_1_setting is: %f \n", envelope_1_setting);
 
     	rt_printf("analog_per_sequence_adsr_a_level is: %f \n", analog_per_sequence_adsr_a_level);
     	rt_printf("analog_per_sequence_adsr_b_level is: %f \n", analog_per_sequence_adsr_b_level);
     	rt_printf("analog_per_sequence_adsr_c_level is: %f \n", analog_per_sequence_adsr_c_level);
-
+*/
 
     	/*
     	rt_printf("envelope_1_release is: %f \n", envelope_1_release);
@@ -3029,18 +2832,9 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
    // Modify Decay
    per_sequence_adsr_c.setDecayRate(envelope_1_setting * analog_sample_rate);
 
-        
-
-	    
-	    audio_osc_2_frequency = lfo_osc_1_frequency * 8.0;
-
 
       lfo_a_analog.setFrequency(lfo_osc_1_frequency); 
-      lfo_b_analog.setFrequency(lfo_osc_1_frequency * 3.0 /2.0);
-
-
-
-		oscillator_2_audio.setFrequency(audio_osc_2_frequency); // higher freq
+      lfo_b_analog.setFrequency(lfo_osc_2_frequency);
 		
 		
 		// We want to Delay Course Dial to span the DELAY_BUFFER_SIZE in jumps of frames_per_24_ticks
@@ -3171,7 +2965,7 @@ bool setup(BelaContext *context, void *userData){
   lfo_b_analog.setup(context->analogSampleRate);
 
 
-	oscillator_2_audio.setup(context->audioSampleRate);
+	//oscillator_2_audio.setup(context->audioSampleRate);
 
 	
 
@@ -3527,14 +3321,15 @@ void render(BelaContext *context, void *userData)
 
 
 
-	    if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 1); // up to 1 Hz
+	    if (ch == LFO_OSC_1_FREQUENCY_INPUT_PIN){
+	      	lfo_osc_1_frequency = map(analogRead(context, n, LFO_OSC_1_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 1); // up to 1 Hz
 		  }
 
-	  if (ch == ADSR_SETTING_INPUT_PIN){
+	  if (ch == LFO_OSC_2_FREQUENCY_INPUT_PIN){
 		  	// used for various ADSR settings
-		  	envelope_1_setting = map(analogRead(context, n, ADSR_SETTING_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
-		  }
+		  	//envelope_1_setting = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
+		    	lfo_osc_2_frequency = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.005, 1); // up to 1 Hz
+      }
 		    
 		  
       // Changes the Midi Lane. 
@@ -3600,9 +3395,10 @@ void render(BelaContext *context, void *userData)
 	      	analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
 	      	
 	      	lfo_a_result_analog = lfo_a_analog.process();
+          lfo_b_result_analog = lfo_b_analog.process();
 	      	
-	      	// PRODUCT LFO A * ADSR A 
-	      	analog_out_2 = lfo_a_result_analog * analog_per_sequence_adsr_a_level;
+	      	// Sum
+	      	analog_out_2 = (lfo_a_result_analog + lfo_b_result_analog) / 2.0;
 	 
 	      	analogWrite(context, n, ch, analog_out_2);
 	      }
@@ -3613,8 +3409,8 @@ void render(BelaContext *context, void *userData)
 	      	//rt_printf("amp is: %f", amp);
 	      	
 	      	
-	      	// SUM LFO A + ADSR A
-	      	analog_out_3 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_a_level;
+	      	// Difference 
+	      	analog_out_3 = (lfo_a_result_analog - lfo_b_result_analog) / 2.0;
 	      	
 	      	
 	      	
@@ -3627,8 +3423,8 @@ void render(BelaContext *context, void *userData)
 	      	
 	      	 analog_per_sequence_adsr_b_level = per_sequence_adsr_b.process();
 	      	
-	      	// PRODUCT LFO A * ADSR B
-	      	analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_b_level;
+	      	// Produect
+	      	analog_out_4 = lfo_a_result_analog * lfo_b_result_analog;
 	      	
 	      	analogWrite(context, n, ch, analog_out_4);
 	      }
