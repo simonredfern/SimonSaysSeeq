@@ -6,7 +6,7 @@
 \___ || || |  ||| \_/|| | \||\___ || |-|| / /  \___ |\___ ||  /_ |  /_ | \_\|
 \____/\_/\_/  \|\____/\_/  \|\____/\_/ \|/_/   \____/\____/\____\\____\\____\
 
-SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020, 2021
+SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020 - 2023
 
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.35-BelaSalt";
+const char version[16]= "v0.36-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -88,8 +88,9 @@ The Bela software is distributed under the GNU Lesser General Public License
 // chmod u+x bela_startup.sh
 // chmod +x bela_startup.sh <- Need this else it doesn't run.
 
-// DONT seem to need to add it to crontab (edited via, for example, crontab -e)
-// @reboot /etc/init.d/bela_startup.sh
+// add it to crontab (edited via, for example, crontab -e)
+// not sure how successfully this runs
+// @reboot sleep 60 && /etc/init.d/bela_startup.sh
 
 
 
@@ -3527,7 +3528,7 @@ void render(BelaContext *context, void *userData)
 
 
 	    if (ch == OSC_FREQUENCY_INPUT_PIN){
-	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 10);
+	      	lfo_osc_1_frequency = map(analogRead(context, n, OSC_FREQUENCY_INPUT_PIN), 0, 1, 0.05, 1); // up to 1 Hz
 		  }
 
 	  if (ch == ADSR_SETTING_INPUT_PIN){
