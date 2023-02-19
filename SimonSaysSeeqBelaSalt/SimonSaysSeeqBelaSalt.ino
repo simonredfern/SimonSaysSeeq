@@ -74,11 +74,11 @@ The Bela software is distributed under the GNU Lesser General Public License
 
 // root@bela:/etc/init.d# cat bela_startup.sh 
 // #!/bin/bash
-// rm /var/log/*.log
+// rm -f /var/log/*.log || true
 // echo > /var/log/syslog
-// rm /var/log/*.gz
+// rm -f /var/log/*.gz || true
 // echo > /var/log/syslog.1
-// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" > /var/log/bela_startup.log
+// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" >> /var/log/bela_startup.log.keep
 
 
 // echo > /var/log/*.log
