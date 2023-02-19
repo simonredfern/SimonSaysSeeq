@@ -16,13 +16,13 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 4 ArmLastStep
 
 
-5 ArmMidiCommand
+5 Lag2
 
-6 ArmSwing
+6 Lag3
 
-7 DoMidiStop
+7 Lag4
 
-8 DoMidiStart
+8 Lag5
 
 
 9 Ratchet2
