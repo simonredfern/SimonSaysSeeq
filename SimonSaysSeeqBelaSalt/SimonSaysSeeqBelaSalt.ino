@@ -1182,6 +1182,8 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
+  target_led_2_state = HIGH;
+
   rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
@@ -1306,12 +1308,12 @@ void printStatus(void*){
     	
     	
     	//rt_printf("the_sequence_a is: %d \n", the_sequence_a);
-	    print_binary(the_sequence_a);
-		rt_printf("%c \n", 'B');
+	  //  print_binary(the_sequence_a);
+		// rt_printf("%c \n", 'B');
 
 
-    	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
-    	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
+    //	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
+    //	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
     	
     	rt_printf("step_a_count is: %d \n", step_a_count);
     	
@@ -1323,7 +1325,7 @@ void printStatus(void*){
     	}
 		*/
 
-		rt_printf("\n==== Sequence B ======= \n");
+		// rt_printf("\n==== Sequence B ======= \n");
 
     	//rt_printf("sequence_b_length_input_raw is: %f \n", sequence_b_length_input_raw);
     	//rt_printf("sequence_b_pattern_input_raw is: %f \n", sequence_b_pattern_input_raw);
@@ -1331,8 +1333,8 @@ void printStatus(void*){
 		//rt_printf("current_sequence_b_length_in_steps is: %d \n", current_sequence_b_length_in_steps);
 		//rt_printf("new_sequence_b_length_in_ticks is: %d \n", new_sequence_b_length_in_ticks);
 		//rt_printf("the_sequence_b is: %d \n", the_sequence_b);
-	    print_binary(the_sequence_b);
-		rt_printf("%c \n", 'B');
+	  //  print_binary(the_sequence_b);
+	//	rt_printf("%c \n", 'B');
 		
 		
 		//rt_printf("loop_timing_b.tick_count_in_sequence is: %d \n", loop_timing_b.tick_count_in_sequence);
@@ -3621,6 +3623,7 @@ void render(BelaContext *context, void *userData)
             // RESET A FALL
             if ((new_reset_a_in_state == LOW) && (current_reset_a_in_state == HIGH)){
               current_reset_a_in_state = LOW;
+              target_led_2_state = LOW;
             }
             
             // RESET B RISE
