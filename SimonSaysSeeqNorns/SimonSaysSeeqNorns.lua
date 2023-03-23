@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.6
+version = 0.7
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -274,6 +274,7 @@ end
 -- SWING_STEPS = Set { 3, 7, 11, 15 }
 
 -- swing 16
+-- we are not doing swing in code
 SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 
 -- Fonts: Note, we can use the Foundry app to view all the fonts.
@@ -529,10 +530,11 @@ end
         -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
 
-          -- this actually goes via midi    
-          if (enable_analog_clock_out == 1) then
-            gate_on(12)
-          end
+          -- this actually goes via midi 
+          -- we don't want to send midi messages at clock rate   
+          -- if (enable_analog_clock_out == 1) then
+          --   gate_on(12)
+          -- end
          --audio.tape_play_start()
 
          --print("POS 0")
@@ -544,9 +546,9 @@ end
 
         else
 
-          if (enable_analog_clock_out == 1) then
-            gate_off(12)
-          end
+          -- if (enable_analog_clock_out == 1) then
+          --   gate_off(12)
+          -- end
          -- print("POS 1")
 
          -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
@@ -558,50 +560,18 @@ end
 
       -- this is a narrower width
 
-        if tick_count % 2 == 0 then
-          if (enable_analog_clock_out == 1) then
-            clock.run(process_clock_gate, 11)
-          end
-        end 
+      -- We don't want any clock out functionality from norns
+
+        -- if tick_count % 2 == 0 then
+        --   if (enable_analog_clock_out == 1) then
+        --     clock.run(process_clock_gate, 11)
+        --   end
+        -- end 
 
 
       end -- End conditional clocks check 
 
     end -- End check for 24 PPQN clocks
-
-
-
-
-    -- -- Every 12 ticks we want to advance the sequencer (if transport is active) 
-    -- if tick_count % 12 == 0 then
-
-    --   -- print("tick_count is: " .. tick_count)
-
-
-    --   print("blip_count is: " .. blip_count)
-
-    --   if transport_is_active then 
-    --     process_step() 
-
-    --     -- Always advance the step based on tick_count mod 12.    
-    --     current_step = util.wrap(current_step + 1, first_step, last_step)
-    --     print ("Advanced step to: " .. current_step)
-
-
-    --     blip_count = 0
-
-    --   end
-
-    --   redraw()
-
-    -- end  
-
-
-
-
-
-
-    
 
 
 
@@ -618,13 +588,6 @@ end
 
     if tick_count % 12 == 0 then
 
-
-
--- here
-
-
-
---if run_conditional_clocks == true then
 
   -- Less frequently triggered gates
 
@@ -644,8 +607,13 @@ end
       clock.run(process_clock_gate, 9)
      end 
 
-  -- end
+     if tick_count % (192 * 5)  == 0 then
+      clock.run(process_clock_gate, 8)
+     end 
 
+     if tick_count % (192 * 6)  == 0 then
+      clock.run(process_clock_gate, 7)
+     end 
 
 
 
