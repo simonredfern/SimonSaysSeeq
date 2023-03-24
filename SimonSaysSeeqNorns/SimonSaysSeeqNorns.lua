@@ -586,40 +586,41 @@ end
     end  
 
 
-    if tick_count % 12 == 0 then
 
 
   -- Less frequently triggered gates
 
-    if tick_count % 192 == 0 then
-        clock.run(process_clock_gate, 12)
-    end 
+        if tick_count % (192 * 1) == 0 then
+            clock.run(process_clock_gate, 12)
+        end 
 
-    if tick_count % (192 * 2)  == 0 then
-      clock.run(process_clock_gate, 11)
-     end 
+        if tick_count % (192 * 2)  == 0 then
+          clock.run(process_clock_gate, 11)
+        end 
 
-     if tick_count % (192 * 3)  == 0 then
-      clock.run(process_clock_gate, 10)
-     end 
+        if tick_count % (192 * 4)  == 0 then
+          clock.run(process_clock_gate, 10)
+        end 
 
-     if tick_count % (192 * 4)  == 0 then
-      clock.run(process_clock_gate, 9)
-     end 
+        if tick_count % (192 * 8)  == 0 then
+          clock.run(process_clock_gate, 9)
+        end 
 
-     if tick_count % (192 * 5)  == 0 then
-      clock.run(process_clock_gate, 8)
-     end 
+        if tick_count % (192 * 16)  == 0 then
+          clock.run(process_clock_gate, 8)
+        end 
 
-     if tick_count % (192 * 6)  == 0 then
-      clock.run(process_clock_gate, 7)
-     end 
+        if tick_count % (192 * 32)  == 0 then
+          clock.run(process_clock_gate, 7)
+        end 
 
 
+    if tick_count % 12 == 0 then
+  
 
       --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
-        -- this will be above 
+
       process_step() 
 
       -- Always advance the step based on tick_count mod 12.    
