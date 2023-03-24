@@ -1143,16 +1143,16 @@ if (enable_midi_clock_out == 1) then
   normal_midi_device:stop ()
 end 
 
-if (enable_analog_clock_out == 1) then
+-- if (enable_analog_clock_out == 1) then
 
-  gate_off(6)
-  gate_off(7)
-  gate_off(8)
-  gate_off(9)
-  gate_off(10)
-  gate_off(11) 
+--   gate_off(6)
+--   gate_off(7)
+--   gate_off(8)
+--   gate_off(9)
+--   gate_off(10)
+--   gate_off(11) 
 
-end
+-- end
 
   run_conditional_clocks = false
 end  
