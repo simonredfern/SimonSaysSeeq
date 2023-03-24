@@ -70,6 +70,8 @@ arm_swing_button = 0
 swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 6
+MIN_GATE_ROW = 7
+MAX_GATE_ROW = 12
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -2930,58 +2932,3 @@ function redraw()
   end
   
 end
-
-
-
-
--- function send_gates(sequence_row, mode)
---   -- This function sends a gate or multiple gates for the row 
---   -- The ratchet level / timing is determined by mode.
---   -- Experimental so far.
-
---   -- Mode == 1 means a normal gate
-  
-
---   local count = mode
---   local timing = 1/32
-
---   if mode == 2 then  
---     timing = 1/32
---   elseif mode == 3 then
---     timing = 3/32
---   elseif mode == 4 then
---     timing = 3/64
---   end  
-
---   if mode > 1 then
---     --print("this is supposed to be a ratchet")
---   end 
-
---   for i=1,count do
---     --print("before do pulse")
-
---       --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
---       midi_gates_device:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_ON_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
-     
---       --print ("A OFF LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
---       midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
-
---     if mode ~= 1 then
---       clock.sync( timing )
---     end
---     --print("after sync") 
---   end
-
--- end  
-
----
-
-
-
--- function gate_low(sequence_row)
---   --print("gate_low " .. output)
---     midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE, MIDI_NOTE_OFF_VELOCITY, sequence_row + MIDI_CHANNEL_GATES)
--- end
-
-
-
