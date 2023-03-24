@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.7
+version = 0.8
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -529,15 +529,6 @@ end
 
         -- 24 PPQN clock -- This is a 50 50 duty cycle
         if tick_count % 2 == 0 then
-
-          -- this actually goes via midi 
-          -- we don't want to send midi messages at clock rate   
-          -- if (enable_analog_clock_out == 1) then
-          --   gate_on(12)
-          -- end
-         --audio.tape_play_start()
-
-         --print("POS 0")
          
          if (enable_audio_clock_out == 1) then
           softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
@@ -546,27 +537,12 @@ end
 
         else
 
-          -- if (enable_analog_clock_out == 1) then
-          --   gate_off(12)
-          -- end
-         -- print("POS 1")
-
          -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
          if (enable_audio_clock_out == 1) then
            softcut.play(1,0)
          end
 
         end  
-
-      -- this is a narrower width
-
-      -- We don't want any clock out functionality from norns
-
-        -- if tick_count % 2 == 0 then
-        --   if (enable_analog_clock_out == 1) then
-        --     clock.run(process_clock_gate, 11)
-        --   end
-        -- end 
 
 
       end -- End conditional clocks check 
@@ -1143,16 +1119,6 @@ if (enable_midi_clock_out == 1) then
   normal_midi_device:stop ()
 end 
 
--- if (enable_analog_clock_out == 1) then
-
---   gate_off(6)
---   gate_off(7)
---   gate_off(8)
---   gate_off(9)
---   gate_off(10)
---   gate_off(11) 
-
--- end
 
   run_conditional_clocks = false
 end  
