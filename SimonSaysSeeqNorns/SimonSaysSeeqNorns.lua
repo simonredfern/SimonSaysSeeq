@@ -1541,7 +1541,7 @@ function init_grid_state_table()
 
 
   -- Push Undo so we can get back to initial state
-  push_undo()
+  push_grid_undo()
 
   
   print ("Bye from init_grid_state_table")
@@ -1663,9 +1663,9 @@ end -- end init_held_state_table
 --------------
 -----
 
-function push_undo()
+function push_grid_undo()
 
-  --print("push_undo says hello. Store Undo LIFO")
+  --print("push_grid_undo says hello. Store Undo LIFO")
   -- TODO check memory / count of states? - if this gets very large, truncate from the other side
 
   -- When we push to the undo_grid_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_grid_lifo 
@@ -1676,7 +1676,7 @@ function push_undo()
 
 end  
 
-function pop_undo()
+function pop_grid_undo()
 
   if lifo_size(undo_grid_lifo) > 1 then
 
@@ -1901,7 +1901,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
     --print ("grid_state:" .. get_tally(grid_state))
 
     -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
-    push_undo()
+    push_grid_undo()
 
     -- So we save the table to file
     -- (don't bother with control rows)
@@ -2344,16 +2344,16 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
         push_redo()
 
         -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE pop_undo is:")
+        -- print ("grid_state BEFORE pop_grid_undo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
 
 
 
-        pop_undo()
+        pop_grid_undo()
 
         -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state AFTER pop_undo is:")
+        -- print ("grid_state AFTER pop_grid_undo is:")
         -- print (grid_state)
         --print ("grid_state: " .. get_tally(grid_state))
 
@@ -2374,7 +2374,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state BEFORE push_undo is:")
+      -- print ("grid_state BEFORE push_grid_undo is:")
       -- print (grid_state)
       -- print ("tally is:" .. tally)
 
@@ -2382,7 +2382,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       if (lifo_populated(redo_grid_lifo)) then
         -- print ("redo_grid_lifo is populated")
 
-        push_undo()
+        push_grid_undo()
 
         -- local tally = refresh_grid_and_screen()
         -- print ("grid_state BEFORE pop_redo is:")
