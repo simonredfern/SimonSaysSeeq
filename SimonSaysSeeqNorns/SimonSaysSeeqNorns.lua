@@ -168,8 +168,8 @@ table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "Lag2", x = 5, y = 8}) -- note Lag is processed through ratchet
-table.insert(BUTTONS, {name = "Lag3", x = 6, y = 8})
+table.insert(BUTTONS, {name = "UndoMozartButton", x = 5, y = 8}) -- note Lag is processed through ratchet
+table.insert(BUTTONS, {name = "RedoMozartButton", x = 6, y = 8})
 table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
 table.insert(BUTTONS, {name = "Lag5", x = 8, y = 8})
 
@@ -1590,6 +1590,8 @@ function init_mozart_state_table()
 
  print ("clock.get_tempo() is: " .. clock.get_tempo())
  
+   -- Push Undo so we can get back to initial state
+   push_mozart_undo()
 
   print ("Bye from init_mozart_state_table")
   
@@ -1947,6 +1949,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
     -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
     push_grid_undo()
 
+    push_mozart_undo()
+
     -- So we save the table to file
     -- (don't bother with control rows)
     --print ("Before set grid_state_dirty = true")
@@ -2224,7 +2228,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
 else
 
-  -- CONTROL ROWS
+  -- *** CONTROL ROWS ***
 
 
 -- direct assignement of control rows.
@@ -2269,21 +2273,34 @@ else
       end
     
 -- NOTE treating lag as a type of ratchet
-    elseif grid_button_function_name(x,y) == "Lag2" then
-      --print ("LAG button pressed: " .. z)
-      if z == 1 then 
-        arm_ratchet = 6
+    elseif grid_button_function_name(x,y) == "UndoMozartButton" then
+
+-- TODO put undo  mozart here
+
+      ----------
+      -- UNDO MOZART--
+      ----------
+
+      -- Only do this if we know we can pop from undo 
+      if (lifo_populated(undo_mozart_lifo)) then
+        push_mozart_redo()
+        pop_mozart_undo()
       else
-        arm_ratchet = 0
+        print ("undo_mozart_lifo is NOT populated")
       end
 
-    elseif grid_button_function_name(x,y) == "Lag3" then
-      --print ("LAG button pressed: " .. z)
-      if z == 1 then 
-        arm_ratchet = 7
+    elseif grid_button_function_name(x,y) == "RedoMozartButton" then
+
+      ----------
+      -- REDO MOZART--
+      ----------
+
+      if (lifo_populated(redo_mozart_lifo)) then
+        push_mozart_undo()
+        pop_mozart_redo()
       else
-        arm_ratchet = 0
-      end
+        print ("redo_grid_lifo is NOT populated")
+      end  
 
     elseif grid_button_function_name(x,y) == "Lag4" then
       --print ("LAG button pressed: " .. z)
