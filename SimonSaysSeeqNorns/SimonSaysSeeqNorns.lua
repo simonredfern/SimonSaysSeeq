@@ -1708,7 +1708,7 @@ end
 
 
 
-function push_redo()
+function push_grid_redo()
     -- 1) Push the current state to the redo_grid_lifo so we can get back to it.
     -- Similarly we want to *copy* the grid_state (not reference) 
     -- so any subsequent changes to the grid_state are not reflected in the redo_grid_lifo
@@ -1718,7 +1718,7 @@ function push_redo()
 end  
 
 
-function pop_redo()
+function pop_grid_redo()
 
   if lifo_size(redo_grid_lifo) > 1 then
 
@@ -2337,11 +2337,11 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 
 
         -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE push_redo is:")
+        -- print ("grid_state BEFORE push_grid_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
 
-        push_redo()
+        push_grid_redo()
 
         -- local tally = refresh_grid_and_screen()
         -- print ("grid_state BEFORE pop_grid_undo is:")
@@ -2385,15 +2385,15 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
         push_grid_undo()
 
         -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE pop_redo is:")
+        -- print ("grid_state BEFORE pop_grid_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
-        pop_redo()
+        pop_grid_redo()
 
       --  refresh_grid_and_screen()
 
         -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state AFTER pop_redo is:")
+        -- print ("grid_state AFTER pop_grid_redo is:")
         -- print (grid_state)
         -- print ("tally is:" .. tally)
 
