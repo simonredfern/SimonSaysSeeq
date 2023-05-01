@@ -7,18 +7,18 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 -- 8th Row (bottom row) (buttons number from left to right)
 
-1 Undo
+1 Undo Gates
 
-2 Redo
+2 Redo Gates
 
 3 ArmFirstStep
 
 4 ArmLastStep
 
 
-5 Lag2
+5 Undo Notes
 
-6 Lag3
+6 Redo Notes
 
 7 Lag4
 
