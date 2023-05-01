@@ -16,9 +16,9 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 4 ArmLastStep
 
 
-5 Undo Notes
+5 Undo Note pitches
 
-6 Redo Notes
+6 Redo Note pitches
 
 7 Lag4
 
