@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.8
+version = 0.9
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -47,6 +47,12 @@ transport_is_active = true
 COLS = 16
 ROWS = 8
 
+GATE_12 = 12
+GATE_11 = 11
+GATE_10 = 10
+GATE_9 = 9
+GATE_8 = 8
+GATE_7 = 7
 
 first_step = 1
 last_step = COLS
@@ -569,27 +575,34 @@ end
   -- Less frequently triggered gates
 
         if tick_count % (192 * 1) == 0 then
-            clock.run(process_clock_gate, 12)
+            clock.run(process_clock_gate, GATE_12)
+            print("tick_count is: " .. tick_count .. " GATE_12 ")
         end 
 
         if tick_count % (192 * 2)  == 0 then
-          clock.run(process_clock_gate, 11)
+          clock.run(process_clock_gate, GATE_11)
+          print("tick_count is: " .. tick_count .. " GATE_11 ")
         end 
 
         if tick_count % (192 * 4)  == 0 then
-          clock.run(process_clock_gate, 10)
+          clock.run(process_clock_gate, GATE_10)
+          print("tick_count is: " .. tick_count .. " GATE_10 ")
         end 
 
         if tick_count % (192 * 8)  == 0 then
-          clock.run(process_clock_gate, 9)
+          clock.run(process_clock_gate, GATE_9)
+          print("tick_count is: " .. tick_count .. " GATE_9 ")
         end 
 
         if tick_count % (192 * 16)  == 0 then
-          clock.run(process_clock_gate, 8)
+          clock.run(process_clock_gate, GATE_8)
+          print("tick_count is: " .. tick_count .. " GATE_8 ")
         end 
 
+        -- Note: make sure reset of tick_count is at least this otherwise we won't go in here
         if tick_count % (192 * 32)  == 0 then
-          clock.run(process_clock_gate, 7)
+          clock.run(process_clock_gate, GATE_7)
+          print("tick_count is: " .. tick_count .. " GATE_7 ")
         end 
 
 
@@ -664,7 +677,7 @@ end
 
 
 
-    if (tick_count == 192 * 4) then -- Reset so we don't have too many numbers on which we do modulus calculations
+    if (tick_count == 192 * 64) then -- Reset so we don't have too many numbers on which we do modulus calculations
 
       -- This means we calculate the average tempo over a fixed period of 192 ticks  
 
@@ -1476,76 +1489,102 @@ function load_slide_state()
 end
 
 
+-- a general grid
+function create_a_grid()
+  local local_grid = {}
+  local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  local_grid["gspc"]=0 -- we might increment this to see how popular it is 
+  for col = 1, COLS do 
+    local_grid[col] = {} -- create a table for each col
+    for row = 1, ROWS do
+        local_grid[col][row] = 0
+    end
+  end
+  return local_grid
+end 
 
  
 -- grid is for storing our gates / ratches
 function create_grid()
-  local fresh_grid = {}
-  fresh_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
-  for col = 1, COLS do 
-    fresh_grid[col] = {} -- create a table for each col
-    for row = 1, ROWS do
-      if col == row then -- eg. if coordinate is (3,3)
-        fresh_grid[col][row] = 1
-      else -- eg. if coordinate is (3,2)
-        fresh_grid[col][row] = 0
-      end
-    end
-  end
-  return fresh_grid
+  return create_a_grid()
+
+  -- local fresh_grid = {}
+  -- fresh_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  -- fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
+  -- for col = 1, COLS do 
+  --   fresh_grid[col] = {} -- create a table for each col
+  --   for row = 1, ROWS do
+  --     if col == row then -- eg. if coordinate is (3,3)
+  --       fresh_grid[col][row] = 1
+  --     else -- eg. if coordinate is (3,2)
+  --       fresh_grid[col][row] = 0
+  --     end
+  --   end
+  -- end
+  -- return fresh_grid
+
 end  
 
 
 -- mozart is for storing our midi notes
 function create_mozart()
-  local fresh_mozart = {}
-  fresh_mozart["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  fresh_mozart["gspc"]=0 -- we can increment this to see how popular this mozart is
-  for col = 1, COLS do 
-    fresh_mozart[col] = {} -- create a table for each col
-    for row = 1, ROWS do
-      if col == row then -- eg. if coordinate is (3,3)
-        fresh_mozart[col][row] = 1
-      else -- eg. if coordinate is (3,2)
-        fresh_mozart[col][row] = 0
-      end
-    end
-  end
-  return fresh_mozart
+  return create_a_grid()
+
+  -- local fresh_mozart = {}
+  -- fresh_mozart["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  -- fresh_mozart["gspc"]=0 -- we can increment this to see how popular this mozart is
+  -- for col = 1, COLS do 
+  --   fresh_mozart[col] = {} -- create a table for each col
+  --   for row = 1, ROWS do
+  --     if col == row then -- eg. if coordinate is (3,3)
+  --       fresh_mozart[col][row] = 1
+  --     else -- eg. if coordinate is (3,2)
+  --       fresh_mozart[col][row] = 0
+  --     end
+  --   end
+  -- end
+  -- return fresh_mozart
 end 
 
 -- slide is for storing our slide / gliss.
 function create_slide()
-  local fresh_slide = {}
-  fresh_slide["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  fresh_slide["gspc"]=0 -- we can increment this to see how popular this mozart is
-  for col = 1, COLS do 
-    fresh_slide[col] = {} -- create a table for each col
-    for row = 1, ROWS do
-      if col == row then -- eg. if coordinate is (3,3)
-        fresh_slide[col][row] = 1
-      else -- eg. if coordinate is (3,2)
-        fresh_slide[col][row] = 0
-      end
-    end
-  end
-  return fresh_slide
+  return create_a_grid()
+
+  -- local fresh_slide = {}
+  -- fresh_slide["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  -- fresh_slide["gspc"]=0 -- we can increment this to see how popular this mozart is
+  -- for col = 1, COLS do 
+  --   fresh_slide[col] = {} -- create a table for each col
+  --   for row = 1, ROWS do
+  --     if col == row then -- eg. if coordinate is (3,3)
+  --       fresh_slide[col][row] = 1
+  --     else -- eg. if coordinate is (3,2)
+  --       fresh_slide[col][row] = 0
+  --     end
+  --   end
+  -- end
+  -- return fresh_slide
+
 end 
 
 
 -- held is for storing grid buttons that are held down 
 function create_held()
-  local fresh_held = {}
-  fresh_held["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  for col = 1, COLS do 
-    fresh_held[col] = {} -- create a table for each col
-    for row = 1, ROWS do
-        fresh_held[col][row] = 0
-    end
-  end
-  return fresh_held
+  return create_a_grid()
+
+  -- local fresh_held = {}
+  -- fresh_held["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
+  -- for col = 1, COLS do 
+  --   fresh_held[col] = {} -- create a table for each col
+  --   for row = 1, ROWS do
+  --       fresh_held[col][row] = 0
+  --   end
+  -- end
+  -- return fresh_held
 end 
+
+
+
 
 
 
