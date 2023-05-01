@@ -1503,92 +1503,6 @@ function create_a_grid()
   return local_grid
 end 
 
- 
--- grid is for storing our gates / ratches
-function create_grid()
-  return create_a_grid()
-
-  -- local fresh_grid = {}
-  -- fresh_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  -- fresh_grid["gspc"]=0 -- we can increment this to see how popular this grid is
-  -- for col = 1, COLS do 
-  --   fresh_grid[col] = {} -- create a table for each col
-  --   for row = 1, ROWS do
-  --     if col == row then -- eg. if coordinate is (3,3)
-  --       fresh_grid[col][row] = 1
-  --     else -- eg. if coordinate is (3,2)
-  --       fresh_grid[col][row] = 0
-  --     end
-  --   end
-  -- end
-  -- return fresh_grid
-
-end  
-
-
--- mozart is for storing our midi notes
-function create_mozart()
-  return create_a_grid()
-
-  -- local fresh_mozart = {}
-  -- fresh_mozart["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  -- fresh_mozart["gspc"]=0 -- we can increment this to see how popular this mozart is
-  -- for col = 1, COLS do 
-  --   fresh_mozart[col] = {} -- create a table for each col
-  --   for row = 1, ROWS do
-  --     if col == row then -- eg. if coordinate is (3,3)
-  --       fresh_mozart[col][row] = 1
-  --     else -- eg. if coordinate is (3,2)
-  --       fresh_mozart[col][row] = 0
-  --     end
-  --   end
-  -- end
-  -- return fresh_mozart
-end 
-
--- slide is for storing our slide / gliss.
-function create_slide()
-  return create_a_grid()
-
-  -- local fresh_slide = {}
-  -- fresh_slide["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  -- fresh_slide["gspc"]=0 -- we can increment this to see how popular this mozart is
-  -- for col = 1, COLS do 
-  --   fresh_slide[col] = {} -- create a table for each col
-  --   for row = 1, ROWS do
-  --     if col == row then -- eg. if coordinate is (3,3)
-  --       fresh_slide[col][row] = 1
-  --     else -- eg. if coordinate is (3,2)
-  --       fresh_slide[col][row] = 0
-  --     end
-  --   end
-  -- end
-  -- return fresh_slide
-
-end 
-
-
--- held is for storing grid buttons that are held down 
-function create_held()
-  return create_a_grid()
-
-  -- local fresh_held = {}
-  -- fresh_held["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  -- for col = 1, COLS do 
-  --   fresh_held[col] = {} -- create a table for each col
-  --   for row = 1, ROWS do
-  --       fresh_held[col][row] = 0
-  --   end
-  -- end
-  -- return fresh_held
-end 
-
-
-
-
-
-
-
 
 function init_grid_state_table()
   
@@ -1609,7 +1523,7 @@ function init_grid_state_table()
   if grid_state == nil then
     print ("No table, I will generate a structure and save that")
 
-    grid_state = create_grid()
+    grid_state = create_a_grid()
 
 
 
@@ -1657,7 +1571,7 @@ function init_mozart_state_table()
   if mozart_state == nil then
     print ("No table, I will generate a structure and save that")
 
-    mozart_state = create_mozart()
+    mozart_state = create_a_grid()
 
 
 
@@ -1699,7 +1613,7 @@ function init_slide_state_table()
   if slide_state == nil then
     print ("No table, I will generate a structure and save that")
 
-    slide_state = create_slide()
+    slide_state = create_a_grid()
 
 
 
@@ -1729,7 +1643,7 @@ function init_held_state_table()
   print ("Hello from init_held_state_table")
   
   -- Don't want to load or save - always create new
-  held_state = create_held()
+  held_state = create_a_grid()
 
   
  --print ("tally is: " .. get_tally(held_state))
@@ -2771,7 +2685,7 @@ end
 function get_copy_of_grid(input_grid)
   -- For creating copies of a grid for Undo and probably other things.
   --print ("input_grid is" .. get_tally(input_grid))
-  local output_grid = create_grid() -- this returns a grid with the dimensions we expect
+  local output_grid = create_a_grid() -- this returns a grid with the dimensions we expect
   -- copy all the key values except the ID 
   output_grid["id"] = math.random(1,99999999999999)
   output_grid["gspc"] = input_grid["gspc"]
