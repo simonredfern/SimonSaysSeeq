@@ -1325,8 +1325,8 @@ function init()
 --  params:set("clock_source",4)
   
     -- Last In First Out (LIFO) tables for Undo and Redo of grid state functionality
-  undo_lifo = {}
-  redo_lifo = {}
+  undo_grid_lifo = {}
+  redo_grid_lifo = {}
 
  
   print ("before init_grid_state_table")
@@ -1489,7 +1489,7 @@ function load_slide_state()
 end
 
 
--- a general grid
+-- a general grid. This is used for grid, mozart, slide etc.
 function create_a_grid()
   local local_grid = {}
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
@@ -1668,25 +1668,25 @@ function push_undo()
   --print("push_undo says hello. Store Undo LIFO")
   -- TODO check memory / count of states? - if this gets very large, truncate from the other side
 
-  -- When we push to the undo_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_lifo 
+  -- When we push to the undo_grid_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_grid_lifo 
   -- Inserts in the last position of the table (push)
-  table.insert (undo_lifo, get_copy_of_grid(grid_state))
+  table.insert (undo_grid_lifo, get_copy_of_grid(grid_state))
 
-  --print ("undo_lifo size is: ".. lifo_size(undo_lifo))
+  --print ("undo_grid_lifo size is: ".. lifo_size(undo_grid_lifo))
 
 end  
 
 function pop_undo()
 
-  if lifo_size(undo_lifo) > 1 then
+  if lifo_size(undo_grid_lifo) > 1 then
 
-    -- 2) Pop from the undo_lifo to the current state.
+    -- 2) Pop from the undo_grid_lifo to the current state.
     -- Removes from the last element of the table (pop)
-    local undo_state = table.remove (undo_lifo)
+    local undo_state = table.remove (undo_grid_lifo)
 
     grid_state = get_copy_of_grid(undo_state)
 
-    --print ("undo_lifo size is: ".. lifo_size(undo_lifo))
+    --print ("undo_grid_lifo size is: ".. lifo_size(undo_grid_lifo))
     
     -- Thus if A through G are all the states we've seen, and E is the current state, we'd have the following:
     
@@ -1694,14 +1694,14 @@ function pop_undo()
     --        *
     -- grid_state: E
     --
-    -- undo_lifo       redo_lifo
+    -- undo_grid_lifo       redo_grid_lifo
     --    D                F 
     --    C                G 
     --    B
     --    A 
 
   else 
-    print ("Not poping last undo_lifo because its size is 1 or less ")  
+    print ("Not poping last undo_grid_lifo because its size is 1 or less ")  
   end
 end 
 
@@ -1709,28 +1709,28 @@ end
 
 
 function push_redo()
-    -- 1) Push the current state to the redo_lifo so we can get back to it.
+    -- 1) Push the current state to the redo_grid_lifo so we can get back to it.
     -- Similarly we want to *copy* the grid_state (not reference) 
-    -- so any subsequent changes to the grid_state are not reflected in the redo_lifo
-    table.insert (redo_lifo, get_copy_of_grid(grid_state))
+    -- so any subsequent changes to the grid_state are not reflected in the redo_grid_lifo
+    table.insert (redo_grid_lifo, get_copy_of_grid(grid_state))
     
-    --print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+    --print ("redo_grid_lifo size is: ".. lifo_size(redo_grid_lifo))
 end  
 
 
 function pop_redo()
 
-  if lifo_size(redo_lifo) > 1 then
+  if lifo_size(redo_grid_lifo) > 1 then
 
-      -- 2) Pop the redo_lifo into the current state.
+      -- 2) Pop the redo_grid_lifo into the current state.
 
       -- TODO need to copy this?
-      local redo_state = table.remove (redo_lifo) 
+      local redo_state = table.remove (redo_grid_lifo) 
       grid_state = get_copy_of_grid(redo_state)
 
-      --print ("redo_lifo size is: ".. lifo_size(redo_lifo))
+      --print ("redo_grid_lifo size is: ".. lifo_size(redo_grid_lifo))
     else 
-      print ("Not poping last redo_lifo because its size is 1 or less ")  
+      print ("Not poping last redo_grid_lifo because its size is 1 or less ")  
     end
 
 end  
@@ -1900,7 +1900,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
     --print ("Sequence button pressed")
     --print ("grid_state:" .. get_tally(grid_state))
 
-    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_lifo
+    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
     push_undo()
 
     -- So we save the table to file
@@ -2329,9 +2329,9 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 
 
       -- Only do this if we know we can pop from undo 
-      if (lifo_populated(undo_lifo)) then
+      if (lifo_populated(undo_grid_lifo)) then
 
-        --print ("undo_lifo is populated")
+        --print ("undo_grid_lifo is populated")
       
         -- In order to Undo we: 
 
@@ -2363,7 +2363,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
         -- print (grid_state)
 
       else
-        print ("undo_lifo is NOT populated")
+        print ("undo_grid_lifo is NOT populated")
       end
 
 
@@ -2379,8 +2379,8 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       -- print ("tally is:" .. tally)
 
           -- Only do this if we know we can pop from undo 
-      if (lifo_populated(redo_lifo)) then
-        -- print ("redo_lifo is populated")
+      if (lifo_populated(redo_grid_lifo)) then
+        -- print ("redo_grid_lifo is populated")
 
         push_undo()
 
@@ -2399,7 +2399,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 
         --print ("grid_state: " .. get_tally(grid_state))
       else
-        print ("redo_lifo is NOT populated")
+        print ("redo_grid_lifo is NOT populated")
       end  
     --end -- End of REDO
 
