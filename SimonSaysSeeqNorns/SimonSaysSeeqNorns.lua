@@ -1328,7 +1328,12 @@ function init()
   undo_grid_lifo = {}
   redo_grid_lifo = {}
 
- 
+  undo_mozart_lifo = {}
+  redo_mozart_lifo = {}
+
+
+
+
   print ("before init_grid_state_table")
   init_grid_state_table()
     
@@ -1676,6 +1681,14 @@ function push_grid_undo()
 
 end  
 
+function push_mozart_undo()
+  table.insert (undo_mozart_lifo, get_copy_of_grid(mozart_state))
+end  
+
+
+
+
+
 function pop_grid_undo()
 
   if lifo_size(undo_grid_lifo) > 1 then
@@ -1705,6 +1718,18 @@ function pop_grid_undo()
   end
 end 
 
+function pop_mozart_undo()
+
+  if lifo_size(undo_mozart_lifo) > 1 then
+    local undo_state = table.remove (undo_mozart_lifo)
+    mozart_state = get_copy_of_grid(undo_state)
+
+  else 
+    print ("Not poping last undo_mozart_lifo because its size is 1 or less ")  
+  end
+end 
+
+
 
 
 
@@ -1716,6 +1741,13 @@ function push_grid_redo()
     
     --print ("redo_grid_lifo size is: ".. lifo_size(redo_grid_lifo))
 end  
+
+
+function push_mozart_redo()
+  table.insert (redo_mozart_lifo, get_copy_of_grid(mozart_state))
+end  
+
+
 
 
 function pop_grid_redo()
@@ -1734,6 +1766,18 @@ function pop_grid_redo()
     end
 
 end  
+
+
+
+function pop_mozart_redo()
+  if lifo_size(redo_mozart_lifo) > 1 then
+      local redo_state = table.remove (redo_mozart_lifo) 
+      mozart_state = get_copy_of_grid(redo_state)
+    else 
+      print ("Not poping last redo_mozart_lifo because its size is 1 or less ")  
+    end
+end  
+
 
 
 function set_mozart_and_grid_based_on_held_key(midi_note_number)
