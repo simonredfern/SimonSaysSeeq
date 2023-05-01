@@ -158,8 +158,8 @@ table.insert(BUTTONS, {name = "Button16", x = 16, y = 7})
 
 
 -- 8th Row
-table.insert(BUTTONS, {name = "Undo", x = 1, y = 8})
-table.insert(BUTTONS, {name = "Redo", x = 2, y = 8})
+table.insert(BUTTONS, {name = "UndoGridButton", x = 1, y = 8})
+table.insert(BUTTONS, {name = "RedoGridButton", x = 2, y = 8})
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
 table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
 
@@ -2365,7 +2365,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 --
 
     -- UNDO
-  elseif grid_button_function_name (x,y) == "Undo" then
+  elseif grid_button_function_name (x,y) == "UndoGridButton" then
       ----------
       -- UNDO --
       ----------
@@ -2414,7 +2414,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
      -- End of UNDO
 
     -- CONTROL REDO    
-    elseif grid_button_function_name (x,y) == "Redo" then
+    elseif grid_button_function_name (x,y) == "RedoGridButton" then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid_and_screen()
