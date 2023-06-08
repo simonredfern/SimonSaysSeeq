@@ -170,10 +170,11 @@ table.insert(BUTTONS, {name = "RedoMozartButton", x = 4, y = 8})
 
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 5, y = 8}) -- note Lag is processed through ratchet
 table.insert(BUTTONS, {name = "ArmLastStep", x = 6, y = 8})
-table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
-table.insert(BUTTONS, {name = "Lag5", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "Ratchet2", x = 9, y = 8})
+table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
+table.insert(BUTTONS, {name = "Ratchet2", x = 8, y = 8})
+
+table.insert(BUTTONS, {name = "Lag3", x = 9, y = 8})
 table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
 table.insert(BUTTONS, {name = "Ratchet4", x = 11, y = 8})
 table.insert(BUTTONS, {name = "Ratchet5", x = 12, y = 8})
@@ -2145,8 +2146,21 @@ if y <= TOTAL_SEQUENCE_ROWS then
       -- Change the state of the grid *AFTER* we have pushed to undo lifo
       
       -- Place RATCHET on step
-      if arm_ratchet ~= 0 then -- We place the ratchet on the step
-        grid_state[x][y] = arm_ratchet
+      --if arm_ratchet ~= 0 then -- We place the ratchet on the step
+      if arm_ratchet == 2 then -- We place the ratchet on the step  
+        -- Actually we cycle around the rachet 1 to 5
+        if grid_state[x][y] == 1 then
+          grid_state[x][y] = 2
+        elseif grid_state[x][y] == 2 then
+          grid_state[x][y] = 3
+        elseif grid_state[x][y] == 3 then
+          grid_state[x][y] = 4 
+        elseif grid_state[x][y] == 4 then
+          grid_state[x][y] = 5 
+        elseif grid_state[x][y] == 5 then
+          grid_state[x][y] = 1 
+
+        --grid_state[x][y] = arm_ratchet
       else
 
 
