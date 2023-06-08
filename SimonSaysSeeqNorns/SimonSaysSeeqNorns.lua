@@ -160,16 +160,16 @@ table.insert(BUTTONS, {name = "Button16", x = 16, y = 7})
 -- 8th Row
 table.insert(BUTTONS, {name = "UndoGridButton", x = 1, y = 8})
 table.insert(BUTTONS, {name = "RedoGridButton", x = 2, y = 8})
-table.insert(BUTTONS, {name = "ArmFirstStep", x = 3, y = 8})
-table.insert(BUTTONS, {name = "ArmLastStep", x = 4, y = 8})
+table.insert(BUTTONS, {name = "UndoMozartButton", x = 3, y = 8})
+table.insert(BUTTONS, {name = "RedoMozartButton", x = 4, y = 8})
 
 --table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
 --table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "UndoMozartButton", x = 5, y = 8}) -- note Lag is processed through ratchet
-table.insert(BUTTONS, {name = "RedoMozartButton", x = 6, y = 8})
+table.insert(BUTTONS, {name = "ArmFirstStep", x = 5, y = 8}) -- note Lag is processed through ratchet
+table.insert(BUTTONS, {name = "ArmLastStep", x = 6, y = 8})
 table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
 table.insert(BUTTONS, {name = "Lag5", x = 8, y = 8})
 
