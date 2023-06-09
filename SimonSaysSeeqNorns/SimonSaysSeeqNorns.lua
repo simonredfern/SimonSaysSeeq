@@ -2149,8 +2149,10 @@ if y <= TOTAL_SEQUENCE_ROWS then
       --if arm_ratchet ~= 0 then -- We place the ratchet on the step
 
       if arm_ratchet == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
-        -- Actually we cycle around the rachet 1 to 5
-        if grid_state[x][y] == 1 then
+        -- Actually we cycle around 0 to 5  i.e. rest to max ratchet 
+        if grid_state[x][y] == 0 then
+          grid_state[x][y] = 1 -- this is not a ratchet, just a normal hit.
+        elseif grid_state[x][y] == 1 then
           grid_state[x][y] = 2
         elseif grid_state[x][y] == 2 then
           grid_state[x][y] = 3
@@ -2159,7 +2161,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
         elseif grid_state[x][y] == 4 then
           grid_state[x][y] = 5 
         elseif grid_state[x][y] == 5 then
-          grid_state[x][y] = 1
+          grid_state[x][y] = 0
         end   
 
         --grid_state[x][y] = arm_ratchet
