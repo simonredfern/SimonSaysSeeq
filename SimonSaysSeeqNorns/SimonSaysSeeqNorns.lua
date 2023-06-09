@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = 0.9
+version = "0.9.1"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -57,7 +57,7 @@ GATE_7 = 7
 first_step = 1
 last_step = COLS
 
-arm_ratchet = 0
+arm_feature = 0
 preset_grid_button = 0
 arm_clock_button = 0
 preset_mozart_button = 0
@@ -176,8 +176,8 @@ table.insert(BUTTONS, {name = "ArmRatchet", x = 8, y = 8})
 
 table.insert(BUTTONS, {name = "Lag3", x = 9, y = 8})
 table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
-table.insert(BUTTONS, {name = "Ratchet4", x = 11, y = 8})
-table.insert(BUTTONS, {name = "Ratchet5", x = 12, y = 8})
+table.insert(BUTTONS, {name = "ArmMozartDown", x = 11, y = 8})
+table.insert(BUTTONS, {name = "ArmMozartUp", x = 12, y = 8})
 
 table.insert(BUTTONS, {name = "PresetGrid", x = 13, y = 8})
 table.insert(BUTTONS, {name = "PresetMozart", x = 14, y = 8})
@@ -1822,10 +1822,20 @@ end
 
 function unconditional_set_mozart(x, y, midi_note_number)
 
+  if midi_note_number < 0 then
+    midi_note_number = 0
+  end  
+
+  if midi_note_number > 127 then
+    midi_note_number = 127
+  end 
+
   mozart_state[x][y] = midi_note_number -- Note we don't have any note off
 
   -- As we have just "put a midi note on the step", make the step on.
-  grid_state[x][y] = 1 -- this not working, something is overriding it
+  grid_state[x][y] = 1 
+
+  slide_state[x][y] = 0 -- this is so we can always hear our change i.e. the pitch is not masked by a slide
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
 
@@ -1915,7 +1925,7 @@ my_grid.key = function(x,y,z)
 print("Hello from ----------- my_grid.key = function -----------------")
 print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 
-print("preset_grid_button is: " .. preset_grid_button .. ", arm_ratchet is: ".. arm_ratchet .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("preset_grid_button is: " .. preset_grid_button .. ", arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 --print(x .. ","..y .. " z is " .. z)
 
 -- Reset. It might get set below
@@ -2140,15 +2150,15 @@ if y <= TOTAL_SEQUENCE_ROWS then
     else -- preset button is not pressed 
 
       --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
-      --print ("arm_ratchet is: " .. arm_ratchet)
+      --print ("arm_feature is: " .. arm_feature)
 
       -- *Order is important here*. 
       -- Change the state of the grid *AFTER* we have pushed to undo lifo
       
       -- Place RATCHET on step
-      --if arm_ratchet ~= 0 then -- We place the ratchet on the step
+      --if arm_feature ~= 0 then -- We place the ratchet on the step
 
-      if arm_ratchet == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
+      if arm_feature == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
         -- Actually we cycle around 0 to 5  i.e. rest to max ratchet 
         if grid_state[x][y] == 0 then
           grid_state[x][y] = 1 -- this is not a ratchet, just a normal hit.
@@ -2162,15 +2172,18 @@ if y <= TOTAL_SEQUENCE_ROWS then
           grid_state[x][y] = 5 
         elseif grid_state[x][y] == 5 then
           grid_state[x][y] = 0
-        end   
-
-        --grid_state[x][y] = arm_ratchet
+        end
+        
+      elseif arm_feature == 4 then 
+        unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
+      elseif arm_feature == 5 then
+        unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
       else
 
 
         -- Conditions under which we want to TOGGLE the grid_state
         -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
-        if arm_ratchet == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
+        if arm_feature == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
 
           -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
           if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
@@ -2264,30 +2277,30 @@ else
     if grid_button_function_name(x,y) == "ArmRatchet" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 2
+        arm_feature = 2 -- ArmRatchet
       else
-        arm_ratchet = 0 -- Reset arm_ratchet with a key up
+        arm_feature = 0 -- Reset arm_feature with a key up
       end
     elseif grid_button_function_name(x,y) == "Ratchet3" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 3
+        arm_feature = 3
       else
-        arm_ratchet = 0
+        arm_feature = 0
       end
-    elseif grid_button_function_name(x,y) == "Ratchet4" then
+    elseif grid_button_function_name(x,y) == "ArmMozartDown" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 4
+        arm_feature = 4
       else
-        arm_ratchet = 0
+        arm_feature = 0
       end
-    elseif grid_button_function_name(x,y) == "Ratchet5" then
+    elseif grid_button_function_name(x,y) == "ArmMozartUp" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 5
+        arm_feature = 5
       else
-        arm_ratchet = 0
+        arm_feature = 0
       end
     
 -- NOTE treating lag as a type of ratchet
@@ -2323,17 +2336,17 @@ else
     elseif grid_button_function_name(x,y) == "ArmLag" then
       --print ("LAG button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 8
+        arm_feature = 8
       else
-        arm_ratchet = 0
+        arm_feature = 0
       end
 
     elseif grid_button_function_name(x,y) == "Lag5" then
       --print ("LAG button pressed: " .. z)
       if z == 1 then 
-        arm_ratchet = 9
+        arm_feature = 9
       else
-        arm_ratchet = 0
+        arm_feature = 0
       end
 
 -- Preset buttons
