@@ -171,8 +171,8 @@ table.insert(BUTTONS, {name = "RedoMozartButton", x = 4, y = 8})
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 5, y = 8}) -- note Lag is processed through ratchet
 table.insert(BUTTONS, {name = "ArmLastStep", x = 6, y = 8})
 
-table.insert(BUTTONS, {name = "Lag4", x = 7, y = 8})
-table.insert(BUTTONS, {name = "Ratchet2", x = 8, y = 8})
+table.insert(BUTTONS, {name = "ArmLag", x = 7, y = 8})
+table.insert(BUTTONS, {name = "ArmRatchet", x = 8, y = 8})
 
 table.insert(BUTTONS, {name = "Lag3", x = 9, y = 8})
 table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
@@ -2147,7 +2147,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
       
       -- Place RATCHET on step
       --if arm_ratchet ~= 0 then -- We place the ratchet on the step
-      if arm_ratchet == 2 then -- We place the ratchet on the step  
+
+      if arm_ratchet == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
         -- Actually we cycle around the rachet 1 to 5
         if grid_state[x][y] == 1 then
           grid_state[x][y] = 2
@@ -2257,7 +2258,7 @@ else
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
 
-    if grid_button_function_name(x,y) == "Ratchet2" then
+    if grid_button_function_name(x,y) == "ArmRatchet" then
       --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         arm_ratchet = 2
@@ -2316,7 +2317,7 @@ else
         print ("redo_grid_lifo is NOT populated")
       end  
 
-    elseif grid_button_function_name(x,y) == "Lag4" then
+    elseif grid_button_function_name(x,y) == "ArmLag" then
       --print ("LAG button pressed: " .. z)
       if z == 1 then 
         arm_ratchet = 8
