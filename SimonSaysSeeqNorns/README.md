@@ -11,19 +11,17 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 2 Redo Gates
 
-3 ArmFirstStep
+3 Undo Note pitches
 
-4 ArmLastStep
+4 Redo Note pitches
 
+5 ArmFirstStep
 
-5 Undo Note pitches
+6 ArmLastStep
 
-6 Redo Note pitches
+7 ArmLag
 
-7 Lag4
-
-8 Lag5
-
+8 ArmRatchet
 
 9 Ratchet2
 
