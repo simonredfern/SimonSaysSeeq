@@ -2159,7 +2159,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
         elseif grid_state[x][y] == 4 then
           grid_state[x][y] = 5 
         elseif grid_state[x][y] == 5 then
-          grid_state[x][y] = 1 
+          grid_state[x][y] = 1
+        end   
 
         --grid_state[x][y] = arm_ratchet
       else
