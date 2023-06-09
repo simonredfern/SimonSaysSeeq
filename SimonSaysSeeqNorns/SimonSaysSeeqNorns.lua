@@ -842,12 +842,12 @@ function process_step()
 
   
   -- For each sequence row...
-  for output = 1, TOTAL_SEQUENCE_ROWS do
+  for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
     -- on the current step...
-    ratchet_mode = grid_state[current_step][output]
+    ratchet_mode = grid_state[current_step][sequence_row]
 
     -- process step should run independently
-    clock.run(process_ratchet, output, ratchet_mode)
+    clock.run(process_ratchet, sequence_row, ratchet_mode)
 
     -- Sent appropriate midi note out as cv
     
@@ -861,47 +861,59 @@ function process_step()
 
   
 
-    if output == 3 then
-      if slide_state[current_step][output] == 1 then
-        crow.output[1].slew = 0.1
-      else
-        crow.output[1].slew = 0
-      end  
-      crow.output[1].volts = mozart_state[current_step][output] / 12 
-      output_text = output .. mozart_state[current_step][output] -- show on display 
+    if sequence_row == 3 then
+
+      conditional_change_crow_output(current_step, sequence_row)
+
+      -- if slide_state[current_step][output] == 1 then
+      --   crow.output[1].slew = 0.1
+      -- else
+      --   crow.output[1].slew = 0
+      -- end  
+      -- crow.output[1].volts = mozart_state[current_step][output] / 12 
+      -- output_text = output .. mozart_state[current_step][output] -- show on display 
       
 
-    elseif output == 4 then
-      if slide_state[current_step][output] == 1 then
-        crow.output[2].slew = 0.1
-      else
-        crow.output[2].slew = 0
-      end  
-      crow.output[2].volts = mozart_state[current_step][output] / 12
+    elseif sequence_row == 4 then
+
+      conditional_change_crow_output(current_step, sequence_row)
+
+      -- if slide_state[current_step][output] == 1 then
+      --   crow.output[2].slew = 0.1
+      -- else
+      --   crow.output[2].slew = 0
+      -- end  
+      -- crow.output[2].volts = mozart_state[current_step][output] / 12
       
-      output_text = output_text .. " " .. output ..  mozart_state[current_step][output] 
+      -- output_text = output_text .. " " .. output ..  mozart_state[current_step][output] 
 
 
 
-    elseif output == 5 then
-      if slide_state[current_step][output] == 1 then
-        crow.output[3].slew = 0.1
-      else
-        crow.output[3].slew = 0
-      end  
-      crow.output[3].volts = mozart_state[current_step][output] / 12  
+    elseif sequence_row == 5 then
+
+      conditional_change_crow_output(current_step, sequence_row)
+
+      -- if slide_state[current_step][output] == 1 then
+      --   crow.output[3].slew = 0.1
+      -- else
+      --   crow.output[3].slew = 0
+      -- end  
+      -- crow.output[3].volts = mozart_state[current_step][output] / 12  
       
-      output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
+      -- output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
 
-    elseif output == 6 then
-      if slide_state[current_step][output] == 1 then
-        crow.output[4].slew = 0.1
-      else
-        crow.output[4].slew = 0
-      end  
-      crow.output[4].volts = mozart_state[current_step][output] / 12  
+    elseif sequence_row == 6 then
 
-      output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
+      conditional_change_crow_output(current_step, sequence_row)
+
+      -- if slide_state[current_step][output] == 1 then
+      --   crow.output[4].slew = 0.1
+      -- else
+      --   crow.output[4].slew = 0
+      -- end  
+      -- crow.output[4].volts = mozart_state[current_step][output] / 12  
+
+      -- output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
 
     end  
 
@@ -914,7 +926,21 @@ function process_step()
 end -- end function
 
 
+function conditional_change_crow_output(current_step, sequence_row)
 
+  crow_output = sequence_row - 2
+
+  if slide_state[current_step][sequence_row] == 1 then
+    crow.output[crow_output].slew = 0.1
+  else
+    crow.output[crow_output].slew = 0
+  end  
+  crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12  
+
+  output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
+
+  
+end -- end function  
 
 
 
