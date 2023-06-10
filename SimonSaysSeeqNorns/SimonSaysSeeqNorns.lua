@@ -85,6 +85,7 @@ MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
+last_action_text = ""
 end_of_line_text = ""
 output_text = ""
 
@@ -890,11 +891,7 @@ if grid_state[current_step][sequence_row]  ~= 0 then
 
   crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12  
 
-  output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
-
---else 
--- this output causes timing errors? 
---  output_text = output_text .. " " ..  crow_output ..  " sequence step is muted"
+ -- output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
 
 
 end
@@ -2258,6 +2255,7 @@ else
     
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
+    last_action_text = grid_button_function_name(x,y)
 
     if grid_button_function_name(x,y) == "ArmRatchet" then
       --print ("RATCHET button pressed: " .. z)
@@ -2929,7 +2927,7 @@ end -- stable tempo check
 -- current_tempo no decimal points
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
-  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. end_of_line_text .. " " .. conductor_text 
+  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. last_action_text .. " " ..  end_of_line_text .. " " .. conductor_text 
   
   screen.move(1,63)   
   screen.text(status_text)
