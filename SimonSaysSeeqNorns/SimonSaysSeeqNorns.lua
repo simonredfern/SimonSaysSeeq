@@ -165,30 +165,48 @@ table.insert(BUTTONS, {name = "Button16", x = 16, y = 7})
 
 
 -- 8th Row
-table.insert(BUTTONS, {name = "UndoGridButton", x = 1, y = 8})
-table.insert(BUTTONS, {name = "RedoGridButton", x = 2, y = 8})
-table.insert(BUTTONS, {name = "UndoMozartButton", x = 3, y = 8})
-table.insert(BUTTONS, {name = "RedoMozartButton", x = 4, y = 8})
+UNDO_GRID_BUTTON = "UndoGridButton"
+REDO_GRID_BUTTON = "RedoGridButton"
+UNDO_MOZART_BUTTON = "UndoMozartButton"
+REDO_MOZART_BUTTON = "RedoMozartButton"
+table.insert(BUTTONS, {name = UNDO_GRID_BUTTON, x = 1, y = 8})
+table.insert(BUTTONS, {name = REDO_GRID_BUTTON, x = 2, y = 8})
+table.insert(BUTTONS, {name = UNDO_MOZART_BUTTON, x = 3, y = 8})
+table.insert(BUTTONS, {name = REDO_MOZART_BUTTON, x = 4, y = 8})
 
 --table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
 --table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "ArmFirstStep", x = 5, y = 8}) -- note Lag is processed through ratchet
-table.insert(BUTTONS, {name = "ArmLastStep", x = 6, y = 8})
-table.insert(BUTTONS, {name = "ArmLag", x = 7, y = 8})
-table.insert(BUTTONS, {name = "ArmRatchet", x = 8, y = 8})
 
+ARM_FIRST_STEP = "ArmFirstStep"
+ARM_LAST_STEP = "ArmLastStep"
+ARM_LAG = "ArmLag"
+ARM_RATCHET = "ArmRatchet"
+table.insert(BUTTONS, {name = ARM_FIRST_STEP, x = 5, y = 8}) -- note Lag is processed through ratchet
+table.insert(BUTTONS, {name = ARM_LAST_STEP, x = 6, y = 8})
+table.insert(BUTTONS, {name = ARM_LAG, x = 7, y = 8})
+table.insert(BUTTONS, {name = ARM_RATCHET, x = 8, y = 8})
+
+ARM_RANDOMISE_GATES = "RandomiseGates"
+ARM_RANDOMISE_MOZART = "RandomiseMozart"
+ARM_MOZART_DOWN = "ArmMozartDown"
+ARM_MOZART_UP = "ArmMozartUp"
 table.insert(BUTTONS, {name = "RandomiseGates", x = 9, y = 8})
 table.insert(BUTTONS, {name = "RandomiseMozart", x = 10, y = 8})
 table.insert(BUTTONS, {name = "ArmMozartDown", x = 11, y = 8})
 table.insert(BUTTONS, {name = "ArmMozartUp", x = 12, y = 8})
 
-table.insert(BUTTONS, {name = "PresetGrid", x = 13, y = 8})
-table.insert(BUTTONS, {name = "PresetMozart", x = 14, y = 8})
-table.insert(BUTTONS, {name = "ArmSlideOff", x = 15, y = 8})
-table.insert(BUTTONS, {name = "ArmSlideOn", x = 16, y = 8})
+
+ARM_PRESET_GRID = "PresetGrid"
+ARM_PRESET_MOZART = "PresetMozart"
+ARM_SLIDE_OFF = "ArmSlideOff"
+ARM_SLIDE_ON = "ArmSlideOn"
+table.insert(BUTTONS, {name = ARM_PRESET_GRID, x = 13, y = 8})
+table.insert(BUTTONS, {name = ARM_PRESET_MOZART, x = 14, y = 8})
+table.insert(BUTTONS, {name = ARM_SLIDE_OFF, x = 15, y = 8})
+table.insert(BUTTONS, {name = ARM_SLIDE_ON, x = 16, y = 8})
 
 
 --MOZART_SCALE_A_MINOR = {}
