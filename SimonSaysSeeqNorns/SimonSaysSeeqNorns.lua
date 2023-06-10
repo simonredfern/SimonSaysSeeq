@@ -209,12 +209,6 @@ table.insert(BUTTONS, {name = ARM_SLIDE_OFF, x = 15, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_ON, x = 16, y = 8})
 
 
---MOZART_SCALE_A_MINOR = {}
---table.insert(MOZART_SCALES, {degree = 1, midi_note = 33})
-
-
-
-
 
 current_step = first_step
 
@@ -2315,25 +2309,25 @@ else
     
     last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Moz"):gsub( "Grid", "Grd") -- used in display
 
-    if grid_button_function_name(x,y) == "ArmRatchet" then
+    if grid_button_function_name(x,y) == ARM_RATCHET then
       if z == 1 then 
         arm_feature = 2 -- ArmRatchet
       else
         arm_feature = 0 -- Reset arm_feature with a key up
       end
-    elseif grid_button_function_name(x,y) == "RandomiseMozart" then
+    elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then
       if z == 1 then 
         arm_feature = 3
       else
         arm_feature = 0
       end
-    elseif grid_button_function_name(x,y) == "ArmMozartDown" then
+    elseif grid_button_function_name(x,y) == ARM_MOZART_DOWN then
       if z == 1 then 
         arm_feature = 4
       else
         arm_feature = 0
       end
-    elseif grid_button_function_name(x,y) == "ArmMozartUp" then
+    elseif grid_button_function_name(x,y) == ARM_MOZART_UP then
       if z == 1 then 
         arm_feature = 5
       else
@@ -2341,7 +2335,7 @@ else
       end
     
 -- NOTE treating lag as a type of ratchet
-    elseif grid_button_function_name(x,y) == "UndoMozartButton" then
+    elseif grid_button_function_name(x,y) == UNDO_MOZART_BUTTON then
 
 -- TODO put undo  mozart here
 
@@ -2357,7 +2351,7 @@ else
         print ("undo_mozart_lifo is NOT populated")
       end
 
-    elseif grid_button_function_name(x,y) == "RedoMozartButton" then
+    elseif grid_button_function_name(x,y) == REDO_MOZART_BUTTON then
 
       ----------
       -- REDO MOZART--
@@ -2370,7 +2364,7 @@ else
         print ("redo_grid_lifo is NOT populated")
       end  
 
-    elseif grid_button_function_name(x,y) == "ArmLag" then
+    elseif grid_button_function_name(x,y) == ARM_LAG then
       --print ("LAG button pressed: " .. z)
       if z == 1 then 
         arm_feature = 8
@@ -2389,7 +2383,7 @@ else
 -- Preset buttons
 -- These buttons are used to put a preset on one of the sequence rows
 
-  elseif grid_button_function_name(x,y) == "PresetGrid" then
+  elseif grid_button_function_name(x,y) == ARM_PRESET_GRID then
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
@@ -2398,7 +2392,7 @@ else
     print ("Preset button RESET: " .. z) 
     preset_grid_button = 0 -- Reset preset_grid_button with a key up
   end
-elseif grid_button_function_name(x,y) == "PresetMozart" then
+elseif grid_button_function_name(x,y) == ARM_PRESET_MOZART then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
     preset_mozart_button = 2
@@ -2450,7 +2444,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 --
 
     -- UNDO
-  elseif grid_button_function_name (x,y) == "UndoGridButton" then
+  elseif grid_button_function_name (x,y) == UNDO_GRID_BUTTON then
       ----------
       -- UNDO --
       ----------
@@ -2499,7 +2493,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
      -- End of UNDO
 
     -- CONTROL REDO    
-    elseif grid_button_function_name (x,y) == "RedoGridButton" then
+    elseif grid_button_function_name (x,y) == REDO_GRID_BUTTON then
       -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid_and_screen()
@@ -2534,7 +2528,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
 
 
 
-  elseif grid_button_function_name (x,y) == "ArmSlideOn" then
+  elseif grid_button_function_name (x,y) == ARM_SLIDE_ON then
 
     if z == 1 then 
       arm_put_slide_on = 1
@@ -2542,7 +2536,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       arm_put_slide_on = 0
     end
 
-elseif grid_button_function_name (x,y) == "ArmSlideOff" then
+elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF then
 
     if z == 1 then 
       arm_take_slide_off = 1
@@ -2551,14 +2545,14 @@ elseif grid_button_function_name (x,y) == "ArmSlideOff" then
     end
 
 
-  elseif grid_button_function_name (x,y) == "ArmFirstStep" then
+  elseif grid_button_function_name (x,y) == ARM_FIRST_STEP then
     if z == 1 then 
       arm_first_step_button = 1
     else
       arm_first_step_button = 0
     end
 
-  elseif grid_button_function_name (x,y) == "ArmLastStep" then
+  elseif grid_button_function_name (x,y) == ARM_LAST_STEP then
     if z == 1 then 
       arm_last_step_button = 1
     else
