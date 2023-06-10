@@ -164,6 +164,8 @@ table.insert(BUTTONS, {name = "Button15", x = 15, y = 7})
 table.insert(BUTTONS, {name = "Button16", x = 16, y = 7})
 
 
+NO_FEATURE = ""
+
 -- 8th Row
 UNDO_GRID_BUTTON = "UndoGridButton"
 REDO_GRID_BUTTON = "RedoGridButton"
@@ -2190,10 +2192,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
       -- Change the state of the grid *AFTER* we have pushed to undo lifo
       
       -- Place RATCHET on step
-      --if arm_feature ~= 0 then -- We place the ratchet on the step
-
-      if arm_feature == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
-        -- Actually we cycle around 0 to 5  i.e. rest to max ratchet 
+  
+      if arm_feature == ARM_RATCHET then -- Cycle around rest, normal and various ratchets 
         if grid_state[x][y] == 0 then
           unconditional_set_grid(x,y,1) -- this is not a ratchet, just a normal hit.
         elseif grid_state[x][y] == 1 then
@@ -2208,16 +2208,16 @@ if y <= TOTAL_SEQUENCE_ROWS then
           unconditional_set_grid(x,y,0) 
         end
         
-      elseif arm_feature == 4 then 
+      elseif arm_feature == ARM_MOZART_DOWN then 
         unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
-      elseif arm_feature == 5 then
+      elseif arm_feature == ARM_MOZART_UP then
         unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
       else
 
 
         -- Conditions under which we want to TOGGLE the grid_state
         -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
-        if arm_feature == 0 and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
+        if arm_feature == "" and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
 
           -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
           if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
@@ -2311,27 +2311,27 @@ else
 
     if grid_button_function_name(x,y) == ARM_RATCHET then
       if z == 1 then 
-        arm_feature = 2 -- ArmRatchet
+        arm_feature = ARM_RATCHET -- 2 -- ArmRatchet
       else
-        arm_feature = 0 -- Reset arm_feature with a key up
+        arm_feature = NO_FEATURE -- Reset arm_feature with a key up
       end
     elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then
       if z == 1 then 
-        arm_feature = 3
+        arm_feature = ARM_RANDOMISE_MOZART -- 3
       else
-        arm_feature = 0
+        arm_feature = NO_FEATURE
       end
     elseif grid_button_function_name(x,y) == ARM_MOZART_DOWN then
       if z == 1 then 
-        arm_feature = 4
+        arm_feature = ARM_MOZART_DOWN -- 4
       else
-        arm_feature = 0
+        arm_feature = NO_FEATURE
       end
     elseif grid_button_function_name(x,y) == ARM_MOZART_UP then
       if z == 1 then 
-        arm_feature = 5
+        arm_feature = ARM_MOZART_UP -- 5
       else
-        arm_feature = 0
+        arm_feature = NO_FEATURE
       end
     
 -- NOTE treating lag as a type of ratchet
@@ -2367,18 +2367,12 @@ else
     elseif grid_button_function_name(x,y) == ARM_LAG then
       --print ("LAG button pressed: " .. z)
       if z == 1 then 
-        arm_feature = 8
+        arm_feature = ARM_LAG
       else
-        arm_feature = 0
+        arm_feature = NO_FEATURE
       end
 
-    elseif grid_button_function_name(x,y) == "Lag5" then
-      --print ("LAG button pressed: " .. z)
-      if z == 1 then 
-        arm_feature = 9
-      else
-        arm_feature = 0
-      end
+
 
 -- Preset buttons
 -- These buttons are used to put a preset on one of the sequence rows
