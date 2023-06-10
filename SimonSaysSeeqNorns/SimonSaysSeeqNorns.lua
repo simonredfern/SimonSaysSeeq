@@ -1826,10 +1826,6 @@ function unconditional_set_mozart(x, y, midi_note_number)
 
   last_mozart_value = midi_note_number
 
-  -- As we have just "put a midi note on the step", make the step on.
-  unconditional_set_grid(x,y,1) 
-
-
   slide_state[x][y] = 0 -- this is so we can always hear our change i.e. the pitch is not masked by a slide
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
@@ -2225,9 +2221,11 @@ if y <= TOTAL_SEQUENCE_ROWS then
           unconditional_set_grid(x,y,0) 
         end
         
-      elseif arm_feature == ARM_MOZART_DOWN then 
+      elseif arm_feature == ARM_MOZART_DOWN then
+        unconditional_set_grid(x, y, 1) -- also set grid on
         unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
       elseif arm_feature == ARM_MOZART_UP then
+        unconditional_set_grid(x, y, 1) -- also set grid on
         unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
       else
 
