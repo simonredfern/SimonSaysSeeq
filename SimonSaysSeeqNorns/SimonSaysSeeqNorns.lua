@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.1"
+version = "0.9.2"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -177,12 +177,11 @@ table.insert(BUTTONS, {name = "RedoMozartButton", x = 4, y = 8})
 
 table.insert(BUTTONS, {name = "ArmFirstStep", x = 5, y = 8}) -- note Lag is processed through ratchet
 table.insert(BUTTONS, {name = "ArmLastStep", x = 6, y = 8})
-
 table.insert(BUTTONS, {name = "ArmLag", x = 7, y = 8})
 table.insert(BUTTONS, {name = "ArmRatchet", x = 8, y = 8})
 
-table.insert(BUTTONS, {name = "Lag3", x = 9, y = 8})
-table.insert(BUTTONS, {name = "Ratchet3", x = 10, y = 8})
+table.insert(BUTTONS, {name = "RandomiseGates", x = 9, y = 8})
+table.insert(BUTTONS, {name = "RandomiseMozart", x = 10, y = 8})
 table.insert(BUTTONS, {name = "ArmMozartDown", x = 11, y = 8})
 table.insert(BUTTONS, {name = "ArmMozartUp", x = 12, y = 8})
 
@@ -1845,10 +1844,25 @@ function unconditional_set_grid(x, y, integer)
 end
 
 
+function randomize_grid(y)
+  for x = 1, 16 do
+    -- on the current step...
+    random_grid_value = math.random(0, 1)
+    unconditional_set_grid(x, y, random_grid_value)
+  end
+end  
 
 
+function randomize_mozart(y)
+  for x = 1, 16 do
+    -- on the current step...
+    random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
+    unconditional_set_mozart(x, y, random_mozart_value)
+  end
 
+  
 
+end  
 
 
 -- probably not used (but does get called becuase lots of prints)
@@ -2281,31 +2295,27 @@ else
     
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
-    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", "") -- used in display
+    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Moz"):gsub( "Grid", "Grd") -- used in display
 
     if grid_button_function_name(x,y) == "ArmRatchet" then
-      --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         arm_feature = 2 -- ArmRatchet
       else
         arm_feature = 0 -- Reset arm_feature with a key up
       end
-    elseif grid_button_function_name(x,y) == "Ratchet3" then
-      --print ("RATCHET button pressed: " .. z)
+    elseif grid_button_function_name(x,y) == "RandomiseMozart" then
       if z == 1 then 
         arm_feature = 3
       else
         arm_feature = 0
       end
     elseif grid_button_function_name(x,y) == "ArmMozartDown" then
-      --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         arm_feature = 4
       else
         arm_feature = 0
       end
     elseif grid_button_function_name(x,y) == "ArmMozartUp" then
-      --print ("RATCHET button pressed: " .. z)
       if z == 1 then 
         arm_feature = 5
       else
