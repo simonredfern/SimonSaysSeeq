@@ -859,62 +859,10 @@ function process_step()
     -- We have 4 outputs on crow
     -- Here we check the slide and set the voltage to the pitch accordingly.
 
-  
 
-    if sequence_row == 3 then
 
+    if sequence_row >= 3 and sequence_row <= 6 then
       conditional_change_crow_output(current_step, sequence_row)
-
-      -- if slide_state[current_step][output] == 1 then
-      --   crow.output[1].slew = 0.1
-      -- else
-      --   crow.output[1].slew = 0
-      -- end  
-      -- crow.output[1].volts = mozart_state[current_step][output] / 12 
-      -- output_text = output .. mozart_state[current_step][output] -- show on display 
-      
-
-    elseif sequence_row == 4 then
-
-      conditional_change_crow_output(current_step, sequence_row)
-
-      -- if slide_state[current_step][output] == 1 then
-      --   crow.output[2].slew = 0.1
-      -- else
-      --   crow.output[2].slew = 0
-      -- end  
-      -- crow.output[2].volts = mozart_state[current_step][output] / 12
-      
-      -- output_text = output_text .. " " .. output ..  mozart_state[current_step][output] 
-
-
-
-    elseif sequence_row == 5 then
-
-      conditional_change_crow_output(current_step, sequence_row)
-
-      -- if slide_state[current_step][output] == 1 then
-      --   crow.output[3].slew = 0.1
-      -- else
-      --   crow.output[3].slew = 0
-      -- end  
-      -- crow.output[3].volts = mozart_state[current_step][output] / 12  
-      
-      -- output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
-
-    elseif sequence_row == 6 then
-
-      conditional_change_crow_output(current_step, sequence_row)
-
-      -- if slide_state[current_step][output] == 1 then
-      --   crow.output[4].slew = 0.1
-      -- else
-      --   crow.output[4].slew = 0
-      -- end  
-      -- crow.output[4].volts = mozart_state[current_step][output] / 12  
-
-      -- output_text = output_text .. " " ..  output ..  mozart_state[current_step][output] 
-
     end  
 
 
@@ -930,15 +878,26 @@ function conditional_change_crow_output(current_step, sequence_row)
 
   crow_output = sequence_row - 2
 
+
+-- only change slew and voltage if the sequence step is active
+if grid_state[current_step][sequence_row]  ~= 0 then
+
   if slide_state[current_step][sequence_row] == 1 then
     crow.output[crow_output].slew = 0.1
   else
     crow.output[crow_output].slew = 0
   end  
+
   crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12  
 
   output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
 
+--else 
+-- this output causes timing errors? 
+--  output_text = output_text .. " " ..  crow_output ..  " sequence step is muted"
+
+
+end
   
 end -- end function  
 
