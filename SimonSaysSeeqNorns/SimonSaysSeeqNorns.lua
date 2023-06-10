@@ -193,20 +193,19 @@ table.insert(BUTTONS, {name = ARM_RATCHET, x = 8, y = 8})
 
 ARM_RANDOMISE_GRID = "RandomiseGrid"
 ARM_RANDOMISE_MOZART = "RandomiseMozart"
-ARM_MOZART_DOWN = "ArmMozartDown"
-ARM_MOZART_UP = "ArmMozartUp"
-table.insert(BUTTONS, {name = ARM_RANDOMISE_GRID, x = 9, y = 8})
-table.insert(BUTTONS, {name = ARM_RANDOMISE_MOZART, x = 10, y = 8})
-table.insert(BUTTONS, {name = ARM_MOZART_DOWN, x = 11, y = 8})
-table.insert(BUTTONS, {name = ARM_MOZART_UP, x = 12, y = 8})
-
-
 ARM_PRESET_GRID = "PresetGrid"
 ARM_PRESET_MOZART = "PresetMozart"
+table.insert(BUTTONS, {name = ARM_RANDOMISE_GRID, x = 9, y = 8})
+table.insert(BUTTONS, {name = ARM_RANDOMISE_MOZART, x = 10, y = 8})
+table.insert(BUTTONS, {name = ARM_PRESET_GRID, x = 11, y = 8})
+table.insert(BUTTONS, {name = ARM_PRESET_MOZART, x = 12, y = 8})
+
+ARM_MOZART_DOWN = "ArmMozartDown"
+ARM_MOZART_UP = "ArmMozartUp"
 ARM_SLIDE_OFF = "ArmSlideOff"
 ARM_SLIDE_ON = "ArmSlideOn"
-table.insert(BUTTONS, {name = ARM_PRESET_GRID, x = 13, y = 8})
-table.insert(BUTTONS, {name = ARM_PRESET_MOZART, x = 14, y = 8})
+table.insert(BUTTONS, {name = ARM_MOZART_DOWN, x = 13, y = 8})
+table.insert(BUTTONS, {name = ARM_MOZART_UP, x = 14, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_OFF, x = 15, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_ON, x = 16, y = 8})
 
