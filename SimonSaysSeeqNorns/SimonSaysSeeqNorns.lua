@@ -1857,25 +1857,32 @@ function unconditional_set_grid(x, y, integer)
 end
 
 
-function randomize_grid(y)
-  for x = 1, 16 do
+function randomize_grid(x, y)
+  -- x and y should be the button pressed
+  -- however we want to loop through all columns (j) and set them
+  for j = 1, 16 do
     -- on the current step...
-    chance = math.random(1, 5)
+    -- if we pressed a key on the right of the grid we have a high probability of chance being 1.
+    -- i.e. key on left less chance the sequence will change. key on right, high chance it will change
+    chance = math.random(1, 17 - x) 
     if chance == 1 then
       random_grid_value = math.random(0, 1)
-      unconditional_set_grid(x, y, random_grid_value)
+      unconditional_set_grid(j, y, random_grid_value)
     end 
   end
 end  
 
 
-function randomize_mozart(y)
-  for x = 1, 16 do
-    chance = math.random(1, 5)
+function randomize_mozart(x, y)
+  -- x and y should be the button pressed
+  -- however we want to loop through all columns (j) and set them
+  for j = 1, 16 do
+    -- chance = math.random(1, 5)
+    chance = math.random(1, 17 - x) 
     if chance == 1 then
       -- on the current step...
       random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
-      unconditional_set_mozart(x, y, random_mozart_value)
+      unconditional_set_mozart(j, y, random_mozart_value)
     end
   end
 
@@ -2187,9 +2194,12 @@ if y <= TOTAL_SEQUENCE_ROWS then
       mozart_state[16][y] = 33
 
     elseif arm_feature == ARM_RANDOMISE_GRID then 
-      randomize_grid (y)
+
+
+
+      randomize_grid (x, y)
     elseif arm_feature == ARM_RANDOMISE_MOZART then  
-      randomize_mozart (y)
+      randomize_mozart (x, y)
     else -- preset button is not pressed 
 
       --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")

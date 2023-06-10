@@ -23,9 +23,9 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 8 ArmRatchet
 
-9 Randomise Gates (AKA Randomise Grid)
+9 Randomise Gates (AKA Randomise Grid) - Pressing a sequence row on the right means a higher chance the sequence will change.
 
-10 Randomise Notes (AKA Randomise Mozart)
+10 Randomise Notes (AKA Randomise Mozart) - Pressing a sequence row on the right means a higher chance the sequence will change.
 
 11 PresetGates - sets some simple gate patterns (AKA Preset Grid)
 
