@@ -191,14 +191,14 @@ table.insert(BUTTONS, {name = ARM_LAST_STEP, x = 6, y = 8})
 table.insert(BUTTONS, {name = ARM_LAG, x = 7, y = 8})
 table.insert(BUTTONS, {name = ARM_RATCHET, x = 8, y = 8})
 
-ARM_RANDOMISE_GATES = "RandomiseGates"
+ARM_RANDOMISE_GRID = "RandomiseGrid"
 ARM_RANDOMISE_MOZART = "RandomiseMozart"
 ARM_MOZART_DOWN = "ArmMozartDown"
 ARM_MOZART_UP = "ArmMozartUp"
-table.insert(BUTTONS, {name = "RandomiseGates", x = 9, y = 8})
-table.insert(BUTTONS, {name = "RandomiseMozart", x = 10, y = 8})
-table.insert(BUTTONS, {name = "ArmMozartDown", x = 11, y = 8})
-table.insert(BUTTONS, {name = "ArmMozartUp", x = 12, y = 8})
+table.insert(BUTTONS, {name = ARM_RANDOMISE_GRID, x = 9, y = 8})
+table.insert(BUTTONS, {name = ARM_RANDOMISE_MOZART, x = 10, y = 8})
+table.insert(BUTTONS, {name = ARM_MOZART_DOWN, x = 11, y = 8})
+table.insert(BUTTONS, {name = ARM_MOZART_UP, x = 12, y = 8})
 
 
 ARM_PRESET_GRID = "PresetGrid"
@@ -2315,21 +2315,27 @@ else
       else
         arm_feature = NO_FEATURE -- Reset arm_feature with a key up
       end
+    elseif grid_button_function_name(x,y) == ARM_RANDOMISE_GRID then
+      if z == 1 then 
+        arm_feature = ARM_RANDOMISE_GRID
+      else
+        arm_feature = NO_FEATURE
+      end
     elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then
       if z == 1 then 
-        arm_feature = ARM_RANDOMISE_MOZART -- 3
+        arm_feature = ARM_RANDOMISE_MOZART
       else
         arm_feature = NO_FEATURE
       end
     elseif grid_button_function_name(x,y) == ARM_MOZART_DOWN then
       if z == 1 then 
-        arm_feature = ARM_MOZART_DOWN -- 4
+        arm_feature = ARM_MOZART_DOWN
       else
         arm_feature = NO_FEATURE
       end
     elseif grid_button_function_name(x,y) == ARM_MOZART_UP then
       if z == 1 then 
-        arm_feature = ARM_MOZART_UP -- 5
+        arm_feature = ARM_MOZART_UP
       else
         arm_feature = NO_FEATURE
       end
