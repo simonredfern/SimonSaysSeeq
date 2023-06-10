@@ -85,7 +85,13 @@ MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
-last_action_text = ""
+last_action_method = ""
+last_x = 0
+last_y = 0
+last_grid_value = 0
+last_mozart_value = 0
+last_slide_value = 0
+
 end_of_line_text = ""
 output_text = ""
 
@@ -1773,12 +1779,7 @@ function set_mozart_and_grid_based_on_held_key(midi_note_number)
         --mozart_state[col][row] = midi_note_number -- Note we don't have any note off
         --print ("set_mozart_and_grid_based_on_held_key says: Just set  " .. col .. "," ..  row ..  " to midi note: " .. midi_note_number)
 
-        -- As we have just "put a midi note on the step", make the step on.
-        -- grid_state[col][row] = 1
-
         unconditional_set_mozart(col, row, midi_note_number)
-
-
       end  
     end 
   end
@@ -1796,9 +1797,6 @@ function conditional_set_mozart(x, y, z, midi_note_number)
     midi_note_key_pressed = -1
   end 
 
-  -- As we have just "put a midi note on the step", make the step on.
-  -- grid_state[x][y] = 1 -- this not working, something is overriding it
-
 end
 
 
@@ -1814,14 +1812,42 @@ function unconditional_set_mozart(x, y, midi_note_number)
 
   mozart_state[x][y] = midi_note_number -- Note we don't have any note off
 
+  last_mozart_value = midi_note_number
+
   -- As we have just "put a midi note on the step", make the step on.
-  grid_state[x][y] = 1 
+  unconditional_set_grid(x,y,1) 
+
 
   slide_state[x][y] = 0 -- this is so we can always hear our change i.e. the pitch is not masked by a slide
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
 
 end
+
+
+
+function unconditional_set_grid(x, y, integer)
+
+  if integer < 0 then
+    integer = 0
+  end  
+
+  if integer > 9 then
+    integer = 9
+  end 
+
+  grid_state[x][y] = integer
+
+  last_x = x
+  last_y = y 
+  last_grid_value = integer
+
+end
+
+
+
+
+
 
 
 
@@ -2143,17 +2169,17 @@ if y <= TOTAL_SEQUENCE_ROWS then
       if arm_feature == 2 then -- We place the ratchet on the step  -- maybe ratchet_is_armed is a better name
         -- Actually we cycle around 0 to 5  i.e. rest to max ratchet 
         if grid_state[x][y] == 0 then
-          grid_state[x][y] = 1 -- this is not a ratchet, just a normal hit.
+          unconditional_set_grid(x,y,1) -- this is not a ratchet, just a normal hit.
         elseif grid_state[x][y] == 1 then
-          grid_state[x][y] = 2
+          unconditional_set_grid(x,y,2) 
         elseif grid_state[x][y] == 2 then
-          grid_state[x][y] = 3
+          unconditional_set_grid(x,y,3) 
         elseif grid_state[x][y] == 3 then
-          grid_state[x][y] = 4 
+          unconditional_set_grid(x,y,4) 
         elseif grid_state[x][y] == 4 then
-          grid_state[x][y] = 5 
+          unconditional_set_grid(x,y,5) 
         elseif grid_state[x][y] == 5 then
-          grid_state[x][y] = 0
+          unconditional_set_grid(x,y,0) 
         end
         
       elseif arm_feature == 4 then 
@@ -2169,16 +2195,16 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
           -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
           if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-            grid_state[x][y] = 0
+            unconditional_set_grid(x,y,0)
           else 
-            grid_state[x][y] = 1
+            unconditional_set_grid(x,y,1) 
           end
 
         else -- no arm behaviour active.
 
           -- it makes sense to turn the step on (if its off) if we're putting a midi note / slide / ratchet on it etc. (only exception might be first / last step but currently they operate on row 7)
           if grid_state[x][y] == 0 then 
-            grid_state[x][y] = 1
+            unconditional_set_grid(x,y,1)
           end
 
         end
@@ -2248,14 +2274,14 @@ else
     -- if the button is pressed it should be lit etc.
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
     -- Gives feedback to user - other function? TODO clarify purpose of setting this.
-    grid_state[x][y] = z
+    unconditional_set_grid(x,y,z) 
 
     -- RATCHETS
     -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
     
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
-    last_action_text = grid_button_function_name(x,y)
+    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", "") -- used in display
 
     if grid_button_function_name(x,y) == "ArmRatchet" then
       --print ("RATCHET button pressed: " .. z)
@@ -2927,7 +2953,10 @@ end -- stable tempo check
 -- current_tempo no decimal points
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
-  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. last_action_text .. " " ..  end_of_line_text .. " " .. conductor_text 
+
+  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. conductor_text .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " G:" .. last_grid_value .. " M:" .. last_mozart_value .. " " .. end_of_line_text .. " "  
+  
+  
   
   screen.move(1,63)   
   screen.text(status_text)
