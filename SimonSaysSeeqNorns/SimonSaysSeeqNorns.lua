@@ -2307,7 +2307,7 @@ else
     
     print ("Some CONTROL ROW BUTTON PRESSED " .. z)
     
-    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Moz"):gsub( "Grid", "Grd") -- used in display
+    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
 
     if grid_button_function_name(x,y) == ARM_RATCHET then
       if z == 1 then 
@@ -2970,7 +2970,7 @@ end -- stable tempo check
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
 
-  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. conductor_text .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " G:" .. last_grid_value .. " M:" .. last_mozart_value .. " " .. end_of_line_text .. " "  
+  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " "  .. end_of_line_text .. " "  
   
   
   
