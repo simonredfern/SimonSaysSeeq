@@ -1860,17 +1860,23 @@ end
 function randomize_grid(y)
   for x = 1, 16 do
     -- on the current step...
-    random_grid_value = math.random(0, 1)
-    unconditional_set_grid(x, y, random_grid_value)
+    chance = math.random(1, 5)
+    if chance == 1 then
+      random_grid_value = math.random(0, 1)
+      unconditional_set_grid(x, y, random_grid_value)
+    end 
   end
 end  
 
 
 function randomize_mozart(y)
   for x = 1, 16 do
-    -- on the current step...
-    random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
-    unconditional_set_mozart(x, y, random_mozart_value)
+    chance = math.random(1, 5)
+    if chance == 1 then
+      -- on the current step...
+      random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
+      unconditional_set_mozart(x, y, random_mozart_value)
+    end
   end
 
   
@@ -1960,7 +1966,7 @@ my_grid.key = function(x,y,z)
 print("Hello from ----------- my_grid.key = function -----------------")
 print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 
-print("preset_grid_button is: " .. preset_grid_button .. ", arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 --print(x .. ","..y .. " z is " .. z)
 
 -- Reset. It might get set below
@@ -2002,8 +2008,8 @@ if y <= TOTAL_SEQUENCE_ROWS then
     --print ("Before set grid_state_dirty = true")
     grid_state_dirty = true
 
-    if preset_grid_button ~= 0 then
-      print ("preset_grid_button is: " .. preset_grid_button .. ", x is: " .. x .. ", y is: " .. y) 
+    if arm_feature == ARM_PRESET_GRID then
+      print ("arm_feature is: " .. ARM_PRESET_GRID  .. ", x is: " .. x .. ", y is: " .. y) 
 
 
       -- Any button pressed on this row (1)
@@ -2156,7 +2162,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
       end  
 
-    elseif preset_mozart_button ~= 0 then
+    elseif arm_feature == ARM_PRESET_MOZART then
 
       -- set all rows to MIDI note A4 (treat all the sequence rows the same.)
 
@@ -2180,8 +2186,10 @@ if y <= TOTAL_SEQUENCE_ROWS then
       mozart_state[15][y] = 33
       mozart_state[16][y] = 33
 
-
-
+    elseif arm_feature == ARM_RANDOMISE_GRID then 
+      randomize_grid (y)
+    elseif arm_feature == ARM_RANDOMISE_MOZART then  
+      randomize_mozart (y)
     else -- preset button is not pressed 
 
       --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
@@ -2216,7 +2224,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
         -- Conditions under which we want to TOGGLE the grid_state
         -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
-        if arm_feature == "" and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
+        if arm_feature == NO_FEATURE and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
 
           -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
           if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
@@ -2386,31 +2394,40 @@ else
   --print ("Preset button pressed: " .. z)
   if z == 1 then
     print ("Preset button pressed: " .. z) 
-    preset_grid_button = 2
+    arm_feature = ARM_PRESET_GRID
+    -- preset_grid_button = 2
   else
     print ("Preset button RESET: " .. z) 
-    preset_grid_button = 0 -- Reset preset_grid_button with a key up
+    arm_feature = NO_FEATURE
+
+    --preset_grid_button = 0 -- Reset preset_grid_button with a key up
   end
 elseif grid_button_function_name(x,y) == ARM_PRESET_MOZART then
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_mozart_button = 2
+    arm_feature = ARM_PRESET_MOZART
+    -- preset_mozart_button = 2
   else
-    preset_mozart_button = 0
+    -- preset_mozart_button = 0
+    arm_feature = NO_FEATURE
   end
-elseif grid_button_function_name(x,y) == "Preset4" then -- currently no button for this
+elseif grid_button_function_name(x,y) == ARM_RANDOMISE_GRID then 
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_grid_button = 4
+    arm_feature = ARM_RANDOMISE_GRID
+    -- preset_grid_button = 4
   else
-    preset_grid_button = 0
+    arm_feature = NO_FEATURE
+    -- preset_grid_button = 0
   end
-elseif grid_button_function_name(x,y) == "Preset5" then -- currently no button for this
+elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then 
   --print ("Preset button pressed: " .. z)
   if z == 1 then 
-    preset_grid_button = 5
+    arm_feature = ARM_RANDOMISE_MOZART
+    --preset_grid_button = 5
   else
-    preset_grid_button = 0
+    arm_feature = NO_FEATURE
+    --preset_grid_button = 0
   end
 
 

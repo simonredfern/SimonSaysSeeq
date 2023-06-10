@@ -7,13 +7,13 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 -- 8th Row (bottom row) (buttons number from left to right)
 
-1 Undo Gates
+1 Undo Gates (AKA Undo Grid)
 
-2 Redo Gates
+2 Redo Gates (AKA Redo Grid)
 
-3 Undo Note pitches
+3 Undo Note pitches (AKA Undo Mozart)
 
-4 Redo Note pitches
+4 Redo Note pitches (AKA Redo Mozart)
 
 5 ArmFirstStep
 
@@ -23,22 +23,17 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 8 ArmRatchet
 
-9 Ratchet2
+9 Randomise Gates (AKA Randomise Grid)
 
-10 Ratchet3
+10 Randomise Notes (AKA Randomise Mozart)
 
-11 Ratchet4
+11 PresetGates - sets some simple gate patterns (AKA Preset Grid)
 
-12 Ratchet5
+12 PresetNotes - sets MIDI notes to A4 (AKA Preset Mozart)
 
+15 Slide Off
 
-13 PresetGates - sets some simple gate patterns
-
-14 PresetNotes - sets MIDI notes to A4
-
-15 ArmSlideOff
-
-16 ArmSlideOn
+16 Slide On
 
 The 7th Row of buttons is sometimes used as a modifier for a button on the 8th row. e.g. to add a swing, press ArmSwing (6) and a button on the 7th row.
 
