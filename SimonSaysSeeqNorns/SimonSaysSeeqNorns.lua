@@ -1855,17 +1855,51 @@ end
 
 function randomize_grid(x, y)
   -- x and y should be the button pressed
-  -- however we want to loop through all columns (j) and set them
+
+  -- Depending on the button pressed, we can randomised in two different ways
+
+  -- 1) (column 1-8 on the row we want to change) we make the pattern more or less dense.
+  -- 2) (column 9-16 on the row we want to change) we randomise some of the steps (more to the right less to the left)
+
+
+  -- i.e.
+  -- <- sparse RANDOM PATTERN CREATION dense -> <- low chance of change - PATTERN CHANGE - high chance of change -> 
+
+
+if x >= 1 and x <= 8 then
+
+  -- RANDOM PATTERN CREATION
+
+  for j = 1, 16 do
+    -- on the current step...
+    -- chance of that step becoming 1 (on) (higher chance if we pressed button 8)
+    chance = math.random(1, 9 - x) 
+    if chance == 1 then
+      -- random_grid_value = math.random(0, 1)
+      unconditional_set_grid(j, y, 1)
+    else 
+      unconditional_set_grid(j, y, 0)
+    end 
+  end
+
+
+else  
+
+  -- PATTERN CHANGE  we want to loop through all steps (columns) (j) and set them
   for j = 1, 16 do
     -- on the current step...
     -- if we pressed a key on the right of the grid we have a high probability of chance being 1.
     -- i.e. key on left less chance the sequence will change. key on right, high chance it will change
+    -- x will have the value 9 - 16
     chance = math.random(1, 17 - x) 
     if chance == 1 then
       random_grid_value = math.random(0, 1)
       unconditional_set_grid(j, y, random_grid_value)
     end 
   end
+
+end  
+
 end  
 
 
@@ -2003,7 +2037,6 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
     -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
     push_grid_undo()
-
     push_mozart_undo()
 
     -- So we save the table to file
@@ -2326,7 +2359,7 @@ else
 
     if grid_button_function_name(x,y) == ARM_RATCHET then
       if z == 1 then 
-        arm_feature = ARM_RATCHET -- 2 -- ArmRatchet
+        arm_feature = ARM_RATCHET 
       else
         arm_feature = NO_FEATURE -- Reset arm_feature with a key up
       end
