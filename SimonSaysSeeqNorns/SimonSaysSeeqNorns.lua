@@ -1866,24 +1866,24 @@ function randomize_grid(x, y)
   -- <- sparse RANDOM PATTERN CREATION dense -> <- low chance of change - PATTERN CHANGE - high chance of change -> 
 
 
-if x >= 1 and x <= 8 then
+-- if x >= 1 and x <= 8 then
 
-  -- RANDOM PATTERN CREATION
+--   -- RANDOM PATTERN CREATION
 
-  for j = 1, 16 do
-    -- on the current step...
-    -- chance of that step becoming 1 (on) (higher chance if we pressed button 8)
-    chance = math.random(1, 9 - x) 
-    if chance == 1 then
-      -- random_grid_value = math.random(0, 1)
-      unconditional_set_grid(j, y, 1)
-    else 
-      unconditional_set_grid(j, y, 0)
-    end 
-  end
+--   for j = 1, 16 do
+--     -- on the current step...
+--     -- chance of that step becoming 1 (on) (higher chance if we pressed button 8)
+--     chance = math.random(1, 9 - x) 
+--     if chance == 1 then
+--       -- random_grid_value = math.random(0, 1)
+--       unconditional_set_grid(j, y, 1)
+--     else 
+--       unconditional_set_grid(j, y, 0)
+--     end 
+--   end
 
 
-else  
+-- else  
 
   -- PATTERN CHANGE  we want to loop through all steps (columns) (j) and set them
   for j = 1, 16 do
@@ -1898,7 +1898,7 @@ else
     end 
   end
 
-end  
+--end  
 
 end  
 
