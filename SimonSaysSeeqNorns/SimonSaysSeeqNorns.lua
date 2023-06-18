@@ -2202,25 +2202,25 @@ if y <= TOTAL_SEQUENCE_ROWS then
 
       -- set all rows to MIDI note A4 (treat all the sequence rows the same.)
 
-      mozart_state[1][y] = 33 -- A2
-      mozart_state[2][y] = 33
-      mozart_state[3][y] = 33
-      mozart_state[4][y] = 33
+      mozart_state[1][y] = MOZART_BASE_MIDI_NOTE -- A2
+      mozart_state[2][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[3][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[4][y] = MOZART_BASE_MIDI_NOTE
 
-      mozart_state[5][y] = 33
-      mozart_state[6][y] = 33
-      mozart_state[7][y] = 33
-      mozart_state[8][y] = 33
+      mozart_state[5][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[6][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[7][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[8][y] = MOZART_BASE_MIDI_NOTE
 
-      mozart_state[9][y]  = 33
-      mozart_state[10][y] = 33
-      mozart_state[11][y] = 33
-      mozart_state[12][y] = 33
+      mozart_state[9][y]  = MOZART_BASE_MIDI_NOTE
+      mozart_state[10][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[11][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[12][y] = MOZART_BASE_MIDI_NOTE
 
-      mozart_state[13][y] = 33
-      mozart_state[14][y] = 33
-      mozart_state[15][y] = 33
-      mozart_state[16][y] = 33
+      mozart_state[13][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[14][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[15][y] = MOZART_BASE_MIDI_NOTE
+      mozart_state[16][y] = MOZART_BASE_MIDI_NOTE
 
     elseif arm_feature == ARM_RANDOMISE_GRID then 
 
