@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.2"
+version = "0.9.3"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -92,6 +92,11 @@ last_grid_value = 0
 last_mozart_value = 0
 last_slide_value = 0
 
+held_x = 0
+held_y = 0
+
+
+
 end_of_line_text = ""
 output_text = ""
 
@@ -106,7 +111,8 @@ LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 47 -- at least 1 will be added to this.
 MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
-MOZART_BASE_MIDI_NOTE = 33 -- A1
+MOZART_BASE_MIDI_NOTE = 36 -- C2  -- 33 = A1
+MOZART_INTERVAL = 4
 
 -- WARNING --------------------------
 -- enabling some of these (not sure which) will cause noticable occasional wow and flutter of tempo. (search for wow and flutter in this file for more info)
@@ -596,33 +602,33 @@ end
 
         if tick_count % (192 * 1) == 0 then
             clock.run(process_clock_gate, GATE_12)
-            print("tick_count is: " .. tick_count .. " GATE_12 ")
+            --print("tick_count is: " .. tick_count .. " GATE_12 ")
         end 
 
         if tick_count % (192 * 2)  == 0 then
           clock.run(process_clock_gate, GATE_11)
-          print("tick_count is: " .. tick_count .. " GATE_11 ")
+          --print("tick_count is: " .. tick_count .. " GATE_11 ")
         end 
 
         if tick_count % (192 * 4)  == 0 then
           clock.run(process_clock_gate, GATE_10)
-          print("tick_count is: " .. tick_count .. " GATE_10 ")
+          --print("tick_count is: " .. tick_count .. " GATE_10 ")
         end 
 
         if tick_count % (192 * 8)  == 0 then
           clock.run(process_clock_gate, GATE_9)
-          print("tick_count is: " .. tick_count .. " GATE_9 ")
+          --print("tick_count is: " .. tick_count .. " GATE_9 ")
         end 
 
         if tick_count % (192 * 16)  == 0 then
           clock.run(process_clock_gate, GATE_8)
-          print("tick_count is: " .. tick_count .. " GATE_8 ")
+          --print("tick_count is: " .. tick_count .. " GATE_8 ")
         end 
 
         -- Note: make sure reset of tick_count is at least this otherwise we won't go in here
         if tick_count % (192 * 32)  == 0 then
           clock.run(process_clock_gate, GATE_7)
-          print("tick_count is: " .. tick_count .. " GATE_7 ")
+          --print("tick_count is: " .. tick_count .. " GATE_7 ")
         end 
 
 
@@ -1784,17 +1790,14 @@ end
 
 
 function set_mozart_and_grid_based_on_held_key(midi_note_number)
-  for col = 1,COLS do 
-    for row = 1,ROWS do
-      -- if a step is held, assign the captured midi note to it.
-      if held_state[col][row] == 1 then
-        --mozart_state[col][row] = midi_note_number -- Note we don't have any note off
-        --print ("set_mozart_and_grid_based_on_held_key says: Just set  " .. col .. "," ..  row ..  " to midi note: " .. midi_note_number)
 
+  if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0    
         unconditional_set_mozart(col, row, midi_note_number)
-      end  
-    end 
-  end
+  else
+    print ("There is no held key to act on")
+  end      
+
+
 end  
 
 
@@ -1803,6 +1806,9 @@ function conditional_set_mozart(x, y, z, midi_note_number)
   print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
 
   if z == 1 then 
+
+
+
     midi_note_key_pressed = midi_note_number
     set_mozart_and_grid_based_on_held_key(midi_note_number)
   else
@@ -1931,6 +1937,11 @@ end
 captured_normal_midi_note_in = -1
 
 
+function get_held_x()
+
+end  
+
+
 -- Capture MIDI IN
 normal_midi_device.event = function(data)
 
@@ -2010,11 +2021,23 @@ print("arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " .
 -- midi_note_key_pressed = -1
 
 
--- To note the keys that are held down 
+-- To note the key that is held down (one only and only a sequence row) 
 if z == 1 then
-  held_state[x][y] = 1
+
+  if y <= TOTAL_SEQUENCE_ROWS then
+    held_x = x
+    held_y = y
+  else
+    -- reset
+    held_x = 0
+    held_y = 0
+  end  
+  
+  
 else
-  held_state[x][y] = 0  
+  -- reset
+  held_x = 0
+  held_y = 0
 end
 
 
@@ -2223,9 +2246,6 @@ if y <= TOTAL_SEQUENCE_ROWS then
       mozart_state[16][y] = MOZART_BASE_MIDI_NOTE
 
     elseif arm_feature == ARM_RANDOMISE_GRID then 
-
-
-
       randomize_grid (x, y)
     elseif arm_feature == ARM_RANDOMISE_MOZART then  
       randomize_mozart (x, y)
@@ -2255,11 +2275,11 @@ if y <= TOTAL_SEQUENCE_ROWS then
         end
         
       elseif arm_feature == ARM_MOZART_DOWN then
-        unconditional_set_grid(x, y, 1) -- also set grid on
         unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
-      elseif arm_feature == ARM_MOZART_UP then
         unconditional_set_grid(x, y, 1) -- also set grid on
+      elseif arm_feature == ARM_MOZART_UP then
         unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
+        unconditional_set_grid(x, y, 1) -- also set grid on
       else
 
 
@@ -2309,7 +2329,7 @@ if y <= TOTAL_SEQUENCE_ROWS then
         --mozart_state[x][y] = midi_note_key_pressed
 
         unconditional_set_mozart(x,y, midi_note_key_pressed)
-
+        unconditional_set_grid(x,y,1) -- also make sure the note is on
 
       else
         print ("Not doing anything to mozart_state via key press")  
@@ -2736,52 +2756,52 @@ elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF then
 
 elseif (grid_button_function_name (x,y) == "Button1") then
   print("button" .. 1)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 0) -- A
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 0)) 
 elseif (grid_button_function_name (x,y) == "Button2") then
   print("button" .. 2)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 2) -- B 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 1)) 
 elseif (grid_button_function_name (x,y) == "Button3") then
   print("button" .. 3)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 3) -- C
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 2))
 elseif (grid_button_function_name (x,y) == "Button4") then
   print("button" .. 4)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 5) -- D
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 3))
 elseif (grid_button_function_name (x,y) == "Button5") then
   print("button" .. 5)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 7) -- E
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 4))
 elseif (grid_button_function_name (x,y) == "Button6") then
   print("button" .. 6)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 8) -- F
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 5))
 elseif (grid_button_function_name (x,y) == "Button7") then
   print("button" .. 7)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 10) -- G
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 6))
 elseif (grid_button_function_name (x,y) == "Button8") then
   print("button" .. 8)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 12) -- A
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 7))
 elseif (grid_button_function_name (x,y) == "Button9") then
   print("button" .. 9)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 14) -- B
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 8))
 elseif (grid_button_function_name (x,y) == "Button10") then
   print("button" .. 10)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 15) -- C 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 9))
 elseif (grid_button_function_name (x,y) == "Button11") then
   print("button" .. 11)             
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 17) -- D 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 10)) 
 elseif (grid_button_function_name (x,y) == "Button12") then
   print("button" .. 12)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 19) -- E 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 11)) 
 elseif (grid_button_function_name (x,y) == "Button13") then
   print("button" .. 13)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 20) -- F
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 12))
 elseif (grid_button_function_name (x,y) == "Button14") then
   print("button" .. 14)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 22) -- G
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 13))
 elseif (grid_button_function_name (x,y) == "Button15") then
   print("button" .. 15)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 24) -- A 
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 14))
 elseif (grid_button_function_name (x,y) == "Button16") then
   print("button" .. 16) 
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + 26) -- B
+  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
   end -- end of grid_button_function_name tests
 
 end  -- End of Sequence / Control
