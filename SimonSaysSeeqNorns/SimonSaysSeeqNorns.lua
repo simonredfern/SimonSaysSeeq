@@ -1830,39 +1830,41 @@ function have_held ()
   end
 end  
 
-function set_mozart_and_grid_based_on_held_key(midi_note_number)
+-- function set_mozart_and_grid_based_on_held_key(midi_note_number)
 
-  if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0 
-    -- warning non functional    
-        unconditional_set_mozart(held_x, held_y, midi_note_number)
-  else
-    print ("There is no held key to act on")
-  end      
-
-
-end  
+--   if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0 
+--     -- warning non functional    
+--         unconditional_set_mozart(held_x, held_y, midi_note_number)
+--   else
+--     print ("There is no held key to act on")
+--   end      
 
 
-function conditional_set_mozart(x, y, z, midi_note_number)
+-- end  
 
-  -- NOTE even though we accept x,y,z i.e. the current button pressed, we are not nessesarily acting on that button!
 
-  print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
+-- function conditional_set_mozart(x, y, z, midi_note_number)
 
-  if z == 1 then 
-    -- HERE
-    -- TODO only have one "captured midi note value whether its from external midi keyboard or the grid "keyboard" 
-    -- The plus and minus keys ArmMozartUp and ArmMozartDown should take their action from the held_midi
-    midi_note_key_pressed = midi_note_number
-    set_mozart_and_grid_based_on_held_key(midi_note_number)
-  else
-    midi_note_key_pressed = -1
-  end 
+--   -- NOTE even though we accept x,y,z i.e. the current button pressed, we are not nessesarily acting on that button!
 
-end
+--   print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
+
+--   if z == 1 then 
+--     -- HERE
+--     -- TODO only have one "captured midi note value whether its from external midi keyboard or the grid "keyboard" 
+--     -- The plus and minus keys ArmMozartUp and ArmMozartDown should take their action from the held_midi
+--     midi_note_key_pressed = midi_note_number
+--     set_mozart_and_grid_based_on_held_key(midi_note_number)
+--   else
+--     midi_note_key_pressed = -1
+--   end 
+
+-- end
 
 
 function unconditional_set_mozart(x, y, midi_note_number)
+
+  print ("unconditional_set_mozart says: Got x: " .. x .. " y: " ..  y ..  " midi_note_number: " .. midi_note_number)
 
   if midi_note_number < 0 then
     midi_note_number = 0
@@ -2006,7 +2008,7 @@ normal_midi_device.event = function(data)
     captured_normal_midi_note_in = data[2] -- store this so we can act on a later step press
     
 
-    set_mozart_and_grid_based_on_held_key(captured_normal_midi_note_in)
+    -- set_mozart_and_grid_based_on_held_key(captured_normal_midi_note_in)
 
 
 
@@ -2290,38 +2292,38 @@ function toggle_sequence_grid(x,y)
 end  
 
 -- WIP WIP
-function set_mozart_state(x,y,captured_normal_midi_note_in)
+-- function set_mozart_state(x,y,captured_normal_midi_note_in)
 
-if captured_normal_midi_note_in ~= -1 then
-  print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
+-- if captured_normal_midi_note_in ~= -1 then
+--   print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
 
-  -- Store the latest captured midi note in the mozart table
-  mozart_state[x][y] = captured_normal_midi_note_in
+--   -- Store the latest captured midi note in the mozart table
+--   mozart_state[x][y] = captured_normal_midi_note_in
   
- else
-  print ("Not doing anything to mozart_state via MIDI input")  
-  -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
- end 
+--  else
+--   print ("Not doing anything to mozart_state via MIDI input")  
+--   -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
+--  end 
 
-end 
+-- end 
 
-function bla_midi(x,y,midi_note_key_pressed)
+-- function bla_midi(x,y,midi_note_key_pressed)
 
-if midi_note_key_pressed ~= -1 then
-  print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
+-- if midi_note_key_pressed ~= -1 then
+--   print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
 
--- Store the latest captured midi note in the mozart table
-  --mozart_state[x][y] = midi_note_key_pressed
+-- -- Store the latest captured midi note in the mozart table
+--   --mozart_state[x][y] = midi_note_key_pressed
 
-  unconditional_set_mozart(x,y, midi_note_key_pressed)
-  unconditional_set_grid(x,y,1) -- also make sure the note is on
+--   unconditional_set_mozart(x,y, midi_note_key_pressed)
+--   unconditional_set_grid(x,y,1) -- also make sure the note is on
 
-else
-  print ("Not doing anything to mozart_state via key press")  
-  -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
-end 
+-- else
+--   print ("Not doing anything to mozart_state via key press")  
+--   -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
+-- end 
 
-end
+-- end
 -- END WIP WIP
 
  
@@ -2564,52 +2566,52 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
   set_last_step(x)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 0)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 0)) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_02 and arm_control == NO_FEATURE then
   print("button" .. 2)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 1)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 1)) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_03 and arm_control == NO_FEATURE then
   print("button" .. 3)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 2))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 2))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_04 and arm_control == NO_FEATURE then
   print("button" .. 4)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 3))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 3))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_05 and arm_control == NO_FEATURE then
   print("button" .. 5)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 4))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 4))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_06 and arm_control == NO_FEATURE then
   print("button" .. 6)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 5))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 5))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_07 and arm_control == NO_FEATURE then
   print("button" .. 7)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 6))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 6))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_08 and arm_control == NO_FEATURE then
   print("button" .. 8)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 7))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 7))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_09 and arm_control == NO_FEATURE then
   print("button" .. 9)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 8))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 8))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_10 and arm_control == NO_FEATURE then
   print("button" .. 10)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 9))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 9))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_11 and arm_control == NO_FEATURE then
   print("button" .. 11)             
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 10)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 10)) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_12 and arm_control == NO_FEATURE then
   print("button" .. 12)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 11)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 11)) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_13 and arm_control == NO_FEATURE then
   print("button" .. 13)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 12))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 12))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_14 and arm_control == NO_FEATURE then
   print("button" .. 14)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 13))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 13))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_15 and arm_control == NO_FEATURE then
   print("button" .. 15)
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 14))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 14))
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm_control == NO_FEATURE then
   print("button" .. 16) 
-  conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
 else
   print("(No action for this combination of buttons: " ..  operation_matix_string .. " )") 
 end -- end of grid_button_function_name tests
