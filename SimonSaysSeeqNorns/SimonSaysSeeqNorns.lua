@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.3"
+version = "0.9.4"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
@@ -2540,6 +2540,10 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
   do_mozart_up(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
   toggle_sequence_grid(x,y)
+elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == UNDO_GRID_BUTTON then
+  undo_grid()
+elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == REDO_GRID_BUTTON then
+  redo_grid()
 elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == UNDO_MOZART_BUTTON then
   undo_mozart()
 elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == REDO_MOZART_BUTTON then
