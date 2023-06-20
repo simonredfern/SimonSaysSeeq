@@ -6,6 +6,7 @@ version = "0.9.4"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
+NO_FEATURE = ""
 
 -- TODO - add total_wow_tempo_ticks to display
 
@@ -39,8 +40,8 @@ sequence_button_midi = 0
 sequence_button_is_pressed = false
 
 
-arm_row7 = 0
-arm_control = 0
+arm_row7 = NO_FEATURE
+arm_control = NO_FEATURE
 
 print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
 
@@ -68,7 +69,7 @@ GATE_7 = 7
 first_step = 1
 last_step = COLS
 
-arm_feature = 0
+arm_feature = NO_FEATURE
 preset_grid_button = 0
 arm_clock_button = 0
 preset_mozart_button = 0
@@ -197,7 +198,7 @@ table.insert(BUTTONS, {name = ROW7_BUTTON_15, x = 15, y = 7})
 table.insert(BUTTONS, {name = ROW7_BUTTON_16, x = 16, y = 7})
 
 
-NO_FEATURE = ""
+
 
 -- 8th Row
 UNDO_GRID_BUTTON = "UndoGridButton"
@@ -1286,6 +1287,11 @@ function grid_button_function_name (x,y)
   end -- end outer loop
 
   print ("grid_button_function_name says Bye. I will return: " .. ret)
+
+  if ret == "NOT_FOUND" then
+    print ("x was: " .. x .. " y was: " .. y) 
+  end  
+
   return ret
 
 end -- end function definition
@@ -2271,6 +2277,7 @@ function do_mozart_up(x,y)
 end 
 
 function toggle_sequence_grid(x,y)
+  -- Is this used?
   -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
   if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
     unconditional_set_grid(x,y,0)
@@ -2445,6 +2452,21 @@ function redo_mozart()
 
 end  
 
+function on_sequence_button_press_down (x,y,z)
+
+      -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
+      push_grid_undo()
+      push_mozart_undo()
+
+      toggle_sequence_grid(x,y)
+  
+      -- So we save the table to file
+      -- (don't bother with control rows)
+      --print ("Before set grid_state_dirty = true")
+      grid_state_dirty = true
+
+
+end 
 
 
 
@@ -2462,7 +2484,7 @@ my_grid.key = function(x,y,z)
 print("Hello from ----------- my_grid.key = function -----------------")
 print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 
-print("arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 --print(x .. ","..y .. " z is " .. z)
 
 -- Reset. It might get set below
@@ -2473,6 +2495,7 @@ if z == 1 then
   print("Key Down")
   if y <= TOTAL_SEQUENCE_ROWS then
     print("Sequence Row Down")
+    -- This holds the sequence button
     set_sequence(x,y,mozart_state[x][y])
   elseif y == 7 then
     print("Row7 On")
@@ -2487,6 +2510,7 @@ else
   print("Key Up")
   if y <= TOTAL_SEQUENCE_ROWS then
     print("Sequence Row Up")
+    -- This releases the sequence button
     set_sequence(0,0,0)
   elseif y == 7 then
     print("Row7 Reset")
@@ -2499,32 +2523,14 @@ else
   end
 end   
 
-print ("***** Operation matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control .. "-END")
+operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control .. "-END"
 
 
+print ("Operation matrix is: " ..  operation_matix_string)
 
 if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
-
-    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
-    push_grid_undo()
-    push_mozart_undo()
-
-    -- So we save the table to file
-    -- (don't bother with control rows)
-    --print ("Before set grid_state_dirty = true")
-    grid_state_dirty = true
-
-end
-
-
--- direct assignement of control rows.
-    -- if the button is pressed it should be lit etc.
-    -- we need to modifiy the code so grid_state control rows doesn't get set by undo
-    -- Gives feedback to user - other function? TODO clarify purpose of setting this.
- --   unconditional_set_grid(x,y,z) 
-
-
-if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON then
+  on_sequence_button_press_down(x,y,z)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON then
   preset_grid(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_MOZART_BUTTON then
   preset_mozart(x,y)
@@ -2538,8 +2544,6 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
   do_mozart_down(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_MOZART_UP_BUTTON then
   do_mozart_up(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
-  toggle_sequence_grid(x,y)
 elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == UNDO_GRID_BUTTON then
   undo_grid()
 elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == REDO_GRID_BUTTON then
@@ -2605,13 +2609,13 @@ elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm
   print("button" .. 16) 
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
 else
-  print("Unhandled button combination" .. 16) 
+  print("Unhandled button combination for:" ..  operation_matix_string) 
 end -- end of grid_button_function_name tests
 
 
-
-last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
-
+if y == 7 or y == 8 then
+  last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
+end
 
   -- Always do this else results are not shown to user.
   refresh_grid_and_screen()
