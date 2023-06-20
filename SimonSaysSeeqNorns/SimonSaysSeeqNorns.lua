@@ -124,7 +124,7 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 MOZART_BASE_MIDI_NOTE = 36 -- C2  -- 33 = A1
-MOZART_INTERVAL = 4
+MOZART_INTERVAL = 5
 
 -- WARNING --------------------------
 -- enabling some of these (not sure which) will cause noticable occasional wow and flutter of tempo. (search for wow and flutter in this file for more info)
@@ -1830,37 +1830,6 @@ function have_held ()
   end
 end  
 
--- function set_mozart_and_grid_based_on_held_key(midi_note_number)
-
---   if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0 
---     -- warning non functional    
---         unconditional_set_mozart(held_x, held_y, midi_note_number)
---   else
---     print ("There is no held key to act on")
---   end      
-
-
--- end  
-
-
--- function conditional_set_mozart(x, y, z, midi_note_number)
-
---   -- NOTE even though we accept x,y,z i.e. the current button pressed, we are not nessesarily acting on that button!
-
---   print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
-
---   if z == 1 then 
---     -- HERE
---     -- TODO only have one "captured midi note value whether its from external midi keyboard or the grid "keyboard" 
---     -- The plus and minus keys ArmMozartUp and ArmMozartDown should take their action from the held_midi
---     midi_note_key_pressed = midi_note_number
---     set_mozart_and_grid_based_on_held_key(midi_note_number)
---   else
---     midi_note_key_pressed = -1
---   end 
-
--- end
-
 
 function unconditional_set_mozart(x, y, midi_note_number)
 
@@ -1879,6 +1848,9 @@ function unconditional_set_mozart(x, y, midi_note_number)
   last_mozart_value = midi_note_number
 
   slide_state[x][y] = 0 -- this is so we can always hear our change i.e. the pitch is not masked by a slide
+
+  -- set the button on
+  unconditional_set_grid(x, y, 1)
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
 
