@@ -2239,13 +2239,12 @@ end
 function do_mozart_down(x,y)
   print (" doing ".. ARM_MOZART_DOWN_BUTTON)
     unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
-    unconditional_set_grid(x, y, 1) -- also set grid on
 end  
 
 function do_mozart_up(x,y)
   print (" doing ".. ARM_MOZART_UP_BUTTON)
     unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
-    unconditional_set_grid(x, y, 1) -- also set grid on
+
 end 
 
 function toggle_sequence_grid(x,y)
