@@ -123,8 +123,8 @@ LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 47 -- at least 1 will be added to this.
 MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
-MOZART_BASE_MIDI_NOTE = 36 -- C2  -- 33 = A1
-MOZART_INTERVAL = 5
+MOZART_BASE_MIDI_NOTE = 24 -- C1  -- 33 = A1
+MOZART_INTERVAL = 7 -- go up in fifths
 
 -- WARNING --------------------------
 -- enabling some of these (not sure which) will cause noticable occasional wow and flutter of tempo. (search for wow and flutter in this file for more info)
