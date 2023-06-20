@@ -2058,7 +2058,7 @@ function set_sequence(x,y,midi_note)
 end  
 
 
-preset_grid (x,y)
+function preset_grid (x,y)
 
     -- Any button pressed on this row (1)
     if y == 1 then
@@ -2207,6 +2207,7 @@ preset_grid (x,y)
       grid_state[15][y] = 1
       grid_state[16][y] = 0
 
+    end
 
 
 end
@@ -2280,7 +2281,7 @@ function toggle_sequence_grid(x,y)
 end  
 
 -- WIP WIP
-set_mozart_state(x,y,midi_note)
+function set_mozart_state(x,y,captured_normal_midi_note_in)
 
 if captured_normal_midi_note_in ~= -1 then
   print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
@@ -2293,7 +2294,9 @@ if captured_normal_midi_note_in ~= -1 then
   -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
  end 
 
+end 
 
+function bla_midi(x,y,midi_note_key_pressed)
 
 if midi_note_key_pressed ~= -1 then
   print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
@@ -2325,8 +2328,6 @@ end
 
 function undo_grid()
 
-    -- UNDO
-  elseif grid_button_function_name (x,y) == UNDO_GRID_BUTTON then
     ----------
     -- UNDO --
     ----------
@@ -2470,58 +2471,32 @@ print("arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " .
 
 if z == 1 then
   print("Key Down")
-
   if y <= TOTAL_SEQUENCE_ROWS then
-
-    print("Sequence On")
-
+    print("Sequence Row Down")
     set_sequence(x,y,mozart_state[x][y])
-
   elseif y == 7 then
-
     print("Row7 On")
-
-
     arm_row7 = grid_button_function_name(x,y)
-  
   elseif y == 8 then
-
     print("Control On")
-
-
     arm_control = grid_button_function_name(x,y)
-
   else
     print("Error")
-    
   end  
-
 else
   print("Key Up")
-
   if y <= TOTAL_SEQUENCE_ROWS then
-
-    print("Sequence Reset")
-
+    print("Sequence Row Up")
     set_sequence(0,0,0)
-
   elseif y == 7 then
-
     print("Row7 Reset")
-
     arm_row7 = NO_FEATURE
-  
   elseif y == 8 then
-
     print("Control Reset")
-
     arm_control = NO_FEATURE
-
   else
     print("Error")
-    
-  end  
-
+  end
 end   
 
 print ("***** Operation matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control .. "-END")
@@ -2549,7 +2524,7 @@ end
  --   unconditional_set_grid(x,y,z) 
 
 
-if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON  then
+if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON then
   preset_grid(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_MOZART_BUTTON then
   preset_mozart(x,y)
