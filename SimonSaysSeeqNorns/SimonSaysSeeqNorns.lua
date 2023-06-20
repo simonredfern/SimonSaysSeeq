@@ -33,6 +33,17 @@ tempo_flutter_is_good = 1
 flutter_threshold = 0.25 
 
 
+sequence_button_x = 0 
+sequence_button_x = 0
+sequence_button_midi = 0
+sequence_button_is_pressed = false
+
+
+arm_row7 = 0
+arm_control = 0
+
+print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
+
 
 current_tempo = 120 -- will be almost immediatly changed to the clock
 
@@ -144,7 +155,7 @@ audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/modular-pulse.wav"
 
 -- audio_clock_file = _path.dust.."audio/x0x/606/606-CH.wav"
 
-PRESET_GRID_BUTTON = {x=1, y=2}
+-- PRESET_GRID_BUTTON = {x=1, y=2}
 
 BUTTONS = {}
 
@@ -188,32 +199,32 @@ table.insert(BUTTONS, {name = REDO_MOZART_BUTTON, x = 4, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
 
-ARM_FIRST_STEP = "ArmFirstStep"
-ARM_LAST_STEP = "ArmLastStep"
-ARM_LAG = "ArmLag"
-ARM_RATCHET = "ArmRatchet"
-table.insert(BUTTONS, {name = ARM_FIRST_STEP, x = 5, y = 8}) -- note Lag is processed through ratchet
-table.insert(BUTTONS, {name = ARM_LAST_STEP, x = 6, y = 8})
-table.insert(BUTTONS, {name = ARM_LAG, x = 7, y = 8})
-table.insert(BUTTONS, {name = ARM_RATCHET, x = 8, y = 8})
+ARM_FIRST_STEP_BUTTON = "ArmFirstStep"
+ARM_LAST_STEP_BUTTON = "ArmLastStep"
+ARM_LAG_BUTTON = "ArmLag"
+ARM_RATCHET_BUTTON = "ArmRatchet"
+table.insert(BUTTONS, {name = ARM_FIRST_STEP_BUTTON, x = 5, y = 8}) -- note Lag is processed through ratchet
+table.insert(BUTTONS, {name = ARM_LAST_STEP_BUTTON, x = 6, y = 8})
+table.insert(BUTTONS, {name = ARM_LAG_BUTTON, x = 7, y = 8})
+table.insert(BUTTONS, {name = ARM_RATCHET_BUTTON, x = 8, y = 8})
 
-ARM_RANDOMISE_GRID = "RandomiseGrid"
-ARM_RANDOMISE_MOZART = "RandomiseMozart"
-ARM_PRESET_GRID = "PresetGrid"
-ARM_PRESET_MOZART = "PresetMozart"
-table.insert(BUTTONS, {name = ARM_RANDOMISE_GRID, x = 9, y = 8})
-table.insert(BUTTONS, {name = ARM_RANDOMISE_MOZART, x = 10, y = 8})
-table.insert(BUTTONS, {name = ARM_PRESET_GRID, x = 11, y = 8})
-table.insert(BUTTONS, {name = ARM_PRESET_MOZART, x = 12, y = 8})
+ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
+ARM_RANDOMISE_MOZART_BUTTON = "RandomiseMozart"
+ARM_PRESET_GRID_BUTTON = "PresetGrid"
+ARM_PRESET_MOZART_BUTTON = "PresetMozart"
+table.insert(BUTTONS, {name = ARM_RANDOMISE_GRID_BUTTON, x = 9, y = 8})
+table.insert(BUTTONS, {name = ARM_RANDOMISE_MOZART_BUTTON, x = 10, y = 8})
+table.insert(BUTTONS, {name = ARM_PRESET_GRID_BUTTON, x = 11, y = 8})
+table.insert(BUTTONS, {name = ARM_PRESET_MOZART_BUTTON, x = 12, y = 8})
 
-ARM_MOZART_DOWN = "ArmMozartDown"
-ARM_MOZART_UP = "ArmMozartUp"
-ARM_SLIDE_OFF = "ArmSlideOff"
-ARM_SLIDE_ON = "ArmSlideOn"
-table.insert(BUTTONS, {name = ARM_MOZART_DOWN, x = 13, y = 8})
-table.insert(BUTTONS, {name = ARM_MOZART_UP, x = 14, y = 8})
-table.insert(BUTTONS, {name = ARM_SLIDE_OFF, x = 15, y = 8})
-table.insert(BUTTONS, {name = ARM_SLIDE_ON, x = 16, y = 8})
+ARM_MOZART_DOWN_BUTTON = "ArmMozartDown"
+ARM_MOZART_UP_BUTTON = "ArmMozartUp"
+ARM_SLIDE_OFF_BUTTON = "ArmSlideOff"
+ARM_SLIDE_ON_BUTTON = "ArmSlideOn"
+table.insert(BUTTONS, {name = ARM_MOZART_DOWN_BUTTON, x = 13, y = 8})
+table.insert(BUTTONS, {name = ARM_MOZART_UP_BUTTON, x = 14, y = 8})
+table.insert(BUTTONS, {name = ARM_SLIDE_OFF_BUTTON, x = 15, y = 8})
+table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 
 
@@ -1787,12 +1798,21 @@ function pop_mozart_redo()
     end
 end  
 
-
+function have_held ()
+  if held_x ~= 0 and held_y ~= 0 then
+    print ("have_held is true")
+    return true
+  else 
+    print ("have_held is false")
+    return false
+  end
+end  
 
 function set_mozart_and_grid_based_on_held_key(midi_note_number)
 
-  if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0    
-        unconditional_set_mozart(col, row, midi_note_number)
+  if held_x ~= 0 and held_y ~= 0 then  -- tilde tilda not = zero !=0 
+    -- warning non functional    
+        unconditional_set_mozart(held_x, held_y, midi_note_number)
   else
     print ("There is no held key to act on")
   end      
@@ -1803,12 +1823,14 @@ end
 
 function conditional_set_mozart(x, y, z, midi_note_number)
 
+  -- NOTE even though we accept x,y,z i.e. the current button pressed, we are not nessesarily acting on that button!
+
   print ("conditional_set_mozart says: Says x is: ".. x .. ", y is: " ..  y .. " z is: " .. z  .. " midi_note_number is: " .. midi_note_number)
 
   if z == 1 then 
-
-
-
+    -- HERE
+    -- TODO only have one "captured midi note value whether its from external midi keyboard or the grid "keyboard" 
+    -- The plus and minus keys ArmMozartUp and ArmMozartDown should take their action from the held_midi
     midi_note_key_pressed = midi_note_number
     set_mozart_and_grid_based_on_held_key(midi_note_number)
   else
@@ -2004,7 +2026,416 @@ end -- end test for 254
 end   
 
 
+function set_sequence(x,y,midi_note)
+
+  sequence_button_x = x
+  sequence_button_y = y
+  sequence_button_midi = midi_note
+
+  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
+    sequence_button_is_pressed = true
+  else 
+    sequence_button_is_pressed = false
+  end
+
+
+end  
+
+
+preset_grid (x,y)
+
+    -- Any button pressed on this row (1)
+    if y == 1 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 1
+      grid_state[2][y] = 0
+      grid_state[3][y] = 0
+      grid_state[4][y] = 0
+
+      grid_state[5][y] = 1
+      grid_state[6][y] = 0
+      grid_state[7][y] = 0
+      grid_state[8][y] = 0
+
+      grid_state[9][y]  = 1
+      grid_state[10][y] = 0
+      grid_state[11][y] = 0
+      grid_state[12][y] = 0
+
+      grid_state[13][y] = 1
+      grid_state[14][y] = 0
+      grid_state[15][y] = 0
+      grid_state[16][y] = 0
+
+     -- Any button pressed on this row (2)  
+    elseif y == 2 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 0
+      grid_state[2][y] = 0
+      grid_state[3][y] = 1
+      grid_state[4][y] = 0
+
+      grid_state[5][y] = 0
+      grid_state[6][y] = 0
+      grid_state[7][y] = 1
+      grid_state[8][y] = 0
+
+      grid_state[9][y]  = 0
+      grid_state[10][y] = 0
+      grid_state[11][y] = 1
+      grid_state[12][y] = 0
+
+      grid_state[13][y] = 0
+      grid_state[14][y] = 0
+      grid_state[15][y] = 1
+      grid_state[16][y] = 0
+
+    elseif y == 3 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 1
+      grid_state[2][y] = 1
+      grid_state[3][y] = 0
+      grid_state[4][y] = 1
+
+      grid_state[5][y] = 1
+      grid_state[6][y] = 1
+      grid_state[7][y] = 0
+      grid_state[8][y] = 1
+
+      grid_state[9][y]  = 1
+      grid_state[10][y] = 1
+      grid_state[11][y] = 0
+      grid_state[12][y] = 1
+
+      grid_state[13][y] = 1
+      grid_state[14][y] = 1
+      grid_state[15][y] = 0
+      grid_state[16][y] = 1
+
+    elseif y == 4 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 0
+      grid_state[2][y] = 0
+      grid_state[3][y] = 0
+      grid_state[4][y] = 0
+
+      grid_state[5][y] = 0
+      grid_state[6][y] = 0
+      grid_state[7][y] = 0
+      grid_state[8][y] = 0
+
+      grid_state[9][y]  = 0
+      grid_state[10][y] = 0
+      grid_state[11][y] = 0
+      grid_state[12][y] = 0
+
+      grid_state[13][y] = 0
+      grid_state[14][y] = 0
+      grid_state[15][y] = 1
+      grid_state[16][y] = 0
+
+
+    elseif y == 5 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 1
+      grid_state[2][y] = 0
+      grid_state[3][y] = 0
+      grid_state[4][y] = 0
+
+      grid_state[5][y] = 0
+      grid_state[6][y] = 0
+      grid_state[7][y] = 0
+      grid_state[8][y] = 0
+
+      grid_state[9][y]  = 0
+      grid_state[10][y] = 0
+      grid_state[11][y] = 0
+      grid_state[12][y] = 0
+
+      grid_state[13][y] = 0
+      grid_state[14][y] = 0
+      grid_state[15][y] = 1
+      grid_state[16][y] = 0
+
+    elseif y == 6 then
+
+      print ("Setting preset for row: " .. x) 
+
+      grid_state[1][y] = 1
+      grid_state[2][y] = 0
+      grid_state[3][y] = 0
+      grid_state[4][y] = 0
+
+      grid_state[5][y] = 0
+      grid_state[6][y] = 1
+      grid_state[7][y] = 0
+      grid_state[8][y] = 0
+
+      grid_state[9][y]  = 0
+      grid_state[10][y] = 0
+      grid_state[11][y] = 0
+      grid_state[12][y] = 0
+
+      grid_state[13][y] = 0
+      grid_state[14][y] = 0
+      grid_state[15][y] = 1
+      grid_state[16][y] = 0
+
+
+
+end
+
+
+function preset_mozart(x,y)
+-- set all rows to MIDI note A4 (treat all the sequence rows the same.)
+
+    mozart_state[1][y] = MOZART_BASE_MIDI_NOTE -- A2
+    mozart_state[2][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[3][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[4][y] = MOZART_BASE_MIDI_NOTE
+
+    mozart_state[5][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[6][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[7][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[8][y] = MOZART_BASE_MIDI_NOTE
+
+    mozart_state[9][y]  = MOZART_BASE_MIDI_NOTE
+    mozart_state[10][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[11][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[12][y] = MOZART_BASE_MIDI_NOTE
+
+    mozart_state[13][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[14][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[15][y] = MOZART_BASE_MIDI_NOTE
+    mozart_state[16][y] = MOZART_BASE_MIDI_NOTE
+
+
+end  
+
+function cycle_ratchet(x,y)
+    -- We look at the current value of the grid_state and increment / Cycle around to produce a rest, normal and various ratchets
+  if grid_state[x][y] == 0 then
+    unconditional_set_grid(x,y,1) -- this is not a ratchet, just a normal hit.
+  elseif grid_state[x][y] == 1 then
+    unconditional_set_grid(x,y,2) 
+  elseif grid_state[x][y] == 2 then
+    unconditional_set_grid(x,y,3) 
+  elseif grid_state[x][y] == 3 then
+    unconditional_set_grid(x,y,4) 
+  elseif grid_state[x][y] == 4 then
+    unconditional_set_grid(x,y,5) 
+  elseif grid_state[x][y] == 5 then
+    unconditional_set_grid(x,y,0) -- This is a rest
+  end
+
+end
+
+
+function do_mozart_down(x,y)
+  print (" doing ".. ARM_MOZART_DOWN_BUTTON)
+    unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
+    unconditional_set_grid(x, y, 1) -- also set grid on
+end  
+
+function do_mozart_up(x,y)
+  print (" doing ".. ARM_MOZART_UP_BUTTON)
+    unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
+    unconditional_set_grid(x, y, 1) -- also set grid on
+end 
+
+function toggle_sequence_grid(x,y)
+  -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
+  if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+    unconditional_set_grid(x,y,0)
+  else 
+    unconditional_set_grid(x,y,1) 
+  end
+
+end  
+
+-- WIP WIP
+set_mozart_state(x,y,midi_note)
+
+if captured_normal_midi_note_in ~= -1 then
+  print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
+
+  -- Store the latest captured midi note in the mozart table
+  mozart_state[x][y] = captured_normal_midi_note_in
+  
+ else
+  print ("Not doing anything to mozart_state via MIDI input")  
+  -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
+ end 
+
+
+
+if midi_note_key_pressed ~= -1 then
+  print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
+
+-- Store the latest captured midi note in the mozart table
+  --mozart_state[x][y] = midi_note_key_pressed
+
+  unconditional_set_mozart(x,y, midi_note_key_pressed)
+  unconditional_set_grid(x,y,1) -- also make sure the note is on
+
+else
+  print ("Not doing anything to mozart_state via key press")  
+  -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
+end 
+
+end
+-- END WIP WIP
+
+ 
+function put slide_on(x,y)
+  slide_state[x][y] = 1
+end  
+
+
+function take_slide_off(x,y)
+  slide_state[x][y] = 0
+end
+
+
+function undo_grid()
+
+    -- UNDO
+  elseif grid_button_function_name (x,y) == UNDO_GRID_BUTTON then
+    ----------
+    -- UNDO --
+    ----------
+    --print ("Pressed 1,8: UNDO")
+
+
+    -- Only do this if we know we can pop from undo 
+    if (lifo_populated(undo_grid_lifo)) then
+
+      --print ("undo_grid_lifo is populated")
+    
+      -- In order to Undo we: 
+
+
+      -- local tally = refresh_grid_and_screen()
+      -- print ("grid_state BEFORE push_grid_redo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+
+      push_grid_redo()
+
+      -- local tally = refresh_grid_and_screen()
+      -- print ("grid_state BEFORE pop_grid_undo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+
+
+
+      pop_grid_undo()
+
+      -- local tally = refresh_grid_and_screen()
+      -- print ("grid_state AFTER pop_grid_undo is:")
+      -- print (grid_state)
+      --print ("grid_state: " .. get_tally(grid_state))
+
+
+  
+      -- print ("grid_state is:")
+      -- print (grid_state)
+
+    else
+      print ("undo_grid_lifo is NOT populated")
+    end
+
+  end
+
+function redo_grid()
+
+   -- REDO  
+      -- print ("Pressed 2,8: REDO")
+      -- local tally = refresh_grid_and_screen()
+      -- print ("grid_state BEFORE push_grid_undo is:")
+      -- print (grid_state)
+      -- print ("tally is:" .. tally)
+
+          -- Only do this if we know we can pop from undo 
+          if (lifo_populated(redo_grid_lifo)) then
+            -- print ("redo_grid_lifo is populated")
+    
+            push_grid_undo()
+    
+            -- local tally = refresh_grid_and_screen()
+            -- print ("grid_state BEFORE pop_grid_redo is:")
+            -- print (grid_state)
+            -- print ("tally is:" .. tally)
+            pop_grid_redo()
+    
+          --  refresh_grid_and_screen()
+    
+            -- local tally = refresh_grid_and_screen()
+            -- print ("grid_state AFTER pop_grid_redo is:")
+            -- print (grid_state)
+            -- print ("tally is:" .. tally)
+    
+            --print ("grid_state: " .. get_tally(grid_state))
+          else
+            print ("redo_grid_lifo is NOT populated")
+          end  
+       
+        
+
+end 
+
+
+
+
+function undo_mozart()
+      ----------
+      -- UNDO MOZART--
+      ----------
+
+      -- Only do this if we know we can pop from undo 
+      if (lifo_populated(undo_mozart_lifo)) then
+        push_mozart_redo()
+        pop_mozart_undo()
+      else
+        print ("undo_mozart_lifo is NOT populated")
+      end
+
+
+end  
+
+
+function redo_mozart()
+      ----------
+      -- REDO MOZART--
+      ----------
+
+      if (lifo_populated(redo_mozart_lifo)) then
+        push_mozart_undo()
+        pop_mozart_redo()
+      else
+        print ("redo_grid_lifo is NOT populated")
+      end  
+
+end  
+
+
+
+
+
+-- MAIN GRID LOOP
 -- Here we capture monome grid key presses - Grid Key Presses
+-- Main Grid button loop
+
 my_grid.key = function(x,y,z)
 -- x is the column
 -- y is the row
@@ -2021,23 +2452,124 @@ print("arm_feature is: ".. arm_feature .. " captured_normal_midi_note_in is: " .
 -- midi_note_key_pressed = -1
 
 
+if z == 1 then
+  print("Key Down")
+
+  if y <= TOTAL_SEQUENCE_ROWS then
+
+    print("Sequence On")
+
+    set_sequence(x,y,mozart_state[x][y])
+
+  elseif y == 7 then
+
+    print("Row7 On")
+
+
+    arm_row7 = grid_button_function_name(x,y)
+  
+  elseif y == 8 then
+
+    print("Control On")
+
+
+    arm_control = grid_button_function_name(x,y)
+
+  else
+    print("Error")
+    
+  end  
+
+else
+  print("Key Up")
+
+  if y <= TOTAL_SEQUENCE_ROWS then
+
+    print("Sequence Reset")
+
+    set_sequence(0,0,0)
+
+  elseif y == 7 then
+
+    print("Row7 Reset")
+
+    arm_row7 = NO_FEATURE
+  
+  elseif y == 8 then
+
+    print("Control Reset")
+
+    arm_control = NO_FEATURE
+
+  else
+    print("Error")
+    
+  end  
+
+end   
+
+print ("***** Operation matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control .. "-END")
+
+
+
+if sequence_button_is_pressed == true then
+
+    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
+    push_grid_undo()
+    push_mozart_undo()
+
+    -- So we save the table to file
+    -- (don't bother with control rows)
+    --print ("Before set grid_state_dirty = true")
+    grid_state_dirty = true
+
+end
+
+
+if sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON  then
+  preset_grid(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_PRESET_MOZART_BUTTON then
+  preset_mozart(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RANDOMISE_GRID_BUTTON then 
+  randomize_grid (x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RANDOMISE_MOZART_BUTTON then  
+  randomize_mozart (x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RATCHET_BUTTON then  
+  cycle_ratchet(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_MOZART_DOWN_BUTTON then
+  do_mozart_down(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_MOZART_UP_BUTTON then
+  do_mozart_up(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == NO_FEATURE then
+  toggle_sequence_grid(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == UNDO_MOZART_BUTTON then
+  undo_mozart()
+elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == REDO_MOZART_BUTTON then
+  redo_mozart()
+
+
+--------------------
+-- previous
+
 -- To note the key that is held down (one only and only a sequence row) 
 if z == 1 then
 
   if y <= TOTAL_SEQUENCE_ROWS then
     held_x = x
     held_y = y
+    held_midi = mozart_state[x][y]
   else
     -- reset
     held_x = 0
     held_y = 0
+    held_midi = 0
   end  
-  
   
 else
   -- reset
   held_x = 0
   held_y = 0
+  held_midi = 0
 end
 
 
@@ -2067,285 +2599,16 @@ if y <= TOTAL_SEQUENCE_ROWS then
     --print ("Before set grid_state_dirty = true")
     grid_state_dirty = true
 
-    if arm_feature == ARM_PRESET_GRID then
-      print ("arm_feature is: " .. ARM_PRESET_GRID  .. ", x is: " .. x .. ", y is: " .. y) 
 
 
-      -- Any button pressed on this row (1)
-      if y == 1 then
-
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
-
-        grid_state[5][y] = 1
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
-
-        grid_state[9][y]  = 1
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
-
-        grid_state[13][y] = 1
-        grid_state[14][y] = 0
-        grid_state[15][y] = 0
-        grid_state[16][y] = 0
-
-       -- Any button pressed on this row (2)  
-      elseif y == 2 then
-
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 0
-        grid_state[2][y] = 0
-        grid_state[3][y] = 1
-        grid_state[4][y] = 0
-
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 1
-        grid_state[8][y] = 0
-
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 1
-        grid_state[12][y] = 0
-
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
-
-      elseif y == 3 then
-
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 1
-        grid_state[2][y] = 1
-        grid_state[3][y] = 0
-        grid_state[4][y] = 1
-
-        grid_state[5][y] = 1
-        grid_state[6][y] = 1
-        grid_state[7][y] = 0
-        grid_state[8][y] = 1
-
-        grid_state[9][y]  = 1
-        grid_state[10][y] = 1
-        grid_state[11][y] = 0
-        grid_state[12][y] = 1
-
-        grid_state[13][y] = 1
-        grid_state[14][y] = 1
-        grid_state[15][y] = 0
-        grid_state[16][y] = 1
-
-      elseif y == 4 then
-
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 0
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
-
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
-
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
-
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
 
 
-      elseif y == 5 then
 
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
-
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
-
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
-
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
-
-      elseif y == 6 then
-
-        print ("Setting preset for row: " .. x) 
-
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
-
-        grid_state[5][y] = 0
-        grid_state[6][y] = 1
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
-
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
-
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
-
-
-      end  
-
-    elseif arm_feature == ARM_PRESET_MOZART then
-
-      -- set all rows to MIDI note A4 (treat all the sequence rows the same.)
-
-      mozart_state[1][y] = MOZART_BASE_MIDI_NOTE -- A2
-      mozart_state[2][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[3][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[4][y] = MOZART_BASE_MIDI_NOTE
-
-      mozart_state[5][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[6][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[7][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[8][y] = MOZART_BASE_MIDI_NOTE
-
-      mozart_state[9][y]  = MOZART_BASE_MIDI_NOTE
-      mozart_state[10][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[11][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[12][y] = MOZART_BASE_MIDI_NOTE
-
-      mozart_state[13][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[14][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[15][y] = MOZART_BASE_MIDI_NOTE
-      mozart_state[16][y] = MOZART_BASE_MIDI_NOTE
-
-    elseif arm_feature == ARM_RANDOMISE_GRID then 
-      randomize_grid (x, y)
-    elseif arm_feature == ARM_RANDOMISE_MOZART then  
-      randomize_mozart (x, y)
-    else -- preset button is not pressed 
-
-      --print ("Before changing grid_state for sequence rows based on key press and ratchet button.")
-      --print ("arm_feature is: " .. arm_feature)
-
-      -- *Order is important here*. 
-      -- Change the state of the grid *AFTER* we have pushed to undo lifo
-      
-      -- Place RATCHET on step
-  
-      if arm_feature == ARM_RATCHET then -- Cycle around rest, normal and various ratchets 
-        if grid_state[x][y] == 0 then
-          unconditional_set_grid(x,y,1) -- this is not a ratchet, just a normal hit.
-        elseif grid_state[x][y] == 1 then
-          unconditional_set_grid(x,y,2) 
-        elseif grid_state[x][y] == 2 then
-          unconditional_set_grid(x,y,3) 
-        elseif grid_state[x][y] == 3 then
-          unconditional_set_grid(x,y,4) 
-        elseif grid_state[x][y] == 4 then
-          unconditional_set_grid(x,y,5) 
-        elseif grid_state[x][y] == 5 then
-          unconditional_set_grid(x,y,0) 
-        end
-        
-      elseif arm_feature == ARM_MOZART_DOWN then
-        unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
-        unconditional_set_grid(x, y, 1) -- also set grid on
-      elseif arm_feature == ARM_MOZART_UP then
-        unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
-        unconditional_set_grid(x, y, 1) -- also set grid on
-      else
-
-
-        -- Conditions under which we want to TOGGLE the grid_state
-        -- I.e. we don't want to change the state of the main grid (steps) if we are doing something else like adding a note / slide or changing last step.
-        if arm_feature == NO_FEATURE and captured_normal_midi_note_in == -1 and arm_put_slide_on == 0 and arm_take_slide_off == 0  and arm_first_step_button == 0 and arm_last_step_button == 0 and arm_swing_button == 0 then
-
-          -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-          if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
-            unconditional_set_grid(x,y,0)
-          else 
-            unconditional_set_grid(x,y,1) 
-          end
-
-        else -- no arm behaviour active.
-
-          -- it makes sense to turn the step on (if its off) if we're putting a midi note / slide / ratchet on it etc. (only exception might be first / last step but currently they operate on row 7)
-          if grid_state[x][y] == 0 then 
-            unconditional_set_grid(x,y,1)
-          end
-
-        end
-
-    end -- ratchet test
 
         --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
 
        -- in this code path, we captured a midi note and then pressed a step button. 
 
-       if captured_normal_midi_note_in ~= -1 then
-        print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
-
-        -- Store the latest captured midi note in the mozart table
-        mozart_state[x][y] = captured_normal_midi_note_in
-        
-       else
-        print ("Not doing anything to mozart_state via MIDI input")  
-        -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
-       end 
-
-
-
-      if midi_note_key_pressed ~= -1 then
-        print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
-  
-      -- Store the latest captured midi note in the mozart table
-        --mozart_state[x][y] = midi_note_key_pressed
-
-        unconditional_set_mozart(x,y, midi_note_key_pressed)
-        unconditional_set_grid(x,y,1) -- also make sure the note is on
-
-      else
-        print ("Not doing anything to mozart_state via key press")  
-        -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
-      end 
-
-       
-       
-      if arm_put_slide_on == 1 then
-        slide_state[x][y] = 1
-      end  
-        
-      if arm_take_slide_off == 1 then
-        slide_state[x][y] = 0
-      end 
-    
 
     end -- preset_grid_button test
 
@@ -2377,235 +2640,27 @@ else
     
     last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
 
-    if grid_button_function_name(x,y) == ARM_RATCHET then
-      if z == 1 then 
-        arm_feature = ARM_RATCHET 
-      else
-        arm_feature = NO_FEATURE -- Reset arm_feature with a key up
-      end
-    elseif grid_button_function_name(x,y) == ARM_RANDOMISE_GRID then
-      if z == 1 then 
-        arm_feature = ARM_RANDOMISE_GRID
-      else
-        arm_feature = NO_FEATURE
-      end
-    elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then
-      if z == 1 then 
-        arm_feature = ARM_RANDOMISE_MOZART
-      else
-        arm_feature = NO_FEATURE
-      end
-    elseif grid_button_function_name(x,y) == ARM_MOZART_DOWN then
-      if z == 1 then 
-        arm_feature = ARM_MOZART_DOWN
-      else
-        arm_feature = NO_FEATURE
-      end
-    elseif grid_button_function_name(x,y) == ARM_MOZART_UP then
-      if z == 1 then 
-        arm_feature = ARM_MOZART_UP
-      else
-        arm_feature = NO_FEATURE
-      end
-    
--- NOTE treating lag as a type of ratchet
-    elseif grid_button_function_name(x,y) == UNDO_MOZART_BUTTON then
-
--- TODO put undo  mozart here
-
-      ----------
-      -- UNDO MOZART--
-      ----------
-
-      -- Only do this if we know we can pop from undo 
-      if (lifo_populated(undo_mozart_lifo)) then
-        push_mozart_redo()
-        pop_mozart_undo()
-      else
-        print ("undo_mozart_lifo is NOT populated")
-      end
-
-    elseif grid_button_function_name(x,y) == REDO_MOZART_BUTTON then
-
-      ----------
-      -- REDO MOZART--
-      ----------
-
-      if (lifo_populated(redo_mozart_lifo)) then
-        push_mozart_undo()
-        pop_mozart_redo()
-      else
-        print ("redo_grid_lifo is NOT populated")
-      end  
-
-    elseif grid_button_function_name(x,y) == ARM_LAG then
-      --print ("LAG button pressed: " .. z)
-      if z == 1 then 
-        arm_feature = ARM_LAG
-      else
-        arm_feature = NO_FEATURE
-      end
 
 
-
--- Preset buttons
--- These buttons are used to put a preset on one of the sequence rows
-
-  elseif grid_button_function_name(x,y) == ARM_PRESET_GRID then
-  --print ("Preset button pressed: " .. z)
-  if z == 1 then
-    print ("Preset button pressed: " .. z) 
-    arm_feature = ARM_PRESET_GRID
-    -- preset_grid_button = 2
-  else
-    print ("Preset button RESET: " .. z) 
-    arm_feature = NO_FEATURE
-
-    --preset_grid_button = 0 -- Reset preset_grid_button with a key up
-  end
-elseif grid_button_function_name(x,y) == ARM_PRESET_MOZART then
-  --print ("Preset button pressed: " .. z)
-  if z == 1 then 
-    arm_feature = ARM_PRESET_MOZART
-    -- preset_mozart_button = 2
-  else
-    -- preset_mozart_button = 0
-    arm_feature = NO_FEATURE
-  end
-elseif grid_button_function_name(x,y) == ARM_RANDOMISE_GRID then 
-  --print ("Preset button pressed: " .. z)
-  if z == 1 then 
-    arm_feature = ARM_RANDOMISE_GRID
-    -- preset_grid_button = 4
-  else
-    arm_feature = NO_FEATURE
-    -- preset_grid_button = 0
-  end
-elseif grid_button_function_name(x,y) == ARM_RANDOMISE_MOZART then 
-  --print ("Preset button pressed: " .. z)
-  if z == 1 then 
-    arm_feature = ARM_RANDOMISE_MOZART
-    --preset_grid_button = 5
-  else
-    arm_feature = NO_FEATURE
-    --preset_grid_button = 0
-  end
+  
 
 
 
 
--- Require alter clock button be pressed so that we don't stop / start the clock acceidentally
--- CURRENTLY NOT AVAILABLE IN BUTTON LIST
-elseif grid_button_function_name (x,y) == "ArmMidiCommand" then
-  if z == 1 then 
-    arm_clock_button = 1
-  else
-    arm_clock_button = 0
-  end
 
 
-  -- CURRENTLY NOT AVAILABLE IN BUTTON LIST
-elseif grid_button_function_name (x,y) == "DoMidiStop" then
-  if z == 1 and arm_clock_button == 1 then 
-    request_midi_stop()
-  end
-
--- CURRENTLY NOT AVAILABLE IN BUTTON LIST
-elseif grid_button_function_name (x,y) == "DoMidiStart" then
-  if z == 1 and arm_clock_button == 1 then 
-    need_to_start_midi = true
-  end
 
 
 
 --
-
-    -- UNDO
-  elseif grid_button_function_name (x,y) == UNDO_GRID_BUTTON then
-      ----------
-      -- UNDO --
-      ----------
-      --print ("Pressed 1,8: UNDO")
-
-
-      -- Only do this if we know we can pop from undo 
-      if (lifo_populated(undo_grid_lifo)) then
-
-        --print ("undo_grid_lifo is populated")
-      
-        -- In order to Undo we: 
-
-
-        -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE push_grid_redo is:")
-        -- print (grid_state)
-        -- print ("tally is:" .. tally)
-
-        push_grid_redo()
-
-        -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE pop_grid_undo is:")
-        -- print (grid_state)
-        -- print ("tally is:" .. tally)
-
-
-
-        pop_grid_undo()
-
-        -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state AFTER pop_grid_undo is:")
-        -- print (grid_state)
-        --print ("grid_state: " .. get_tally(grid_state))
-
-
-    
-        -- print ("grid_state is:")
-        -- print (grid_state)
-
-      else
-        print ("undo_grid_lifo is NOT populated")
-      end
 
 
      -- End of UNDO
 
     -- CONTROL REDO    
     elseif grid_button_function_name (x,y) == REDO_GRID_BUTTON then
-      -- REDO  
-      -- print ("Pressed 2,8: REDO")
-      -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state BEFORE push_grid_undo is:")
-      -- print (grid_state)
-      -- print ("tally is:" .. tally)
-
-          -- Only do this if we know we can pop from undo 
-      if (lifo_populated(redo_grid_lifo)) then
-        -- print ("redo_grid_lifo is populated")
-
-        push_grid_undo()
-
-        -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state BEFORE pop_grid_redo is:")
-        -- print (grid_state)
-        -- print ("tally is:" .. tally)
-        pop_grid_redo()
-
-      --  refresh_grid_and_screen()
-
-        -- local tally = refresh_grid_and_screen()
-        -- print ("grid_state AFTER pop_grid_redo is:")
-        -- print (grid_state)
-        -- print ("tally is:" .. tally)
-
-        --print ("grid_state: " .. get_tally(grid_state))
-      else
-        print ("redo_grid_lifo is NOT populated")
-      end  
-    --end -- End of REDO
-
-
-
-  elseif grid_button_function_name (x,y) == ARM_SLIDE_ON then
+     
+  elseif grid_button_function_name (x,y) == ARM_SLIDE_ON_BUTTON then
 
     if z == 1 then 
       arm_put_slide_on = 1
@@ -2613,7 +2668,7 @@ elseif grid_button_function_name (x,y) == "DoMidiStart" then
       arm_put_slide_on = 0
     end
 
-elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF then
+elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF_BUTTON then
 
     if z == 1 then 
       arm_take_slide_off = 1
@@ -2622,14 +2677,14 @@ elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF then
     end
 
 
-  elseif grid_button_function_name (x,y) == ARM_FIRST_STEP then
+  elseif grid_button_function_name (x,y) == ARM_FIRST_STEP_BUTTON then
     if z == 1 then 
       arm_first_step_button = 1
     else
       arm_first_step_button = 0
     end
 
-  elseif grid_button_function_name (x,y) == ARM_LAST_STEP then
+  elseif grid_button_function_name (x,y) == ARM_LAST_STEP_BUTTON then
     if z == 1 then 
       arm_last_step_button = 1
     else
@@ -2811,6 +2866,10 @@ end  -- End of Sequence / Control
 
 
 end -- End of my_grid.key function definition
+
+-- //////////////////////////////////////////////
+-------------------------/////////////////////////
+-------------------------/////////////////////////
 
 function set_first_step(step)
   if step <= last_step then
