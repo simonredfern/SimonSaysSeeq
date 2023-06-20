@@ -160,25 +160,41 @@ audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/modular-pulse.wav"
 BUTTONS = {}
 
 --7th Row
-table.insert(BUTTONS, {name = "Button1", x = 1, y = 7})
-table.insert(BUTTONS, {name = "Button2", x = 2, y = 7})
-table.insert(BUTTONS, {name = "Button3", x = 3, y = 7})
-table.insert(BUTTONS, {name = "Button4", x = 4, y = 7})
+ROW7_BUTTON_01 = "Button1"
+ROW7_BUTTON_02 = "Button2"
+ROW7_BUTTON_03 = "Button3"
+ROW7_BUTTON_04 = "Button4"
+table.insert(BUTTONS, {name = ROW7_BUTTON_01, x = 1, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_02, x = 2, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_03, x = 3, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_04, x = 4, y = 7})
 
-table.insert(BUTTONS, {name = "Button5", x = 5, y = 7})
-table.insert(BUTTONS, {name = "Button6", x = 6, y = 7})
-table.insert(BUTTONS, {name = "Button7", x = 7, y = 7})
-table.insert(BUTTONS, {name = "Button8", x = 8, y = 7})
+ROW7_BUTTON_05 = "Button5"
+ROW7_BUTTON_06 = "Button6"
+ROW7_BUTTON_07 = "Button7"
+ROW7_BUTTON_08 = "Button8"
+table.insert(BUTTONS, {name = ROW7_BUTTON_05, x = 5, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_06, x = 6, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_07, x = 7, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_08, x = 8, y = 7})
 
-table.insert(BUTTONS, {name = "Button9", x = 9, y = 7})
-table.insert(BUTTONS, {name = "Button10", x = 10, y = 7})
-table.insert(BUTTONS, {name = "Button11", x = 11, y = 7})
-table.insert(BUTTONS, {name = "Button12", x = 12, y = 7})
+ROW7_BUTTON_09 = "Button9"
+ROW7_BUTTON_10 = "Button10"
+ROW7_BUTTON_11 = "Button11"
+ROW7_BUTTON_12 = "Button12"
+table.insert(BUTTONS, {name = ROW7_BUTTON_09, x = 9, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_10, x = 10, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_11, x = 11, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_12, x = 12, y = 7})
 
-table.insert(BUTTONS, {name = "Button13", x = 13, y = 7})
-table.insert(BUTTONS, {name = "Button14", x = 14, y = 7})
-table.insert(BUTTONS, {name = "Button15", x = 15, y = 7})
-table.insert(BUTTONS, {name = "Button16", x = 16, y = 7})
+ROW7_BUTTON_13 = "Button13"
+ROW7_BUTTON_14 = "Button14"
+ROW7_BUTTON_15 = "Button15"
+ROW7_BUTTON_16 = "Button16"
+table.insert(BUTTONS, {name = ROW7_BUTTON_13, x = 13, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_14, x = 14, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_15, x = 15, y = 7})
+table.insert(BUTTONS, {name = ROW7_BUTTON_16, x = 16, y = 7})
 
 
 NO_FEATURE = ""
@@ -2297,7 +2313,7 @@ end
 -- END WIP WIP
 
  
-function put slide_on(x,y)
+function put_slide_on(x,y)
   slide_state[x][y] = 1
 end  
 
@@ -2512,7 +2528,7 @@ print ("***** Operation matrix is " .. sequence_button_x .. " " .. sequence_butt
 
 
 
-if sequence_button_is_pressed == true then
+if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
 
     -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
     push_grid_undo()
@@ -2524,342 +2540,99 @@ if sequence_button_is_pressed == true then
     grid_state_dirty = true
 
 end
-
-
-if sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON  then
-  preset_grid(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_PRESET_MOZART_BUTTON then
-  preset_mozart(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RANDOMISE_GRID_BUTTON then 
-  randomize_grid (x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RANDOMISE_MOZART_BUTTON then  
-  randomize_mozart (x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_RATCHET_BUTTON then  
-  cycle_ratchet(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_MOZART_DOWN_BUTTON then
-  do_mozart_down(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == ARM_MOZART_UP_BUTTON then
-  do_mozart_up(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == NO_FEATURE then
-  toggle_sequence_grid(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == UNDO_MOZART_BUTTON then
-  undo_mozart()
-elseif sequence_button_is_pressed == true and arm_row7 = NO_FEATURE and arm_control == REDO_MOZART_BUTTON then
-  redo_mozart()
-
-
---------------------
--- previous
-
--- To note the key that is held down (one only and only a sequence row) 
-if z == 1 then
-
-  if y <= TOTAL_SEQUENCE_ROWS then
-    held_x = x
-    held_y = y
-    held_midi = mozart_state[x][y]
-  else
-    -- reset
-    held_x = 0
-    held_y = 0
-    held_midi = 0
-  end  
-  
-else
-  -- reset
-  held_x = 0
-  held_y = 0
-  held_midi = 0
-end
-
-
-
-
--- We treat sequence rows and control rows different.
-
--- If one of the SEQUENCE ROWS (not the bottom control rows)
-if y <= TOTAL_SEQUENCE_ROWS then
-  -- For sequence rows we only want to capture key down event only  
-  if z == 1 then
-
-
-    -- *Order is important here*. 
-    -- We want to save the current state *BEFORE* we push a copy of the grid to the undo lifo
-    -- But only do this if we are not touching the control rows (7 & 8)
-
-    --print ("Sequence button pressed")
-    --print ("grid_state:" .. get_tally(grid_state))
-
-    -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
-    push_grid_undo()
-    push_mozart_undo()
-
-    -- So we save the table to file
-    -- (don't bother with control rows)
-    --print ("Before set grid_state_dirty = true")
-    grid_state_dirty = true
-
-
-
-
-
-
-
-        --print ("After changing grid_state for sequence rows based on key press and ratchet button.")
-
-       -- in this code path, we captured a midi note and then pressed a step button. 
-
-
-    end -- preset_grid_button test
-
---print ("End of key down test")
-
-  end -- End of key down test
-
-  --print(x .. ","..y .. " value after change " .. grid_state[y][y])
-  --print("--------------------------------------------------------------")
-
-
-
-
-else
-
-  -- *** CONTROL ROWS ***
 
 
 -- direct assignement of control rows.
     -- if the button is pressed it should be lit etc.
     -- we need to modifiy the code so grid_state control rows doesn't get set by undo
     -- Gives feedback to user - other function? TODO clarify purpose of setting this.
-    unconditional_set_grid(x,y,z) 
-
-    -- RATCHETS
-    -- Holding one of the ratchet buttons and a step will put the ratchet "on" the step
-    
-    print ("Some CONTROL ROW BUTTON PRESSED " .. z)
-    
-    last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
+ --   unconditional_set_grid(x,y,z) 
 
 
-
-  
-
-
-
-
-
-
-
-
-
---
-
-
-     -- End of UNDO
-
-    -- CONTROL REDO    
-    elseif grid_button_function_name (x,y) == REDO_GRID_BUTTON then
-     
-  elseif grid_button_function_name (x,y) == ARM_SLIDE_ON_BUTTON then
-
-    if z == 1 then 
-      arm_put_slide_on = 1
-    else
-      arm_put_slide_on = 0
-    end
-
-elseif grid_button_function_name (x,y) == ARM_SLIDE_OFF_BUTTON then
-
-    if z == 1 then 
-      arm_take_slide_off = 1
-    else
-      arm_take_slide_off = 0
-    end
-
-
-  elseif grid_button_function_name (x,y) == ARM_FIRST_STEP_BUTTON then
-    if z == 1 then 
-      arm_first_step_button = 1
-    else
-      arm_first_step_button = 0
-    end
-
-  elseif grid_button_function_name (x,y) == ARM_LAST_STEP_BUTTON then
-    if z == 1 then 
-      arm_last_step_button = 1
-    else
-      arm_last_step_button = 0
-    end
-
-  elseif grid_button_function_name (x,y) == "ArmSwing" then
-    if z == 1 then 
-      arm_swing_button = 1
-    else
-      arm_swing_button = 0
-    end
-
-
- -- Set first_step 
- -- (TODO first and last step should be independent of row so we can have phasing) 
- -- (This would require separe step counters)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button1" )  then
-    set_first_step(1)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button2" )  then
-    set_first_step(2)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button3" )  then
-    set_first_step(3)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button4" )  then
-    set_first_step(4)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button5" )  then
-    set_first_step(5)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button6" )  then
-    set_first_step(6)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button7" )  then
-    set_first_step(7)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button8" )  then
-    set_first_step(8)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button9" )  then
-    set_first_step(9)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button10" )  then
-    set_first_step(10)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button11" )  then
-    set_first_step(11)             
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button12" )  then
-    set_first_step(12)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button13" )  then
-    set_first_step(13)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button14" )  then
-    set_first_step(14)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button15" )  then
-    set_first_step(15)
-  elseif (arm_first_step_button == 1 and grid_button_function_name (x,y) == "Button16" )  then
-    set_first_step(16)
-    
-  -- Set last_step
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button1" )  then
-    set_last_step(1)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button2" )  then
-    set_last_step(2)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button3" )  then
-    set_last_step(3)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button4" )  then
-    set_last_step(4)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button5" )  then
-    set_last_step(5)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button6" )  then
-    set_last_step(6)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button7" )  then
-    set_last_step(7)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button8" )  then
-    set_last_step(8)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button9" )  then
-    set_last_step(9)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button10" )  then
-    set_last_step(10)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button11" )  then
-    set_last_step(11)             
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button12" )  then
-    set_last_step(12)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button13" )  then
-    set_last_step(13)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button14" )  then
-    set_last_step(14)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button15" )  then
-    set_last_step(15)
-  elseif (arm_last_step_button == 1 and grid_button_function_name (x,y) == "Button16" )  then
-    set_last_step(16) 
-
-  -- Set Swing
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button1" )  then
-    swing_mode = 1 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button2" )  then
-    swing_mode = 2 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button3" )  then
-    swing_mode = 3 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button4" )  then
-    swing_mode = 4 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button5" )  then
-    swing_mode = 5 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button6" )  then
-    swing_mode = 6   
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button7" )  then
-    swing_mode = 7 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button8" )  then
-    swing_mode = 8 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button9" )  then
-    swing_mode = 9 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button10" )  then
-    swing_mode = 10 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button11" )  then
-    swing_mode = 11 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button12" )  then
-    swing_mode = 12
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button13" )  then
-    swing_mode = 13 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button14" )  then
-    swing_mode = 14 
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button15" )  then
-    swing_mode = 15   
-  elseif (arm_swing_button == 1 and grid_button_function_name (x,y) == "Button16" )  then
-    swing_mode = 16 
-
-  -- Place MIDI note on sequence notes
--- Handles the following key combination: First press and hold a sequence note, then press one of these buttons to put a MIDI note on the button
-
-
--- HERE
-
-elseif (grid_button_function_name (x,y) == "Button1") then
+if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_GRID_BUTTON  then
+  preset_grid(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_PRESET_MOZART_BUTTON then
+  preset_mozart(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_RANDOMISE_GRID_BUTTON then 
+  randomize_grid (x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_RANDOMISE_MOZART_BUTTON then  
+  randomize_mozart (x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_RATCHET_BUTTON then  
+  cycle_ratchet(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_MOZART_DOWN_BUTTON then
+  do_mozart_down(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_MOZART_UP_BUTTON then
+  do_mozart_up(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
+  toggle_sequence_grid(x,y)
+elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == UNDO_MOZART_BUTTON then
+  undo_mozart()
+elseif sequence_button_is_pressed == false and arm_row7 == NO_FEATURE and arm_control == REDO_MOZART_BUTTON then
+  redo_mozart()
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_OFF_BUTTON then
+  take_slide_off(x,y)  
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_ON_BUTTON then
+  put_slide_on(x,y)  
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_FIRST_STEP_BUTTON then
+  set_first_step(x)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_LAST_STEP_BUTTON then
+  set_last_step(x)
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 0)) 
-elseif (grid_button_function_name (x,y) == "Button2") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_02 and arm_control == NO_FEATURE then
   print("button" .. 2)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 1)) 
-elseif (grid_button_function_name (x,y) == "Button3") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_03 and arm_control == NO_FEATURE then
   print("button" .. 3)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 2))
-elseif (grid_button_function_name (x,y) == "Button4") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_04 and arm_control == NO_FEATURE then
   print("button" .. 4)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 3))
-elseif (grid_button_function_name (x,y) == "Button5") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_05 and arm_control == NO_FEATURE then
   print("button" .. 5)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 4))
-elseif (grid_button_function_name (x,y) == "Button6") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_06 and arm_control == NO_FEATURE then
   print("button" .. 6)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 5))
-elseif (grid_button_function_name (x,y) == "Button7") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_07 and arm_control == NO_FEATURE then
   print("button" .. 7)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 6))
-elseif (grid_button_function_name (x,y) == "Button8") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_08 and arm_control == NO_FEATURE then
   print("button" .. 8)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 7))
-elseif (grid_button_function_name (x,y) == "Button9") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_09 and arm_control == NO_FEATURE then
   print("button" .. 9)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 8))
-elseif (grid_button_function_name (x,y) == "Button10") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_10 and arm_control == NO_FEATURE then
   print("button" .. 10)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 9))
-elseif (grid_button_function_name (x,y) == "Button11") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_11 and arm_control == NO_FEATURE then
   print("button" .. 11)             
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 10)) 
-elseif (grid_button_function_name (x,y) == "Button12") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_12 and arm_control == NO_FEATURE then
   print("button" .. 12)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 11)) 
-elseif (grid_button_function_name (x,y) == "Button13") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_13 and arm_control == NO_FEATURE then
   print("button" .. 13)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 12))
-elseif (grid_button_function_name (x,y) == "Button14") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_14 and arm_control == NO_FEATURE then
   print("button" .. 14)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 13))
-elseif (grid_button_function_name (x,y) == "Button15") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_15 and arm_control == NO_FEATURE then
   print("button" .. 15)
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 14))
-elseif (grid_button_function_name (x,y) == "Button16") then
+elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm_control == NO_FEATURE then
   print("button" .. 16) 
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
-  end -- end of grid_button_function_name tests
+else
+  print("Unhandled button combination" .. 16) 
+end -- end of grid_button_function_name tests
 
-end  -- End of Sequence / Control
+
+
+last_action_method = grid_button_function_name(x,y):gsub( "Button", ""):gsub( "Arm", ""):gsub( "Preset", "Pre"):gsub( "Mozart", "Mz"):gsub( "Grid", "Grd"):gsub( "Randomise", "Rnd") -- used in display
+
 
   -- Always do this else results are not shown to user.
   refresh_grid_and_screen()
