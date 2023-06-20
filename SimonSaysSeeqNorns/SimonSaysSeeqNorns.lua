@@ -2431,7 +2431,7 @@ function on_sequence_button_press_down (x,y,z)
 
       -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
       push_grid_undo()
-      push_mozart_undo()
+      push_mozart_undo() -- TODO check this is not too much.
 
       toggle_sequence_grid(x,y)
   
@@ -2454,17 +2454,14 @@ my_grid.key = function(x,y,z)
 -- x is the column
 -- y is the row
 -- z == 1 means key down, z == 0 means key up
--- We want to capture the key down event and toggle the state of the key in the grid.
 
 print("Hello from ----------- my_grid.key = function -----------------")
 print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
 
-print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
---print(x .. ","..y .. " z is " .. z)
+-- print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
--- Reset. It might get set below
--- midi_note_key_pressed = -1
 
+-- First lets capture the combination of buttons pressed (up to three groups i.e. one sequence button, one row7 and one row8 (control))
 
 if z == 1 then
   print("Key Down")
@@ -2502,6 +2499,8 @@ operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x
 
 
 print ("Operation matrix is: " ..  operation_matix_string)
+
+-- Now we have a matrix of buttons, now process.
 
 if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
   on_sequence_button_press_down(x,y,z)
