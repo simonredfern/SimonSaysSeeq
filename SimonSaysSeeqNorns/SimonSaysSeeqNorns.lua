@@ -6,7 +6,7 @@ version = "0.9.4"
 
 version_string = "SimonSaysSeeq on Norns v" .. version
 
-NO_FEATURE = ""
+NO_FEATURE = "NO_FEATURE"
 
 -- TODO - add total_wow_tempo_ticks to display
 
@@ -1286,7 +1286,7 @@ function grid_button_function_name (x,y)
 
   end -- end outer loop
 
-  print ("grid_button_function_name says Bye. I will return: " .. ret)
+  -- print ("grid_button_function_name says Bye. I will return: " .. ret)
 
   if ret == "NOT_FOUND" then
     print ("x was: " .. x .. " y was: " .. y) 
@@ -1981,9 +1981,7 @@ end
 captured_normal_midi_note_in = -1
 
 
-function get_held_x()
-
-end  
+ 
 
 
 -- Capture MIDI IN
@@ -2281,8 +2279,12 @@ function toggle_sequence_grid(x,y)
   -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
   if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
     unconditional_set_grid(x,y,0)
+    held_x = 0
+    held_y = 0
   else 
-    unconditional_set_grid(x,y,1) 
+    unconditional_set_grid(x,y,1)
+    held_x = x
+    held_y = y 
   end
 
 end  
@@ -2523,7 +2525,7 @@ else
   end
 end   
 
-operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control .. "-END"
+operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
 
 
 print ("Operation matrix is: " ..  operation_matix_string)
@@ -2609,7 +2611,7 @@ elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm
   print("button" .. 16) 
   conditional_set_mozart(x, y, z, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
 else
-  print("Unhandled button combination for:" ..  operation_matix_string) 
+  print("(No action for this combination of buttons: " ..  operation_matix_string .. " )") 
 end -- end of grid_button_function_name tests
 
 
