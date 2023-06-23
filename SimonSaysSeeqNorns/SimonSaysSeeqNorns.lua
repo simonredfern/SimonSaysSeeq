@@ -142,6 +142,8 @@ enable_audio_clock_out = 0
 need_to_start_midi = true -- Check gate clock situation.
 run_conditional_clocks = false
 
+SCREEN_INFO_X = 40
+SCREEN_INFO_Y = 49
 
 -- audio_clock_file = _path.dust.."code/softcut-studies/lib/whirl1.aif"
 
@@ -1383,7 +1385,7 @@ function init()
   refresh_grid_and_screen()
 
   print("hello")
-  my_grid:all(2)
+  -- my_grid:all(2)
   my_grid:refresh() -- refresh the LEDs
     
     
@@ -1457,6 +1459,11 @@ init_flutter_window()
             grid_state_dirty = false
 
             print("I saved tables.")
+
+            screen.move(SCREEN_INFO_X,SCREEN_INFO_Y)
+            screen.text("I saved tables.")
+            screen.update() 
+
            end
         end
     end
