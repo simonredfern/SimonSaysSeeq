@@ -124,7 +124,11 @@ MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
 MOZART_BASE_MIDI_NOTE = 24 -- C1  -- 33 = A1
-MOZART_INTERVAL = 7 -- go up in fifths
+MOZART_INTERVAL_PERFECT_FIFTH = 7 -- go up in fifths
+MOZART_INTERVAL_PERFECT_FOURTH = 4
+MOZART_INTERVAL_MAJOR_THIRD = 3
+MOZART_INTERVAL_MINOR_THIRD = 2
+
 
 -- WARNING --------------------------
 -- enabling some of these (not sure which) will cause noticable occasional wow and flutter of tempo. (search for wow and flutter in this file for more info)
@@ -525,11 +529,11 @@ end
 
   if (tempo_is_stable == 0) then 
 
-    print (tempo_status_string_1)
-    print (tempo_status_string_2)
-    print (tempo_status_string_3)
-    print (tempo_status_string_4)
-    print (tempo_status_string_5)
+   -- print (tempo_status_string_1)
+   -- print (tempo_status_string_2)
+   -- print (tempo_status_string_3)
+   -- print (tempo_status_string_4)
+   -- print (tempo_status_string_5)
 
   end
 
@@ -749,20 +753,6 @@ end
   end
 end
 
-
-
-
--- function grid_state_popularity_watcher()
---   -- get some idea of how much a particular grid is used
---   -- the idea is to use this on a fast forward backward undo / redo that just scrolls through the popular states
---   -- (i.e. states that have been used for a long time)
---   -- WIP The idea is to have a separate undo / redo that only uses hi popularity states
---   while true do
---     clock.sync(1) -- do this every beat
---     grid_state["gspc"] = grid_state["gspc"] + 1
---     --print ("grid_state.gspc is: " .. grid_state["gspc"])
---   end
--- end
 
 
 
@@ -1147,7 +1137,7 @@ function clock.transport.stop()
   --screen.text("Transport STOP")
   --screen.update()
 
-  -- refresh_grid_and_screen()
+
 
 
   display_tempo_status()
@@ -1445,15 +1435,6 @@ init_flutter_window()
 
 
 
- 
-
-
- --clock.run(grid_state_popularity_watcher) 
-
- 
-
-
-
 
  -- Periodically check if we need to save the grid state to file.
  -- TODO - if we're not saving this when running then might as well just save it when we stop (rather than have a loop)
@@ -1577,6 +1558,16 @@ function init_grid_state_table()
   else
     print ("I already have a grid_state table, no need to generate one")
   end
+
+  -- We want to make sure rows 7 and 8 are all off. 
+  -- There's no reason to have a different initial state for rows 7 and8
+  for y = 7, 8 do
+    for x = 1, 16 do
+      print("turn off x:" .. x .. " y:" .. y)
+      unconditional_set_grid_non_seq_button(x, y, 0)
+    end 
+  end
+
   
  print ("grid tally is: " .. get_tally(grid_state))
 
@@ -1831,7 +1822,8 @@ function have_held ()
 end  
 
 
-function unconditional_set_mozart(x, y, midi_note_number)
+function unconditional_set_mozart(x, y, midi_note_number, set_grid_on)
+ 
 
   print ("unconditional_set_mozart says: Got x: " .. x .. " y: " ..  y ..  " midi_note_number: " .. midi_note_number)
 
@@ -1850,7 +1842,9 @@ function unconditional_set_mozart(x, y, midi_note_number)
   slide_state[x][y] = 0 -- this is so we can always hear our change i.e. the pitch is not masked by a slide
 
   -- set the button on
-  unconditional_set_grid(x, y, 1)
+  if set_grid_on == 1 then
+    unconditional_set_grid(x, y, 1)
+  end
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
 
@@ -1858,7 +1852,29 @@ end
 
 
 
-function unconditional_set_grid(x, y, integer)
+function unconditional_set_grid_non_seq_button(x, y, integer)  
+  if y > TOTAL_SEQUENCE_ROWS then
+
+    if integer < 0 then
+      integer = 0
+    end  
+  
+    if integer > 1 then
+      integer = 1
+    end
+  
+    grid_state[x][y] = integer
+
+  else
+    print ("Error: unconditional_set_grid_non_seq_button will not set state of sequence button ")
+  end
+
+end  
+
+
+function unconditional_set_grid(x, y, integer)  
+
+if y >= 0 and y <= TOTAL_SEQUENCE_ROWS then
 
   if integer < 0 then
     integer = 0
@@ -1873,6 +1889,10 @@ function unconditional_set_grid(x, y, integer)
   last_x = x
   last_y = y 
   last_grid_value = integer
+
+else
+  print ("Error: unconditional_set_grid will not set state of non sequence button ")
+end
 
 end
 
@@ -1909,8 +1929,8 @@ function randomize_grid(x, y)
 
 -- else  
 
-  -- PATTERN CHANGE  we want to loop through all steps (columns) (j) and set them
-  for j = 1, 16 do
+  -- PATTERN CHANGE  we want to loop through all steps (columns) (i) and set them
+  for i = 1, 16 do
     -- on the current step...
     -- if we pressed a key on the right of the grid we have a high probability of chance being 1.
     -- i.e. key on left less chance the sequence will change. key on right, high chance it will change
@@ -1918,7 +1938,7 @@ function randomize_grid(x, y)
     chance = math.random(1, 17 - x) 
     if chance == 1 then
       random_grid_value = math.random(0, 1)
-      unconditional_set_grid(j, y, random_grid_value)
+      unconditional_set_grid(i, y, random_grid_value)
     end 
   end
 
@@ -1936,7 +1956,7 @@ function randomize_mozart(x, y)
     if chance == 1 then
       -- on the current step...
       random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
-      unconditional_set_mozart(j, y, random_mozart_value)
+      unconditional_set_mozart(j, y, random_mozart_value, 0) -- we don't want to also set the grid in this case.
     end
   end
 
@@ -2238,12 +2258,12 @@ end
 
 function do_mozart_down(x,y)
   print (" doing ".. ARM_MOZART_DOWN_BUTTON)
-    unconditional_set_mozart(x, y, mozart_state[x][y] - 1)
+    unconditional_set_mozart(x, y, mozart_state[x][y] - 1, 1)
 end  
 
 function do_mozart_up(x,y)
   print (" doing ".. ARM_MOZART_UP_BUTTON)
-    unconditional_set_mozart(x, y, mozart_state[x][y] + 1)
+    unconditional_set_mozart(x, y, mozart_state[x][y] + 1, 1)
 
 end 
 
@@ -2261,41 +2281,6 @@ function toggle_sequence_grid(x,y)
   end
 
 end  
-
--- WIP WIP
--- function set_mozart_state(x,y,captured_normal_midi_note_in)
-
--- if captured_normal_midi_note_in ~= -1 then
---   print ("Set mozart_state MIDI note via MIDI input" .. captured_normal_midi_note_in .. " on x: " .. x .. " y: " .. y )
-
---   -- Store the latest captured midi note in the mozart table
---   mozart_state[x][y] = captured_normal_midi_note_in
-  
---  else
---   print ("Not doing anything to mozart_state via MIDI input")  
---   -- print ("captured_normal_midi_note_in is  " .. captured_normal_midi_note_in) 
---  end 
-
--- end 
-
--- function bla_midi(x,y,midi_note_key_pressed)
-
--- if midi_note_key_pressed ~= -1 then
---   print ("Set mozart_state MIDI note via key press " .. midi_note_key_pressed .. " on x: " .. x .. " y: " .. y )
-
--- -- Store the latest captured midi note in the mozart table
---   --mozart_state[x][y] = midi_note_key_pressed
-
---   unconditional_set_mozart(x,y, midi_note_key_pressed)
---   unconditional_set_grid(x,y,1) -- also make sure the note is on
-
--- else
---   print ("Not doing anything to mozart_state via key press")  
---   -- print ("midi_note_key_pressed is  " .. midi_note_key_pressed) 
--- end 
-
--- end
--- END WIP WIP
 
  
 function put_slide_on(x,y)
@@ -2472,9 +2457,11 @@ if z == 1 then
   elseif y == 7 then
     print("Row7 On")
     arm_row7 = grid_button_function_name(x,y)
+    my_grid:led(x,y,12) -- just show that the button is pressed
   elseif y == 8 then
     print("Control On")
     arm_control = grid_button_function_name(x,y)
+    my_grid:led(x,y,12) 
   else
     print("Error")
   end  
@@ -2487,9 +2474,11 @@ else
   elseif y == 7 then
     print("Row7 Reset")
     arm_row7 = NO_FEATURE
+    my_grid:led(x,y,0) 
   elseif y == 8 then
     print("Control Reset")
     arm_control = NO_FEATURE
+    my_grid:led(x,y,0) 
   else
     print("Error")
   end
@@ -2536,52 +2525,52 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
   set_last_step(x)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 0)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0),1) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_02 and arm_control == NO_FEATURE then
   print("button" .. 2)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 1)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 1),1) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_03 and arm_control == NO_FEATURE then
   print("button" .. 3)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 2))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 2),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_04 and arm_control == NO_FEATURE then
   print("button" .. 4)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 3))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 3),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_05 and arm_control == NO_FEATURE then
   print("button" .. 5)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 4))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FOURTH * 1),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_06 and arm_control == NO_FEATURE then
   print("button" .. 6)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 5))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FOURTH * 2),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_07 and arm_control == NO_FEATURE then
   print("button" .. 7)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 6))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FOURTH * 3),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_08 and arm_control == NO_FEATURE then
   print("button" .. 8)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 7))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FOURTH * 4),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_09 and arm_control == NO_FEATURE then
   print("button" .. 9)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 8))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MAJOR_THIRD * 1),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_10 and arm_control == NO_FEATURE then
   print("button" .. 10)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 9))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MAJOR_THIRD * 2),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_11 and arm_control == NO_FEATURE then
   print("button" .. 11)             
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 10)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MAJOR_THIRD * 3),1) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_12 and arm_control == NO_FEATURE then
   print("button" .. 12)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 11)) 
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MAJOR_THIRD * 4),1) 
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_13 and arm_control == NO_FEATURE then
   print("button" .. 13)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 12))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 1),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_14 and arm_control == NO_FEATURE then
   print("button" .. 14)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 13))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 2),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_15 and arm_control == NO_FEATURE then
   print("button" .. 15)
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 14))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 3),1)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm_control == NO_FEATURE then
   print("button" .. 16) 
-  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL * 15))
+  unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 4),1)
 else
   print("(No action for this combination of buttons: " ..  operation_matix_string .. " )") 
 end -- end of grid_button_function_name tests
@@ -2766,7 +2755,7 @@ function refresh_grid_and_screen()
 
 
   for col = 1,COLS do 
-    for row = 1,ROWS do
+    for row = 1,TOTAL_SEQUENCE_ROWS do -- don't want to set (or display) non sequence rows here
       tally = tally .. grid_state[col][row]
 
       screen.move(10 + (col * 7),row * 7)
