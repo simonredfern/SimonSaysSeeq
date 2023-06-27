@@ -2,9 +2,9 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.4"
+version = "0.9.5"
 
-version_string = "SimonSaysSeeq on Norns v" .. version
+version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
