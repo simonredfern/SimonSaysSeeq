@@ -54,7 +54,13 @@ CV 4 Out is LFO (carrier) B * Decaying Env (Modulator) B
 
     - This resets on every Gate B if the modulator B has reached zero
 
+# Hardware
 
+We use a Betweener
+
+https://github.com/jkrame1/Betweener
+
+It runs a Teensy 3.2 microprocessor
 
 # Instructions for compiling (if you need to)
 
