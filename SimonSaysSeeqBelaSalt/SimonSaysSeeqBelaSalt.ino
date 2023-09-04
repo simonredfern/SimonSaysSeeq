@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.36-BelaSalt";
+const char version[16]= "v0.37-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -437,6 +437,9 @@ const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
 
+// Receive on midi channel 1 (0 internally)
+int midi_receive_channel = 0; // Midi channels are between 0 to 15. (Humans call this 1 - 16). So this is channel 1.
+
 uint8_t midi_channel_x = 0; // This is zero indexed. 0 will send on midi channel 1!
 uint8_t last_note_on = 0;
 uint8_t last_note_off = 0;
@@ -745,10 +748,10 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
             			count_of_file_operations = count_of_file_operations + 1;
 						
-						rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
-						rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
+						//rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
+						//rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
 						
-						//rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_x_midi_note_events[ln][bc][sc][n][1].velocity);
+						////rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_x_midi_note_events[ln][bc][sc][n][1].velocity);
 					
 						// Must cast the value to int else it won't be written to the file.
 						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
@@ -1184,7 +1187,7 @@ void ResetSequenceACounters(){
 
   target_led_2_state = HIGH;
 
-  rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
+  //rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
 
 
@@ -1217,11 +1220,13 @@ void ResetSequenceBCounters(){
 
 
 void printStatus(void*){
+  // This is used to print periodically. 
 
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    if(gCount % 1 == 0) {
+    // By setting this mod we can choose to print less frequently.  
+    if(gCount % 1000 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -1298,7 +1303,7 @@ void printStatus(void*){
 	
     	*/
     	
-    	rt_printf("\n==== Sequence A ======= \n");
+    	//rt_printf("\n==== Sequence A ======= \n");
     	
     	//rt_printf("sequence_a_length_input_raw is: %f \n", sequence_a_length_input_raw);
     	//rt_printf("sequence_a_pattern_input_raw is: %f \n", sequence_a_pattern_input_raw);
@@ -1503,84 +1508,92 @@ void DisableMidiNotes(uint8_t note){
 }
 
 
-void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, uint8_t channel){
+void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int channel){
 	
 	last_function = 466942;
 
-  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is %d bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
-  if (on_off == MIDI_NOTE_ON){
+  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is: %d - AND - bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
+  
+  if (channel == midi_receive_channel){
+  
+    rt_printf("***** I AM PROCESSING the midi event because it is on channel %d and midi_receive_channel is: %d \n", channel, midi_receive_channel);
+  
+  
+    if (on_off == MIDI_NOTE_ON){
 
-        // A mechanism to clear notes from memory by playing them quietly.
-        if (velocity < 7 ){
-           // Send Note OFF
+      // A mechanism to clear notes from memory by playing them quietly.
+      if (velocity < 7 ){
+        // Send Note OFF
 
-           midi.writeNoteOff(channel, note, 0);
-           
-           // Disable the note on all steps
-           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
-           DisableMidiNotes(note);
-           
-           last_note_disabled = note;
+        midi.writeNoteOff(channel, note, 0);
+        
+        // Disable the note on all steps
+        //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
+        DisableMidiNotes(note);
+        
+        last_note_disabled = note;
 
-          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_x_midi_note_events
-          // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
-          // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
-          // these Note OFF events. 
-          // One way is to store them here for processing after the note OFF actually happens. 
-          channel_x_ghost_events[note].is_active=1;
-    
+        // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_x_midi_note_events
+        // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
+        // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
+        // these Note OFF events. 
+        // One way is to store them here for processing after the note OFF actually happens. 
+        channel_x_ghost_events[note].is_active=1;
+  
+      } else {
+        // We want the note on, so set it on.
+
+        if (current_midi_lane != SILENT_MIDI_LANE){ 
+          rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+          // WRITE MIDI MIDI_DATA
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
         } else {
-          // We want the note on, so set it on.
+          rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
+        }
 
-          if (current_midi_lane != SILENT_MIDI_LANE){ 
-            rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
-            // WRITE MIDI MIDI_DATA
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
-          } else {
-            rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
-          }
+      } // End velocity check
 
 
-          // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
-          if (sequence_is_running == 0){
-          	midi.writeNoteOn(midi_channel_x, note, velocity); // echo midi to the output
-          }
-          
-          
-          last_note_on = note;
-          
-          rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
-
-        } 
-      
-          
-        } else {
-          
-            // Note Off
-             rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
-             
-             // WRITE MIDI MIDI_DATA (unless on silent lane)
-            if (current_midi_lane != SILENT_MIDI_LANE){ 
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+      // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
+      if (sequence_is_running == 0){
+        midi.writeNoteOn(channel, note, velocity); // echo midi to the output
+      }
+        
             
-            } else {
-               rt_printf("SILENT land so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
-            }
+      last_note_on = note;
+            
+      rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
 
-			      last_note_off = note;
-             
-			
-			// Echo Midibut only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
-			if (sequence_is_running == 0){ 
-				midi.writeNoteOff(midi_channel_x, note, 0);
-			}
-        	rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
-  }
-  } 
+      } else { // End of Note ON   
+        // Note Off
+        rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+        
+        // WRITE MIDI MIDI_DATA (unless on silent lane)
+        if (current_midi_lane != SILENT_MIDI_LANE){ 
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+        
+        } else {
+          rt_printf("SILENT land so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+        }
+
+        last_note_off = note;
+
+        // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
+        if (sequence_is_running == 0){ 
+          midi.writeNoteOff(channel, note, 0);
+        }
+            
+        rt_printf("Done setting MIDI note OFF (Sent) for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+    
+      } // End of Note Off
+  } else {
+ 	  rt_printf("###### I am NOT processing the midi because it was on channel %d and midi_receive_channel is set to: %d \n", channel, midi_receive_channel);
+  } // End of receive channel check
+} // End of function
 
 
 void GateAHigh(){
@@ -2167,26 +2180,31 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	uint8_t type_received = message.getType();
 	uint8_t note_received = message.getDataByte(0); // may have different meaning depending on the type
 	uint8_t velocity_received = message.getDataByte(1); // may have different meaning depending on the type
-	uint8_t channel_received = message.getChannel(); // we ignore the channel
+	int channel_received = message.getChannel(); // only recently we use the channel
 
+//rt_printf("B4 PrettyPrint type: %d, note: %d, velocity: %d, channel: %d  \n", type_received, note_received, velocity_received, channel_received);
 
-	rt_printf("Midi Message: type: %d, note: %d, velocity: %d, channel: %d  \n", type_received, note_received, velocity_received, channel_received);
+//  message.prettyPrint();
+
+// rt_printf("\n");  
+
+	//rt_printf("Midi Message: type: %d, note: %d, velocity: %d, channel: %d  \n", type_received, note_received, velocity_received, channel_received);
 
 	//rt_printf("Note: kmmNoteOn: %d, kmmNoteOff: %d \n", kmmNoteOn, kmmNoteOff);
 
 	// Check for a NOTE ON
     // Some keyboards send velocity 0 for note off instead of sending 0 for type, so we must check for that.
 	if(type_received == kmmNoteOn && velocity_received > 0){
-			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
+			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
 			// Write any note ON into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, midi_channel_x);
+			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, channel_received);
 	// Check for a NOTE OFF	 
 	} else if (message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
 		
-			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
+			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received: %d channel: \n", type_received, note_received, velocity_received, channel_received);
 			
 			// Write any note OFF into the sequence
-			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, midi_channel_x);
+			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, channel_received);
 			
 	// CLOCK but not currently working.
 	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
@@ -2196,7 +2214,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 		// int byte1 = message.getDataByte(1);
     	
     	
-    	rt_printf("MAYBE CLOCK MIDI Message: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
+    //	rt_printf("MAYBE CLOCK MIDI Message: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
     	
 
 		//rt_printf("THINK I GOT MIDI CLOCK - type: %d byte0: %d  byte1 : %d \n", type, byte0, byte1);
@@ -2208,7 +2226,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	// OTHER 
 	} else {
-			rt_printf("OTHER MIDI Message: type_received: %d, note_received: %d velocity_received %d Ignoring channel \n", type_received, note_received, velocity_received);
+			rt_printf("OTHER MIDI Message: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
 	}
 }
 
@@ -3159,7 +3177,7 @@ bool setup(BelaContext *context, void *userData){
 	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
 	ReadSequenceFromFiles();
         
-        rt_printf("Bye from Setup \n");
+        rt_printf("Bye from Setup. - I hope you will send me a clock :-) \n");
 
         return true;
 }
