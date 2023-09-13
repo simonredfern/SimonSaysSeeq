@@ -52,4 +52,6 @@ Norns (Shield) sends MIDI to create Gates on the Flame.
 
 Norns (Shield) controls Crow over USB to produce CV with glissando / slide.
 
+On Crow, the 4 sockets nearest the USB are OUTPUTS (pitch). The two sockets furthest from the USB are INPUTS (unused).
+
 ![IMG_4290-annotate](https://user-images.githubusercontent.com/485218/184129289-01ab1354-dd41-4740-858d-358702cac016.jpeg)
