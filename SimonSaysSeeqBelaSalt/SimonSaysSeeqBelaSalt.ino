@@ -125,12 +125,12 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <cstdlib>
 
 
-#include <curlpp/cURLpp.hpp>
-#include <curlpp/Easy.hpp>
-#include <curlpp/Options.hpp>
+//#include <curlpp/cURLpp.hpp>
+//#include <curlpp/Easy.hpp>
+//#include <curlpp/Options.hpp>
 
 
-using namespace curlpp::options;
+//using namespace curlpp::options;
 
 
 Scope scope;
@@ -604,6 +604,7 @@ float flash_interval = 44000;
 
 
 
+
 void FlashHello(){
 	last_function = 238469;
 	
@@ -974,6 +975,21 @@ uint8_t bar_a_play; // for reading
 uint8_t bar_b_count; // for wrting
 uint8_t bar_b_play; // for reading
 
+
+void SetPlayAFromCount(){
+	last_function = 6798;
+	
+	bar_a_play = bar_a_count;
+	step_a_play = step_a_count;
+}
+
+void SetPlayBFromCount(){
+	
+	last_function = 79;
+	
+	bar_b_play = bar_b_count;
+	step_b_play = step_b_count;
+}
 
 
 // Helper functions that operate on global variables. Yae!  
@@ -1877,20 +1893,7 @@ int gAudioFramesPerAnalogFrame = 0;
 
 
 
-void SetPlayAFromCount(){
-	last_function = 6798;
-	
-	bar_a_play = bar_a_count;
-	step_a_play = step_a_count;
-}
 
-void SetPlayBFromCount(){
-	
-	last_function = 79;
-	
-	bar_b_play = bar_b_count;
-	step_b_play = step_b_count;
-}
 
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
