@@ -229,7 +229,7 @@ float draw_delay_feedback_amount = 0.999;
 
 
 uint8_t midi_lane_input = 0; // normal
-
+uint8_t clock_divider_input_value = 1;
 
 #include <math.h> //sinf
 #include <time.h> //time
@@ -1260,7 +1260,7 @@ void printStatus(void*){
     gCount++;
 	
     // By setting this mod we can choose to print less frequently.  
-    if(gCount % 1000 == 0) {
+    if(gCount % 10 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -1355,7 +1355,9 @@ void printStatus(void*){
     //	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
     	
     	rt_printf("step_a_count is: %d \n", step_a_count);
-    	
+    	rt_printf("clock_divider_input_value is: %d \n", clock_divider_input_value);
+
+
     	/*
     	if (step_a_count == FIRST_STEP) {
     		rt_printf("FIRST_STEP A \n");
