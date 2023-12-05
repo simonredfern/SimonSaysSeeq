@@ -66,17 +66,14 @@ crontab -e
 * * * * * /root/bin/SimonSaysSeeq/midi_usb_info.job
 ```
 
-To work with a monome grids:
-
-https://github.com/padenot/bela-utils/blob/master/bela-setup-monome.sh
-
 
 To enable network for bela to mac:
+
+```
 
 vi /etc/network/interfaces
 
 systemctl restart networking.service
-
 
 ping 8.8.8.8
 
@@ -84,22 +81,25 @@ root@bela:~# cat /etc/resolv.conf
 nameserver 192.168.3.1
 nameserver 8.8.8.8
 
-========
+```
+
+*Experiemental* notes about monome grids (currently not used or working with the Bela here) (See SimonSaysSeeqNorns folder instead for monome):
+
+https://github.com/padenot/bela-utils/blob/master/bela-setup-monome.sh
 
 Follow the instructions (including various hacks to files)
 https://forum.bela.io/d/240-monome-grid-bela/24
 
-#!/bin/bash
+Install all that is required to use a monome device on a vanilla bela board,
+start the serialosc daemon on boot using systemd.
+Requires an internet connection to use apt and git.
 
-# Install all that is required to use a monome device on a vanilla bela board,
-# start the serialosc daemon on boot using systemd.
-# Requires an internet connection to use apt and git.
 
-(
+```
+
 sudo apt-get update -y
-
 sudo apt-get install -y libudev-dev
-)
+
 
 
 sudo apt install libudev-dev liblo-dev libavahi-compat-libdnssd-dev 
@@ -143,6 +143,8 @@ ldconfig
 now try: 
 
 systemctl start serialoscd
+
+```
 
 Learn to code to serialosc
 
