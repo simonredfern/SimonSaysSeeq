@@ -380,7 +380,7 @@ const int SEQUENCE_B_LENGTH_ANALOG_INPUT_PIN = 6; // CV 6 (SALT+)
 
 
 const uint8_t MIDI_LANE_INPUT_PIN = 5; // CV 7 (SALT+) 
-const uint8_t DRAW_INPUT_PIN = 7; // CV 8 (SALT+)
+const uint8_t CLOCK_DIVIDER_INPUT_PIN = 7; // CV 8 (SALT+)
 
 
 bool need_to_reset_draw_buf_pointer = false;
@@ -418,6 +418,11 @@ const uint8_t MAX_BAR = 7; // Memory User!
 
 const uint8_t MIN_LANE = 0;
 const uint8_t MAX_LANE = 7; // Memory User!
+
+const uint8_t MIN_CLOCK_DIVIDER_SETTING = 1;
+const uint8_t MAX_CLOCK_DIVIDER_SETTING = 8;
+
+
 
 uint8_t previous_lane = 0;
 uint8_t current_midi_lane = 0;
@@ -2143,7 +2148,10 @@ void OnTick(){
  
 
   // Decide if we have a "step"
-  if (loop_timing_a.tick_count_in_sequence % 6 == 0){
+  
+  // clock divide here?
+
+  if (loop_timing_a.tick_count_in_sequence % (6 * clock_divider_input_value) == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
@@ -2158,7 +2166,7 @@ void OnTick(){
 
 
   // Decide if we have a "step"
-  if (loop_timing_b.tick_count_in_sequence % 6 == 0){
+  if (loop_timing_b.tick_count_in_sequence % (6 * clock_divider_input_value) == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
@@ -3388,35 +3396,37 @@ void render(BelaContext *context, void *userData)
 		  	SetLane(midi_lane_input);
 		  }
 		  
-		  // Delay Feedback (decay) 	  // > 0.999 leads to distorsion
-		  if (ch == DRAW_INPUT_PIN){
+		  if (ch == CLOCK_DIVIDER_INPUT_PIN){
 
-        
-		        // Increment draw buffer write pointer
-		        if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
-		            draw_buf_write_pointer = 0;
-		        }
+        clock_divider_input_value = floor(map(analogRead(context, n, CLOCK_DIVIDER_INPUT_PIN), 0, 1, MIN_CLOCK_DIVIDER_SETTING, MAX_CLOCK_DIVIDER_SETTING));
+
+// Now using this pot for clock devider
+
+		        // // Increment draw buffer write pointer
+		        // if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
+		        //     draw_buf_write_pointer = 0;
+		        // }
 		        
-		        // this might be set when we reset sequence (get to FIRST_STEP)
-		        if (need_to_reset_draw_buf_pointer == true){
-		        	draw_buf_write_pointer = 0;
-		        	need_to_reset_draw_buf_pointer = false;
-		        }
+		        // // this might be set when we reset sequence (get to FIRST_STEP)
+		        // if (need_to_reset_draw_buf_pointer == true){
+		        // 	draw_buf_write_pointer = 0;
+		        // 	need_to_reset_draw_buf_pointer = false;
+		        // }
 		
-		        // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
-		        if (new_button_3_state == 1){
-		  		      analog_out_8 = analogRead(context,n,DRAW_INPUT_PIN);
-		            draw_buffer[draw_buf_write_pointer] = analog_out_8;
-		        } else {
-		        	// Else use the buffer value
-		            // analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
-		        	analog_out_8 = draw_buffer[draw_buf_write_pointer];
+		        // // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
+		        // if (new_button_3_state == 1){
+		  		  //     analog_out_8 = analogRead(context,n,CLOCK_DIVIDER_INPUT_PIN);
+		        //     draw_buffer[draw_buf_write_pointer] = analog_out_8;
+		        // } else {
+		        // 	// Else use the buffer value
+		        //     // analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
+		        // 	analog_out_8 = draw_buffer[draw_buf_write_pointer];
 		        	
 		        	
-		        }     
+		        // }     
 		
-				    // Write output Draw Output
-		        analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
+				    // // Write output Draw Output
+		        // analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
 
 
 		  }
