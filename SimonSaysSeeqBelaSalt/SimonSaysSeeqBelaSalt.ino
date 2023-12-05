@@ -1545,7 +1545,8 @@ void DisableMidiNotes(uint8_t note){
 
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int channel){
-	
+	// This function writes midi notes into channel_x_midi_note_events based on the current step_a_count
+
 	last_function = 466942;
 
   rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is: %d - AND - bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
@@ -1905,6 +1906,8 @@ int gAudioFramesPerAnalogFrame = 0;
 // See http://docs.bela.io/classMidi.html for the Bela Midi stuff
 
 void PlayMidi(){
+
+  // This function only plays midi based on the current state of step_a_play and whatever is in the channel_x_midi_note_events array.
 	
 	last_function = 364892;
 	
@@ -2153,6 +2156,7 @@ void OnTick(){
   
   // clock divide here?
 
+  // This is how we define when a step happens.
   if (loop_timing_a.tick_count_in_sequence % (6 * clock_divider_input_value) == 0){
     //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
@@ -2187,6 +2191,7 @@ void OnTick(){
 
 // Here we could clock divide 
 
+// Do we call this too often
   PlayMidi();
    
   // Advance and Reset ticks and steps
