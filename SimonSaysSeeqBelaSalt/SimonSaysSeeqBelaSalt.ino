@@ -3176,7 +3176,10 @@ bool setup(BelaContext *context, void *userData){
 
 
         // The two LEDS on Salt
-        pinMode(context, 0, LED_1_PIN, OUTPUT);
+        pinMode(context, 0, LED_1_PIN, OUTPUT); // RED
+        //pinMode(context, 0, LED_1_PIN, INPUT); // YELLOW - doesn't work
+
+
         pinMode(context, 0, LED_2_PIN, OUTPUT);
         
         // The two LEDS on Salt + 
