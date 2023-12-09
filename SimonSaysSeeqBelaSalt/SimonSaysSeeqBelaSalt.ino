@@ -1260,7 +1260,7 @@ void printStatus(void*){
     gCount++;
 	
     // By setting this mod we can choose to print less frequently.  
-    if(gCount % 10 == 0) {
+    if(gCount % 1000 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -1553,19 +1553,22 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
   
   if (channel == midi_receive_channel){
   
-    rt_printf("***** I AM ACCEPTING the midi event because it is on channel %d and midi_receive_channel is: %d \n", channel, midi_receive_channel);
+    //rt_printf("***** I AM ACCEPTING the midi event because it is on channel %d and midi_receive_channel is: %d \n", channel, midi_receive_channel);
 
 
     if (note >= lowest_midi_note && note <= highest_midi_note) {
 
-        rt_printf("***** I AM PROCESSING the midi event because note %d is within lowest_midi_note %d and highest_midi_note %d \n", note, lowest_midi_note,  highest_midi_note);
+        //rt_printf("***** I AM PROCESSING the midi event because note %d is within lowest_midi_note %d and highest_midi_note %d \n", note, lowest_midi_note,  highest_midi_note);
 
     
       if (on_off == MIDI_NOTE_ON){
 
         // A mechanism to clear notes from memory by playing them quietly.
-        if (velocity < 7 ){
+        if (velocity < 25 ){
           // Send Note OFF
+
+          rt_printf("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***  \n", velocity, note);
+
 
           midi.writeNoteOff(channel, note, 0);
           
@@ -2191,7 +2194,7 @@ void OnTick(){
 
 // Here we could clock divide 
 
-// Do we call this too often
+// Do we call this too often?
   PlayMidi();
    
   // Advance and Reset ticks and steps
