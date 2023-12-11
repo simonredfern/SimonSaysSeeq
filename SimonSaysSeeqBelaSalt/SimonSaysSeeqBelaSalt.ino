@@ -556,10 +556,6 @@ bool target_digital_gate_b_out_state = false;
 bool current_digital_gate_b_out_state = false;
 
 
-bool target_led_1_state = false;
-bool target_led_2_state = false;
-bool target_led_3_state = false;
-bool target_led_4_state = false;
 
 uint8_t target_led_1_tri_state = 0;
 uint8_t target_led_2_tri_state = 0;
@@ -641,24 +637,11 @@ if(frame_timer < 440000) {
 	// No point in flashing if the interval is too small
 	if (flash_interval > 100){
 		if (frame_timer >= next_flash_change){
-			// target_led_1_state = ! target_led_1_state;
-    	// 	target_led_2_state = ! target_led_2_state;
-    	// 	target_led_3_state = ! target_led_3_state;
-    	// 	target_led_4_state = ! target_led_4_state;
 
         target_led_1_tri_state = TriStateToggle(target_led_1_tri_state);
         target_led_2_tri_state = TriStateToggle(target_led_2_tri_state);
         target_led_3_tri_state = TriStateToggle(target_led_3_tri_state);
         target_led_4_tri_state = TriStateToggle(target_led_4_tri_state);
-
-
-        // if (target_led_4_tri_state == 0){
-        //   target_led_4_tri_state = 1;
-        // } else if (target_led_4_tri_state == 1){
-        //   target_led_4_tri_state = 2;
-        // } else if (target_led_4_tri_state == 2){
-        //   target_led_4_tri_state = 0;
-        // }
 
 			last_flash_change = frame_timer;
 			flash_interval = flash_interval / 1.5;
@@ -667,11 +650,6 @@ if(frame_timer < 440000) {
 	// Once we're done..
 	} else {
 		// In the end we want the led to be off (until something else changes the state)
-		target_led_1_state = false;
-    	target_led_2_state = false;
-    	target_led_3_state = false;
-    	target_led_4_state = false;
-      
       target_led_1_tri_state = 0;
       target_led_2_tri_state = 0;
       target_led_3_tri_state = 0;
@@ -1253,7 +1231,6 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-  target_led_2_state = HIGH;
   target_led_2_tri_state = 1;
 
   //rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
@@ -1695,7 +1672,6 @@ void GateAHigh(){
   
   target_analog_gate_a_out_state = true;
   target_digital_gate_a_out_state = true;
-  target_led_1_state = true; 
   target_led_1_tri_state = 1; 
 
 
@@ -1714,7 +1690,6 @@ void GateALow(){
   target_analog_gate_a_out_state = false;
   target_digital_gate_a_out_state = false;
   
-  target_led_1_state = false; 
   target_led_1_tri_state = 0;
   
   //per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
@@ -1733,7 +1708,6 @@ void GateBHigh(){
   
   target_digital_gate_b_out_state = true;
 
-  target_led_3_state = true;
   target_led_3_tri_state = 1; 
     
 
@@ -1749,8 +1723,6 @@ void GateBLow(){
 
   target_digital_gate_b_out_state = false;
 
-
-  target_led_3_state = false; 
   target_led_3_tri_state = 0;
   
   
@@ -1975,7 +1947,6 @@ void PlayMidi(){
             	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
             	
               // Set LED 4 high
-              target_led_4_state = true;
               target_led_4_tri_state = 1;
               
               midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
@@ -1988,7 +1959,6 @@ void PlayMidi(){
            //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step_a +  String(" Found and will send Note OFF for ") + n );
 
            // Set LED 4 low
-           target_led_4_state = false;
            target_led_4_tri_state = 0;
 
            midi.writeNoteOff(midi_channel_x, n, 0);
@@ -2583,7 +2553,6 @@ void AllNotesOff(void*){
 		  rt_printf("All MIDI notes OFF \n");
 		  for (uint8_t n = 0; n <= 127; n++) {
 		     midi.writeNoteOff(midi_channel_x, n, 0);
-         target_led_4_state = false;
          target_led_4_tri_state = 0;
 		  }
 		  last_notes_off_frame = frame_timer;
@@ -3279,7 +3248,7 @@ bool setup(BelaContext *context, void *userData){
         return true;
 }
 
-
+// Thanks to giuliomoro
 void drivePwm(BelaContext* context, int pwmPin)
 {
     static unsigned int count = 0;
@@ -3293,6 +3262,7 @@ void drivePwm(BelaContext* context, int pwmPin)
     }
 }
 
+// Thanks to giuliomoro
 void setLed(BelaContext* context, int ledPin,  int color)
 {
     switch(color)
@@ -3300,8 +3270,8 @@ void setLed(BelaContext* context, int ledPin,  int color)
         case 0: // off
             pinMode(context, 0, ledPin, INPUT);
             break;
-        case 1: // red (I think? yellow otherwise)
-        case 2: // yellow (I think? red otherwise)
+        case 1: // red 
+        case 2: // yellow 
             pinMode(context, 0, ledPin, OUTPUT);
             digitalWrite(context, 0, ledPin, color - 1); // note the -1 so that it's 0 or 1
             break;
@@ -3323,15 +3293,8 @@ void render(BelaContext *context, void *userData)
 	
 	last_function = 886653;
 
-//////
 
   drivePwm(context, LED_PWM_PIN);
-
-
-
-
-
-  //////
 
   ///////////////////////////////////////////
   // Look for Analogue Clock (24 PPQ)
@@ -3722,34 +3685,6 @@ void render(BelaContext *context, void *userData)
           setLed(context, LED_3_PIN, target_led_3_tri_state);
           setLed(context, LED_4_PIN, target_led_4_tri_state);
 
-
-          // if (target_led_1_state == HIGH){
-          //   digitalWriteOnce(context, m, LED_1_PIN, LOW);      
-          // } else {
-          //   digitalWriteOnce(context, m, LED_1_PIN, HIGH);
-          // }
-          
-          // if (target_led_2_state == HIGH){
-          //   digitalWriteOnce(context, m, LED_2_PIN, LOW);      
-          // } else {
-          //   digitalWriteOnce(context, m, LED_2_PIN, HIGH);
-          // }
-          
-          // if (target_led_3_state == HIGH){
-          //   digitalWriteOnce(context, m, LED_3_PIN, LOW);      
-          // } else {
-          //   digitalWriteOnce(context, m, LED_3_PIN, HIGH);
-          // }
-          
-          // if (target_led_4_state == HIGH){
-          //   digitalWriteOnce(context, m, LED_4_PIN, LOW);      
-          // } else {
-          //   digitalWriteOnce(context, m, LED_4_PIN, HIGH);
-          // }
-
-          
-          
-        	
         
             // CLOCK RISE
             // If detect a rising clock edge
@@ -3793,7 +3728,6 @@ void render(BelaContext *context, void *userData)
             // RESET A FALL
             if ((new_reset_a_in_state == LOW) && (current_reset_a_in_state == HIGH)){
               current_reset_a_in_state = LOW;
-              target_led_2_state = LOW;
               target_led_2_tri_state = 0;
             }
             
