@@ -4,6 +4,12 @@ See this video for an intro into some features and how to modify source code: [S
 
 ![SimonSaysSeeq - on Bela Salt with Salt+ 5 December 2023](https://github.com/simonredfern/SimonSaysSeeq/assets/485218/9e7547bc-99ac-41cc-9224-38f2cffdf1ef)
 
+
+Various notes:
+
+Analog outputs (code value from 0 to 1) corresponding to the range 0 to 5V
+
+
 To find out which USB devices are active (if disconnected from your main computer)
 
 First create SimonSaysSeeq directory in /var/log becasue we'll log there.
@@ -149,3 +155,7 @@ systemctl start serialoscd
 Learn to code to serialosc
 
 http://daniel-bytes.github.io/serialosc_example/
+
+
+
+
