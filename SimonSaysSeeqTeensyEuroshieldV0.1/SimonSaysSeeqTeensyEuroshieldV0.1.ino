@@ -14,14 +14,14 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.28; 
+const float simon_says_seq_version = 0.29; 
 
 
 #include <Audio.h>
 #include <MIDI.h>
 
 
-AudioSynthWaveformDc     external_modulator_object;
+AudioSynthWaveformDc     external_modulator_object; // TODO maybe use (this) input for Reset instead?
 
 AudioSynthWaveformDc     gate_dc_waveform;
 AudioSynthWaveform       cv_waveform_a_object;      
@@ -889,12 +889,11 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
    //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
 
+   float amp_1_gain = 1.0; // Try unity, previously was 0.2;
 
 
- 
-   //float amp_1_gain = fscale( 0, 1, 0, 1, left_peak_level, 0);
 
-   float amp_1_gain = 0.2;  // let external ofset / gain set this higher
+
    
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
@@ -1242,7 +1241,7 @@ void Led4Digital(bool state){
 }
 
 
-//////////
+////////// TODO look at this function, seems messy
 bool last_button_1_state = HIGH;
 
 bool Button1HasChanged(bool button_1_state){
