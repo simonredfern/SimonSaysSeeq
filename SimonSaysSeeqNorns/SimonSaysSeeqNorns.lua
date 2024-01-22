@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.5"
+version = "0.9.6"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -128,6 +128,8 @@ MOZART_INTERVAL_PERFECT_FIFTH = 7 -- go up in fifths
 MOZART_INTERVAL_PERFECT_FOURTH = 4
 MOZART_INTERVAL_MAJOR_THIRD = 3
 MOZART_INTERVAL_MINOR_THIRD = 2
+
+MOZART_RANDOM_MAX_DELTA = 48
 
 
 -- WARNING --------------------------
@@ -1962,8 +1964,10 @@ function randomize_mozart(x, y)
     chance = math.random(1, 17 - x) 
     if chance == 1 then
       -- on the current step...
-      random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + 12)
+      random_mozart_value = math.random(MOZART_BASE_MIDI_NOTE, MOZART_BASE_MIDI_NOTE + MOZART_RANDOM_MAX_DELTA)
       unconditional_set_mozart(j, y, random_mozart_value, 0) -- we don't want to also set the grid in this case.
+      -- TODO instead of just choosing a random note for each step, we could choose a note near to the note currently used on this step?
+      -- So each time we press randomise we would diverge from the current notes
     end
   end
 
@@ -2219,27 +2223,27 @@ end
 
 
 function preset_mozart(x,y)
--- set all rows to MIDI note A4 (treat all the sequence rows the same.)
+-- if x == 1 do set all rows to MIDI note A4 (treat all the sequence rows the same.)
+-- else do some other patterns TODO improve this.
 
-    mozart_state[1][y] = MOZART_BASE_MIDI_NOTE -- A2
-    mozart_state[2][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[3][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[4][y] = MOZART_BASE_MIDI_NOTE
 
-    mozart_state[5][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[6][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[7][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[8][y] = MOZART_BASE_MIDI_NOTE
-
-    mozart_state[9][y]  = MOZART_BASE_MIDI_NOTE
-    mozart_state[10][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[11][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[12][y] = MOZART_BASE_MIDI_NOTE
-
-    mozart_state[13][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[14][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[15][y] = MOZART_BASE_MIDI_NOTE
-    mozart_state[16][y] = MOZART_BASE_MIDI_NOTE
+for i = 1, 16 do
+  if x == 1 then
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE, 0)
+  elseif x == 2 then
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + i, 0)
+  elseif x == 3 then
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + 12 - i, 0)
+  elseif x == 4 then
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + i + x, 0)
+  elseif x == 5 then
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE - i + (2 * x), 0)
+  elseif x == 6 then 
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + (2 * i) + (2 * x) , 0)    
+  else
+    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + (2 * i) + (2 * x) , 0) 
+  end   
+end
 
 
 end  
