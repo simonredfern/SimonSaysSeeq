@@ -320,6 +320,7 @@ normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
  captured_normal_midi_note_in = -1
  midi_note_key_pressed = -1
 
+ direction = 1 
 
 
 -- psudo random for our grid ids
@@ -2221,28 +2222,60 @@ function preset_grid (x,y)
 
 end
 
+function get_interesting_note_value(x, y, x_pressed)
 
-function preset_mozart(x,y)
+  last_note = mozart_state[x][y] 
+
+  print (" last_note ".. last_note)
+
+  print (" direction ".. direction)
+
+  if direction == 1 then
+    
+    new_note = last_note + x + x_pressed
+
+    print (" new_note ".. new_note)
+
+    if new_note >= MOZART_BASE_MIDI_NOTE + MOZART_RANDOM_MAX_DELTA then
+      new_note = last_note - x - x_pressed
+      direction = 0
+    end
+
+  else
+    new_note = last_note - x - x_pressed
+
+    if new_note <= MOZART_BASE_MIDI_NOTE then
+      new_note = last_note + x + x_pressed
+      direction = 1
+    end
+
+
+  end
+
+
+  print (" new_note ".. new_note)
+  return new_note
+
+end
+
+
+
+
+
+function preset_mozart(x_button_pressed,y)
+-- Set the notes on row y.
+-- Use the value to determine the algorithm. 
+
 -- if x == 1 do set all rows to MIDI note A4 (treat all the sequence rows the same.)
 -- else do some other patterns TODO improve this.
 
-
-for i = 1, 16 do
-  if x == 1 then
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE, 0)
-  elseif x == 2 then
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + i, 0)
-  elseif x == 3 then
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + 12 - i, 0)
-  elseif x == 4 then
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + i + x, 0)
-  elseif x == 5 then
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE - i + (2 * x), 0)
-  elseif x == 6 then 
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + (2 * i) + (2 * x) , 0)    
+for x = 1, 16 do
+  if x_button_pressed == 1 then
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE, 0) -- same note
   else
-    unconditional_set_mozart(i, y, MOZART_BASE_MIDI_NOTE + (2 * i) + (2 * x) , 0) 
-  end   
+    unconditional_set_mozart(x, y, get_interesting_note_value(x, y, x_button_pressed), 0)
+  end  
+ 
 end
 
 
