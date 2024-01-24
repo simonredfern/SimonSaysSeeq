@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.6"
+version = "0.9.7"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -2068,6 +2068,47 @@ function set_sequence(x,y,midi_note)
 end  
 
 
+
+-- here
+
+
+function random_dense_grid(x, y)
+  -- x and y should be the button pressed
+
+  -- Depending on which column 1-16 is pressed on the row we want to change, we make the pattern more or less dense.
+  -- i.e.
+  -- <- sparse RANDOM PATTERN CREATION dense -> 
+
+  print ("Hello from random_dense_grid: x: " .. x .. " y: " .. y) 
+
+  on_bias = x / 16 -- more bias towards an on note with a higher x button pressed
+
+
+  print ("on_bias: " .. on_bias ) 
+  
+ 
+
+  for j = 1, 16 do
+    -- on the current step...
+    -- chance of that step becoming 1 (on) (higher chance if we pressed button 16)
+    
+    dice = math.random() -- we want a real number between 0 and 1
+
+    print ("dice: " .. dice ) 
+
+    if on_bias > dice then 
+      unconditional_set_grid(j, y, 1)
+    else 
+      unconditional_set_grid(j, y, 0)
+    end 
+  end
+
+end
+
+
+
+
+
 function preset_grid (x,y)
 
     -- Any button pressed on this row (1)
@@ -2075,147 +2116,183 @@ function preset_grid (x,y)
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 1
-      grid_state[2][y] = 0
-      grid_state[3][y] = 0
-      grid_state[4][y] = 0
+      if x == 1 then
 
-      grid_state[5][y] = 1
-      grid_state[6][y] = 0
-      grid_state[7][y] = 0
-      grid_state[8][y] = 0
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-      grid_state[9][y]  = 1
-      grid_state[10][y] = 0
-      grid_state[11][y] = 0
-      grid_state[12][y] = 0
+        grid_state[5][y] = 1
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-      grid_state[13][y] = 1
-      grid_state[14][y] = 0
-      grid_state[15][y] = 0
-      grid_state[16][y] = 0
+        grid_state[9][y]  = 1
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 1
+        grid_state[14][y] = 0
+        grid_state[15][y] = 0
+        grid_state[16][y] = 0
+      
+      else
+        random_dense_grid(x, y)
+      end
+            
 
      -- Any button pressed on this row (2)  
     elseif y == 2 then
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 0
-      grid_state[2][y] = 0
-      grid_state[3][y] = 1
-      grid_state[4][y] = 0
+      if x == 1 then
 
-      grid_state[5][y] = 0
-      grid_state[6][y] = 0
-      grid_state[7][y] = 1
-      grid_state[8][y] = 0
+        grid_state[1][y] = 0
+        grid_state[2][y] = 0
+        grid_state[3][y] = 1
+        grid_state[4][y] = 0
 
-      grid_state[9][y]  = 0
-      grid_state[10][y] = 0
-      grid_state[11][y] = 1
-      grid_state[12][y] = 0
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 1
+        grid_state[8][y] = 0
 
-      grid_state[13][y] = 0
-      grid_state[14][y] = 0
-      grid_state[15][y] = 1
-      grid_state[16][y] = 0
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 1
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
+
+      else
+        random_dense_grid(x, y)
+      end
 
     elseif y == 3 then
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 1
-      grid_state[2][y] = 1
-      grid_state[3][y] = 0
-      grid_state[4][y] = 1
+      if x == 1 then
 
-      grid_state[5][y] = 1
-      grid_state[6][y] = 1
-      grid_state[7][y] = 0
-      grid_state[8][y] = 1
+        grid_state[1][y] = 1
+        grid_state[2][y] = 1
+        grid_state[3][y] = 0
+        grid_state[4][y] = 1
 
-      grid_state[9][y]  = 1
-      grid_state[10][y] = 1
-      grid_state[11][y] = 0
-      grid_state[12][y] = 1
+        grid_state[5][y] = 1
+        grid_state[6][y] = 1
+        grid_state[7][y] = 0
+        grid_state[8][y] = 1
 
-      grid_state[13][y] = 1
-      grid_state[14][y] = 1
-      grid_state[15][y] = 0
-      grid_state[16][y] = 1
+        grid_state[9][y]  = 1
+        grid_state[10][y] = 1
+        grid_state[11][y] = 0
+        grid_state[12][y] = 1
+
+        grid_state[13][y] = 1
+        grid_state[14][y] = 1
+        grid_state[15][y] = 0
+        grid_state[16][y] = 1
+
+      else
+        random_dense_grid(x, y)
+      end
 
     elseif y == 4 then
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 0
-      grid_state[2][y] = 0
-      grid_state[3][y] = 0
-      grid_state[4][y] = 0
+      if x == 1 then
 
-      grid_state[5][y] = 0
-      grid_state[6][y] = 0
-      grid_state[7][y] = 0
-      grid_state[8][y] = 0
+        grid_state[1][y] = 0
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-      grid_state[9][y]  = 0
-      grid_state[10][y] = 0
-      grid_state[11][y] = 0
-      grid_state[12][y] = 0
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-      grid_state[13][y] = 0
-      grid_state[14][y] = 0
-      grid_state[15][y] = 1
-      grid_state[16][y] = 0
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
 
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
+
+      else
+        random_dense_grid(x, y)
+      end  
 
     elseif y == 5 then
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 1
-      grid_state[2][y] = 0
-      grid_state[3][y] = 0
-      grid_state[4][y] = 0
+      if x == 1 then
 
-      grid_state[5][y] = 0
-      grid_state[6][y] = 0
-      grid_state[7][y] = 0
-      grid_state[8][y] = 0
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-      grid_state[9][y]  = 0
-      grid_state[10][y] = 0
-      grid_state[11][y] = 0
-      grid_state[12][y] = 0
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-      grid_state[13][y] = 0
-      grid_state[14][y] = 0
-      grid_state[15][y] = 1
-      grid_state[16][y] = 0
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
+
+      else
+        random_dense_grid(x, y)
+      end   
 
     elseif y == 6 then
 
       print ("Setting preset for row: " .. x) 
 
-      grid_state[1][y] = 1
-      grid_state[2][y] = 0
-      grid_state[3][y] = 0
-      grid_state[4][y] = 0
+      if x == 1 then
 
-      grid_state[5][y] = 0
-      grid_state[6][y] = 1
-      grid_state[7][y] = 0
-      grid_state[8][y] = 0
+        grid_state[1][y] = 1
+        grid_state[2][y] = 0
+        grid_state[3][y] = 0
+        grid_state[4][y] = 0
 
-      grid_state[9][y]  = 0
-      grid_state[10][y] = 0
-      grid_state[11][y] = 0
-      grid_state[12][y] = 0
+        grid_state[5][y] = 0
+        grid_state[6][y] = 1
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
 
-      grid_state[13][y] = 0
-      grid_state[14][y] = 0
-      grid_state[15][y] = 1
-      grid_state[16][y] = 0
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 1
+        grid_state[16][y] = 0
+
+      else
+        random_dense_grid(x, y)
+      end   
 
     end
 
