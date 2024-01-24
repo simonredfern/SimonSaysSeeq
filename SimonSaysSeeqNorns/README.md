@@ -2,6 +2,7 @@
 
 ![Image 1](https://user-images.githubusercontent.com/485218/183310740-9ae29170-92d2-48f8-9fb8-c081f015f669.jpeg)
 
+The picture above shows a [Monome Norns Shield](https://monome.org/docs/norns/shield/) which is connected to a [Monome Grid](https://monome.org/docs/grid/), a [Monome Crow](https://monome.org/docs/crow/), a [Flame U16MGTV](http://www.flame-instruments.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf) and a MIDI keyboard.
 
 The bottom two rows of buttons are control buttons. You can use them to control the whole sequence or "put something on" one of the steps or one of the sequence rows.
 
