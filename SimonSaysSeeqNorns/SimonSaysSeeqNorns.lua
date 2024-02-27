@@ -1033,6 +1033,10 @@ function process_ratchet (output, ratchet_mode)
     gate_off(output)
 
     -- this is a "lag" (pause before playing) 
+    -- This applies lag to a single step.
+    -- If we want to apply swing we'd need to look at a swing setting of the track
+    -- Then if the track is swung we'd need to process each step's lag differently 
+    -- depending on the type of swing
 elseif ratchet_mode == 6 then
   clock.sync(1/32) 
   gate_on(output)
@@ -2092,7 +2096,7 @@ function random_dense_grid(x, y)
     -- on the current step...
     -- chance of that step becoming 1 (on) (higher chance if we pressed button 16)
     
-    dice = math.random() -- we want a real number between 0 and 1
+    dice = math.random() -- we want a real number between 0 and 1.
 
     print ("dice: " .. dice ) 
 
