@@ -212,7 +212,7 @@ unsigned int cv_waveform_a_frequency_raw;
 float cv_waveform_a_frequency;
 
 // set this to true for guaranteed reset of lfo
-boolean reset_cv_lfo_at_FIRST_STEP = true;
+bool reset_cv_lfo_at_FIRST_STEP = true;
 
 // Amplitude of the LFO
 unsigned int cv_waveform_a_amplitude_raw;
@@ -927,11 +927,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println(String("cv_waveform_b_frequency_raw is: ") + cv_waveform_b_frequency_raw  );
    ///////////////////////
 
-  // if the pot is turned clockwise i.e. the CV lasts for a long time, reset it at step 1. // This could be the case anyway (see value of reset_cv_lfo_at_FIRST_STEP above)
-  if (cv_waveform_b_frequency_raw > CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT - 20){
-    reset_cv_lfo_at_FIRST_STEP = true;
-    //Serial.println(String("reset_cv_lfo_at_FIRST_STEP is: ") + reset_cv_lfo_at_FIRST_STEP);
-  }
+
 
 
    // We want a value that goes from high to low as we turn the pot to the right.
@@ -1105,7 +1101,7 @@ void GateLow(){
 
 
 
-// HERE
+
 // Kind of syncs the CV 
 void ConditionalSyncAndResetCv(){
   //Serial.println(String("CV Pulse On") );
