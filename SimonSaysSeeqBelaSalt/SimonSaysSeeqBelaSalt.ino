@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.38-BelaSalt";
+const char version[16]= "v0.39-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -1231,7 +1231,7 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-  target_led_2_tri_state = 1;
+  // target_led_2_tri_state = 1;
 
   //rt_printf("******************** ResetSequenceACounters Done. current_sequence_a_length_in_steps is: %d step_a_count is now: %d \n", current_sequence_a_length_in_steps, step_a_count);
 }
@@ -1583,6 +1583,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
 
           rt_printf("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***  \n", velocity, note);
 
+          // Set to yellow
           target_led_4_tri_state = 2;
 
           midi.writeNoteOff(channel, note, 0);
@@ -3723,11 +3724,14 @@ void render(BelaContext *context, void *userData)
               current_reset_a_in_state = HIGH;
               // Do reset A
               ResetSequenceACounters();
+              // show it
+              target_led_2_tri_state = 2;
             }
             
             // RESET A FALL
             if ((new_reset_a_in_state == LOW) && (current_reset_a_in_state == HIGH)){
               current_reset_a_in_state = LOW;
+              // show off
               target_led_2_tri_state = 0;
             }
             
@@ -3736,11 +3740,15 @@ void render(BelaContext *context, void *userData)
               current_reset_b_in_state = HIGH;
               // Do reset B
               ResetSequenceBCounters();
+              // show it
+              target_led_4_tri_state = 2;
             }
             
             // RESET B FALL
             if ((new_reset_b_in_state == LOW) && (current_reset_b_in_state == HIGH)){
               current_reset_b_in_state = LOW;
+              // show off
+              target_led_4_tri_state = 0;
             }
             
             
