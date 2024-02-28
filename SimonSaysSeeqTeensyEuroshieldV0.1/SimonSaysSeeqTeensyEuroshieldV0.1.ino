@@ -327,7 +327,7 @@ void ResetToFirstStep(){
 uint8_t IncrementStepCount(){
   step_count = step_count_sanity(step_count + 1);
 
-  Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
+  //Serial.println(String("IncrementStepCount. sequence_length_in_steps is ") + sequence_length_in_steps + String(" step_count is now: ") + step_count);
   return step_count_sanity(step_count);
 }
 
@@ -340,7 +340,7 @@ uint8_t IncrementOrResetBarCount(){
     bar_count = BarCountSanity(bar_count + 1);
   }
   
-  Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
+  //Serial.println(String("** IncrementOrResetBarCount bar_count is now: ") + bar_count);
   return BarCountSanity(bar_count);
 }
 
@@ -914,9 +914,14 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
     // MONITOR GATE    
     if (gate_out_monitor.available())
     {
-        float gate_peak = gate_out_monitor.read();
-        //Serial.println(String("gate_out_monitor gate_peak ") + gate_peak  );
-        Led1Level(fscale( 0.0, 1.0, 0, 255, gate_peak, 0));
+        float gate_out_peak = gate_out_monitor.read();
+
+        Serial.print("gate_out_peak:");
+        Serial.print(gate_out_peak);
+        Serial.print(",");
+
+
+        Led1Level(fscale( 0.0, 1.0, 0, 255, gate_out_peak, 0));
     } else {
       //Serial.println(String("gate_out_monitor not available ")   );
     }
@@ -925,9 +930,15 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
     /// This is connected to cv_waveform and reads the level. We use that to drive the led.
     if (cv_out_monitor.available())
     {
-        float cv_peak = cv_out_monitor.read();
-        Serial.println(String("cv_out_monitor cv_peak ") + cv_peak  );
-        Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
+        float cv_out_peak = cv_out_monitor.read();
+       // Serial.println(String("cv_out_peak ") + cv_out_peak  );
+
+        // For the serial monitor and plotter. keep it simple for the plotter 
+        Serial.print("cv_out_peak:");
+        Serial.print(cv_out_peak);
+        Serial.print(",");
+
+        Led4Level(fscale( 0.0, 1.0, 0, 255, cv_out_peak, 0));
     } else {
       //Serial.println(String("gate_out_monitor not available ")   );
     }
@@ -1077,7 +1088,7 @@ void ConditionalSyncAndResetCv(){
   if (RampIsPositive()){
     if (cv_waveform_b_amplitude == 1 || reset_cv_lfo_at_FIRST_STEP == 1) {
       cv_waveform_b_amplitude = 0;
-      Serial.println(String("ConditionalSyncAndResetCv : 0") );
+      //Serial.println(String("ConditionalSyncAndResetCv : 0") );
       
       SetWaveformBObjectAmplitude ();
     }
