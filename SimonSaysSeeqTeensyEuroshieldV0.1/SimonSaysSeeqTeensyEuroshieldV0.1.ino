@@ -166,8 +166,8 @@ unsigned int lower_pot_low_value_at_button_change;
 
 
 
-float left_peak_level;
-float right_peak_level;
+float left_in_peak_level;
+float right_in_peak_level;
 
 float external_modulator_object_level;
 
@@ -345,7 +345,7 @@ uint8_t IncrementOrResetBarCount(){
 }
 
 
-boolean midi_clock_detected = LOW;
+bool midi_clock_detected = LOW;
 
 
  unsigned int  min_pot_value;
@@ -578,10 +578,18 @@ int note, velocity, channel;
    // Look for Analogue Clock (24 PPQ)
    // Note: We use this input for other things too.
    if (peak_L.available()){
-        left_peak_level = peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
-        // Serial.println(String("**** left_peak_level: ") + left_peak_level) ;
+        left_in_peak_level = peak_L.read() * 1.0; // minimum seems to be 0.1 from intelij attenuator
+        // Serial.println(String("**** left_in_peak_level: ") + left_in_peak_level) ;
 
         //Serial.println(String("analogue_gate_state: ") + analogue_gate_state) ;
+
+
+      // This creates lots of output!
+      //  Serial.print("left_in_peak_level:");
+      //  Serial.print(left_in_peak_level);
+      //  Serial.print(",");
+      //  Serial.print("\n");
+
 
          // ONLY if no MIDI clock, run the sequencer from the Analogue clock.
         if (midi_clock_detected == LOW) {
@@ -591,7 +599,7 @@ int note, velocity, channel;
           // Only look for this clock if we don't have midi.
 
             // Rising clock edge? // state-change-1
-            if ((left_peak_level > 0.5) && (analogue_gate_state == LOW)){
+            if ((left_in_peak_level > 0.5) && (analogue_gate_state == LOW)){
     
               if (sequence_is_running == LOW){
                 StartSequencer();
@@ -608,7 +616,7 @@ int note, velocity, channel;
             } 
     
             // Falling clock edge?
-            if ((left_peak_level < 0.5) && (analogue_gate_state == HIGH)){
+            if ((left_in_peak_level < 0.5) && (analogue_gate_state == HIGH)){
               analogue_gate_state = LOW;
               //Serial.println(String("Went LOW "));
             } 
@@ -771,16 +779,36 @@ int SequenceSettings(){
   
    if (peak_R.available())
     {
-        right_peak_level = peak_R.read() * 1.0;
+        right_in_peak_level = peak_R.read() * 1.0;
+
+        // drive the LED - could tweak this so we don't always have some kind of on
+        // Led2Level(fscale( 0.0, 1.0, 0, 255, right_in_peak_level, 0));
+
+        // this display logic might be confusing if we don't in fact trigger the reset.
+        if (right_in_peak_level > 0.2) {
+            Led2Level(BRIGHT_3);
+        } else {
+          Led2Level(BRIGHT_0);
+        }
+
+
+
 
         // HERE
 
-        Serial.println(String("right_peak_level: ") + right_peak_level );  
+        //Serial.println(String("right_in_peak_level: ") + right_in_peak_level );
+
+        Serial.print("right_in_peak_level:");
+        Serial.print(right_in_peak_level);
+        Serial.print(",");
+        Serial.print("\n"); // this line break should probably be the last print of the "loop"
+
+
     } else {
-      Serial.println(String("right_peak_level not available ")   );
+      Serial.println(String("right_in_peak_level not available ")   );
     }
 
-     external_modulator_object_level = right_peak_level;
+     external_modulator_object_level = right_in_peak_level;
 
     external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
 
@@ -862,7 +890,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
 
 
-// Hmm why are we setting this gain based on the left_peak_level? (jan 19 2021)
+// Hmm why are we setting this gain based on the left_in_peak_level? (jan 19 2021)
 
    amp_1_object.gain(amp_1_gain); 
    
