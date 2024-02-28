@@ -35,13 +35,13 @@ AudioAmplifier amp_for_monitor_object;
 AudioInputI2S        audioInput;         // audio shield: mic or line-in
 AudioOutputI2S       audioOutput;        // audio shield: headphones & line-out         
 
-AudioAnalyzeRMS          cv_monitor;           
-AudioAnalyzeRMS          gate_monitor; 
+AudioAnalyzeRMS          cv_out_monitor;           
+AudioAnalyzeRMS          gate_out_monitor; 
 
 //////////////////////////
 // GATE Output and Monitor
 AudioConnection          patchCord3(gate_dc_waveform, 0, audioOutput, 0); // GATE -> UPPER Audio Out
-AudioConnection          patchCord9(gate_dc_waveform, gate_monitor); // GATE -> montior (for LED)
+AudioConnection          patchCord9(gate_dc_waveform, gate_out_monitor); // GATE -> montior (for LED)
 
 //////////////
 // Modulate CV
@@ -61,7 +61,7 @@ AudioConnection          patchCord10(amp_1_object, 0, audioOutput, 1); // CV -> 
 
 AudioConnection          patchCord2(amp_1_object, amp_for_monitor_object);
 
-AudioConnection          patchCord14(amp_for_monitor_object, cv_monitor); // CV -> monitor (for LED)
+AudioConnection          patchCord14(amp_for_monitor_object, cv_out_monitor); // CV -> monitor (for LED)
 
  
 
@@ -616,7 +616,7 @@ int note, velocity, channel;
         } // 
         
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      //Serial.println(String("gate_out_monitor not available ")   );
     }
 
  
@@ -715,7 +715,8 @@ int SequenceSettings(){
 
   // state-change-3
   
-  int button_1_has_changed = Button1HasChanged(button_1_state);
+  // Do we use this?
+  //int button_1_has_changed = Button1HasChanged(button_1_state);
   //Serial.println(String("button_1_has_changed is: ") + button_1_has_changed);
 
 
@@ -771,9 +772,12 @@ int SequenceSettings(){
    if (peak_R.available())
     {
         right_peak_level = peak_R.read() * 1.0;
-        //Serial.println(String("right_peak_level: ") + right_peak_level );  
+
+        // HERE
+
+        Serial.println(String("right_peak_level: ") + right_peak_level );  
     } else {
-      //Serial.println(String("right_peak_level not available ")   );
+      Serial.println(String("right_peak_level not available ")   );
     }
 
      external_modulator_object_level = right_peak_level;
@@ -847,35 +851,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
  sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
 
 
-  // Highlight the first step 
-  // if (step_count == FIRST_STEP) {
 
-  //   // If the sequence length is 8 (very predictable), make it shine!
-  //   if (sequence_length_in_steps == 8){
-  //     Led2Level(BRIGHT_5);
-  //     //Led4Digital(true);
-  //   } else {
-  //     Led2Level(BRIGHT_2);
-  //     //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
-  //     //Led4Digital(false);
-  //   }
-  
-  // } else {
-  //     // Else off.
-  //     Led2Level(BRIGHT_0);
-
-  // }
-
-// continuous indication of length
-    // if (sequence_length_in_steps == 16){
-    //   Led3Level(BRIGHT_2);     
-    // } else if (sequence_length_in_steps == 8){
-    //   Led3Level(BRIGHT_5);
-    // } else if (sequence_length_in_steps == 4){
-    //   Led3Level(BRIGHT_4);
-    // } else {
-    //   Led3Level(BRIGHT_0);
-    // }
 
    float amp_1_gain = 1.0; // Try unity, previously was 0.2;
 
@@ -893,10 +869,7 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    amp_for_monitor_object.gain(1.0);
 
    
-   // setting-
-   //Led3Level(fscale( 0, 1, 0, BRIGHT_3, amp_1_gain, -1.5));
-
-
+  
    ////////////////////////////////////// 
    // CV stuff
    // ***LOWER Pot HIGH Button***
@@ -939,24 +912,24 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
 
     // MONITOR GATE    
-    if (gate_monitor.available())
+    if (gate_out_monitor.available())
     {
-        float gate_peak = gate_monitor.read();
-        //Serial.println(String("gate_monitor gate_peak ") + gate_peak  );
+        float gate_peak = gate_out_monitor.read();
+        //Serial.println(String("gate_out_monitor gate_peak ") + gate_peak  );
         Led1Level(fscale( 0.0, 1.0, 0, 255, gate_peak, 0));
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      //Serial.println(String("gate_out_monitor not available ")   );
     }
     
     // MONITOR CV
     /// This is connected to cv_waveform and reads the level. We use that to drive the led.
-    if (cv_monitor.available())
+    if (cv_out_monitor.available())
     {
-        float cv_peak = cv_monitor.read();
-        //Serial.println(String("gate_monitor cv_peak ") + cv_peak  );
+        float cv_peak = cv_out_monitor.read();
+        Serial.println(String("cv_out_monitor cv_peak ") + cv_peak  );
         Led4Level(fscale( 0.0, 1.0, 0, 255, cv_peak, 0));
     } else {
-      //Serial.println(String("gate_monitor not available ")   );
+      //Serial.println(String("gate_out_monitor not available ")   );
     }
 
 
@@ -1218,7 +1191,7 @@ void Led1Level(uint8_t level){
 
 // Reset In 
 void Led2Level(uint8_t level){
-  analogWrite(euroshieldLedPins[1], level); // WAS 1
+  analogWrite(euroshieldLedPins[1], level); 
 }
 
 // Gate In
@@ -1229,7 +1202,7 @@ void Led3Level(uint8_t level){
 // CV Out
 void Led4Level(uint8_t level){
   //Serial.println(String("****** Led4Level level ") + level);
-  analogWrite(euroshieldLedPins[3], level); // Was 3
+  analogWrite(euroshieldLedPins[3], level); 
 }
 
 void Led4Digital(bool state){
@@ -1326,7 +1299,7 @@ void AdvanceSequenceChronology(){
   // Just to show the tick progress  
   ticks_after_step = loop_timing.tick_count_in_sequence % 6;
 
- Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step + String(" tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence  ); 
+ // Serial.println(String("bar_count is ") + bar_count  + String(" step_count is ") + step_count  + String(" ticks_after_step is ") + ticks_after_step + String(" tick_count_in_sequence is ") + loop_timing.tick_count_in_sequence  ); 
 
   
 }
