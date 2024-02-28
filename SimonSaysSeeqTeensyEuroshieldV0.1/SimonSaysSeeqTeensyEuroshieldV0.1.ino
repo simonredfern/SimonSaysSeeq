@@ -14,7 +14,7 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.29; 
+const float simon_says_seq_version = 0.30; 
 
 
 #include <Audio.h>
@@ -877,18 +877,6 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
       Led3Level(BRIGHT_0);
     }
 
-
-  // Led3Level(fscale( MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, 0, BRIGHT_5, sequence_length_in_steps, -1.5));   
-   
-   // UPPER Pot LOW Button (Jitter Reduction AKA Stability)
-   //jitter_reduction = (upper_pot_low_value & jitter_reduction_bits_5_4_3_2_1) >> 0;
-   //Led3Level(fscale( 0, 31, 0, BRIGHT_3, jitter_reduction, -1.5));
-
-   
-   //jitter_reduction = fscale( 0, 255, 0, 4, left_peak_level, 0);
-   //Serial.println(String("jitter_reduction is: ") + jitter_reduction  );
-   //Led3Level(fscale( 0, 255, 0, BRIGHT_3, jitter_reduction, -1.5));
-
    float amp_1_gain = 1.0; // Try unity, previously was 0.2;
 
 
@@ -1215,21 +1203,25 @@ void Led1State(char state){
   
 }
 
+// Gate Out
 void Led1Level(uint8_t level){
-  analogWrite(euroshieldLedPins[0], level);
+  analogWrite(euroshieldLedPins[2], level); // WAS 0
 }
 
+// Reset In 
 void Led2Level(uint8_t level){
-  analogWrite(euroshieldLedPins[1], level);
+  analogWrite(euroshieldLedPins[1], level); // WAS 1
 }
 
+// Gate In
 void Led3Level(uint8_t level){
-  analogWrite(euroshieldLedPins[2], level);
+  analogWrite(euroshieldLedPins[0], level); // Was 2
 }
 
+// CV Out
 void Led4Level(uint8_t level){
   //Serial.println(String("****** Led4Level level ") + level);
-  analogWrite(euroshieldLedPins[3], level);
+  analogWrite(euroshieldLedPins[3], level); // Was 3
 }
 
 void Led4Digital(bool state){
