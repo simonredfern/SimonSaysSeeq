@@ -848,34 +848,34 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 
 
   // Highlight the first step 
-  if (step_count == FIRST_STEP) {
+  // if (step_count == FIRST_STEP) {
 
-    // If the sequence length is 8 (very predictable), make it shine!
-    if (sequence_length_in_steps == 8){
-      Led2Level(BRIGHT_5);
-      //Led4Digital(true);
-    } else {
-      Led2Level(BRIGHT_2);
-      //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
-      //Led4Digital(false);
-    }
+  //   // If the sequence length is 8 (very predictable), make it shine!
+  //   if (sequence_length_in_steps == 8){
+  //     Led2Level(BRIGHT_5);
+  //     //Led4Digital(true);
+  //   } else {
+  //     Led2Level(BRIGHT_2);
+  //     //Led2Level(fscale( FIRST_STEP, sequence_length_in_steps, 0, BRIGHT_1, sequence_length_in_steps, 0));
+  //     //Led4Digital(false);
+  //   }
   
-  } else {
-      // Else off.
-      Led2Level(BRIGHT_0);
+  // } else {
+  //     // Else off.
+  //     Led2Level(BRIGHT_0);
 
-  }
+  // }
 
 // continuous indication of length
-    if (sequence_length_in_steps == 16){
-      Led3Level(BRIGHT_2);     
-    } else if (sequence_length_in_steps == 8){
-      Led3Level(BRIGHT_5);
-    } else if (sequence_length_in_steps == 4){
-      Led3Level(BRIGHT_4);
-    } else {
-      Led3Level(BRIGHT_0);
-    }
+    // if (sequence_length_in_steps == 16){
+    //   Led3Level(BRIGHT_2);     
+    // } else if (sequence_length_in_steps == 8){
+    //   Led3Level(BRIGHT_5);
+    // } else if (sequence_length_in_steps == 4){
+    //   Led3Level(BRIGHT_4);
+    // } else {
+    //   Led3Level(BRIGHT_0);
+    // }
 
    float amp_1_gain = 1.0; // Try unity, previously was 0.2;
 
@@ -1173,17 +1173,25 @@ void CvStop(){
 
 
 
-
+// HERE
 void clockShowHigh(){
   //Serial.println(String("Clock Show HIGH ") );
-  //analogWrite(teensy_led_pin, BRIGHT_4);   // set the LED on
-  digitalWrite(teensy_led_pin, HIGH);   // set the LED on
+
+  // Indicate first step with brighter led
+  if (step_count == FIRST_STEP){
+    Led3Level(BRIGHT_5);
+  } else {
+    Led3Level(BRIGHT_1);
+  }
+  
+
+
 }
 
 void clockShowLow(){
   //Serial.println(String("Clock Show LOW") );
-  //analogWrite(teensy_led_pin, BRIGHT_0);
-  digitalWrite(teensy_led_pin, LOW);   // set the LED off
+  Led3Level(BRIGHT_0);
+
 }
 
 
