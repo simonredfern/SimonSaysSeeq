@@ -109,7 +109,7 @@ const uint8_t FIRST_BAR = 0;
 const uint8_t MAX_BAR = 1; // Memory User!
 
 
-const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 4; // ONE INDEXED
+const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 8; // ONE INDEXED
 const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
 
 ///////////////////////
@@ -178,7 +178,7 @@ float external_modulator_object_level;
 ////////////////////////////////////////////////////
 // Musical parameters that the user can tweak.
 
-uint8_t sequence_length_in_steps_raw;
+//uint8_t sequence_length_in_steps_raw;
 
 
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
@@ -798,10 +798,11 @@ int SequenceSettings(){
 
         //Serial.println(String("right_in_peak_level: ") + right_in_peak_level );
 
-        Serial.print("right_in_peak_level:");
-        Serial.print(right_in_peak_level);
-        Serial.print(",");
-        Serial.print("\n"); // this line break should probably be the last print of the "loop"
+        // Nice format for serial monitor and plotter
+        //Serial.print("right_in_peak_level:");
+        //Serial.print(right_in_peak_level);
+        //Serial.print(",");
+        //Serial.print("\n"); // this line break should probably be the last print of the "loop"
 
 
     } else {
@@ -863,10 +864,8 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
    //Serial.println();
 
    gray_code_sequence = Binary2Gray(binary_sequence);
-   //Serial.println(String("gray_code_sequence is: ") + gray_code_sequence  );
-   //Serial.print("\t");
-   //Serial.print(gray_code_sequence, BIN);
-   //Serial.println();
+
+   // print this onstep for less print out
 
 
     the_sequence = gray_code_sequence;
@@ -876,24 +875,13 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
 // ***UPPER pot LOW value***
 
 
- sequence_length_in_steps_raw = fscale( min_pot_value, max_pot_value, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
+sequence_length_in_steps = fscale( 1, 1023, MIN_SEQUENCE_LENGTH_IN_STEPS, MAX_SEQUENCE_LENGTH_IN_STEPS, upper_pot_low_value, 0);
 
 
 
 
-   float amp_1_gain = 1.0; // Try unity, previously was 0.2;
-
-
-
-
-   
-   //Serial.println(String("amp_1_gain is: ") + amp_1_gain  );
-
-
-// Hmm why are we setting this gain based on the left_in_peak_level? (jan 19 2021)
-
+   float amp_1_gain = 1.0; // Try unity, previously was 0.2
    amp_1_object.gain(amp_1_gain); 
-   
    amp_for_monitor_object.gain(1.0);
 
    
@@ -944,9 +932,10 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
     {
         float gate_out_peak = gate_out_monitor.read();
 
-        Serial.print("gate_out_peak:");
-        Serial.print(gate_out_peak);
-        Serial.print(",");
+        // Nice output for serial monitor and serial plotter
+        //Serial.print("gate_out_peak:");
+        //Serial.print(gate_out_peak);
+        //Serial.print(",");
 
 
         Led1Level(fscale( 0.0, 1.0, 0, 255, gate_out_peak, 0));
@@ -962,9 +951,9 @@ binary_sequence_upper_limit = pow(2.0, sequence_length_in_steps) - 1;
        // Serial.println(String("cv_out_peak ") + cv_out_peak  );
 
         // For the serial monitor and plotter. keep it simple for the plotter 
-        Serial.print("cv_out_peak:");
-        Serial.print(cv_out_peak);
-        Serial.print(",");
+        //Serial.print("cv_out_peak:");
+        //Serial.print(cv_out_peak);
+        //Serial.print(",");
 
         Led4Level(fscale( 0.0, 1.0, 0, 255, cv_out_peak, 0));
     } else {
@@ -1074,6 +1063,40 @@ void OnStep(){
      //Serial.println(String("not play ")   );
    }
 
+
+
+
+  // Nice format for serial monitor and plotter
+  Serial.print("step_count:");
+  Serial.print(step_count);
+  Serial.print(",");
+
+  Serial.print("sequence_length_in_steps:");
+  Serial.print(sequence_length_in_steps);
+  Serial.print(",");
+
+
+
+  Serial.print("\n"); // this line break should probably be the last print of the "loop"
+
+
+
+
+
+  Serial.print("gray_code_sequence:");
+  Serial.print(gray_code_sequence);
+  Serial.print(",");
+  Serial.print("\n");
+
+
+
+   //Serial.println(String("gray_code_sequence is: ") + gray_code_sequence  );
+   //Serial.print("\t");
+   //Serial.print("gray_code_sequence_BIN:");
+   //Serial.print(gray_code_sequence, BIN);
+   //Serial.print("\n");
+   //Serial.println();
+
    
       
 }
@@ -1091,6 +1114,12 @@ void OnNotStep(){
 void GateHigh(){
   //Serial.println(String("Gate HIGH at tick_count_since_start: ") + loop_timing.tick_count_since_start);
   gate_dc_waveform.amplitude(0.99, 10);
+
+
+
+ //Serial.println(String("Setting MIDI note ON for note ") + note + String(" when bar is ") + bar_count + String(" when step is ") + step_count + String(" velocity is ") + velocity );
+       
+
 
 }
 
@@ -1271,7 +1300,7 @@ void AdvanceSequenceChronology(){
   // This function advances or resets the sequence powered by the clock.
   // But first check / set the desired sequence length
 
-  sequence_length_in_steps = sequence_length_in_steps_raw;
+  //sequence_length_in_steps = sequence_length_in_steps_raw;
 
   //Serial.println(String("sequence_length_in_steps is: ") + sequence_length_in_steps  );
 
@@ -1496,15 +1525,25 @@ uint8_t step_count_sanity(uint8_t step_count_){
 // Floating Point Autoscale Function V0.1
 // Paul Badger 2007
 // Modified from code by Greg Shakar
+
+
+
+
+
+
 float fscale( float originalMin, float originalMax, float newBegin, float
 newEnd, float inputValue, float curve){
+
+// Given the inputValue which is in the range of originalMin to originalMax, return a new value in the range newBegin to newEnd.
+// The curve parmeter emphasises the lower / upper values somehow. 
+
 
   float OriginalRange = 0;
   float new_range = 0;
   float zeroRefCurVal = 0;
   float normalizedCurVal = 0;
   float rangedValue = 0;
-  boolean invFlag = 0;
+  bool invFlag = 0;
 
 
   // condition curve parameter
