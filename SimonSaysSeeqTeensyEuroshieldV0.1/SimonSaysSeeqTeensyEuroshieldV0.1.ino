@@ -1077,14 +1077,14 @@ void OnStep(){
 
 
 
-  Serial.print("\n"); // this line break should probably be the last print of the "loop"
+  //Serial.print("\n"); // this line break should probably be the last print of the "loop"
 
 
 
 
 
-  Serial.print("gray_code_sequence:");
-  Serial.print(gray_code_sequence);
+  Serial.print("binary_sequence:");
+  Serial.print(binary_sequence);
   Serial.print(",");
   Serial.print("\n");
 
