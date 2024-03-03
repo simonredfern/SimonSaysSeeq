@@ -102,7 +102,7 @@ const uint8_t BRIGHT_5 = 255;
 
 // Use zero based index for sequencer. i.e. step_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
-const uint8_t MAX_STEP = 15;
+
 
 // Use zero based index for bar.
 const uint8_t FIRST_BAR = 0;
@@ -110,7 +110,10 @@ const uint8_t MAX_BAR = 1; // Memory User!
 
 
 const uint8_t MIN_SEQUENCE_LENGTH_IN_STEPS = 8; // ONE INDEXED
-const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 16; // ONE INDEXED
+const uint8_t MAX_SEQUENCE_LENGTH_IN_STEPS = 20; // ONE INDEXED
+
+const uint8_t MAX_STEP = MAX_SEQUENCE_LENGTH_IN_STEPS; // was 15 to give a 16 step sequencer
+
 
 ///////////////////////
 
@@ -791,6 +794,11 @@ int SequenceSettings(){
               ResetToFirstStep();
               analogue_reset_state = HIGH;
 
+              Serial.print("analogue_reset_state:");
+              Serial.print(analogue_reset_state);
+              Serial.print(",");
+              Serial.print("\n");
+
 
 
 
@@ -801,12 +809,18 @@ int SequenceSettings(){
             if ((right_in_peak_level < 0.5) && (analogue_reset_state == HIGH)){
               Led2Level(BRIGHT_0);
               analogue_reset_state = LOW;
-              //Serial.println(String("Went LOW "));
-            } 
+
 
               Serial.print("analogue_reset_state:");
               Serial.print(analogue_reset_state);
               Serial.print(",");
+               Serial.print("\n");
+
+
+              //Serial.println(String("Went LOW "));
+            } 
+
+
 
 
         //Serial.println(String("right_in_peak_level: ") + right_in_peak_level );
@@ -1364,9 +1378,9 @@ void AdvanceSequenceChronology(){
       // If somehow we overshot (because pot was being turned whilst sequence running), only 
       loop_timing.tick_count_since_start % 6 == 0 
   )
-  // or we're past 16 beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
+  // or we're past MAX_SEQUENCE_LENGTH_IN_STEPS beats worth of ticks. (this could happen if the sequence length gets changed during run-time)
   || 
-  loop_timing.tick_count_in_sequence >= 16 * 6 // Fix for multiple bars
+  loop_timing.tick_count_in_sequence >= MAX_SEQUENCE_LENGTH_IN_STEPS * 6 // Fix for multiple bars
   ) { // Reset
     ResetToFirstStep();
   } else {
