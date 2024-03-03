@@ -487,7 +487,9 @@ void setup() {
 
 unsigned long last_clock_pulse=0;
 
-boolean analogue_gate_state = LOW;
+bool analogue_gate_state = LOW;
+bool analogue_reset_state = LOW;
+
 
 boolean sequence_is_running = LOW;
 
@@ -779,22 +781,33 @@ int SequenceSettings(){
   
    if (peak_R.available())
     {
+
         right_in_peak_level = peak_R.read() * 1.0;
-
-        // drive the LED - could tweak this so we don't always have some kind of on
-        // Led2Level(fscale( 0.0, 1.0, 0, 255, right_in_peak_level, 0));
-
-        // this display logic might be confusing if we don't in fact trigger the reset.
-        if (right_in_peak_level > 0.2) {
-            Led2Level(BRIGHT_3);
-        } else {
-          Led2Level(BRIGHT_0);
-        }
+            // Rising edge on reset input? 
+            if ((right_in_peak_level > 0.5) && (analogue_reset_state == LOW)){
+              // drive the LED - could tweak this so we don't always have some kind of on
+              // Led2Level(fscale( 0.0, 1.0, 0, 255, right_in_peak_level, 0));
+              Led2Level(BRIGHT_3);
+              ResetToFirstStep();
+              analogue_reset_state = HIGH;
 
 
 
 
-        // HERE
+              //Serial.println(String("Went HIGH ")); 
+            } 
+    
+            // Falling clock edge?
+            if ((right_in_peak_level < 0.5) && (analogue_reset_state == HIGH)){
+              Led2Level(BRIGHT_0);
+              analogue_reset_state = LOW;
+              //Serial.println(String("Went LOW "));
+            } 
+
+              Serial.print("analogue_reset_state:");
+              Serial.print(analogue_reset_state);
+              Serial.print(",");
+
 
         //Serial.println(String("right_in_peak_level: ") + right_in_peak_level );
 
@@ -809,9 +822,9 @@ int SequenceSettings(){
       Serial.println(String("right_in_peak_level not available ")   );
     }
 
-     external_modulator_object_level = right_in_peak_level;
 
-    external_modulator_object.amplitude(1 - external_modulator_object_level, 10);
+
+    external_modulator_object.amplitude(1 - right_in_peak_level, 10);
 
 
 
