@@ -2128,6 +2128,56 @@ void AdvanceSequenceBChronology(){
 }
 
 
+void InitMidiSequence(bool force){
+	
+	last_function = 32786;
+	
+  if (init_midi_sequence_has_run == false || force == true){	
+
+  rt_printf("InitMidiSequence Start \n");
+
+
+  // Loop through lanes
+  for (uint8_t ln = MIN_LANE; ln <= MAX_LANE; ln++) {
+
+  // Loop through bars
+  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
+
+    // Loop through steps
+    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
+      //Serial.println(String("Step ") + sc );
+    
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Initialise and print Note on (1) and Off (2) contents of the array.
+        // WRITE MIDI MIDI_DATA
+        channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
+        channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
+  
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
+      } 
+    }
+  }
+}
+    for (uint8_t n = 0; n <= 127; n++) {
+     channel_x_ghost_events[n].is_active = 0;
+     //rt_printf("Init Step with ghost Note: %s is_active false", n );
+  }
+  
+
+
+    init_midi_sequence_has_run = true;
+
+	rt_printf("InitMidiSequence Done \n");
+	
+  } else {
+  	rt_printf("InitMidiSequence Skipped because already done \n");
+  }
+	
+	
+} // End of InitMidiSequence
+
 
 
 
@@ -2237,6 +2287,13 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	int MIDI_STATUS_OF_CLOCK = 7; // not  (decimal 248, hex 0xF8) ??
 	
+  uint8_t MIDI_SUSTAIN_PEDAL_TYPE = 3; 
+  uint8_t MIDI_SUSTAIN_PEDAL_NOTE_NUMBER = 64;
+  uint8_t MIDI_SUSTAIN_PEDAL_VELOCITY = 127;
+  uint8_t MIDI_SUSTAIN_PEDAL_CHANNEL = 0; 
+
+
+
 	// Read midi loop
 
 	uint8_t type_received = message.getType();
@@ -2269,7 +2326,11 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, channel_received);
 			
 	// CLOCK but not currently working.
-	} else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
+	} else if (message.getType() == MIDI_SUSTAIN_PEDAL_TYPE && note_received == MIDI_SUSTAIN_PEDAL_NOTE_NUMBER && velocity_received == MIDI_SUSTAIN_PEDAL_VELOCITY && channel_received == MIDI_SUSTAIN_PEDAL_CHANNEL){
+    target_led_4_tri_state = 2; // yellow
+    InitMidiSequence(true);
+    Bela_scheduleAuxiliaryTask(gAllNotesOff);
+  } else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
 			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock (kmmSystem ?)
 		// int type = message.getType();
 		// int byte0 = message.getDataByte(0);
@@ -2288,7 +2349,7 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 
 	// OTHER 
 	} else {
-			rt_printf("OTHER MIDI Message: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
+			rt_printf("***** OTHER MIDI Message *******: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
 	}
 }
 
@@ -2591,59 +2652,6 @@ void SetLane(uint8_t lane_in){
 }
 
 
-
-void InitMidiSequence(bool force){
-	
-	last_function = 32786;
-	
-  if (init_midi_sequence_has_run == false || force == true){	
-
-  rt_printf("InitMidiSequence Start \n");
-
-
-  // Loop through lanes
-  for (uint8_t ln = MIN_LANE; ln <= MAX_LANE; ln++) {
-
-  // Loop through bars
-  for (uint8_t bc = FIRST_BAR; bc <= MAX_BAR; bc++) {
-
-    // Loop through steps
-    for (uint8_t sc = FIRST_STEP; sc <= MAX_STEP; sc++) {
-      //Serial.println(String("Step ") + sc );
-    
-      // Loop through notes
-      for (uint8_t n = 0; n <= 127; n++) {
-        // Initialise and print Note on (1) and Off (2) contents of the array.
-        // WRITE MIDI MIDI_DATA
-        channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
-        channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
-  
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
-      } 
-    }
-  }
-}
-
-   
-  
-    for (uint8_t n = 0; n <= 127; n++) {
-     channel_x_ghost_events[n].is_active = 0;
-     //rt_printf("Init Step with ghost Note: %s is_active false", n );
-  }
-  
-
-
-    init_midi_sequence_has_run = true;
-
-	rt_printf("InitMidiSequence Done \n");
-	
-  } else {
-  	rt_printf("InitMidiSequence Skipped because already done \n");
-  }
-	
-	
-}
 
 
 
@@ -2981,6 +2989,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		if (do_button_4_action == 1) {
 			InitMidiSequence(true);
 			Bela_scheduleAuxiliaryTask(gAllNotesOff);
+      target_led_4_tri_state = 2; // yellow
 			do_button_4_action = 0;
 		}
 
