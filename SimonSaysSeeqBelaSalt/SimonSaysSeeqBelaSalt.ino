@@ -667,6 +667,7 @@ class NoteInfo
    uint8_t velocity = 0 ;
    uint8_t tick_count_since_step = 0; 
    uint8_t is_active = 0;
+   uint8_t tick_count_since_start = 0;
 };
 /////////
 
@@ -929,7 +930,7 @@ void ReadSequenceFromFiles(){
 
 
 
-// "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created when during the note off of low velocity notes.
+// "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created  during the note off of low velocity notes.
 class GhostNote
 {
  public:
@@ -937,7 +938,7 @@ class GhostNote
    uint8_t is_active = 0;
 };
 
-GhostNote channel_x_ghost_events[128];
+//GhostNote channel_x_ghost_events[128];
 
 ////////////////////////////////////////
 // Bit Constants for bit wise operations 
@@ -1599,17 +1600,18 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
           // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
           // these Note OFF events. 
           // One way is to store them here for processing after the note OFF actually happens. 
-          channel_x_ghost_events[note].is_active=1;
+          // channel_x_ghost_events[note].is_active=1;
     
         } else {
-          // We want the note on, so set it on.
-
+          // We want the note on, so set it on. Note On
           if (current_midi_lane != SILENT_MIDI_LANE){ 
             rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
             // WRITE MIDI MIDI_DATA
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+
           } else {
             rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
           }
@@ -1628,17 +1630,17 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
         rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
 
         } else { // End of Note ON   
-          // Note Off
+          // MIDI Note OFF
           rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
           
-          // WRITE MIDI MIDI_DATA (unless on silent lane)
+          // WRITE MIDI MIDI_DATA (unless on silent lane) Note Off
           if (current_midi_lane != SILENT_MIDI_LANE){ 
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
           
           } else {
-            rt_printf("SILENT land so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
+            rt_printf("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
           }
 
           last_note_off = note;
@@ -2160,10 +2162,10 @@ void InitMidiSequence(bool force){
     }
   }
 }
-    for (uint8_t n = 0; n <= 127; n++) {
-     channel_x_ghost_events[n].is_active = 0;
+    //for (uint8_t n = 0; n <= 127; n++) {
+    // channel_x_ghost_events[n].is_active = 0;
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
-  }
+  //}
   
 
 
@@ -2324,12 +2326,11 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			
 			// Write any note OFF into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, channel_received);
-			
-	// CLOCK but not currently working.
 	} else if (message.getType() == MIDI_SUSTAIN_PEDAL_TYPE && note_received == MIDI_SUSTAIN_PEDAL_NOTE_NUMBER && velocity_received == MIDI_SUSTAIN_PEDAL_VELOCITY && channel_received == MIDI_SUSTAIN_PEDAL_CHANNEL){
     target_led_4_tri_state = 2; // yellow
     InitMidiSequence(true);
     Bela_scheduleAuxiliaryTask(gAllNotesOff);
+	// CLOCK but not currently working.
   } else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
 			// Midi clock  (decimal 248, hex 0xF8) - for some reason the library returns 7 for clock (kmmSystem ?)
 		// int type = message.getType();
@@ -2604,7 +2605,7 @@ void clockShowLow(){
   //digitalWrite(teensy_led_pin, LOW);   // set the LED off
 }
 
-
+// look here
 void AllNotesOff(void*){
 	
 	last_function = 99883352;
