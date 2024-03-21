@@ -935,12 +935,12 @@ void ReadSequenceFromFiles(){
 
 
 // "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created  during the note off of low velocity notes.
-class GhostNote
-{
- public:
-   uint8_t tick_count_in_sequence = 0;
-   uint8_t is_active = 0;
-};
+// class GhostNote
+// {
+//  public:
+//    uint8_t tick_count_in_sequence = 0;
+//    uint8_t is_active = 0;
+// };
 
 //GhostNote channel_x_ghost_events[128];
 
@@ -1614,8 +1614,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
 
+            
           } else {
             rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
           }
@@ -1625,6 +1625,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
 
         // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
         if (sequence_is_running == 0){
+
+          // note this when we actually send the midi note out
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0;
+
           midi.writeNoteOn(channel, note, velocity); // echo midi to the output
         }
           
@@ -1651,6 +1656,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
 
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){ 
+
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0;
+            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
+
+
             midi.writeNoteOff(channel, note, 0);
           }
               
@@ -1955,6 +1965,11 @@ void PlayMidi(){
             	
               // Set LED 4 high
               target_led_4_tri_state = 1;
+
+              
+              // Note the fact that we sent a midi note ON (any record of a note OFF is now invalid)
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0;
               
               midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
@@ -1968,7 +1983,11 @@ void PlayMidi(){
            // Set LED 4 low
            target_led_4_tri_state = 0;
 
-           midi.writeNoteOff(midi_channel_x, n, 0);
+          // Note the fact that we sent a midi note OFF (any record of a note ON is now invalid)
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
+
+          midi.writeNoteOff(midi_channel_x, n, 0);
        }
     }
   } // End midi note loop
@@ -2852,7 +2871,7 @@ void ChangeSequence(void*){
 	
 	
 	uint8_t sequence_pattern_lower_limit = 1;  // Setting to 1 means we never get 0 i.e. a blank sequence especially when we change seq length
-    unsigned int sequence_a_pattern_upper_limit = 1023; 
+  unsigned int sequence_a_pattern_upper_limit = 1023; 
 	unsigned int sequence_b_pattern_upper_limit = 1023;
 	
 	
