@@ -258,6 +258,10 @@ AuxiliaryTask gWriteSequenceToFiles;
 
 AuxiliaryTask gSendUdpMessage;
 
+AuxiliaryTask gInitMidiSequenceForce;
+
+AuxiliaryTask gInitMidiSequenceNoForce;
+
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in set up()
@@ -2151,10 +2155,26 @@ void InitMidiSequence(bool force){
     
       // Loop through notes
       for (uint8_t n = 0; n <= 127; n++) {
+
+        if (channel_x_midi_note_events[ln][bc][sc][n][1].is_active == 1){	
+          rt_printf("ACTIVE Init Step is: %d Note is: %d Note ON is_active is: %d tick_count_since_start is %d \n", sc, n, channel_x_midi_note_events[ln][bc][sc][n][1].is_active, channel_x_midi_note_events[ln][bc][sc][n][1].tick_count_since_start);
+        } else {
+          rt_printf(".");
+        }
+
         // Initialise and print Note on (1) and Off (2) contents of the array.
         // WRITE MIDI MIDI_DATA
         channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
         channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
+
+// HERE
+       // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
+
+
+
+
+//rt_printf("Init Step ") + sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
+
   
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
@@ -2181,7 +2201,15 @@ void InitMidiSequence(bool force){
 } // End of InitMidiSequence
 
 
+void InitMidiSequenceForce(){
+  last_function = 56811;
+  InitMidiSequence(true)
+}
 
+void InitMidiSequenceNoForce(){
+  last_function = 78911;
+  InitMidiSequence(false)
+}
 
 
 void OnTick(){
@@ -2328,7 +2356,9 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, channel_received);
 	} else if (message.getType() == MIDI_SUSTAIN_PEDAL_TYPE && note_received == MIDI_SUSTAIN_PEDAL_NOTE_NUMBER && velocity_received == MIDI_SUSTAIN_PEDAL_VELOCITY && channel_received == MIDI_SUSTAIN_PEDAL_CHANNEL){
     target_led_4_tri_state = 2; // yellow
-    InitMidiSequence(true);
+    //InitMidiSequence(true);
+
+    Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
     Bela_scheduleAuxiliaryTask(gAllNotesOff);
 	// CLOCK but not currently working.
   } else if (message.getType() == MIDI_STATUS_OF_CLOCK) {
@@ -2988,7 +3018,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
-			InitMidiSequence(true);
+      Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
 			Bela_scheduleAuxiliaryTask(gAllNotesOff);
       target_led_4_tri_state = 2; // yellow
 			do_button_4_action = 0;
@@ -3021,8 +3051,6 @@ WriteFile file2;
 
 
 void SendUdpMessage(void*){
-
-  // HERE
 	
 	last_function = 686587;
 
@@ -3221,7 +3249,14 @@ bool setup(BelaContext *context, void *userData){
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
                 return false;
-        
+
+        if((gInitMidiSequenceForce = Bela_createAuxiliaryTask(&InitMidiSequenceForce, 82, "bela-init-midi-sequence-force")) == 0)
+                return false;
+
+        if((gInitMidiSequenceNoForce = Bela_createAuxiliaryTask(&InitMidiSequenceNoForce, 82, "bela-init-midi-sequence-no-force")) == 0)
+                return false;
+
+
         if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 80, "bela-print-status")) == 0)
                 return false;
 
@@ -3231,6 +3266,9 @@ bool setup(BelaContext *context, void *userData){
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
+
+
+
         //if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
         //        return false;
                 
@@ -3249,7 +3287,9 @@ bool setup(BelaContext *context, void *userData){
         //rt_printf("After myUdpClient.setup in Setup. \n");
         
     // Create Midi Sequence in memory Structure
-    InitMidiSequence(false);
+    // InitMidiSequence(false);
+
+    Bela_scheduleAuxiliaryTask(InitMidiSequenceNoForce);
         
 	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
 	ReadSequenceFromFiles();
