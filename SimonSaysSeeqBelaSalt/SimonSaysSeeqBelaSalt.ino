@@ -1968,8 +1968,8 @@ void PlayMidi(){
 
               
               // Note the fact that we sent a midi note ON (any record of a note OFF is now invalid)
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0;
               
               midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
@@ -1984,8 +1984,8 @@ void PlayMidi(){
            target_led_4_tri_state = 0;
 
           // Note the fact that we sent a midi note OFF (any record of a note ON is now invalid)
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0;
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = 0;
+          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
 
           midi.writeNoteOff(midi_channel_x, n, 0);
        }
@@ -2222,12 +2222,12 @@ void InitMidiSequence(bool force){
 
 void InitMidiSequenceForce(){
   last_function = 56811;
-  InitMidiSequence(true)
+  InitMidiSequence(true);
 }
 
 void InitMidiSequenceNoForce(){
   last_function = 78911;
-  InitMidiSequence(false)
+  InitMidiSequence(false);
 }
 
 
