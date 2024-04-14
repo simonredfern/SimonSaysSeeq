@@ -2220,12 +2220,12 @@ void InitMidiSequence(bool force){
 } // End of InitMidiSequence
 
 
-void InitMidiSequenceForce(){
+void InitMidiSequenceForce(void*){
   last_function = 56811;
   InitMidiSequence(true);
 }
 
-void InitMidiSequenceNoForce(){
+void InitMidiSequenceNoForce(void*){
   last_function = 78911;
   InitMidiSequence(false);
 }
@@ -3308,7 +3308,7 @@ bool setup(BelaContext *context, void *userData){
     // Create Midi Sequence in memory Structure
     // InitMidiSequence(false);
 
-    Bela_scheduleAuxiliaryTask(InitMidiSequenceNoForce);
+    Bela_scheduleAuxiliaryTask(gInitMidiSequenceNoForce);
         
 	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
 	ReadSequenceFromFiles();
@@ -3852,12 +3852,9 @@ void render(BelaContext *context, void *userData)
 			    	
 			    	if (need_to_auto_save_sequence == true){
 			    		rt_printf("Saving Sequence to Files because elapsed_frames_since_last_tick: %llu is greater than frames_per_24_ticks * 10 : %llu \n", elapsed_frames_since_last_tick, frames_per_24_ticks);
-						//WriteSequenceToFiles();
-						
-						Bela_scheduleAuxiliaryTask(gWriteSequenceToFiles);
-						
-						need_to_auto_save_sequence = false;
-					}
+						  Bela_scheduleAuxiliaryTask(gWriteSequenceToFiles);
+						  need_to_auto_save_sequence = false;
+					  }
 			    	
 				}
 			}
