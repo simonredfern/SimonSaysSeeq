@@ -336,20 +336,7 @@ int	LED_PWM_PIN = 7;
 // - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
-//////////////////
 
-
-UdpClient* myUdpClient0; 
-
-int remotePort0 =40000;						// remote IP port
-const char* remoteIP = "192.168.6.1";	    // remote IP, where data will be published
-
-//myUdpClient0 = new UdpClient(remotePort0,remoteIP);
-
-//UdpClient myUdpClient = new UdpClient();
-
-
-/////////////
 
 
 // recursive function to print binary representation of a positive integer
@@ -1712,7 +1699,7 @@ void GateAHigh(){
 
   
 
-  // TODO UDP ENABLE FLAG Bela_scheduleAuxiliaryTask(gSendUdpMessage);
+  Bela_scheduleAuxiliaryTask(gSendUdpMessage);
 
 
 }
@@ -3100,7 +3087,7 @@ void SendUdpMessage(void*){
 
       
 	 // This sends a UDP message 
-	 // TODO UDP ENABLE FLAG int my_result  = myUdpClient.send(&message2, 32);
+	 int my_result  = myUdpClient0.send(&message2, 32);
 }   
 
 
@@ -3283,6 +3270,15 @@ bool setup(BelaContext *context, void *userData){
         // Get different colours out of LEDS? See https://github.com/BelaPlatform/Bela/blob/master/examples/Digital/bicolor-LEDs/render.cpp
 
 
+// UPD setup
+
+      int remotePort0 =7000;						// remote IP port
+      const char* remoteIP = "192.168.3.1";	    // remote IP, where data will be published
+
+
+      // Causes: Error while sending to pipe from WSClient_scope_data: (12) Cannot allocate memory (size: 25792)
+      UdpClient *myUdpClient0 = new UdpClient(remotePort0,remoteIP);
+
 
 
 
@@ -3309,8 +3305,8 @@ bool setup(BelaContext *context, void *userData){
 
 
 
-        //if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
-        //        return false;
+        if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
+                return false;
                 
                 
                 
