@@ -336,6 +336,15 @@ int	LED_PWM_PIN = 7;
 // - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
+      int remotePort0 =7000;						// remote IP port
+      const char* remoteIP = "192.168.3.1";	    // remote IP, where data will be published
+
+
+      // Causes: Error while sending to pipe from WSClient_scope_data: (12) Cannot allocate memory (size: 25792)
+
+UdpClient* myUdpClient0; 
+      
+   //   UdpClient *myUdpClient0 = new UdpClient(remotePort0,remoteIP);
 
 
 
@@ -1674,7 +1683,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
         } // End of Note Off
 
     } else {
-      	  rt_printf("###### I am NOT processing the midi because the note %d was out of range - lowest note allowed: %d highest note allowed: %d \n", note, lowest_midi_note, highest_midi_note);
+      	 // rt_printf("###### I am NOT processing the midi because the note %d was out of range - lowest note allowed: %d highest note allowed: %d \n", note, lowest_midi_note, highest_midi_note);
 
     }
 
@@ -1682,7 +1691,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
 
 
   } else { // End correct receive_midi_channel
- 	  rt_printf("###### I am NOT ACCEPTING the midi because it was on channel %d and midi_receive_channel is set to: %d \n", channel, midi_receive_channel);
+ 	 // rt_printf("###### I am NOT ACCEPTING the midi because it was on channel %d and midi_receive_channel is set to: %d \n", channel, midi_receive_channel);
   } // End of receive channel check
 } // End of function
 
@@ -3081,13 +3090,18 @@ void SendUdpMessage(void*){
 	
 	last_function = 686587;
 
-      std::string message2 = ">:" + std::to_string(analog_out_2) + ":<";
+     // std::string message2 = ">:" + std::to_string(analog_out_2) + ":<";
 
 
+int32_t test = 123;
 
+rt_printf("*********** BEFORE UDP ******************* \n");
       
 	 // This sends a UDP message 
-	 int my_result  = myUdpClient0.send(&message2, 32);
+	 int my_result  = myUdpClient0->send(&test, 32);
+
+rt_printf("******** after UDP *******. \n");
+
 }   
 
 
@@ -3270,14 +3284,9 @@ bool setup(BelaContext *context, void *userData){
         // Get different colours out of LEDS? See https://github.com/BelaPlatform/Bela/blob/master/examples/Digital/bicolor-LEDs/render.cpp
 
 
-// UPD setup
+// UPD setup UDP
 
-      int remotePort0 =7000;						// remote IP port
-      const char* remoteIP = "192.168.3.1";	    // remote IP, where data will be published
-
-
-      // Causes: Error while sending to pipe from WSClient_scope_data: (12) Cannot allocate memory (size: 25792)
-      UdpClient *myUdpClient0 = new UdpClient(remotePort0,remoteIP);
+myUdpClient0 = new UdpClient(remotePort0,remoteIP);
 
 
 
