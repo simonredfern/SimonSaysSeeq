@@ -336,15 +336,15 @@ int	LED_PWM_PIN = 7;
 // - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
-      int remotePort0 =7000;						// remote IP port
-      const char* remoteIP = "192.168.3.1";	    // remote IP, where data will be published
+      int remoteUDPPort0 =7001;						// remote IP port
+      const char* remoteUDPIP = "192.168.3.1";	    // remote IP, where data will be published
 
 
       // Causes: Error while sending to pipe from WSClient_scope_data: (12) Cannot allocate memory (size: 25792)
 
 UdpClient* myUdpClient0; 
       
-   //   UdpClient *myUdpClient0 = new UdpClient(remotePort0,remoteIP);
+   //   UdpClient *myUdpClient0 = new UdpClient(remoteUDPPort0,remoteUDPIP);
 
 
 
@@ -3093,12 +3093,14 @@ void SendUdpMessage(void*){
      // std::string message2 = ">:" + std::to_string(analog_out_2) + ":<";
 
 
-int32_t test = 123;
+//int32_t test = 123;
+
+//uint8_t step_a_count;
 
 rt_printf("*********** BEFORE UDP ******************* \n");
       
 	 // This sends a UDP message 
-	 int my_result  = myUdpClient0->send(&test, 32);
+	 int my_result  = myUdpClient0->send(&step_a_count, sizeof(uint8_t));
 
 rt_printf("******** after UDP *******. \n");
 
@@ -3286,7 +3288,7 @@ bool setup(BelaContext *context, void *userData){
 
 // UPD setup UDP
 
-myUdpClient0 = new UdpClient(remotePort0,remoteIP);
+myUdpClient0 = new UdpClient(remoteUDPPort0,remoteUDPIP);
 
 
 
