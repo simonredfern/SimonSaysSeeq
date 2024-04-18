@@ -3100,9 +3100,27 @@ void SendUdpMessage(void*){
 rt_printf("*********** BEFORE UDP ******************* \n");
       
 	 // This sends a UDP message 
-	 int my_result  = myUdpClient0->send(&step_a_count, sizeof(uint8_t));
+	 //int my_result  = myUdpClient0->send(&step_a_count, sizeof(uint8_t));
 
-rt_printf("******** after UDP *******. \n");
+
+  int  len ;
+std::string field1 = "S";
+std::string result;
+
+result = field1 + std::to_string(step_a_count);
+
+
+ const char* msg = "X";
+
+//len = msg.size();
+
+len = strlen(msg);
+
+myUdpClient0->send(&msg, len);
+
+rt_printf("******** after UDP len: %d *******. \n", len);
+rt_printf("******** after UDP sent: %c %c *******. \n", &msg[0], &msg[1]);
+
 
 }   
 
