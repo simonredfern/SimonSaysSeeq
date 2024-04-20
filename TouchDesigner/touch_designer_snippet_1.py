@@ -22,7 +22,10 @@ def onReceive(dat, rowIndex, message, bytes, peer):
     # we know we are being sent a 4 byte unsigned integer (C++ uint64_t) 
 	# doesn't work int_values = struct.unpack('<Q', bytes) #little endian. Thanks chatgpt
 	try:
+		# doesn't work int_values = struct.unpack('<Q', bytes) #little endian. Thanks chatgpt
+		# works except for 8000000 ?
 		int_values = struct.unpack('<i', bytes)
+		# doesn't work int_values = struct.unpack('!Q', bytes)
 		first_value = int_values[0]
 		print(first_value)
 		t1.par.text = first_value
