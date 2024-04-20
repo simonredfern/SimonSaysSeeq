@@ -336,16 +336,13 @@ int	LED_PWM_PIN = 7;
 // - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
-      int remoteUDPPort0 =7001;	
-       int remoteUDPPort1 =7002;						// remote IP port
-      const char* remoteUDPAddress0 = "192.168.3.1";	    // remote IP, where data will be published
-      const char* remoteUDPAddress1 = "192.168.3.1";
-
-      // Causes: Error while sending to pipe from WSClient_scope_data: (12) Cannot allocate memory (size: 25792)
-
+int remoteUDPPort0 =7001;	
+int remoteUDPPort1 =7002;						// remote IP port
+const char* remoteUDPAddress0 = "192.168.3.1";	    // remote IP, where data will be published
+const char* remoteUDPAddress1 = "192.168.3.1";
+    
 UdpClient* myUdpClient0; 
 UdpClient* myUdpClient1; 
-
 
 
 
@@ -1294,7 +1291,7 @@ void printStatus(void*){
     gCount++;
 	
     // By setting this mod we can choose to print less frequently.  
-    if(gCount % 1000 == 0) {
+    if(gCount % 10 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -1494,11 +1491,11 @@ void printStatus(void*){
     	
 */
     	
-		/*
+		
 		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
 		print_binary(gray_code_sequence_a);
 		rt_printf("%c \n", 'B');
-		*/
+		
 
 
 
@@ -3100,14 +3097,13 @@ int  len;
 
 // unsigned integer.
 uint64_t valueToSend = (uint64_t)step_a_count;
-len = sizeof(&valueToSend); 
+len = sizeof(valueToSend);  // this (correctly) reports 8 (bytes) 
 
 myUdpClient0->send(&valueToSend, len);
 myUdpClient1->send(&valueToSend, len);
 
 rt_printf("after UDP len: %d  \n", len);
 rt_printf("after UDP value: %llu  \n", valueToSend);
-
 
 }   
 
