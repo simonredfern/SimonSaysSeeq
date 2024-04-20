@@ -544,7 +544,7 @@ unsigned int coarse_delay_input = 1;
 // The Primary GATE sequence pattern // Needs to be upto 16 bits. Maybe more later.
 unsigned int binary_sequence_a_result;
 unsigned int gray_code_sequence_a;
-unsigned int the_sequence_a;
+unsigned int the_sequence_a; // TODO change this to explicit type ?
 unsigned int last_binary_sequence_a_result; // So we can detect changes
 
 unsigned int binary_sequence_b_result;
@@ -1528,20 +1528,6 @@ void printStatus(void*){
     // Sequence Outputs 
     //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
 		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
-
-
-      //std::string message = "$simon!";
-      
-      //int signal = 1; 
-      //float signal2 = 1.23456;
-      //int my_result  = myUdpClient.send(&message, message.length()+1);
-
-	  //int my_result  = myUdpClient.send(&message, 16);
-
-
-	//	int my_result  = myUdpClient.send(&signal2, sizeof(float));
-
-//rt_printf("sent %d  bytes \n", my_result);
 
 
       rt_printf("\n==== Bye from printStatus ======= \n");
@@ -3093,17 +3079,87 @@ rt_printf("*********** BEFORE UDP ******************* \n");
       
 
 int  len;
+uint64_t valueToSend;
+
+// Encode the various values by putting them in different ranges.
+
+// one million to two million etc. (assumes these values are less than one million)
 
 
 // unsigned integer.
-uint64_t valueToSend = (uint64_t)step_a_count;
+valueToSend = (uint64_t)step_a_count + 1000000;
 len = sizeof(valueToSend);  // this (correctly) reports 8 (bytes) 
 
 myUdpClient0->send(&valueToSend, len);
 myUdpClient1->send(&valueToSend, len);
 
-rt_printf("after UDP len: %d  \n", len);
-rt_printf("after UDP value: %llu  \n", valueToSend);
+rt_printf("uint64_t value: %llu  \n", valueToSend);
+rt_printf("uint64_t len: %d  \n", len);
+
+// we know we are sending 8 bytes, so no need to calc it.
+
+valueToSend = (uint64_t)step_b_count + 2000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+
+// The 8 knobs on the salt and salt+
+
+valueToSend = (uint64_t)the_sequence_a + 3000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+valueToSend = (uint64_t)the_sequence_b + 4000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+
+valueToSend = (uint64_t)current_sequence_a_length_in_steps + 5000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+valueToSend = (uint64_t)current_sequence_b_length_in_steps + 6000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+     
+valueToSend = (uint64_t)clock_divider_input_value + 7000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+valueToSend = (uint64_t)midi_lane_input + 8000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+
+// Since lfo_osc_1_frequency is a float between 0 and 1 we give it a greater scale before rounding it.
+valueToSend = (uint64_t)std::round(lfo_osc_1_frequency * 10000) + 9000000;
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+valueToSend = (uint64_t)std::round(lfo_osc_2_frequency * 10000) + 10000000; 
+myUdpClient0->send(&valueToSend, 8);
+myUdpClient1->send(&valueToSend, 8);
+
+
+
+
+
+/////////
+// text not sure how to decode this on the UDP server.
+// std::string textToSend = std::to_string(step_a_count);
+// // Convert std::string to C-style string using c_str() method so we can use printf
+// const char* cstr = textToSend.c_str();
+// lenOfText = sizeof(cstr); 
+
+// myUdpClient0->send(&cstr, lenOfText);
+// myUdpClient1->send(&cstr, lenOfText);
+
+// rt_printf("std::string value: %s  \n", cstr);
+// rt_printf("std::string len: %d  \n", lenOfText);
+
+
+
+
 
 }   
 
