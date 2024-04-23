@@ -290,7 +290,11 @@ func main() {
 
 		fmt.Printf("Received %d bytes from %s: %d\n", n, addr, receivedData)
 
-		getMetrics(obpApiHost, myToken, 0, 1)
+		if receivedData == 1000000 {
+			getMetrics(obpApiHost, myToken, 0, 1)
+		} else {
+			fmt.Printf(".")
+		}
 
 	}
 }
