@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.39-BelaSalt";
+const char version[16]= "v0.40-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -3099,46 +3099,55 @@ rt_printf("uint64_t len: %d  \n", len);
 // we know we are sending 8 bytes, so no need to calc it.
 
 valueToSend = (uint64_t)step_b_count + 2000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 
 // The 8 knobs on the salt and salt+
 
 valueToSend = (uint64_t)the_sequence_a + 3000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 valueToSend = (uint64_t)the_sequence_b + 4000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 
 valueToSend = (uint64_t)current_sequence_a_length_in_steps + 5000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
-valueToSend = (uint64_t)current_sequence_b_length_in_steps + 6000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+valueToSend = (uint64_t)current_sequence_b_length_in_steps + 6000000;
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
      
-valueToSend = (uint64_t)clock_divider_input_value + 7000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+valueToSend = (uint64_t)clock_divider_input_value + 7000000;
+len = sizeof(valueToSend); 
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
-valueToSend = (uint64_t)midi_lane_input + 8000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+valueToSend = (uint64_t)(midi_lane_input + 8000000); 
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 
 // Since lfo_osc_1_frequency is a float between 0 and 1 we give it a greater scale before rounding it.
 valueToSend = (uint64_t)std::round(lfo_osc_1_frequency * 10000) + 9000000;
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 valueToSend = (uint64_t)std::round(lfo_osc_2_frequency * 10000) + 10000000; 
-myUdpClient0->send(&valueToSend, 8);
-myUdpClient1->send(&valueToSend, 8);
+len = sizeof(valueToSend);
+myUdpClient0->send(&valueToSend, len);
+myUdpClient1->send(&valueToSend, len);
 
 
 
