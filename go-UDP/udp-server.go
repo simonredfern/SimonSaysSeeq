@@ -32,12 +32,15 @@ func main() {
 		if err != nil {
 			fmt.Println("Error reading data:", err)
 			continue
+
 		}
+		fmt.Printf("Received: %s\n", buffer)
 
 		// Convert the received data to uint64
 		receivedData := uint64(buffer[0]) | uint64(buffer[1])<<8 | uint64(buffer[2])<<16 | uint64(buffer[3])<<24 |
 			uint64(buffer[4])<<32 | uint64(buffer[5])<<40 | uint64(buffer[6])<<48 | uint64(buffer[7])<<56
 
 		fmt.Printf("Received %d bytes from %s: %d\n", n, addr, receivedData)
+
 	}
 }
