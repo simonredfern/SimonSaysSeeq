@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.7"
+version = "0.9.9"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -87,9 +87,9 @@ arm_swing_button = 0
 
 swing_mode = 1
 
-TOTAL_SEQUENCE_ROWS = 6
-MIN_GATE_ROW = 7
-MAX_GATE_ROW = 12
+TOTAL_SEQUENCE_ROWS = 7 -- was 6
+--MIN_GATE_ROW = 7 -- Not used?
+--MAX_GATE_ROW = 12 -- Not used?
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -168,7 +168,7 @@ audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/modular-pulse.wav"
 
 BUTTONS = {}
 
---7th Row
+--7th Row -- Probably not used because now using for gates
 ROW7_BUTTON_01 = "Button1"
 ROW7_BUTTON_02 = "Button2"
 ROW7_BUTTON_03 = "Button3"
@@ -2298,6 +2298,42 @@ function preset_grid (x,y)
         random_dense_grid(x, y)
       end   
 
+
+    elseif y == 7 then
+
+      print ("Setting preset for row: " .. x) 
+
+      if x == 1 then
+
+        grid_state[1][y] = 1
+        grid_state[2][y] = 1
+        grid_state[3][y] = 1
+        grid_state[4][y] = 0
+
+        grid_state[5][y] = 0
+        grid_state[6][y] = 0
+        grid_state[7][y] = 0
+        grid_state[8][y] = 0
+
+        grid_state[9][y]  = 0
+        grid_state[10][y] = 0
+        grid_state[11][y] = 0
+        grid_state[12][y] = 0
+
+        grid_state[13][y] = 0
+        grid_state[14][y] = 0
+        grid_state[15][y] = 0
+        grid_state[16][y] = 0
+
+      else
+        random_dense_grid(x, y)
+      end   
+
+
+
+
+
+
     end
 
 
@@ -2887,8 +2923,9 @@ function refresh_grid_and_screen()
       --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
       
 
-      -- Show the scrolling of the steps with the first 6 rows of LEDS. (Others will be used for other controls)
-      if (current_step == col and row <= 6) then
+      -- Show the scrolling of the steps with the sequence rows of LEDS. (Others will be used for other controls)
+      -- note: row 7 has a dual use (sequence and set midi note when a row 8 button is presssed.)
+      if (current_step == col and row <= TOTAL_SEQUENCE_ROWS) then
           -- This is the scrolling cursor
           screen.text("*")
         
