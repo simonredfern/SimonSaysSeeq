@@ -15,6 +15,11 @@ current_year = datetime.now().year
 
 
 url_for_daily_co2_ppm = 'https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.csv'
+
+
+
+
+folder = '/home/we/dust/data/SimonSaysSeeqNorns/'
 file_name_for_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv'
 
 
@@ -43,11 +48,13 @@ my_value =  latest_line.split(",")[-1]
 
 print (my_value)
 
+daily_co2_ppm_path = "%s%s" %(folder, file_name_for_daily_co2_ppm)
 
-f = open(file_name_for_daily_co2_ppm, "w")
+
+f = open(daily_co2_ppm_path, "w")
 f.write(my_value)
 f.close()
 
 
-print("I wrote the value %s for the day %s to the file %s" %(my_value, co2_ppm_today_finder, file_name_for_daily_co2_ppm))
+print("I wrote the value %s for the day %s to the file %s" %(my_value, co2_ppm_today_finder, daily_co2_ppm_path))
 
