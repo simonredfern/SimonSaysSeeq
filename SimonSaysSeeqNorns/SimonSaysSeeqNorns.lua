@@ -2,11 +2,55 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.9"
+version = "1.0.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
+
+function get_script_path()
+  local info = debug.getinfo(1,'S');
+  local script_path = info.source:match[[^@?(.*[\/])[^\/]-$]]
+  return script_path
+end
+
+
+print ("Current script path is " .. get_script_path())
+
+
+--- 
+
+-- file_path = io.open("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_1.txt", "r")
+
+-- print ("my file contents is: START" .. file .. "END")
+
+
+local open = io.open
+
+local function read_file(path)
+    local file = open(path, "rb") -- r read mode and b binary mode
+    if not file then return nil end
+    local content = file:read "*a" -- *a or *all reads the whole file
+    file:close()
+    return content
+end
+
+
+
+-- # See gml.noaa.gov/ccgg/trends/ for additional details.
+
+
+local co2_ppm_daily_latest_value = read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv");
+
+if (co2_ppm_daily_latest_value) then 
+  print ("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
+  we_have_last_daily_co2_ppm_value = true
+else
+  print ("We do NOT have a daily co2 ppm ");
+  we_have_last_daily_co2_ppm_value = false
+end
+
+
 
 -- TODO - add total_wow_tempo_ticks to display
 
@@ -46,7 +90,22 @@ arm_control = NO_FEATURE
 print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
 
 
-current_tempo = 120 -- will be almost immediatly changed to the clock
+
+co2_ppm_simon_bday = 318
+default_tempo = 20
+
+
+if (we_have_last_daily_co2_ppm_value) then
+  co2_ppm_delta = co2_ppm_daily_latest_value - co2_ppm_simon_bday
+  print ("co2_ppm_delta is " .. co2_ppm_delta)
+  current_tempo = default_tempo + co2_ppm_delta
+else
+  current_tempo = default_tempo -- will be almost immediatly changed to the clock
+end
+
+
+print ("Initial tempo (current_tempo) is " .. current_tempo)
+
 
 local volts = 0
 local slew = 0
@@ -1573,9 +1632,9 @@ function init_grid_state_table()
     print ("I already have a grid_state table, no need to generate one")
   end
 
-  -- We want to make sure rows 7 and 8 are all off. 
-  -- There's no reason to have a different initial state for rows 7 and8
-  for y = 7, 8 do
+  -- We want to make sure rown 8 are all off. 
+  -- Note: row 7 has a kind of dual function but 8 is all control.
+  for y = 8, 8 do
     for x = 1, 16 do
       print("turn off x:" .. x .. " y:" .. y)
       unconditional_set_grid_non_seq_button(x, y, 0)
