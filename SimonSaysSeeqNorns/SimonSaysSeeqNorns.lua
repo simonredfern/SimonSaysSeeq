@@ -40,7 +40,7 @@ end
 -- # See gml.noaa.gov/ccgg/trends/ for additional details.
 
 
-local co2_ppm_daily_latest_value = read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv");
+local co2_ppm_daily_latest_value = tonumber(read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
 
 if (co2_ppm_daily_latest_value) then 
   print ("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
@@ -590,6 +590,15 @@ end
   tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f",flutter_average_tempo)
   tempo_status_string_4 = "Wow Epsds: " .. wow_tempo_episodes .. " Ticks: " .. total_wow_tempo_ticks
   tempo_status_string_5 = "Flutter Epsds: " .. flutter_tempo_episodes .. " Ticks: " .. total_flutter_tempo_ticks
+
+
+  if (we_have_last_daily_co2_ppm_value) then 
+    co2_ppm_status_string = "CO2 PPM: " .. co2_ppm_daily_latest_value 
+  else
+    co2_ppm_status_string = "CO2 PPM: UNKOWN" 
+  end
+
+
 
   if (tempo_is_stable == 0) then 
 
@@ -2920,6 +2929,9 @@ function display_tempo_status()
 
   screen.move(1,35) 
   screen.text(tempo_status_string_5)
+
+  screen.move(1,42) 
+  screen.text(co2_ppm_status_string)
 
 
   screen.move(1,49) 

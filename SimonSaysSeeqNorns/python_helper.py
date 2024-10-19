@@ -22,7 +22,8 @@ def write_latest_co2_ppm(folder):
 
 
     #folder = '/home/we/dust/data/SimonSaysSeeqNorns/'
-    file_name_for_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv'
+    file_name_for_latest_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv'
+    file_name_for_all_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv'
 
 
     x = requests.get(url_for_daily_co2_ppm)
@@ -50,15 +51,26 @@ def write_latest_co2_ppm(folder):
 
     print (my_value)
 
-    daily_co2_ppm_path = "%s%s" %(folder, file_name_for_daily_co2_ppm)
+    latest_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_latest_daily_co2_ppm)
 
 
-    f = open(daily_co2_ppm_path, "w")
+    f = open(latest_daily_co2_ppm_path, "w")
     f.write(my_value)
     f.close()
 
+    print("I wrote the value %s for the day %s to the file %s" %(my_value, co2_ppm_yesterday_finder, latest_daily_co2_ppm_path))
 
-    print("I wrote the value %s for the day %s to the file %s" %(my_value, co2_ppm_yesterday_finder, daily_co2_ppm_path))
+    ################
+
+
+
+    all_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_all_daily_co2_ppm)
+    f = open(all_daily_co2_ppm_path, "w")
+    f.write(x.text)
+    f.close()
+
+
+    print("I wrote the data %s up to the day %s to the file %s" %(x.text, co2_ppm_yesterday_finder, all_daily_co2_ppm_path))
     return my_value
 
 
