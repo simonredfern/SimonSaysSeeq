@@ -36,6 +36,13 @@ local function read_file(path)
 end
 
 
+function file_exists(name)
+  local f=io.open(name,"r")
+  if f~=nil then io.close(f) return true else return false end
+end
+
+
+
 
 -- # See gml.noaa.gov/ccgg/trends/ for additional details.
 
@@ -52,19 +59,28 @@ end
 
 
 
-local co2_ppm_all_daily_value = read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv");
+local all_days_path = "/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"
 
-if (co2_ppm_all_daily_value) then 
-  print ("Yes we HAVE co2_ppm_all_daily_value we got from file");
+if (file_exists(all_days_path)) then 
+  print ("Yes all days path file exists");
+  -- create a table out of the csv data.
+  -- note the last match is greedy with *
+  local co2_ppm_list = {}
+  for line in io.lines(all_days_path) do
+      local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
+      co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value = the_co2_ppm_value }
+  end
+  
+  for i,v in ipairs(co2_ppm_list) do
+   -- print(i, v.year .. "-" .. v.month .. "-" .. v.day .. " is " .. v.the_co2_ppm_value)
+
+    print(i, v.the_co2_ppm_value)
+
+  end
   we_have_all_daily_co2_ppm_value = true
-
-  -- all_daily_table = totable(co2_ppm_all_daily_value)
-
 else
   print ("We do NOT have ALL daily co2 ppm ");
-  we_have_all_daily_co2_ppm_value = false
-
-  -- all_daily_table = nil
+  we_have_all_daily_co2_ppm_values = false
 end
 
 
