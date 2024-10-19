@@ -52,6 +52,24 @@ end
 
 
 
+local co2_ppm_all_daily_value = read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv");
+
+if (co2_ppm_all_daily_value) then 
+  print ("Yes we HAVE co2_ppm_all_daily_value we got from file");
+  we_have_all_daily_co2_ppm_value = true
+
+  -- all_daily_table = totable(co2_ppm_all_daily_value)
+
+else
+  print ("We do NOT have ALL daily co2 ppm ");
+  we_have_all_daily_co2_ppm_value = false
+
+  -- all_daily_table = nil
+end
+
+
+
+
 -- TODO - add total_wow_tempo_ticks to display
 
 
@@ -93,6 +111,8 @@ print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. 
 
 co2_ppm_simon_bday = 318
 default_tempo = 20
+
+-- HEREHERE
 
 
 if (we_have_last_daily_co2_ppm_value) then
@@ -524,8 +544,6 @@ function tick()
 
      
     --swing_amount = 0
-
--- now_tempo = clock.get_tempo()
 
 current_tempo = clock.get_tempo()
 
