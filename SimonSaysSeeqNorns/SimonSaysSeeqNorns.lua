@@ -18,12 +18,6 @@ end
 print ("Current script path is " .. get_script_path())
 
 
---- 
-
--- file_path = io.open("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_1.txt", "r")
-
--- print ("my file contents is: START" .. file .. "END")
-
 
 local open = io.open
 
@@ -41,10 +35,8 @@ function file_exists(name)
   if f~=nil then io.close(f) return true else return false end
 end
 
- 
 
-
--- # See gml.noaa.gov/ccgg/trends/ for additional details.
+-- See gml.noaa.gov/ccgg/trends/ for additional details.
 
 
 local co2_ppm_daily_latest_value = tonumber(read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
@@ -128,18 +120,6 @@ print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. 
 
 
 -- clock is currently external so cant script clock 
---co2_ppm_simon_bday = 318
---default_tempo = 20
--- if (we_have_last_daily_co2_ppm_value) then
---   co2_ppm_delta = co2_ppm_daily_latest_value - co2_ppm_simon_bday
---   print ("co2_ppm_delta is " .. co2_ppm_delta)
---   current_tempo = default_tempo + co2_ppm_delta
--- else
---   current_tempo = default_tempo -- will be almost immediatly changed to the clock
--- end
-
-
--- print ("Initial tempo (current_tempo) is " .. current_tempo)
 
 
 local volts = 0
@@ -181,9 +161,7 @@ arm_swing_button = 0
 
 swing_mode = 1
 
-TOTAL_SEQUENCE_ROWS = 7 -- was 6
---MIN_GATE_ROW = 7 -- Not used?
---MAX_GATE_ROW = 12 -- Not used?
+TOTAL_SEQUENCE_ROWS = 6 -- was 6
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -1447,6 +1425,8 @@ end
 
 function init()
 
+  print ("Hello from init")
+
   -- clear buffer
   softcut.buffer_clear()
   -- read file into buffer
@@ -1614,51 +1594,20 @@ init_flutter_window()
 
 
 function load_grid_state()
-  
   grid_state = Tab.load (GRID_STATE_FILE)
-
-
-  
-  -- grid state popularity counter
-  --grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-
-  print("Result of table load is:")
-  print (grid_state)
-  print (get_tally(grid_state))
-
   return grid_state
 end
   
 
 
 function load_mozart_state()
-  
-
-
   mozart_state = Tab.load (MOZART_STATE_FILE) 
-
-
-  --mozart_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-  print("Result of table load is:")
-  print (mozart_state)
-  print (get_tally(mozart_state))
-
   return mozart_state
 end
 
 
 function load_slide_state()
-
   slide_state = Tab.load (SLIDE_STATE_FILE) 
-
-  --slide_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-  print("Result of table load is:")
-  print (slide_state)
-  print (get_tally(slide_state))
-
   return slide_state
 end
 
@@ -1667,7 +1616,7 @@ end
 function create_a_grid()
   local local_grid = {}
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  --local_grid["gspc"]=0 -- we might increment this to see how popular it is 
+
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
@@ -1683,14 +1632,15 @@ function init_grid_state_table()
   print ("Hello from init_grid_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_grid_state)
+  local success, err = pcall(load_grid_state) -- note grid_state is loaded into a global
 
-  -- hmm should we check for err instead
-  if grid_state then
+  if success then
     print ("load grid state seems ok. grid_state is:")
     print (grid_state)
+    print (get_tally(grid_state))
   else
-    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: ")
+    print(err)
     grid_state = nil
   end  
   
@@ -1700,8 +1650,6 @@ function init_grid_state_table()
 
     grid_state = create_a_grid()
 
-
-
     Tab.save(grid_state, GRID_STATE_FILE)
     grid_state = Tab.load (GRID_STATE_FILE)  
   else
@@ -1709,8 +1657,8 @@ function init_grid_state_table()
   end
 
   -- We want to make sure rown 8 are all off. 
-  -- Note: row 7 has a kind of dual function but 8 is all control.
-  for y = 8, 8 do
+  -- Note: row 7 may have kind of dual function but 8 is all control.
+  for y = TOTAL_SEQUENCE_ROWS + 1, 8 do
     for x = 1, 16 do
       print("turn off x:" .. x .. " y:" .. y)
       unconditional_set_grid_non_seq_button(x, y, 0)
@@ -1742,13 +1690,15 @@ function init_mozart_state_table()
   print ("Hello from init_mozart_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_mozart_state)
+  local success, err = pcall(load_mozart_state) -- note mozart_state is loaded into a global
 
-  if status then
+  if success then
     print ("load mozart state seems ok. mozart_state is:")
     print (mozart_state)
+    print (get_tally(mozart_state))
   else
-    print ("Seems we got an error - setting mozart_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting mozart_state to nil so we will create it and save it: ")
+    print (err)
     mozart_state = nil
   end  
   
@@ -1757,9 +1707,6 @@ function init_mozart_state_table()
     print ("No table, I will generate a structure and save that")
 
     mozart_state = create_a_grid()
-
-
-
     Tab.save(mozart_state, MOZART_STATE_FILE)
     mozart_state = Tab.load (MOZART_STATE_FILE)  
   else
@@ -1786,13 +1733,15 @@ function init_slide_state_table()
   print ("Hello from init_slide_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_slide_state)
+  local success, err = pcall(load_slide_state)
 
-  if status then
+  if success then
     print ("load slide state seems ok. slide_state is:")
     print (slide_state)
+    print (get_tally(slide_state))
   else
-    print ("Seems we got an error - setting slide_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting slide_state to nil so we will create it and save it: ")
+    print (err)
     slide_state = nil
   end  
   
@@ -1830,12 +1779,7 @@ function init_held_state_table()
   print ("Hello from init_held_state_table")
   
   -- Don't want to load or save - always create new
-  held_state = create_a_grid()
-
-  
- --print ("tally is: " .. get_tally(held_state))
-
-  
+  held_state = create_a_grid()  
   print ("Bye from init_held_state_table")
   
 
@@ -2962,7 +2906,6 @@ end
 
 function get_copy_of_grid(input_grid)
   -- For creating copies of a grid for Undo and probably other things.
-  --print ("input_grid is" .. get_tally(input_grid))
   local output_grid = create_a_grid() -- this returns a grid with the dimensions we expect
   -- copy all the key values except the ID 
   output_grid["id"] = math.random(1,99999999999999)
