@@ -1620,7 +1620,7 @@ function load_grid_state()
 
   
   -- grid state popularity counter
-  grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+  --grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
 
 
   print("Result of table load is:")
@@ -1639,7 +1639,7 @@ function load_mozart_state()
   mozart_state = Tab.load (MOZART_STATE_FILE) 
 
 
-  mozart_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+  --mozart_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
 
   print("Result of table load is:")
   print (mozart_state)
@@ -1653,7 +1653,7 @@ function load_slide_state()
 
   slide_state = Tab.load (SLIDE_STATE_FILE) 
 
-  slide_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
+  --slide_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
 
   print("Result of table load is:")
   print (slide_state)
@@ -1667,7 +1667,7 @@ end
 function create_a_grid()
   local local_grid = {}
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  local_grid["gspc"]=0 -- we might increment this to see how popular it is 
+  --local_grid["gspc"]=0 -- we might increment this to see how popular it is 
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
@@ -2913,7 +2913,7 @@ function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
   -- A grid is a table with known dimensions
   -- Used for debugging
-  local tally = "id:" ..input_grid["id"] .. " gspc:" .. input_grid["gspc"] .. " colsXrows:"
+  local tally = "id:" ..input_grid["id"] .. " colsXrows:"
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. input_grid[col][row]
@@ -2966,7 +2966,7 @@ function get_copy_of_grid(input_grid)
   local output_grid = create_a_grid() -- this returns a grid with the dimensions we expect
   -- copy all the key values except the ID 
   output_grid["id"] = math.random(1,99999999999999)
-  output_grid["gspc"] = input_grid["gspc"]
+  -- output_grid["gspc"] = input_grid["gspc"]
   
 
 
