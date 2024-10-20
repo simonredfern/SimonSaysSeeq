@@ -1048,20 +1048,17 @@ function conditional_change_crow_output(current_step, sequence_row)
       if (sequence_row == 3) then
         print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
-        --co2_ppm_value_to_use = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
-
         co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
 
         print (co2_ppm_step_offset)
 
-        crow.output[crow_output].volts =  co2_ppm_step_offset + mozart_state[current_step][sequence_row] / 12      
+        crow.output[crow_output].volts =  co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)     
       elseif (sequence_row == 4) then 
-        --co2_ppm_value_to_use = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
 
         co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
 
         print (co2_ppm_tick_offset)
-        crow.output[crow_output].volts =  co2_ppm_tick_offset + mozart_state[current_step][sequence_row] / 12   
+        crow.output[crow_output].volts =  co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)   
       else 
         
         -- use the notes from the grid
@@ -1688,7 +1685,8 @@ function init_grid_state_table()
   -- Try to load the table
   local status, err = pcall(load_grid_state)
 
-  if status then
+  -- hmm should we check for err instead
+  if grid_state then
     print ("load grid state seems ok. grid_state is:")
     print (grid_state)
   else
@@ -2525,7 +2523,11 @@ function preset_mozart(x_button_pressed,y)
 
 for x = 1, 16 do
   if x_button_pressed == 1 then
-    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE, 0) -- same note
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 24, 0) -- same note low low
+  elseif x_button_pressed == 2 then
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 12, 0) -- same note low
+  elseif x_button_pressed == 3 then
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 0, 0) -- same note  
   else
     unconditional_set_mozart(x, y, get_interesting_note_value(x, y, x_button_pressed), 0)
   end  
