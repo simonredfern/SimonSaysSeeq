@@ -1595,19 +1595,25 @@ init_flutter_window()
 
 function load_grid_state()
   grid_state = Tab.load (GRID_STATE_FILE)
+  -- NOTE: get_tally serves to check the table is at least kind of OK.
+  print (get_tally(grid_state))
   return grid_state
 end
   
 
 
 function load_mozart_state()
-  mozart_state = Tab.load (MOZART_STATE_FILE) 
+  mozart_state = Tab.load (MOZART_STATE_FILE)
+  -- NOTE: get_tally serves to check the table is at least kind of OK. 
+  print (get_tally(mozart_state))
   return mozart_state
 end
 
 
 function load_slide_state()
   slide_state = Tab.load (SLIDE_STATE_FILE) 
+  -- NOTE: get_tally serves to check the table is at least kind of OK.
+  print (get_tally(slide_state))
   return slide_state
 end
 
