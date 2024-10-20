@@ -41,7 +41,7 @@ function file_exists(name)
   if f~=nil then io.close(f) return true else return false end
 end
 
-
+ 
 
 
 -- # See gml.noaa.gov/ccgg/trends/ for additional details.
@@ -65,18 +65,18 @@ if (file_exists(all_days_path)) then
   print ("Yes all days path file exists");
   -- create a table out of the csv data.
   -- note the last match is greedy with *
-  local co2_ppm_list = {}
+  co2_ppm_list = {}
   for line in io.lines(all_days_path) do
       local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
       co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value = the_co2_ppm_value }
   end
   
-  for i,v in ipairs(co2_ppm_list) do
-   -- print(i, v.year .. "-" .. v.month .. "-" .. v.day .. " is " .. v.the_co2_ppm_value)
+  -- for i,v in ipairs(co2_ppm_list) do
+  --  -- print(i, v.year .. "-" .. v.month .. "-" .. v.day .. " is " .. v.the_co2_ppm_value)
 
-    print(i, v.the_co2_ppm_value)
+  --   print(i, v.the_co2_ppm_value)
 
-  end
+  -- end
   we_have_all_daily_co2_ppm_value = true
 else
   print ("We do NOT have ALL daily co2 ppm ");
@@ -125,22 +125,19 @@ print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. 
 
 
 
-co2_ppm_simon_bday = 318
-default_tempo = 20
-
--- HEREHERE
-
-
-if (we_have_last_daily_co2_ppm_value) then
-  co2_ppm_delta = co2_ppm_daily_latest_value - co2_ppm_simon_bday
-  print ("co2_ppm_delta is " .. co2_ppm_delta)
-  current_tempo = default_tempo + co2_ppm_delta
-else
-  current_tempo = default_tempo -- will be almost immediatly changed to the clock
-end
+-- clock is currently external so cant script clock 
+--co2_ppm_simon_bday = 318
+--default_tempo = 20
+-- if (we_have_last_daily_co2_ppm_value) then
+--   co2_ppm_delta = co2_ppm_daily_latest_value - co2_ppm_simon_bday
+--   print ("co2_ppm_delta is " .. co2_ppm_delta)
+--   current_tempo = default_tempo + co2_ppm_delta
+-- else
+--   current_tempo = default_tempo -- will be almost immediatly changed to the clock
+-- end
 
 
-print ("Initial tempo (current_tempo) is " .. current_tempo)
+-- print ("Initial tempo (current_tempo) is " .. current_tempo)
 
 
 local volts = 0
@@ -347,8 +344,13 @@ table.insert(BUTTONS, {name = ARM_SLIDE_OFF_BUTTON, x = 15, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 
+function reset_step_counters()
+  current_step = first_step
+  total_step_count = 1
+end  
 
-current_step = first_step
+
+reset_step_counters()
 
 
 tick_text = "."
@@ -734,10 +736,7 @@ end
       -- process_step() 
     end  
 
-
-
-
-  -- Less frequently triggered gates
+        -- Less frequently triggered gates
 
         if tick_count % (192 * 1) == 0 then
             clock.run(process_clock_gate, GATE_12)
@@ -783,6 +782,7 @@ end
       current_step = util.wrap(current_step + 1, first_step, last_step)
       -- print ("Advanced step to: " .. current_step)
       
+      total_step_count = total_step_count + 1
         
       -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
       if current_step == 3 then
@@ -988,7 +988,7 @@ function process_step()
 
    end -- End check midi start
 
-
+ 
 
   
   -- For each sequence row...
@@ -1006,11 +1006,8 @@ function process_step()
 
     -- Send the midi note number as CV we have previously captured (this currently sends even if the step is not active)
 
-    -- We have 4 outputs on crow
+    -- We have 4 outputs on crow to output eurorack CV
     -- Here we check the slide and set the voltage to the pitch accordingly.
-
-
-
     if sequence_row >= 3 and sequence_row <= 6 then
       conditional_change_crow_output(current_step, sequence_row)
     end  
@@ -1029,21 +1026,39 @@ function conditional_change_crow_output(current_step, sequence_row)
   crow_output = sequence_row - 2
 
 
--- only change slew and voltage if the sequence step is active
-if grid_state[current_step][sequence_row]  ~= 0 then
 
-  if slide_state[current_step][sequence_row] == 1 then
-    crow.output[crow_output].slew = 0.1
-  else
-    crow.output[crow_output].slew = 0
-  end  
+    -- only change slew and voltage if the sequence step is active
+    if grid_state[current_step][sequence_row]  ~= 0 then
 
-  crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12  
+      if slide_state[current_step][sequence_row] == 1 then
+        crow.output[crow_output].slew = 0.1
+      else
+        crow.output[crow_output].slew = 0
+      end  
 
- -- output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
+    -- Row 3 special case for the CO2 PPM data
+      if (sequence_row == 3) then
+        print("hello from row 6 total_step_count is " .. total_step_count)
+
+        co2_ppm_value_to_use = co2_ppm_list[total_step_count].the_co2_ppm_value
+
+        voltage_to_set = co2_ppm_value_to_use / 50
+
+        print (voltage_to_set)
+
+        crow.output[crow_output].volts =  voltage_to_set      
+      else -- use the notes from the grid
+        crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 
+      end
+
+    end
 
 
-end
+    --if (sequence_row ==5) then
+    --print("hello from row 5 voltage just set was " .. mozart_state[current_step][sequence_row] / 12 ) 
+    --end
+
+
   
 end -- end function  
 
@@ -1226,6 +1241,8 @@ end
  
 
 
+
+
 function clock.transport.stop()
 
   -- This function is maybe called
@@ -1238,7 +1255,7 @@ function clock.transport.stop()
   print("total_flutter_tempo_ticks since last start: " .. total_flutter_tempo_ticks)
   print("flutter_tempo_episodes since last start: " .. flutter_tempo_episodes)
 
-  current_step = first_step
+  reset_step_counters()
 
 
 --  screen.clear()
@@ -1302,7 +1319,8 @@ function key(n,z)
 
         
      -- else -- Not currently running so reset. 
-        current_step = first_step -- effectively we press this again.
+       -- effectively we press this again.
+        reset_step_counters()
 
      -- end
       
