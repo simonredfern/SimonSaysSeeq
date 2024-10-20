@@ -161,7 +161,7 @@ arm_swing_button = 0
 
 swing_mode = 1
 
-TOTAL_SEQUENCE_ROWS = 6 -- was 6
+TOTAL_SEQUENCE_ROWS = 7 -- was 6
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
