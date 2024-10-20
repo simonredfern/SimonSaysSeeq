@@ -129,7 +129,7 @@ local slew = 0
 transport_is_active = true
 
 
--- Dimensions of Grid
+-- Dimensions of Monome Grid
 COLS = 16
 ROWS = 8
 
@@ -1596,6 +1596,7 @@ init_flutter_window()
 function load_grid_state()
   grid_state = Tab.load (GRID_STATE_FILE)
   -- NOTE: get_tally serves to check the table is at least kind of OK.
+  -- if error pcall will return false which makes us create the table
   print (get_tally(grid_state))
   return grid_state
 end
@@ -2141,13 +2142,23 @@ end -- end test for 254
 end   
 
 
+-- bug here
 function set_sequence(x,y,midi_note)
 
   sequence_button_x = x
   sequence_button_y = y
   sequence_button_midi = midi_note
 
-  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
+
+  -- the midi_note ~= 0  test caused a bug
+
+--  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
+--    sequence_button_is_pressed = true
+--  else 
+--    sequence_button_is_pressed = false
+--  end
+
+  if x ~= 0 and y ~= 0 then
     sequence_button_is_pressed = true
   else 
     sequence_button_is_pressed = false
@@ -2691,19 +2702,19 @@ my_grid.key = function(x,y,z)
 -- z == 1 means key down, z == 0 means key up
 
 print("Hello from ----------- my_grid.key = function -----------------")
-print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
+print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_state[y][y])
 
--- print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
 
 -- First lets capture the combination of buttons pressed (up to three groups i.e. one sequence button, one row7 and one row8 (control))
 
 if z == 1 then
-  print("Key Down")
+  print("z is 1. You pressed a monome grid key down")
   if y <= TOTAL_SEQUENCE_ROWS then
-    print("Sequence Row Down")
+    print("You pressed a Sequence Row button down")
     -- This holds the sequence button
-    set_sequence(x,y,mozart_state[x][y])
+    set_sequence(x,y,mozart_state[x][y]) -- bug here
   elseif y == 7 then
     print("Row7 On")
     arm_row7 = grid_button_function_name(x,y)
@@ -2734,12 +2745,12 @@ else
   end
 end   
 
-operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
+operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x ..  " z:" .. z .. " sequence_button_is_pressed: " .. tostring(sequence_button_is_pressed) .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
 
 
 print ("Operation matrix is: " ..  operation_matix_string)
-
--- Now we have a matrix of buttons, now process.
+print ("Before deciding what to do.. ")
+-- Now we have a matrix of buttons, now decide and process.
 
 if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
   on_sequence_button_press_down(x,y,z)
@@ -2822,7 +2833,7 @@ elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm
   print("button" .. 16) 
   unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 4),1)
 else
-  print("(No action for this combination of buttons: " ..  operation_matix_string .. " )") 
+  print("WARNING! No action found for the following combination of buttons: " ..  operation_matix_string .. " )") 
 end -- end of grid_button_function_name tests
 
 
