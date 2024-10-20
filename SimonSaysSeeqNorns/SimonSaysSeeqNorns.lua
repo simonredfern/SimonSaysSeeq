@@ -66,9 +66,11 @@ if (file_exists(all_days_path)) then
   -- create a table out of the csv data.
   -- note the last match is greedy with *
   co2_ppm_list = {}
+  no_of_co2_ppm_records = 0
   for line in io.lines(all_days_path) do
       local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
       co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value = the_co2_ppm_value }
+      no_of_co2_ppm_records = no_of_co2_ppm_records + 1
   end
   
   -- for i,v in ipairs(co2_ppm_list) do
@@ -346,7 +348,8 @@ table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 function reset_step_counters()
   current_step = first_step
-  total_step_count = 1
+  total_step_co2_count = 1 -- This will loop around the co2 ppm rows
+  total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
 end  
 
 
@@ -563,6 +566,7 @@ function tick()
      
     --swing_amount = 0
 
+-- This is for informational purposes      
 current_tempo = clock.get_tempo()
 
 -- Check for big differences in tempo from average 
@@ -609,8 +613,6 @@ if (math.abs(flutter_average_tempo - current_tempo) > flutter_threshold) then
 
 else
   tempo_flutter_is_good = 1
-
-
 end
 
 if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
@@ -620,6 +622,7 @@ else
   tempo_status_string_1 = "Current Tempo: " .. string.format("%.2f",current_tempo) 
   tempo_is_stable = 1
 end  
+
 
 
   tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f",wow_average_tempo) 
@@ -770,6 +773,8 @@ end
         end 
 
 
+        total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records) 
+
     if tick_count % 12 == 0 then
   
 
@@ -781,8 +786,11 @@ end
       -- Always advance the step based on tick_count mod 12.    
       current_step = util.wrap(current_step + 1, first_step, last_step)
       -- print ("Advanced step to: " .. current_step)
-      
-      total_step_count = total_step_count + 1
+    
+
+     -- total_step_co2_count = total_step_co2_count + 1
+
+      total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)  --- total_step_co2_count + 1
         
       -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
       if current_step == 3 then
@@ -1038,17 +1046,26 @@ function conditional_change_crow_output(current_step, sequence_row)
 
     -- Row 3 special case for the CO2 PPM data
       if (sequence_row == 3) then
-        print("hello from row 6 total_step_count is " .. total_step_count)
+        print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
-        co2_ppm_value_to_use = co2_ppm_list[total_step_count].the_co2_ppm_value
+        --co2_ppm_value_to_use = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
 
-        voltage_to_set = co2_ppm_value_to_use / 50
+        co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
 
-        print (voltage_to_set)
+        print (co2_ppm_step_offset)
 
-        crow.output[crow_output].volts =  voltage_to_set      
-      else -- use the notes from the grid
-        crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 
+        crow.output[crow_output].volts =  co2_ppm_step_offset + mozart_state[current_step][sequence_row] / 12      
+      elseif (sequence_row == 4) then 
+        --co2_ppm_value_to_use = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
+
+        co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
+
+        print (co2_ppm_tick_offset)
+        crow.output[crow_output].volts =  co2_ppm_tick_offset + mozart_state[current_step][sequence_row] / 12   
+      else 
+        
+        -- use the notes from the grid
+        crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
       end
 
     end
