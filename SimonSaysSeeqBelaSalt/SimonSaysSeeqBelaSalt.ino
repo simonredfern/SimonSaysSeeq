@@ -6,7 +6,7 @@
 \___ || || |  ||| \_/|| | \||\___ || |-|| / /  \___ |\___ ||  /_ |  /_ | \_\|
 \____/\_/\_/  \|\____/\_/  \|\____/\_/ \|/_/   \____/\____/\____\\____\\____\
 
-SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020 - 2023
+SIMON SAYS SEEQ is released under the AGPL and (c) Simon Redfern 2020 - 2024
 
 This sequencer is dedicated to all those folks working to fight climate change! Whilst you're here, check out https://feedbackloopsclimate.com/introduction/ 
 
@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.40-BelaSalt";
+const char version[16]= "v0.41-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -502,7 +502,6 @@ float lfo_a_frequency_input_raw;
 float lfo_osc_1_frequency;
 float lfo_osc_2_frequency;
 float frequency_2;
-//float audio_osc_2_frequency;
 
 
 unsigned int lfo_a_frequency_input = 20;
@@ -695,7 +694,7 @@ int test_int = 8 ;
 
 ////////
 // For each sequence step / midi note number  / on-or-off we store a NoteInfo (which defines a bit more info)
-// Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.)
+// Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.
 // This way we can easily access a step and the notes there.
 // [step][midi_note][on-or-off]
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
@@ -707,23 +706,20 @@ NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2];
 ////////
 
 
-// uint8_t data[32];
-// // fill in the data...
-// write_to_file(data, sizeof(data));
+////////////
+// These structures are used used to record which midi notes (and voltages are used in a given midi lane) - for use in pitch quantisation.
 
-// void write_to_file(uint8_t *ptr, size_t len) {
-//     ofstream fp;
-//     fp.open("somefile.bin",ios::out | ios :: binary );
-//     fp.write((char*)ptr, len);
-// }
+class MidiNoteSet
+{
+ public:
+   float voltage = 0;
+   uint8_t is_active = 0;
+   float delta = 1000;
+};
 
+class MidiNoteSet channel_x_midi_note_set[MAX_LANE+1][128]; 
 
-// std::String converter(uint8_t *str){
-//     return std::String((char *)str);
-// }
-
-
-
+/////////
 
 
 void SyncSequenceToFile(bool write_to_file){
@@ -750,7 +746,7 @@ void SyncSequenceToFile(bool write_to_file){
 	uint8_t sc = 0;
 	uint8_t bc = 0;
 	uint8_t n = 0;
-    uint8_t onoff = 0;
+  uint8_t onoff = 0;
    
 
 	std::string file_name;
@@ -925,24 +921,6 @@ void ReadSequenceFromFiles(){
 	
 	SyncSequenceToFile(false);
 }
-
-
-
-///////
-
-//void SaveNoteInfos() {
-	
-	// possible alternative approach using Bela WriteFile
-
-	    // file2.setup("simon_says_test_out.m"); //set the file name to write to
-     //   file2.setHeader("myvar=[\n"); //set one or more lines to be printed at the beginning of the file
-     //   file2.setFooter("];\n"); //set one or more lines to be printed at the end of the file
-     //   file2.setFormat("%.4f %.4f\n"); // set the format that you want to use for your output. Please use %f only (with modifiers)
-     //   file2.setFileType(kBinary);
-     //   file2.setEchoInterval(1); // only print to the console 1 line every other 10000
-        
-       
-//}
 
 
 
@@ -1153,7 +1131,7 @@ ADSR per_sequence_adsr_a;
 ADSR per_sequence_adsr_b;
 ADSR per_sequence_adsr_c;
 
-float analog_per_sequence_adsr_a_level = 0;
+//float analog_per_sequence_adsr_a_level = 0;
 float analog_per_sequence_adsr_b_level = 0;
 float analog_per_sequence_adsr_c_level = 0;
 
@@ -1542,6 +1520,9 @@ void printStatus(void*){
 
 
 
+
+////////////////////////
+
 void DisableMidiNotes(uint8_t note){
 	
 	last_function = 28749;
@@ -1558,6 +1539,10 @@ void DisableMidiNotes(uint8_t note){
               channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
+
+
+           channel_x_midi_note_set[current_midi_lane][note].is_active = 0;
+
 }
 
 
@@ -1613,6 +1598,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
 
+
+            channel_x_midi_note_set[current_midi_lane][note].is_active = 1;
             
           } else {
             rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
@@ -1637,7 +1624,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
         rt_printf("Done setting MIDI note ON for note %d when step is %d velocity is %d \n", note,  step_a_count, velocity );
 
         } else { // End of Note ON   
-          // MIDI Note OFF
+          // MIDI Note OFF (this is not relavent for midi note set)
           rt_printf("Set MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
           
           // WRITE MIDI MIDI_DATA (unless on silent lane) Note Off
@@ -2184,6 +2171,14 @@ void InitMidiSequence(bool force){
         channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
         channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
 
+
+        // Init channel_x_midi_note_set
+        channel_x_midi_note_set[current_midi_lane][n].is_active = 0;
+        channel_x_midi_note_set[current_midi_lane][n].voltage = note / 12; // Midi note to voltage in a one volt per octave system.
+
+        channel_x_midi_note_set[current_midi_lane][n].delta = 1000;
+
+
 // HERE
        // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
 
@@ -2417,7 +2412,33 @@ int BitClear (unsigned int number, unsigned int n) {
 }
 
 
+float quantisePitchBasedOnMidi(float inputVoltage){
+	
+	last_function = 4334;
 
+ for (uint8_t n = 0; n <= 127; n++) {
+
+        // Init channel_x_midi_note_set
+
+
+        if (channel_x_midi_note_set[current_midi_lane][n].is_active == 1){	
+          rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, channel_x_midi_note_set[current_midi_lane][n].is_active);
+
+          channel_x_midi_note_set[current_midi_lane][n].delta = abs(inputVoltage - channel_x_midi_note_set[current_midi_lane][n].voltage)
+
+
+
+          if (channel_x_midi_note_set[current_midi_lane][n].voltage - inputVoltage) < 
+
+
+
+        } else {
+          rt_printf(".");
+        }
+ }
+
+  return inputVoltage;
+}
 
 
 
@@ -3684,7 +3705,7 @@ void render(BelaContext *context, void *userData)
 	      	//////
 	      	
 
-	      	analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
+	      	// analog_per_sequence_adsr_a_level = per_sequence_adsr_a.process();
 	      	
 	      	lfo_a_result_analog = lfo_a_analog.process();
           lfo_b_result_analog = lfo_b_analog.process();
@@ -3742,6 +3763,11 @@ void render(BelaContext *context, void *userData)
 	      	
 	      	analog_out_6 = (lfo_a_result_analog - lfo_b_result_analog) * analog_per_sequence_adsr_b_level;
 	      	
+          // HERE TODO instead make this a quantised version of analog_out_2 etc.
+
+
+          analog_out_6 = quantisePitchBasedOnMidi(analog_out_2);
+
 	      	
 	      	analogWrite(context, n, ch, analog_out_6);
 	      }
