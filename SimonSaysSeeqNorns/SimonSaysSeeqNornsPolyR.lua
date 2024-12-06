@@ -1375,6 +1375,9 @@ function init()
 
 
 
+  print ("before init_row_settings_table")
+  init_row_settings_table()
+
   print ("before init_grid_state_table")
   init_grid_state_table()
     
@@ -1559,25 +1562,59 @@ function create_a_grid()
 end 
 
 
-function create_sequence_row_settings()
+function create_row_settings()
 -- This stores first_step and last_step for each sequence row.
 
-    local sequence_row_settings = {}
+    local row_settings = {}
       for row = 1, ROWS do
-        sequence_row_settings[row] = {} -- create a table for each row
-        sequence_row_settings[row]["first_step"] = 1 
-        sequence_row_settings[row]["last_step"] = 16   
+        row_settings[row] = {} -- create a table for each row
+        row_settings[row]["first_step"] = 1 
+        row_settings[row]["last_step"] = 16   
       end
 
-    return sequence_row_settings
+    return row_settings
 end 
 
-function set_first_step(row, step)
-    sequence_row_settings[row]["first_step"] = step
+
+function set_first_step(step)
+  if step <= last_step then
+    print ("Setting first_step to: " .. step)
+    first_step = step 
+  else 
+    print ("No can do. First step would be after last step. " .. step)
+  end
+end  
+
+function set_last_step(step)
+  if step >= first_step then
+    print ("Setting last_step to: " .. step)
+    last_step = step 
+  else 
+    print ("No can do. Last step would be before first step. " .. step) 
+  end
+end  
+
+
+
+function set_first_step(x, y)
+
+HEREHEREHERE
+
+  if step <= last_step then
+    print ("Setting first_step to: " .. step)
+    first_step = step 
+  else 
+    print ("No can do. First step would be after last step. " .. step)
+  end
+
+
+  -- x is the step
+  -- y is the row 
+    row_settings[y]["first_step"] = x
 end   
 
-function set_last_step(row, step)
-    sequence_row_settings[row]["last_step"]  = step
+function set_last_step(x, y)
+    row_settings[y]["last_step"]  = x
 end  
 
 
@@ -1661,12 +1698,12 @@ function init_row_settings_table()
     if row_settings == nil then
       print ("No table, I will generate a structure and save that")
   
-      row_settings = create_sequence_row_settings()
+      row_settings = create_row_settings()
   
       Tab.save(row_settings, ROW_SETTINGS_FILE)
       row_settings = Tab.load (ROW_SETTINGS_FILE)  
     else
-      print ("I already have a row settings table, no need to generate one")
+      print ("I already have a row_settings table, no need to generate one")
     end
 
    
@@ -2760,9 +2797,9 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_ON_BUTTON then
   put_slide_on(x,y)  
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_FIRST_STEP_BUTTON then
-  set_first_step(x)
+  set_first_step(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_LAST_STEP_BUTTON then
-  set_last_step(x)
+  set_last_step(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
   unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0),1) 
@@ -2830,23 +2867,7 @@ end -- End of my_grid.key function definition
 -------------------------/////////////////////////
 -------------------------/////////////////////////
 
-function set_first_step(step)
-  if step <= last_step then
-    print ("Setting first_step to: " .. step)
-    first_step = step 
-  else 
-    print ("No can do. First step would be after last step. " .. step)
-  end
-end  
 
-function set_last_step(step)
-  if step >= first_step then
-    print ("Setting last_step to: " .. step)
-    last_step = step 
-  else 
-    print ("No can do. Last step would be before first step. " .. step) 
-  end
-end  
 
 
 function get_row_settings_tally(row_settings)
