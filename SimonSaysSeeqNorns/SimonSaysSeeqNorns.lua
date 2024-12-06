@@ -2,11 +2,83 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "0.9.9"
+version = "1.0.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
+
+function get_script_path()
+  local info = debug.getinfo(1,'S');
+  local script_path = info.source:match[[^@?(.*[\/])[^\/]-$]]
+  return script_path
+end
+
+
+print ("Current script path is " .. get_script_path())
+
+
+
+local open = io.open
+
+local function read_file(path)
+    local file = open(path, "rb") -- r read mode and b binary mode
+    if not file then return nil end
+    local content = file:read "*a" -- *a or *all reads the whole file
+    file:close()
+    return content
+end
+
+
+function file_exists(name)
+  local f=io.open(name,"r")
+  if f~=nil then io.close(f) return true else return false end
+end
+
+
+-- See gml.noaa.gov/ccgg/trends/ for additional details.
+
+
+local co2_ppm_daily_latest_value = tonumber(read_file("/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
+
+if (co2_ppm_daily_latest_value) then 
+  print ("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
+  we_have_last_daily_co2_ppm_value = true
+else
+  print ("We do NOT have a daily co2 ppm ");
+  we_have_last_daily_co2_ppm_value = false
+end
+
+
+
+local all_days_path = "/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"
+
+if (file_exists(all_days_path)) then 
+  print ("Yes all days path file exists");
+  -- create a table out of the csv data.
+  -- note the last match is greedy with *
+  co2_ppm_list = {}
+  no_of_co2_ppm_records = 0
+  for line in io.lines(all_days_path) do
+      local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
+      co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value = the_co2_ppm_value }
+      no_of_co2_ppm_records = no_of_co2_ppm_records + 1
+  end
+  
+  -- for i,v in ipairs(co2_ppm_list) do
+  --  -- print(i, v.year .. "-" .. v.month .. "-" .. v.day .. " is " .. v.the_co2_ppm_value)
+
+  --   print(i, v.the_co2_ppm_value)
+
+  -- end
+  we_have_all_daily_co2_ppm_value = true
+else
+  print ("We do NOT have ALL daily co2 ppm ");
+  we_have_all_daily_co2_ppm_values = false
+end
+
+
+
 
 -- TODO - add total_wow_tempo_ticks to display
 
@@ -46,7 +118,9 @@ arm_control = NO_FEATURE
 print ("Current matrix is " .. sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
 
 
-current_tempo = 120 -- will be almost immediatly changed to the clock
+
+-- clock is currently external so cant script clock 
+
 
 local volts = 0
 local slew = 0
@@ -55,7 +129,7 @@ local slew = 0
 transport_is_active = true
 
 
--- Dimensions of Grid
+-- Dimensions of Monome Grid
 COLS = 16
 ROWS = 8
 
@@ -88,8 +162,6 @@ arm_swing_button = 0
 swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 7 -- was 6
---MIN_GATE_ROW = 7 -- Not used?
---MAX_GATE_ROW = 12 -- Not used?
 
 GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
@@ -252,8 +324,14 @@ table.insert(BUTTONS, {name = ARM_SLIDE_OFF_BUTTON, x = 15, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 
+function reset_step_counters()
+  current_step = first_step
+  total_step_co2_count = 1 -- This will loop around the co2 ppm rows
+  total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
+end  
 
-current_step = first_step
+
+reset_step_counters()
 
 
 tick_text = "."
@@ -466,8 +544,7 @@ function tick()
      
     --swing_amount = 0
 
--- now_tempo = clock.get_tempo()
-
+-- This is for informational purposes      
 current_tempo = clock.get_tempo()
 
 -- Check for big differences in tempo from average 
@@ -514,8 +591,6 @@ if (math.abs(flutter_average_tempo - current_tempo) > flutter_threshold) then
 
 else
   tempo_flutter_is_good = 1
-
-
 end
 
 if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0 ) then
@@ -527,10 +602,20 @@ else
 end  
 
 
+
   tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f",wow_average_tempo) 
   tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f",flutter_average_tempo)
   tempo_status_string_4 = "Wow Epsds: " .. wow_tempo_episodes .. " Ticks: " .. total_wow_tempo_ticks
   tempo_status_string_5 = "Flutter Epsds: " .. flutter_tempo_episodes .. " Ticks: " .. total_flutter_tempo_ticks
+
+
+  if (we_have_last_daily_co2_ppm_value) then 
+    co2_ppm_status_string = "CO2 PPM: " .. co2_ppm_daily_latest_value 
+  else
+    co2_ppm_status_string = "CO2 PPM: UNKOWN" 
+  end
+
+
 
   if (tempo_is_stable == 0) then 
 
@@ -632,10 +717,7 @@ end
       -- process_step() 
     end  
 
-
-
-
-  -- Less frequently triggered gates
+        -- Less frequently triggered gates
 
         if tick_count % (192 * 1) == 0 then
             clock.run(process_clock_gate, GATE_12)
@@ -669,6 +751,8 @@ end
         end 
 
 
+        total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records) 
+
     if tick_count % 12 == 0 then
   
 
@@ -680,7 +764,11 @@ end
       -- Always advance the step based on tick_count mod 12.    
       current_step = util.wrap(current_step + 1, first_step, last_step)
       -- print ("Advanced step to: " .. current_step)
-      
+    
+
+     -- total_step_co2_count = total_step_co2_count + 1
+
+      total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)  --- total_step_co2_count + 1
         
       -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
       if current_step == 3 then
@@ -886,7 +974,7 @@ function process_step()
 
    end -- End check midi start
 
-
+ 
 
   
   -- For each sequence row...
@@ -904,11 +992,8 @@ function process_step()
 
     -- Send the midi note number as CV we have previously captured (this currently sends even if the step is not active)
 
-    -- We have 4 outputs on crow
+    -- We have 4 outputs on crow to output eurorack CV
     -- Here we check the slide and set the voltage to the pitch accordingly.
-
-
-
     if sequence_row >= 3 and sequence_row <= 6 then
       conditional_change_crow_output(current_step, sequence_row)
     end  
@@ -927,21 +1012,45 @@ function conditional_change_crow_output(current_step, sequence_row)
   crow_output = sequence_row - 2
 
 
--- only change slew and voltage if the sequence step is active
-if grid_state[current_step][sequence_row]  ~= 0 then
 
-  if slide_state[current_step][sequence_row] == 1 then
-    crow.output[crow_output].slew = 0.1
-  else
-    crow.output[crow_output].slew = 0
-  end  
+    -- only change slew and voltage if the sequence step is active
+    if grid_state[current_step][sequence_row]  ~= 0 then
 
-  crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12  
+      if slide_state[current_step][sequence_row] == 1 then
+        crow.output[crow_output].slew = 0.1
+      else
+        crow.output[crow_output].slew = 0
+      end  
 
- -- output_text = output_text .. " " ..  crow_output ..  mozart_state[current_step][sequence_row] 
+    -- Row 3 special case for the CO2 PPM data
+      if (sequence_row == 3) then
+        print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
+
+        co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
+
+        print (co2_ppm_step_offset)
+
+        crow.output[crow_output].volts =  co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)     
+      elseif (sequence_row == 4) then 
+
+        co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
+
+        print (co2_ppm_tick_offset)
+        crow.output[crow_output].volts =  co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)   
+      else 
+        
+        -- use the notes from the grid
+        crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
+      end
+
+    end
 
 
-end
+    --if (sequence_row ==5) then
+    --print("hello from row 5 voltage just set was " .. mozart_state[current_step][sequence_row] / 12 ) 
+    --end
+
+
   
 end -- end function  
 
@@ -1124,6 +1233,8 @@ end
  
 
 
+
+
 function clock.transport.stop()
 
   -- This function is maybe called
@@ -1136,7 +1247,7 @@ function clock.transport.stop()
   print("total_flutter_tempo_ticks since last start: " .. total_flutter_tempo_ticks)
   print("flutter_tempo_episodes since last start: " .. flutter_tempo_episodes)
 
-  current_step = first_step
+  reset_step_counters()
 
 
 --  screen.clear()
@@ -1200,7 +1311,8 @@ function key(n,z)
 
         
      -- else -- Not currently running so reset. 
-        current_step = first_step -- effectively we press this again.
+       -- effectively we press this again.
+        reset_step_counters()
 
      -- end
       
@@ -1312,6 +1424,8 @@ end
 
 
 function init()
+
+  print ("Hello from init")
 
   -- clear buffer
   softcut.buffer_clear()
@@ -1480,51 +1594,27 @@ init_flutter_window()
 
 
 function load_grid_state()
-  
   grid_state = Tab.load (GRID_STATE_FILE)
-
-
-  
-  -- grid state popularity counter
-  grid_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-
-  print("Result of table load is:")
-  print (grid_state)
+  -- NOTE: get_tally serves to check the table is at least kind of OK.
+  -- if error pcall will return false which makes us create the table
   print (get_tally(grid_state))
-
   return grid_state
 end
   
 
 
 function load_mozart_state()
-  
-
-
-  mozart_state = Tab.load (MOZART_STATE_FILE) 
-
-
-  mozart_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-  print("Result of table load is:")
-  print (mozart_state)
+  mozart_state = Tab.load (MOZART_STATE_FILE)
+  -- NOTE: get_tally serves to check the table is at least kind of OK. 
   print (get_tally(mozart_state))
-
   return mozart_state
 end
 
 
 function load_slide_state()
-
   slide_state = Tab.load (SLIDE_STATE_FILE) 
-
-  slide_state["gspc"]=0 -- Reset this (apart from anything this assures the key is there)
-
-  print("Result of table load is:")
-  print (slide_state)
+  -- NOTE: get_tally serves to check the table is at least kind of OK.
   print (get_tally(slide_state))
-
   return slide_state
 end
 
@@ -1533,7 +1623,7 @@ end
 function create_a_grid()
   local local_grid = {}
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
-  local_grid["gspc"]=0 -- we might increment this to see how popular it is 
+
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
@@ -1549,13 +1639,15 @@ function init_grid_state_table()
   print ("Hello from init_grid_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_grid_state)
+  local success, err = pcall(load_grid_state) -- note grid_state is loaded into a global
 
-  if status then
+  if success then
     print ("load grid state seems ok. grid_state is:")
     print (grid_state)
+    print (get_tally(grid_state))
   else
-    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: ")
+    print(err)
     grid_state = nil
   end  
   
@@ -1565,17 +1657,15 @@ function init_grid_state_table()
 
     grid_state = create_a_grid()
 
-
-
     Tab.save(grid_state, GRID_STATE_FILE)
     grid_state = Tab.load (GRID_STATE_FILE)  
   else
     print ("I already have a grid_state table, no need to generate one")
   end
 
-  -- We want to make sure rows 7 and 8 are all off. 
-  -- There's no reason to have a different initial state for rows 7 and8
-  for y = 7, 8 do
+  -- We want to make sure rown 8 are all off. 
+  -- Note: row 7 may have kind of dual function but 8 is all control.
+  for y = TOTAL_SEQUENCE_ROWS + 1, 8 do
     for x = 1, 16 do
       print("turn off x:" .. x .. " y:" .. y)
       unconditional_set_grid_non_seq_button(x, y, 0)
@@ -1607,13 +1697,15 @@ function init_mozart_state_table()
   print ("Hello from init_mozart_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_mozart_state)
+  local success, err = pcall(load_mozart_state) -- note mozart_state is loaded into a global
 
-  if status then
+  if success then
     print ("load mozart state seems ok. mozart_state is:")
     print (mozart_state)
+    print (get_tally(mozart_state))
   else
-    print ("Seems we got an error - setting mozart_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting mozart_state to nil so we will create it and save it: ")
+    print (err)
     mozart_state = nil
   end  
   
@@ -1622,9 +1714,6 @@ function init_mozart_state_table()
     print ("No table, I will generate a structure and save that")
 
     mozart_state = create_a_grid()
-
-
-
     Tab.save(mozart_state, MOZART_STATE_FILE)
     mozart_state = Tab.load (MOZART_STATE_FILE)  
   else
@@ -1651,13 +1740,15 @@ function init_slide_state_table()
   print ("Hello from init_slide_state_table")
   
   -- Try to load the table
-  local status, err = pcall(load_slide_state)
+  local success, err = pcall(load_slide_state)
 
-  if status then
+  if success then
     print ("load slide state seems ok. slide_state is:")
     print (slide_state)
+    print (get_tally(slide_state))
   else
-    print ("Seems we got an error - setting slide_state to nil so we will create it and save it: " .. err)
+    print ("Seems we got an error - setting slide_state to nil so we will create it and save it: ")
+    print (err)
     slide_state = nil
   end  
   
@@ -1695,12 +1786,7 @@ function init_held_state_table()
   print ("Hello from init_held_state_table")
   
   -- Don't want to load or save - always create new
-  held_state = create_a_grid()
-
-  
- --print ("tally is: " .. get_tally(held_state))
-
-  
+  held_state = create_a_grid()  
   print ("Bye from init_held_state_table")
   
 
@@ -2056,13 +2142,23 @@ end -- end test for 254
 end   
 
 
+-- bug here
 function set_sequence(x,y,midi_note)
 
   sequence_button_x = x
   sequence_button_y = y
   sequence_button_midi = midi_note
 
-  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
+
+  -- the midi_note ~= 0  test caused a bug
+
+--  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
+--    sequence_button_is_pressed = true
+--  else 
+--    sequence_button_is_pressed = false
+--  end
+
+  if x ~= 0 and y ~= 0 then
     sequence_button_is_pressed = true
   else 
     sequence_button_is_pressed = false
@@ -2388,7 +2484,11 @@ function preset_mozart(x_button_pressed,y)
 
 for x = 1, 16 do
   if x_button_pressed == 1 then
-    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE, 0) -- same note
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 24, 0) -- same note low low
+  elseif x_button_pressed == 2 then
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 12, 0) -- same note low
+  elseif x_button_pressed == 3 then
+    unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 0, 0) -- same note  
   else
     unconditional_set_mozart(x, y, get_interesting_note_value(x, y, x_button_pressed), 0)
   end  
@@ -2602,19 +2702,19 @@ my_grid.key = function(x,y,z)
 -- z == 1 means key down, z == 0 means key up
 
 print("Hello from ----------- my_grid.key = function -----------------")
-print(x .. ","..y .. " z is " .. z.. " value before change " .. grid_state[y][y])
+print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_state[y][y])
 
--- print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
 
 -- First lets capture the combination of buttons pressed (up to three groups i.e. one sequence button, one row7 and one row8 (control))
 
 if z == 1 then
-  print("Key Down")
+  print("z is 1. You pressed a monome grid key down")
   if y <= TOTAL_SEQUENCE_ROWS then
-    print("Sequence Row Down")
+    print("You pressed a Sequence Row button down")
     -- This holds the sequence button
-    set_sequence(x,y,mozart_state[x][y])
+    set_sequence(x,y,mozart_state[x][y]) -- bug here
   elseif y == 7 then
     print("Row7 On")
     arm_row7 = grid_button_function_name(x,y)
@@ -2645,12 +2745,12 @@ else
   end
 end   
 
-operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
+operation_matix_string = "x:" .. sequence_button_x .. " y:" .. sequence_button_x ..  " z:" .. z .. " sequence_button_is_pressed: " .. tostring(sequence_button_is_pressed) .. " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
 
 
 print ("Operation matrix is: " ..  operation_matix_string)
-
--- Now we have a matrix of buttons, now process.
+print ("Before deciding what to do.. ")
+-- Now we have a matrix of buttons, now decide and process.
 
 if sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == NO_FEATURE then
   on_sequence_button_press_down(x,y,z)
@@ -2733,7 +2833,7 @@ elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_16 and arm
   print("button" .. 16) 
   unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_MINOR_THIRD * 4),1)
 else
-  print("(No action for this combination of buttons: " ..  operation_matix_string .. " )") 
+  print("WARNING! No action found for the following combination of buttons: " ..  operation_matix_string .. " )") 
 end -- end of grid_button_function_name tests
 
 
@@ -2774,7 +2874,7 @@ function get_tally(input_grid)
   -- A helper debug function to show the state of a grid
   -- A grid is a table with known dimensions
   -- Used for debugging
-  local tally = "id:" ..input_grid["id"] .. " gspc:" .. input_grid["gspc"] .. " colsXrows:"
+  local tally = "id:" ..input_grid["id"] .. " colsXrows:"
   for col = 1,COLS do 
     for row = 1,ROWS do
       tally = tally .. input_grid[col][row]
@@ -2823,11 +2923,10 @@ end
 
 function get_copy_of_grid(input_grid)
   -- For creating copies of a grid for Undo and probably other things.
-  --print ("input_grid is" .. get_tally(input_grid))
   local output_grid = create_a_grid() -- this returns a grid with the dimensions we expect
   -- copy all the key values except the ID 
   output_grid["id"] = math.random(1,99999999999999)
-  output_grid["gspc"] = input_grid["gspc"]
+  -- output_grid["gspc"] = input_grid["gspc"]
   
 
 
@@ -2861,6 +2960,9 @@ function display_tempo_status()
 
   screen.move(1,35) 
   screen.text(tempo_status_string_5)
+
+  screen.move(1,42) 
+  screen.text(co2_ppm_status_string)
 
 
   screen.move(1,49) 
