@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.5.0"
+version = "1.5.3"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -407,6 +407,10 @@ function reset_step_counters()
   total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
 
   for row = 1, TOTAL_SEQUENCE_ROWS do
+    
+
+    row_settings[row]["first_step"] = first_step
+    row_settings[row]["last_step"] = last_step
     row_settings[row]["current_step"] = row_settings[row]["first_step"]
   end
   
@@ -2307,9 +2311,18 @@ end
 
 
 
+function reset_row_settings(row)
 
+  row_settings[row]["first_step"] = first_step
+  row_settings[row]["last_step"] = last_step
+  row_settings[row]["current_step"] = first_step   
+
+end  
 
 function preset_grid (x,y)
+
+
+  reset_row_settings(y)
 
     -- Any button pressed on this row (1)
     if y == 1 then
@@ -2339,6 +2352,8 @@ function preset_grid (x,y)
         grid_state[16][y] = 0
       
       else
+
+        -- TODO if x==2 then just reset_row_settings not the pattern? 
         random_dense_grid(x, y)
       end
             
