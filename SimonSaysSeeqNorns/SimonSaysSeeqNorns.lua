@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.4.5"
+version = "1.4.6"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -2860,9 +2860,9 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_ON_BUTTON then
   put_slide_on(x,y)  
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_FIRST_STEP_BUTTON then
-  set_first_step(x)
+  set_first_step(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_LAST_STEP_BUTTON then
-  set_last_step(x)
+  set_last_step(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
   unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0),1) 
@@ -2930,23 +2930,30 @@ end -- End of my_grid.key function definition
 -------------------------/////////////////////////
 -------------------------/////////////////////////
 
-function set_first_step(step)
-  if step <= last_step then
-    print ("Setting first_step to: " .. step)
-    first_step = step 
-  else 
-    print ("No can do. First step would be after last step. " .. step)
-  end
-end  
+function set_first_step(x, y)
+  -- x is the step
+  -- y is the row 
 
-function set_last_step(step)
-  if step >= first_step then
-    print ("Setting last_step to: " .. step)
-    last_step = step 
+  -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
+  if x <= row_settings[y]["last_step"] then
+    print ("Setting first_step of row " .. y .. " to: " .. x)
+    row_settings[y]["first_step"] = x
   else 
-    print ("No can do. Last step would be before first step. " .. step) 
+    print ("No can do. First step of row " .. y .. " would be after last step. " .. x)
   end
-end  
+
+end   
+
+function set_last_step(x, y)
+
+  if x >= row_settings[y]["first_step"] then
+    print ("Setting last_step of row" .. y .. " to: " .. x)
+    row_settings[y]["last_step"]  = x
+  else 
+    print ("No can do. Last step of row " .. y .. " would be before first step. " .. x) 
+  end
+
+end 
 
 
 function get_tally(input_grid)
