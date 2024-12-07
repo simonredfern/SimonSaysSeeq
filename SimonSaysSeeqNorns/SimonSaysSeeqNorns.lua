@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.3.0"
+version = "1.4.3"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -193,6 +193,44 @@ function load_row_settings()
 
   return row_settings
 end
+ 
+function init_row_settings_table()
+  
+  print ("Hello from init_row_settings_table")
+  
+  -- Try to load the table
+  local status, err = pcall(load_row_settings)
+
+  if status then
+    print ("load row_settings state seems ok. row_settings is:")
+    print (row_settings)
+  else
+    print ("Seems we got an error - setting row_settings to nil so we will create it and save it: " .. err)
+    row_settings = nil
+  end  
+  
+  -- if it doesn't exist
+  if row_settings == nil then
+    print ("No row_settings table, I will generate a structure and save that")
+
+    row_settings = create_row_settings()
+
+    Tab.save(row_settings, ROW_SETTINGS_FILE)
+    row_settings = Tab.load (ROW_SETTINGS_FILE)  
+  else
+    print ("I already have a row_settings table, no need to generate one")
+  end
+
+ 
+   -- Push Undo so we can get back to initial state
+   --push_mozart_undo()
+
+  print ("Bye from init_row_settings_table")
+  
+
+end -- end init_sequence_row_settings_table
+
+
 
 
 last_action_method = ""
