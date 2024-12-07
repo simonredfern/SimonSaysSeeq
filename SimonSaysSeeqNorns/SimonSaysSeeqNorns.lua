@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.4.7"
+version = "1.5.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -405,10 +405,15 @@ function reset_step_counters()
   current_step = first_step
   total_step_co2_count = 1 -- This will loop around the co2 ppm rows
   total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
+
+  for row = 1, TOTAL_SEQUENCE_ROWS do
+    row_settings[row]["current_step"] = row_settings[row]["first_step"]
+  end
+  
 end  
 
 
-reset_step_counters()
+
 
 
 tick_text = "."
@@ -845,7 +850,7 @@ end
     
 
       -- Advance the step for each row each_row_step
-      for row = 1, ROWS do
+      for row = 1, TOTAL_SEQUENCE_ROWS do
         row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"]  + 1, row_settings[row]["first_step"], row_settings[row]["last_step"] )
         print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
       end
@@ -1083,7 +1088,9 @@ function process_step()
     -- We have 4 outputs on crow to output eurorack CV
     -- Here we check the slide and set the voltage to the pitch accordingly.
     if sequence_row >= 3 and sequence_row <= 6 then
-      conditional_change_crow_output(current_step, sequence_row)
+      -- conditional_change_crow_output(current_step, sequence_row)
+
+      conditional_change_crow_output(row_settings[sequence_row]["current_step"], sequence_row)
     end  
 
 
@@ -1592,7 +1599,7 @@ function init()
   print ("before init_held_state_table")
   init_held_state_table()
 
-
+  reset_step_counters()
 
   refresh_grid_and_screen()
 
@@ -1628,7 +1635,7 @@ function init()
   -- print(grid_button_function_name (2,1))
   -- print ("========END============")
 
--- here
+
 --crow.output[1].scale = {0,7,2,9}
 
 current_tempo = clock.get_tempo()
@@ -1637,6 +1644,8 @@ flutter_average_tempo = clock.get_tempo() -- just for initial value
 init_wow_and_flutter_counters()
 init_wow_window()
 init_flutter_window()
+
+
 
    print("init says: Starting main sequencer timing called tick.")
    clock.run(tick)       -- start the sequencer
@@ -2260,7 +2269,7 @@ end
 
 
 
--- here
+
 
 
 function random_dense_grid(x, y)
@@ -2784,7 +2793,7 @@ end
 
 
 -- MAIN GRID LOOP
--- Here we capture monome grid key presses - Grid Key Presses
+-- We capture monome grid key presses - Grid Key Presses
 -- Main Grid button loop
 
 my_grid.key = function(x,y,z)
@@ -3117,7 +3126,7 @@ function refresh_grid_and_screen()
 
   -- NOTE This is only for display purposes.  
   for col = 1,COLS do 
-    for row = 1,TOTAL_SEQUENCE_ROWS do -- don't want to set (or display) non sequence rows here
+    for row = 1,TOTAL_SEQUENCE_ROWS do -- don't want to set (or display) non sequence rows in this place
       tally = tally .. grid_state[col][row]
 
       screen.move(10 + (col * 7),row * 7)
