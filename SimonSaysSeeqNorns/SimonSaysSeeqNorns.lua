@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.4.6"
+version = "1.4.7"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -169,7 +169,7 @@ MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
-ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settings.tbl"
+ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settingsB.tbl"
 
 function get_row_settings_tally(row_settings)
   -- A helper debug function to show the state the row_settings table
@@ -188,7 +188,8 @@ function create_row_settings()
         for row = 1, ROWS do
           row_settings[row] = {} -- create a table for each row
           row_settings[row]["first_step"] = 1 
-          row_settings[row]["last_step"] = 16   
+          row_settings[row]["last_step"] = 16
+          row_settings[row]["current_step"] = 1   
         end
   
       return row_settings
@@ -837,10 +838,20 @@ end
 
       process_step() 
 
+      -- This is the master (original step) 
       -- Always advance the step based on tick_count mod 12.    
       current_step = util.wrap(current_step + 1, first_step, last_step)
       -- print ("Advanced step to: " .. current_step)
     
+
+      -- Advance the step for each row each_row_step
+    for row = 1, ROWS do
+      row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"]  + 1, row_settings[row]["first_step"], row_settings[row]["last_step"] )
+      print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+    end
+
+
+
 
      -- total_step_co2_count = total_step_co2_count + 1
 
@@ -1100,18 +1111,18 @@ function conditional_change_crow_output(current_step, sequence_row)
 
     -- Row 3 special case for the CO2 PPM data
       if (sequence_row == 3) then
-        print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
+        --print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
         co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
 
-        print (co2_ppm_step_offset)
+        --print (co2_ppm_step_offset)
 
         crow.output[crow_output].volts =  co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)     
       elseif (sequence_row == 4) then 
 
         co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
 
-        print (co2_ppm_tick_offset)
+        --print (co2_ppm_tick_offset)
         crow.output[crow_output].volts =  co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)   
       else 
         
