@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.0.0"
+version = "1.1.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -1373,7 +1373,7 @@ function init()
   redo_mozart_lifo = {}
 
 
-
+  print ("!!! before init tables !!!")
 
   print ("before init_row_settings_table")
   init_row_settings_table()
@@ -1576,45 +1576,32 @@ function create_row_settings()
 end 
 
 
-function set_first_step(step)
-  if step <= last_step then
-    print ("Setting first_step to: " .. step)
-    first_step = step 
-  else 
-    print ("No can do. First step would be after last step. " .. step)
-  end
-end  
-
-function set_last_step(step)
-  if step >= first_step then
-    print ("Setting last_step to: " .. step)
-    last_step = step 
-  else 
-    print ("No can do. Last step would be before first step. " .. step) 
-  end
-end  
 
 
 
 function set_first_step(x, y)
-
-HEREHEREHERE
-
-  if step <= last_step then
-    print ("Setting first_step to: " .. step)
-    first_step = step 
-  else 
-    print ("No can do. First step would be after last step. " .. step)
-  end
-
-
   -- x is the step
   -- y is the row 
+
+  -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
+  if x <= row_settings[y]["last_step"] then
+    print ("Setting first_step of row " .. y .. " to: " .. x)
     row_settings[y]["first_step"] = x
+  else 
+    print ("No can do. First step of row " .. y .. " would be after last step. " .. x)
+  end
+
 end   
 
 function set_last_step(x, y)
+
+  if x >= row_settings[y]["first_step"] then
+    print ("Setting last_step of row" .. y .. " to: " .. x)
     row_settings[y]["last_step"]  = x
+  else 
+    print ("No can do. Last step of row " .. y .. " would be before first step. " .. x) 
+  end
+
 end  
 
 
@@ -1687,7 +1674,7 @@ function init_row_settings_table()
     local status, err = pcall(load_row_settings)
   
     if status then
-      print ("load mozart state seems ok. row_settings is:")
+      print ("load row_settings state seems ok. row_settings is:")
       print (row_settings)
     else
       print ("Seems we got an error - setting row_settings to nil so we will create it and save it: " .. err)
@@ -1696,7 +1683,7 @@ function init_row_settings_table()
     
     -- if it doesn't exist
     if row_settings == nil then
-      print ("No table, I will generate a structure and save that")
+      print ("No row_settings table, I will generate a structure and save that")
   
       row_settings = create_row_settings()
   

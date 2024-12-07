@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.0.0"
+version = "1.2.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -168,6 +168,8 @@ GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
+
+ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settings.tbl"
 
 last_action_method = ""
 last_x = 0
