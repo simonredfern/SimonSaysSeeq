@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.2.0"
+version = "1.3.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -170,6 +170,30 @@ MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
 ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settings.tbl"
+
+function get_row_settings_tally(row_settings)
+  -- A helper debug function to show the state the row_settings table
+  -- We use this to get an error if the expected keys are not there.
+  local tally = "id:" .. row_settings["id"] .. " " 
+    for row = 1,ROWS do
+      tally = tally .. " Row: " .. row .. " first_step is: " ..  row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
+    end 
+  return tally
+end 
+
+
+function load_row_settings()
+  
+  row_settings = Tab.load (ROW_SETTINGS_FILE) 
+
+  print("Result of table load is:")
+  print (row_settings)
+
+  print (get_row_settings_tally(row_settings))
+
+  return row_settings
+end
+
 
 last_action_method = ""
 last_x = 0
