@@ -3124,7 +3124,10 @@ function refresh_grid_and_screen()
 
       -- Show the scrolling of the steps with the sequence rows of LEDS. (Others will be used for other controls)
       -- note: row 7 has a dual use (sequence and set midi note when a row 8 button is presssed.)
-      if (current_step == col and row <= TOTAL_SEQUENCE_ROWS) then
+      --if (current_step == col and row <= TOTAL_SEQUENCE_ROWS) then
+
+      if (row_settings[row]["current_step"] == col and row <= TOTAL_SEQUENCE_ROWS) then
+
           -- This is the scrolling cursor
           screen.text("*")
         
