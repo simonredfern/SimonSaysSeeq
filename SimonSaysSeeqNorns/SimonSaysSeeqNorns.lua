@@ -845,12 +845,10 @@ end
     
 
       -- Advance the step for each row each_row_step
-    for row = 1, ROWS do
-      row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"]  + 1, row_settings[row]["first_step"], row_settings[row]["last_step"] )
-      print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
-    end
-
-
+      for row = 1, ROWS do
+        row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"]  + 1, row_settings[row]["first_step"], row_settings[row]["last_step"] )
+        print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+      end
 
 
      -- total_step_co2_count = total_step_co2_count + 1
@@ -1067,7 +1065,10 @@ function process_step()
   -- For each sequence row...
   for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
     -- on the current step...
-    ratchet_mode = grid_state[current_step][sequence_row]
+    -- Prior to POLYR
+    --ratchet_mode = grid_state[current_step][sequence_row]
+
+    ratchet_mode = grid_state[row_settings[sequence_row]["current_step"]][sequence_row]
 
     -- process step should run independently
     clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -3114,6 +3115,7 @@ function refresh_grid_and_screen()
     screen.text(total_flutter_tempo_ticks)
 
 
+  -- NOTE This is only for display purposes.  
   for col = 1,COLS do 
     for row = 1,TOTAL_SEQUENCE_ROWS do -- don't want to set (or display) non sequence rows here
       tally = tally .. grid_state[col][row]
@@ -3126,6 +3128,7 @@ function refresh_grid_and_screen()
       -- note: row 7 has a dual use (sequence and set midi note when a row 8 button is presssed.)
       --if (current_step == col and row <= TOTAL_SEQUENCE_ROWS) then
 
+      -- POLYR  
       if (row_settings[row]["current_step"] == col and row <= TOTAL_SEQUENCE_ROWS) then
 
           -- This is the scrolling cursor
