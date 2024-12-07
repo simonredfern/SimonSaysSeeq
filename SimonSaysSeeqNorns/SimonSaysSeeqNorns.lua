@@ -2,7 +2,7 @@
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
 
-version = "1.4.3"
+version = "1.4.5"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -181,6 +181,18 @@ function get_row_settings_tally(row_settings)
   return tally
 end 
 
+function create_row_settings()
+  -- This stores first_step and last_step for each sequence row.
+  
+      local row_settings = {}
+        for row = 1, ROWS do
+          row_settings[row] = {} -- create a table for each row
+          row_settings[row]["first_step"] = 1 
+          row_settings[row]["last_step"] = 16   
+        end
+  
+      return row_settings
+  end 
 
 function load_row_settings()
   
@@ -1548,7 +1560,10 @@ function init()
   undo_mozart_lifo = {}
   redo_mozart_lifo = {}
 
+  print ("!!! before init tables !!!")
 
+  print ("before init_row_settings_table")
+  init_row_settings_table()
 
 
   print ("before init_grid_state_table")
