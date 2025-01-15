@@ -2416,29 +2416,20 @@ int BitClear (unsigned int number, unsigned int n) {
 // loop through our midi sequence
 // for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
 
-float quantisePitchBasedOnMidi(float inputVoltage){
+float updateIncomingMidiNoteSet(float inputVoltage){
 	
 	last_function = 4334;
 
- for (uint8_t n = 0; n <= 127; n++) {
+  for (uint8_t n = 0; n <= 127; n++) {
 
-        // Init incoming_midi_note_set
+    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage)
 
-
-        if (incoming_midi_note_set[current_midi_lane][n].is_active == 1){	
-          rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, incoming_midi_note_set[current_midi_lane][n].is_active);
-
-          incoming_midi_note_set[current_midi_lane][n].delta = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage)
-
-
-
-          if (incoming_midi_note_set[current_midi_lane][n].voltage - inputVoltage) < 
-
-
-
-        } else {
-          rt_printf(".");
-        }
+    if (the_difference < 0.1) {
+      incoming_midi_note_set[current_midi_lane][n].is_active = 1  
+      rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, incoming_midi_note_set[current_midi_lane][n].is_active);
+    } else {
+      rt_printf(".");
+    }
  }
 
   return inputVoltage;
@@ -3440,12 +3431,17 @@ void render(BelaContext *context, void *userData)
     // Begin Bela delay example code
     float in_left = 0;
     float in_right = 0;
+    float result = 0;
+
+
+    // Very WIP
+    result = updateIncomingMidiNoteSet(in_left);
     
     // Read audio inputs
     in_left = audioRead(context,n,0);
     in_right = audioRead(context,n,1);
     
-        
+
 
 
     audioWrite(context, n, 0, in_left);
