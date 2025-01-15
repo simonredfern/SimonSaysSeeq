@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.41-BelaSalt";
+const char version[16]= "v0.44-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -272,7 +272,6 @@ int gWavetableLength = 1024;
 void recalculate_frequencies(void*);
 OscillatorBank osc_bank;
 
-//Oscillator oscillator_2_audio;
 Oscillator lfo_a_analog;
 Oscillator lfo_b_analog;
 
@@ -2263,17 +2262,14 @@ void OnTick(){
 
   // Decide if we have a "step"
   
-  // clock divide here?
 
   // This is how we define when a step happens.
   if (loop_timing_a.tick_count_in_sequence % (6 * clock_divider_input_value) == 0){
-    //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
     OnStepA();
     /////////////////////////////////////////   
   } else {
-    //clockShowLow();
     // The other ticks which are not "steps".
     OnNotStepA();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
@@ -2282,13 +2278,11 @@ void OnTick(){
 
   // Decide if we have a "step"
   if (loop_timing_b.tick_count_in_sequence % (6 * clock_divider_input_value) == 0){
-    //clockShowHigh();
     //rt_printf("loop_timing_a.tick_count_in_sequence is: ") + loop_timing_a.tick_count_in_sequence + String(" the first tick of a crotchet or after MIDI Start message") );    
     //////////////////////////////////////////
     OnStepB();
     /////////////////////////////////////////   
   } else {
-    //clockShowLow();
     // The other ticks which are not "steps".
     OnNotStepB();
     //rt_printf("timing.tick_count_in_sequence is: ") + timing.tick_count_in_sequence );
@@ -2297,8 +2291,6 @@ void OnTick(){
   
   
   // Play any suitable midi in the sequence (note, we read midi using a callback)
-
-// Here we could clock divide 
 
 // Do we call this too often?
   PlayMidi();
@@ -2614,8 +2606,6 @@ void ChangeCvWaveformBAmplitude(){
   // change by an amount (might go up or down)
   cv_waveform_b_amplitude += cv_waveform_b_amplitude_delta;
 
-  // TODO do something with bela
-  // SetWaveformBObjectAmplitude ();
  
 }
 
@@ -2632,11 +2622,6 @@ void SetWaveformBObjectAmplitude (){
     cv_waveform_b_amplitude = 1;
     }
 
-
-  // set it.
-  // TODO set bela oscailator
-  //cv_waveform_b_object.amplitude(cv_waveform_b_amplitude, 10); // setting-b-amplitude
-  //Serial.println(String("cv_waveform_b_object.amplitude was set to: ") + cv_waveform_b_amplitude);
 }
 
 
@@ -3214,10 +3199,6 @@ bool setup(BelaContext *context, void *userData){
 	lfo_a_analog.setup(context->analogSampleRate);
   lfo_b_analog.setup(context->analogSampleRate);
 
-
-	//oscillator_2_audio.setup(context->audioSampleRate);
-
-	
 
 	
 
