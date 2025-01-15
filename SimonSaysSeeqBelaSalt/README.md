@@ -2,7 +2,7 @@
 
 See this video for an intro into some features and how to modify source code: [SimonSaysSeeq on Bela Salt Twitch video](https://www.twitch.tv/videos/885185134)
 
-![SimonSaysSeeq - on Bela Salt with Salt+ 5 December 2023](https://github.com/simonredfern/SimonSaysSeeq/assets/485218/9e7547bc-99ac-41cc-9224-38f2cffdf1ef)
+![Jan 2025 SimonSaysSeeq - on Bela Salt with Salt+](https://github.com/user-attachments/assets/7a6c7f39-5683-410d-90df-77e93d651988)
 
 
 Various notes:
