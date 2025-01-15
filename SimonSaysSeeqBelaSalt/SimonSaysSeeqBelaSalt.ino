@@ -716,7 +716,9 @@ class MidiNoteSet
    float delta = 1000;
 };
 
-class MidiNoteSet channel_x_midi_note_set[MAX_LANE+1][128]; 
+class MidiNoteSet incoming_midi_note_set[MAX_LANE+1][128]; 
+
+
 
 /////////
 
@@ -1540,7 +1542,7 @@ void DisableMidiNotes(uint8_t note){
            }
 
 
-           channel_x_midi_note_set[current_midi_lane][note].is_active = 0;
+           incoming_midi_note_set[current_midi_lane][note].is_active = 0;
 
 }
 
@@ -1596,9 +1598,6 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
             channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
-
-
-            channel_x_midi_note_set[current_midi_lane][note].is_active = 1;
             
           } else {
             rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
@@ -2171,14 +2170,14 @@ void InitMidiSequence(bool force){
         channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
 
 
-        // Init channel_x_midi_note_set
-        channel_x_midi_note_set[current_midi_lane][n].is_active = 0;
-        channel_x_midi_note_set[current_midi_lane][n].voltage = note / 12; // Midi note to voltage in a one volt per octave system.
+        // Init incoming_midi_note_set
+        // this array is used to track incoming notes seen via audio in (CV)
+        incoming_midi_note_set[current_midi_lane][n].is_active = 0;
+        incoming_midi_note_set[current_midi_lane][n].voltage = note / 12; // Midi note to voltage in a one volt per octave system.
 
-        channel_x_midi_note_set[current_midi_lane][n].delta = 1000;
+        incoming_midi_note_set[current_midi_lane][n].delta = 1000;
 
 
-// HERE
        // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
 
 
@@ -2404,23 +2403,36 @@ int BitClear (unsigned int number, unsigned int n) {
 }
 
 
+// hey copilot shut up
+// Sample the audio 
+
+
+
+// sample the audio 
+// periodically check which midi note it is (convert voltage to note)
+// add it to the set of recent notes.
+
+// then
+// loop through our midi sequence
+// for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
+
 float quantisePitchBasedOnMidi(float inputVoltage){
 	
 	last_function = 4334;
 
  for (uint8_t n = 0; n <= 127; n++) {
 
-        // Init channel_x_midi_note_set
+        // Init incoming_midi_note_set
 
 
-        if (channel_x_midi_note_set[current_midi_lane][n].is_active == 1){	
-          rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, channel_x_midi_note_set[current_midi_lane][n].is_active);
+        if (incoming_midi_note_set[current_midi_lane][n].is_active == 1){	
+          rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, incoming_midi_note_set[current_midi_lane][n].is_active);
 
-          channel_x_midi_note_set[current_midi_lane][n].delta = abs(inputVoltage - channel_x_midi_note_set[current_midi_lane][n].voltage)
+          incoming_midi_note_set[current_midi_lane][n].delta = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage)
 
 
 
-          if (channel_x_midi_note_set[current_midi_lane][n].voltage - inputVoltage) < 
+          if (incoming_midi_note_set[current_midi_lane][n].voltage - inputVoltage) < 
 
 
 
@@ -3419,116 +3431,33 @@ void render(BelaContext *context, void *userData)
 	frame_timer = context->audioFramesElapsed;
 
 
-  // AUDIO LOOP
+  // AUDIO LOOP tracking audio in  HEREHERE
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 	
 		
+    ////////////////////////////////
+    // Begin Bela delay example code
+    float in_left = 0;
+    float in_right = 0;
     
-
-		
-        ////////////////////////////////
-		    // Begin Bela delay example code
-		    float out_l = 0;
-        float out_r = 0;
-        
-        // Read audio inputs
-        out_l = audioRead(context,n,0);
-        out_r = audioRead(context,n,1);
-        
-        // Increment delay buffer write pointer
-        if(++gDelayBufWritePtr>DELAY_BUFFER_SIZE)
-            gDelayBufWritePtr = 0;
-        
-        // Calculate the sample that will be written into the delay buffer...
-        // 1. Multiply the current (dry) sample by the pre-delay gain level (set above)
-        // 2. Get the previously delayed sample from the buffer, multiply it by the feedback gain and add it to the current sample
-        float del_input_l = (gDelayAmountPre * out_l + gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
-        float del_input_r = (gDelayAmountPre * out_r + gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * delay_feedback_amount);
-        
-        // ...but let's not write it into the buffer yet! First we need to apply the low-pass filter!
-        
-        // Remember these values so that we can update the filter later, as we're about to overwrite it
-        float temp_x_l = del_input_l;
-        float temp_x_r = del_input_r;
-        
-        // Apply the butterworth filter (y = a0*x0 + a1*x1 + a2*x2 + a3*y1 + a4*y2)
-        del_input_l = gDel_a0*del_input_l
-                    + gDel_a1*gDel_x1_l
-                    + gDel_a2*gDel_x2_l
-                    + gDel_a3*gDelayBuffer_l[(gDelayBufWritePtr-1+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE]
-                    + gDel_a4*gDelayBuffer_l[(gDelayBufWritePtr-2+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE];
-        
-        // Update previous values for next iteration of filter processing
-        gDel_x2_l = gDel_x1_l;
-        gDel_x1_l = temp_x_l;
-        gDel_y2_l = gDel_y1_l;
-        gDel_y1_l = del_input_l;
-        
-        // Repeat process for the right channel
-        del_input_r = gDel_a0*del_input_r
-                    + gDel_a1*gDel_x1_r
-                    + gDel_a2*gDel_x2_r
-                    + gDel_a3*gDelayBuffer_r[(gDelayBufWritePtr-1+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE]
-                    + gDel_a4*gDelayBuffer_r[(gDelayBufWritePtr-2+DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE];
+    // Read audio inputs
+    in_left = audioRead(context,n,0);
+    in_right = audioRead(context,n,1);
     
-        gDel_x2_r = gDel_x1_r;
-        gDel_x1_r = temp_x_r;
-        gDel_y2_r = gDel_y1_r;
-        gDel_y1_r = del_input_r;
         
-        //  Now we can write it into the delay buffer
-        gDelayBuffer_l[gDelayBufWritePtr] = del_input_l;
-        gDelayBuffer_r[gDelayBufWritePtr] = del_input_r;
-        
-        // Get the delayed sample (by reading `total_delay_frames` many samples behind our current write pointer) and add it to our output sample
-        out_l += gDelayBuffer_l[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
-        out_r += gDelayBuffer_r[(gDelayBufWritePtr - total_delay_frames + DELAY_BUFFER_SIZE)%DELAY_BUFFER_SIZE] * gDelayAmount;
-        
-        // Write the sample into the output buffer -- done!
-        // Apply "VCA" to the output.  
 
 
+    audioWrite(context, n, 0, in_left);
+    audioWrite(context, n, 1, in_right);
 
-        audioWrite(context, n, 0, out_l);
-        audioWrite(context, n, 1, out_r);
-		    // End Bela delay example code
-		    //////////////////////////////
-		
-
-
+	
 
 	}
 
 // ANALOG LOOP
 	for(unsigned int n = 0; n < context->analogFrames; n++) {
 
-		// Process analog oscillator	
-	//	lfo_a_result_analog = lfo_a_analog.process();
-	//	lfo_b_result_analog = lfo_b_analog.process();
-
-
-	//  analog_per_sequence_adsr_a_level  = 1.0 * per_sequence_adsr_a.process();
-	//	analog_per_sequence_adsr_b_level  = 1.0 * per_sequence_adsr_b.process();  
-	//	analog_per_sequence_adsr_c_level  = 1.0 * per_sequence_adsr_c.process();
-				
-		// Modulated outputs
-		//analog_out_2 = lfo_a_result_analog; // * analog_per_sequence_adsr_a_level;
-		//analog_out_2 = per_sequence_adsr_a.process();
-    	//analog_out_3 = analog_per_sequence_adsr_b_level; 
-		//analog_out_4 = analog_per_sequence_adsr_c_level;
-
-		
-    	//analog_out_3 = lfo_a_result_analog * analog_per_sequence_adsr_b_level; 
-		//analog_out_4 = lfo_a_result_analog * analog_per_sequence_adsr_c_level;
-		
-		
-		
-		
-
-  //  analog_out_6 = lfo_b_result_analog * analog_per_sequence_adsr_a_level;
-  //  analog_out_7 = lfo_b_result_analog * analog_per_sequence_adsr_b_level; 
-  //  analog_out_8 = lfo_b_result_analog * analog_per_sequence_adsr_c_level;
 		
 		// ANALOG INPUTS
 		for(unsigned int ch = 0; ch < gAnalogChannelNum; ch++){
@@ -3696,7 +3625,7 @@ void render(BelaContext *context, void *userData)
           // HERE TODO instead make this a quantised version of analog_out_2 etc.
 
 
-          analog_out_6 = quantisePitchBasedOnMidi(analog_out_2);
+          //analog_out_6 = quantisePitchBasedOnMidi(analog_out_2);
 
 	      	
 	      	analogWrite(context, n, ch, analog_out_6);
