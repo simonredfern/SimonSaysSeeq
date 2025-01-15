@@ -3245,57 +3245,6 @@ bool setup(BelaContext *context, void *userData){
 		gAudioFramesPerAnalogFrame = context->audioFrames / context->analogFrames;
 	gInverseSampleRate = 1.0 / context->audioSampleRate;
 	gPhase = 0.0;
-
-//////
-
-// BELA OSC LGPL
-
-
-       if(context->audioOutChannels != 2) {
-                rt_printf("Error: this example needs stereo audio enabled\n");
-                return false;
-        }
-        srandom(time(NULL));
-        
-        //rt_printf("Creating an oscilator in Setup. \n");
-        
-        osc_bank.setup(context->audioSampleRate, gWavetableLength, gNumOscillators);
-        // Fill in the wavetable with one period of your waveform
-        float* wavetable = osc_bank.getWavetable();
-        for(int n = 0; n < osc_bank.getWavetableLength() + 1; n++){
-                wavetable[n] = sinf(2.0 * M_PI * (float)n / (float)osc_bank.getWavetableLength());
-        }
-        
-        // Initialise frequency and amplitude
-        float freq = kMinimumFrequency;
-        float increment = (kMaximumFrequency - kMinimumFrequency) / (float)gNumOscillators;
-        for(int n = 0; n < gNumOscillators; n++) {
-                if(context->analogFrames == 0) {
-                        // Random frequencies when used without analogInputs
-                        osc_bank.setFrequency(n, kMinimumFrequency + (kMaximumFrequency - kMinimumFrequency) * ((float)random() / (float)RAND_MAX));
-                }
-                else {
-                        // Constant spread of frequencies when used with analogInputs
-                        osc_bank.setFrequency(n, freq);
-                        freq += increment;
-                }
-                osc_bank.setAmplitude(n, (float)random() / (float)RAND_MAX / (float)gNumOscillators);
-        }
-        increment = 0;
-        freq = 440.0;
-        for(int n = 0; n < gNumOscillators; n++) {
-                // Update the frequencies to a regular spread, plus a small amount of randomness
-                // to avoid weird phase effects
-                float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
-                float newFreq = freq * randScale;
-                // For efficiency, frequency is expressed in change in wavetable position per sample, not Hz or radians
-                osc_bank.setFrequency(n, newFreq);
-                freq += increment;
-        }
-        // Initialise auxiliary tasks
-        //if((gFrequencyUpdateTask = Bela_createAuxiliaryTask(&recalculate_frequencies, 85, "bela-update-frequencies")) == 0)
-        //        return false;
-        
         
 
         audio_sample_rate = context->audioSampleRate;
