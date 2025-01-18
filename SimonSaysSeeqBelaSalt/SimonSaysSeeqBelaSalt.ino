@@ -2173,7 +2173,7 @@ void InitMidiSequence(bool force){
         // Init incoming_midi_note_set
         // this array is used to track incoming notes seen via audio in (CV)
         incoming_midi_note_set[current_midi_lane][n].is_active = 0;
-        incoming_midi_note_set[current_midi_lane][n].voltage = note / 12; // Midi note to voltage in a one volt per octave system.
+        incoming_midi_note_set[current_midi_lane][n].voltage = n / 12; // Midi note to voltage in a one volt per octave system.
 
         incoming_midi_note_set[current_midi_lane][n].delta = 1000;
 
@@ -2422,10 +2422,10 @@ float updateIncomingMidiNoteSet(float inputVoltage){
 
   for (uint8_t n = 0; n <= 127; n++) {
 
-    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage)
+    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
 
     if (the_difference < 0.1) {
-      incoming_midi_note_set[current_midi_lane][n].is_active = 1  
+      incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
       rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, incoming_midi_note_set[current_midi_lane][n].is_active);
     } else {
       rt_printf(".");
