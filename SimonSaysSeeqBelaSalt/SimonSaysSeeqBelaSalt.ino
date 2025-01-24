@@ -3435,13 +3435,14 @@ void render(BelaContext *context, void *userData)
     float in_right = 0;
     float result = 0;
 
-
-    // Very WIP
-    result = updateIncomingMidiNoteSet(in_left);
-    
     // Read audio inputs
     in_left = audioRead(context,n,0);
     in_right = audioRead(context,n,1);
+
+    // Very WIP
+    //result = updateIncomingMidiNoteSet(in_left);
+    
+
     
     //audioWrite(context, n, 0, in_left);
     //audioWrite(context, n, 1, in_right);
