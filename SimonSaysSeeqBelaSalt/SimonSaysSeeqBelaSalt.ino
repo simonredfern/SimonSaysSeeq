@@ -1234,8 +1234,8 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-
-  Bela_scheduleAuxiliaryTask(gClearIncomingMidiNoteSet); // Every once and a while, clear this set.
+  // Every once and a while (try on reset), clear this set.
+  Bela_scheduleAuxiliaryTask(gClearIncomingMidiNoteSet); 
 
   // target_led_2_tri_state = 1;
 
@@ -1550,10 +1550,6 @@ void DisableMidiNotes(uint8_t note){
               channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
-
-
-           incoming_midi_note_set[current_midi_lane][note].is_active = 0;
-
 }
 
 
@@ -2445,8 +2441,6 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
       //rt_printf(".");
     }
  }
-
-
 }
 
 
@@ -2462,6 +2456,27 @@ void ClearIncomingMidiNoteSet(void*){
     }
  }
 }
+
+
+// to be run on a button press
+void FilterMidiNotesViaIncomingMidiNoteSet(void*){
+	
+	last_function = 45434;
+
+  // Loop through all possible midi notes to see if the voltage input is close to one of them.
+  for (uint8_t n = 0; n <= 127; n++) {
+
+    if (incoming_midi_note_set[current_midi_lane][n].is_active == 0) {
+      DisableMidiNotes(n);
+      // TODO MAKE SURE WE TURN OFF THE NOTE midi.writeNoteOff(channel, n, 0);
+ 
+      rt_printf("Cleared midi note: %d because it is not active in IncomingMidiNoteSet \n",  n);
+    } else {
+      //rt_printf(".");
+    }
+ }
+}
+
 
 
 
