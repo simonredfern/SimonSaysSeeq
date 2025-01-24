@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.46-BelaSalt";
+const char version[16]= "v0.47-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -2427,15 +2427,19 @@ void UpdateIncomingMidiNoteSet(float inputVoltage){
 	
 	last_function = 4334;
 
+  // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
     float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
 
     if (the_difference < 0.1) {
+      // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
+      // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
+      // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
       incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
-      rt_printf("ACTIVE Note is: %d is_active is: %d \n", n, incoming_midi_note_set[current_midi_lane][n].is_active);
+      //rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
     } else {
-      rt_printf(".");
+      //rt_printf(".");
     }
  }
 
