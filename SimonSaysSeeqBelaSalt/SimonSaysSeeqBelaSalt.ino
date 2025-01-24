@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.44-BelaSalt";
+const char version[16]= "v0.46-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -248,6 +248,11 @@ int gSampleCount;               // Sample counter for indicating when to update 
 float gNewMinFrequency;
 float gNewMaxFrequency;
 // Task for handling the update of the frequencies using the analog inputs
+
+// Not sure if we should use  Bela AuxiliaryTask (i.e.: a Xenomai thread) for all these
+// https://forum.bela.io/d/4219-cpu-time-limit-exceeded
+
+
 AuxiliaryTask gFrequencyUpdateTask;
 
 AuxiliaryTask gChangeSequenceTask;
@@ -1677,7 +1682,7 @@ void GateAHigh(){
 
   
 
-  Bela_scheduleAuxiliaryTask(gSendUdpMessage);
+  //Bela_scheduleAuxiliaryTask(gSendUdpMessage);
 
 
 }
@@ -3073,9 +3078,9 @@ void MaybeOnTick(){
 
 
 
-#include <libraries/WriteFile/WriteFile.h>
-WriteFile file1;
-WriteFile file2;
+//#include <libraries/WriteFile/WriteFile.h>
+//WriteFile file1;
+//WriteFile file2;
 
 
 
@@ -3426,9 +3431,6 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 	
-		
-    ////////////////////////////////
-    // Begin Bela delay example code
     float in_left = 0;
     float in_right = 0;
     float result = 0;
@@ -3441,13 +3443,9 @@ void render(BelaContext *context, void *userData)
     in_left = audioRead(context,n,0);
     in_right = audioRead(context,n,1);
     
+    //audioWrite(context, n, 0, in_left);
+    //audioWrite(context, n, 1, in_right);
 
-
-
-    audioWrite(context, n, 0, in_left);
-    audioWrite(context, n, 1, in_right);
-
-	
 
 	}
 
