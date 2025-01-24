@@ -269,6 +269,8 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
+AuxiliaryTask gUpdateIncomingMidiNoteSet;
+
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in set up()
@@ -2421,7 +2423,7 @@ int BitClear (unsigned int number, unsigned int n) {
 // loop through our midi sequence
 // for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
 
-float updateIncomingMidiNoteSet(float inputVoltage){
+void UpdateIncomingMidiNoteSet(float inputVoltage){
 	
 	last_function = 4334;
 
@@ -2437,7 +2439,7 @@ float updateIncomingMidiNoteSet(float inputVoltage){
     }
  }
 
-  return inputVoltage;
+
 }
 
 
@@ -3329,13 +3331,13 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
                 return false;
 
 
-        if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 80, "bela-print-status")) == 0)
+        if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 20, "bela-print-status")) == 0)
                 return false;
 
         if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 75, "bela-all-notes-off")) == 0)
                 return false;   
                 
-        if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 70, "bela-write-sequence-to-files")) == 0)
+        if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 10, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
 
@@ -3344,7 +3346,10 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
                 return false;
                 
-                
+        //if((gUpdateIncomingMidiNoteSet = Bela_createAuxiliaryTask(&UpdateIncomingMidiNoteSet, 76, "bela-update-incoming-midi-note-set")) == 0)
+        //        return false;
+
+
                 
 
     
@@ -3428,6 +3433,8 @@ void render(BelaContext *context, void *userData)
 
 
   // AUDIO LOOP tracking audio in  HEREHERE
+  // See Bela Settings for the block size. Might be 16 or a lot more.
+  // We only need to sample occasionally.
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 	
@@ -3439,9 +3446,12 @@ void render(BelaContext *context, void *userData)
     in_left = audioRead(context,n,0);
     in_right = audioRead(context,n,1);
 
-    // Very WIP
-    //result = updateIncomingMidiNoteSet(in_left);
-    
+    // Very WIP this seems to cause CPU problem
+
+    // Try once in a while. once per block e.g. once per 16
+    if (n==0){
+      UpdateIncomingMidiNoteSet(in_left);
+    }
 
     
     //audioWrite(context, n, 0, in_left);
