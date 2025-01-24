@@ -269,7 +269,7 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
-AuxiliaryTask gUpdateIncomingMidiNoteSet;
+AuxiliaryTask gClearIncomingMidiNoteSet;
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
@@ -1233,6 +1233,9 @@ void ResetSequenceACounters(){
  
   
   need_to_reset_draw_buf_pointer = true;
+
+
+  Bela_scheduleAuxiliaryTask(gClearIncomingMidiNoteSet); // Every once and a while, clear this set.
 
   // target_led_2_tri_state = 1;
 
@@ -2423,7 +2426,7 @@ int BitClear (unsigned int number, unsigned int n) {
 // loop through our midi sequence
 // for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
 
-void UpdateIncomingMidiNoteSet(float inputVoltage){
+void AddToIncomingMidiNoteSet(float inputVoltage){
 	
 	last_function = 4334;
 
@@ -2445,6 +2448,21 @@ void UpdateIncomingMidiNoteSet(float inputVoltage){
 
 
 }
+
+
+void ClearIncomingMidiNoteSet(void*){
+	last_function = 43347;
+  // Loop through all possible midi notes and clear them.
+  for (uint8_t n = 0; n <= 127; n++) {
+    if (1==1) {
+      incoming_midi_note_set[current_midi_lane][n].is_active = 0;  
+      //rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
+    } else {
+      //rt_printf(".");
+    }
+ }
+}
+
 
 
 
@@ -3323,7 +3341,9 @@ myUdpClient0 = new UdpClient(remoteUDPPort0,remoteUDPAddress0);
 myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 
 
-
+        // high prioity task (low number)        
+        if((gClearIncomingMidiNoteSet = Bela_createAuxiliaryTask(&ClearIncomingMidiNoteSet, 5, "bela-clear-incoming-midi-note-set")) == 0)
+                return false;
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
                 return false;
@@ -3338,26 +3358,17 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 20, "bela-print-status")) == 0)
                 return false;
 
-        if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 75, "bela-all-notes-off")) == 0)
+        if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 6, "bela-all-notes-off")) == 0)
                 return false;   
                 
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 10, "bela-write-sequence-to-files")) == 0)
                 return false;
                 
-
-
-
         if((gSendUdpMessage = Bela_createAuxiliaryTask(&SendUdpMessage, 60, "bela-send-udp-message")) == 0)
                 return false;
-                
-        //if((gUpdateIncomingMidiNoteSet = Bela_createAuxiliaryTask(&UpdateIncomingMidiNoteSet, 76, "bela-update-incoming-midi-note-set")) == 0)
-        //        return false;
 
 
-                
 
-    
-        
         
         gSampleCount = 0;
         
@@ -3454,7 +3465,7 @@ void render(BelaContext *context, void *userData)
 
     // Try once in a while. once per block e.g. once per 16
     if (n==0){
-      UpdateIncomingMidiNoteSet(in_left);
+      AddToIncomingMidiNoteSet(in_left);
     }
 
     
