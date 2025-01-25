@@ -1231,7 +1231,7 @@ void printStatus(void*){
     gCount++;
 	
     // By setting this mod we can choose to print less frequently.  
-    if(gCount % 1000 == 0) {
+    if(gCount % 10 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -2403,6 +2403,30 @@ void ClearIncomingMidiNoteSet(void*){
 }
 
 
+/// HEREHERe
+
+void PrintActiveMidiNotes(void*){
+	last_function = 13347;
+  // Loop through all possible midi notes and clear them.
+
+  uint8_t bc = 0; // bar count
+  uint8_t sc = 0; // step count
+  uint8_t note = 0; // note
+ 
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+              for (note = 0; note <= 127; note++) {
+                if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
+                  rt_printf("Active midi note %d on bar %d step %d is active. Its voltage is : %f  \n", note, n, the_difference, channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].voltage);
+                }
+              }
+
+            }
+           }
+}
+
+
+
 // to be run on a button press
 void FilterCurrentMidiNotesByIncoming(void*){
 	
@@ -3439,10 +3463,6 @@ void render(BelaContext *context, void *userData)
   // See Bela Settings for the block size. Might be 16 or a lot more.
   // We only need to sample occasionally.
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
-		
-	
-
-    // float result = 0;
 
     // Read audio inputs
     audio_left_in_raw = audioRead(context,n,0);
