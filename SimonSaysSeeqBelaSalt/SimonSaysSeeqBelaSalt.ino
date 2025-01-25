@@ -1234,7 +1234,7 @@ void printStatus(void*){
     gCount++;
 	
     // By setting this mod we can choose to print less frequently.  
-    if(gCount % 10 == 0) {
+    if(gCount % 1000 == 0) {
       
 		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
@@ -3332,12 +3332,15 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 
 // HEREHEREHERE
 
+  // high prioity task (low number means hi prio) 
 
-        // high prioity task (low number)        
-        if((gClearIncomingMidiNoteSet = Bela_createAuxiliaryTask(&ClearIncomingMidiNoteSet, 5, "bela-clear-incoming-midi-note-set")) == 0)
+        if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 3, "bela-all-notes-off")) == 0)
+                return false;  
+
+        if((gClearIncomingMidiNoteSet = Bela_createAuxiliaryTask(&ClearIncomingMidiNoteSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
                 return false;
 
-        if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 6, "bela-filter-current-midi-notes-by-incoming")) == 0)
+        if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
                 return false;
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
@@ -3353,8 +3356,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gPrintStatus = Bela_createAuxiliaryTask(&printStatus, 20, "bela-print-status")) == 0)
                 return false;
 
-        if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 6, "bela-all-notes-off")) == 0)
-                return false;   
+ 
                 
         if((gWriteSequenceToFiles = Bela_createAuxiliaryTask(&WriteSequenceToFiles, 10, "bela-write-sequence-to-files")) == 0)
                 return false;
