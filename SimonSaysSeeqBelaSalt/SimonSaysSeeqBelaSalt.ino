@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.49-BelaSalt";
+const char version[16]= "v0.50-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -204,6 +204,9 @@ uint64_t frames_per_24_ticks = 22064; // This must never be zero else we can div
 int audio_sample_rate;
 int analog_sample_rate;
 
+float audio_left_in_raw = 0;
+float audio_right_in_raw = 0;
+
 int draw_buf_write_pointer = 0;
 
 // Amount of delay in samples (needs to be smaller than or equal to the buffer size defined above)
@@ -227,21 +230,16 @@ uint8_t clock_divider_input_value = 1;
 #include <libraries/OscillatorBank/OscillatorBank.h>
 
 
-#define DELAY_BUFFER_SIZE 6400000
-#define DRAW_BUFFER_SIZE 6400000
+//#define DELAY_BUFFER_SIZE 6400000
+//#define DRAW_BUFFER_SIZE 6400000
 
-const float kMinimumFrequency = 20.0f;
-const float kMaximumFrequency = 8000.0f;
-int gSampleCount;               // Sample counter for indicating when to update frequencies
-float gNewMinFrequency;
-float gNewMaxFrequency;
-// Task for handling the update of the frequencies using the analog inputs
+
+
 
 // Not sure if we should use  Bela AuxiliaryTask (i.e.: a Xenomai thread) for all these
 // https://forum.bela.io/d/4219-cpu-time-limit-exceeded
 
 
-// AuxiliaryTask gFrequencyUpdateTask;
 
 AuxiliaryTask gChangeSequenceTask;
 
@@ -403,7 +401,7 @@ const int SEQUENCE_CV_OUTPUT_4_PIN = 3; // CV 4 output
 const int SEQUENCE_B_GATE_OUTPUT_5_PIN = 4; // CV (GATE) 5 output
 const int SEQUENCE_CV_OUTPUT_6_PIN = 5; // CV 6 output
 const int SEQUENCE_CV_OUTPUT_7_PIN = 6; // CV 7 output
-const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
+//const int SEQUENCE_CV_OUTPUT_8_PIN = 7; // CV 8 output
 
 
 
@@ -520,9 +518,6 @@ float right_peak_level;
 
 float external_modulator_object_level;
 
-
-float audio_left_input_raw;
-float audio_right_input_raw;
 
 unsigned int coarse_delay_input = 1;
 
@@ -717,9 +712,11 @@ void SyncSequenceToFile(bool write_to_file){
  
  
     if (write_to_file == true){
-		const int mkdir= system("mkdir -p /var/SimonSaysSeeqConfig");
+		//const int mkdir= system("mkdir -p /var/SimonSaysSeeqConfig");
+      system("mkdir -p /var/SimonSaysSeeqConfig");
 		// hm what if we get -bash: /bin/rm: Argument list too long ?
-		const int remove= system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
+		//const int remove= system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
+      system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
     }
 	
 	
@@ -1413,10 +1410,10 @@ void printStatus(void*){
 		
 
 		
-		/*
-		rt_printf("audio_left_input_raw is: %f \n", audio_left_input_raw);	
-		rt_printf("audio_right_input_raw is: %f \n", audio_right_input_raw);
-		*/
+		
+		rt_printf("audio_left_in_raw is: %f \n", audio_left_in_raw);	
+		rt_printf("audio_right_in_raw is: %f \n", audio_right_in_raw);
+		
 
 		// Clock derived values
 		/*
@@ -1426,13 +1423,7 @@ void printStatus(void*){
     	rt_printf("midi_clock_detected is: %d \n", midi_clock_detected);
     	*/
 
-/*
 
-
-
-
-    	
-*/
     	
 		
 		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
@@ -1712,11 +1703,11 @@ void SyncAndResetCv(){
 
 
 // Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
-uint8_t ReadBit (int number, int b ){
+// uint8_t ReadBit (int number, int b ){
 	
-	last_function = 28642;
-	(number & ( 1 << b )) >> b;
-}
+// 	last_function = 28642;
+// 	(number & ( 1 << b )) >> b;
+// }
 
 
 
@@ -2810,12 +2801,12 @@ bool IsCrossing(int value_1, int value_2, int fuzzyness){
 
 
 
-float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
-float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+//float gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
+//float gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
 
 
-float draw_buffer[DELAY_BUFFER_SIZE] = {0};
-float draw_gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+//float draw_buffer[DELAY_BUFFER_SIZE] = {0};
+//float draw_gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
 
 
 // Write pointer
@@ -2864,16 +2855,16 @@ float gDel_y2_r = 0;
 
 
 ////
-void InitAudioBuffer(){
+// void InitAudioBuffer(){
 	
-	last_function = 25852;
-	// Buffer holding previous samples per channel
-	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
-	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
-	// Write pointer
-	gDelayBufWritePtr = 0;
+// 	last_function = 25852;
+// 	// Buffer holding previous samples per channel
+// 	gDelayBuffer_l[DELAY_BUFFER_SIZE] = {0};
+// 	gDelayBuffer_r[DELAY_BUFFER_SIZE] = {0};
+// 	// Write pointer
+// 	gDelayBufWritePtr = 0;
 
-}
+// }
 
 
 void ChangeSequence(void*){
@@ -2992,16 +2983,16 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		
 		
 		// We want to Delay Course Dial to span the DELAY_BUFFER_SIZE in jumps of frames_per_24_ticks
-		float delay_coarse_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COARSE_DELAY_TIME_INPUT);
+		//float delay_coarse_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COARSE_DELAY_TIME_INPUT);
 		
 		
 		// The course delay amount we dial in with the pot
-		coarse_delay_frames = rint(frames_per_24_ticks * coarse_delay_input * delay_coarse_dial_factor);	    
+		//coarse_delay_frames = rint(frames_per_24_ticks * coarse_delay_input * delay_coarse_dial_factor);	    
 	    
 		// The amount we increment / decrement the delay using buttons 2 and 1
 		//fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);	
 		
-		fine_delay_frames_delta = rint(frames_per_24_ticks / 48.0);	
+		//fine_delay_frames_delta = rint(frames_per_24_ticks / 48.0);	
 		
 
     // Two simultanious functions for this button.
@@ -3021,42 +3012,42 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 
 
 
-			if ((fine_delay_frames - fine_delay_frames_delta) < 0){
-				// Skip
-			} else { 
-				fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
-			}			
+			// if ((fine_delay_frames - fine_delay_frames_delta) < 0){
+			// 	// Skip
+			// } else { 
+			// 	fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
+			// }			
 			
 			do_button_1_action = 0;
 		
 		// Larger	
 		} else if (do_button_2_action == 1) {
 			
-			if ((coarse_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
-				// Skip
-			} else {
-				fine_delay_frames = fine_delay_frames + fine_delay_frames_delta;
-			}
+			// if ((coarse_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
+			// 	// Skip
+			// } else {
+			// 	fine_delay_frames = fine_delay_frames + fine_delay_frames_delta;
+			// }
 			
 			do_button_2_action = 0;
 		} 
 			
-		total_delay_frames = coarse_delay_frames + fine_delay_frames;
+		//total_delay_frames = coarse_delay_frames + fine_delay_frames;
 
 		// Sanity Checks
-	    if (total_delay_frames > DELAY_BUFFER_SIZE){
-	    	total_delay_frames = DELAY_BUFFER_SIZE;
-		}
+	  //   if (total_delay_frames > DELAY_BUFFER_SIZE){
+	  //   	total_delay_frames = DELAY_BUFFER_SIZE;
+		// }
 		
-		if (total_delay_frames < 0){
-	    	total_delay_frames = 0;
-		}
+		// if (total_delay_frames < 0){
+	  //   	total_delay_frames = 0;
+		// }
 
 
 
 		// Clear Audio Buffer (Delay)
 		if (do_button_3_action == 1) {
-			InitAudioBuffer();
+			//InitAudioBuffer();
 			do_button_3_action = 0;
 		}
 
@@ -3212,7 +3203,7 @@ bool setup(BelaContext *context, void *userData){
 	
 	rt_printf("Hello from Setup: SimonSaysSeeq on Bela %s:-) \n", version);
 	
-  InitAudioBuffer();
+  //InitAudioBuffer();
 
 	scope.setup(4, context->analogSampleRate);
 
@@ -3367,7 +3358,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 
 
         
-        gSampleCount = 0;
+        //gSampleCount = 0;
         
         //rt_printf("Before myUdpClient.setup in Setup. \n");
 
@@ -3450,25 +3441,21 @@ void render(BelaContext *context, void *userData)
 	for(unsigned int n = 0; n < context->audioFrames; n++) {
 		
 	
-    float in_left = 0;
-    float in_right = 0;
-    float result = 0;
+
+    // float result = 0;
 
     // Read audio inputs
-    in_left = audioRead(context,n,0);
-    in_right = audioRead(context,n,1);
+    audio_left_in_raw = audioRead(context,n,0);
+    audio_right_in_raw = audioRead(context,n,1);
 
     // Very WIP this seems to cause CPU problem
 
     // Try once in a while. once per block e.g. once per 16
     if (n==0){
-      AddToIncomingMidiNoteSet(in_left);
+      AddToIncomingMidiNoteSet(audio_left_in_raw);
     }
 
-    
-    //audioWrite(context, n, 0, in_left);
-    //audioWrite(context, n, 1, in_right);
-
+  
 
 	}
 
@@ -3627,11 +3614,7 @@ void render(BelaContext *context, void *userData)
 	      	analogWrite(context, n, ch, analog_out_7);
 	      }
 	      
-	      // CV 8 -- See above, Draw CV
-	      //if (ch == SEQUENCE_CV_OUTPUT_8_PIN){
-	      //	//rt_printf("amp is: %f", amp);
-	      //	analogWrite(context, n, ch, analog_out_8);
-	      //}
+	    
 
  
 	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
