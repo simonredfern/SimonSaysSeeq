@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.47-BelaSalt";
+const char version[16]= "v0.48-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -56,8 +56,7 @@ The Bela software is distributed under the GNU Lesser General Public License
 // ping 8.8.8.8
 
 
-//
-// install curl apt-get install -y libcurl-dev
+
 
 // Note: Bela might run out of disk space
 // du -h --max-depth=1
@@ -127,13 +126,6 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <libraries/UdpClient/UdpClient.h> 
 
 
-//#include <curlpp/cURLpp.hpp>
-//#include <curlpp/Easy.hpp>
-//#include <curlpp/Options.hpp>
-
-
-//using namespace curlpp::options;
-
 
 Scope scope;
 
@@ -174,10 +166,6 @@ const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi devi
 
 // Let our delay have 50 different course settings (so the pot doesn't jitter)
 const unsigned int MAX_COARSE_DELAY_TIME_INPUT = 50;
-
-// Divde clock - maybe just for midi maybe for sequence too
-//const uint8_t MIN_midi_lane_input = 0;
-//const uint8_t MAX_midi_lane_input = 16;
 
 
 uint64_t last_function = 0; // set this in a function to a number
@@ -253,7 +241,7 @@ float gNewMaxFrequency;
 // https://forum.bela.io/d/4219-cpu-time-limit-exceeded
 
 
-AuxiliaryTask gFrequencyUpdateTask;
+// AuxiliaryTask gFrequencyUpdateTask;
 
 AuxiliaryTask gChangeSequenceTask;
 
@@ -385,10 +373,6 @@ const int SEQUENCE_A_DIGITAL_OUT_PIN = 0;
 const int SEQUENCE_B_DIGITAL_OUT_PIN = 5; // TODO check
 
 
-
-
-// TODO Add a reset (on a digital pin?)
-
 // CV I/O 1-8	ANALOG channel 0-7
 const int SEQUENCE_A_PATTERN_ANALOG_INPUT_PIN = 0; // CV 1 input
 const int SEQUENCE_A_LENGTH_ANALOG_INPUT_PIN = 2; // CV 3 input
@@ -462,9 +446,6 @@ uint8_t current_sequence_b_length_in_steps = 8;
 
 ///////////////////////
 
-//const int CV_WAVEFORM_B_FREQUENCY_RAW_MAX_INPUT = 1023;
-
-
 const uint8_t MIDI_NOTE_ON = 1;
 const uint8_t MIDI_NOTE_OFF = 0;
 
@@ -533,7 +514,6 @@ int new_reset_b_in_state;
 int current_reset_b_in_state;
 
 
-float analog_clock_in_level; // unused?
 float right_peak_level;
 
 float external_modulator_object_level;
@@ -594,13 +574,6 @@ uint8_t ticks_after_step_a;
 uint8_t ticks_after_step_b;
 
 
-// Jitter Reduction: Used to flatten out glitches from the analog pots. 
-// Actually we like the glitches - it makes the sequencer more interesting
-
-
-//double	wait_time_ms;
-
-
 uint8_t NO_JITTER_REDUCTION = 0;
 
 uint8_t jitter_reduction = NO_JITTER_REDUCTION;
@@ -612,7 +585,7 @@ uint8_t FUZZINESS_AMOUNT = 100;
 unsigned int cv_waveform_a_frequency_raw;
 float cv_waveform_a_frequency;
 
-  bool reset_cv_lfo_at_FIRST_STEP = false;
+bool reset_cv_lfo_at_FIRST_STEP = false;
 
 // Amplitude of the LFO
 unsigned int cv_waveform_a_amplitude_raw;
@@ -1174,27 +1147,6 @@ float envelope_2_attack = 0.0001; // envelope_2 attack (seconds)
 float envelope_2_decay = 0.25; // envelope_2 decay (seconds)
 float envelope_2_sustain = 0.9; // envelope_2 sustain level
 float envelope_2_release = 0.5; // envelope_2 release (seconds)
-
-
-
-
-
-float gFrequency = 320.0; // Oscillator frequency (Hz)
-//float gPhase; // Oscillator phase
-//float gInverseSampleRate;
-
-// Oscillator type
-enum osc_type
-{
-	sine,		// 0
-	triangle,	// 1
-	square,		// 2
-	sawtooth,	// 3
-	numOscTypes
-};
-
-
-
 
 
 
