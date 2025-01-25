@@ -613,6 +613,10 @@ uint8_t TriStateToggle(uint8_t tri_state_input){
 }
 
 
+
+
+
+
 void FlashHello(){
 	last_function = 238469;
 	
@@ -659,6 +663,7 @@ class NoteInfo
    uint8_t tick_count_since_step = 0; 
    uint8_t is_active = 0;
    uint8_t tick_count_since_start = 0;
+   //float   voltage = 0;
 };
 /////////
 
@@ -695,6 +700,28 @@ class MidiNoteSet
 
 class MidiNoteSet incoming_midi_note_set[MAX_LANE+1][128]; 
 
+
+
+/// HEREHERe
+
+void PrintActiveMidiNotes(){
+	last_function = 13347;
+  // Loop through all possible midi notes and clear them.
+
+  uint8_t bc = 0; // bar count
+  uint8_t sc = 0; // step count
+  uint8_t note = 0; // note
+ 
+           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
+            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
+              for (note = 0; note <= 127; note++) {
+                if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
+                  rt_printf("Active midi note %d on bar %d step %d is active. \n", note, bc, sc);
+                }
+              }
+            }
+           }
+}
 
 
 /////////
@@ -1463,6 +1490,8 @@ void printStatus(void*){
     //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
 		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
 
+
+      PrintActiveMidiNotes();
 
       rt_printf("\n==== Bye from printStatus ======= \n");
       
@@ -2403,27 +2432,7 @@ void ClearIncomingMidiNoteSet(void*){
 }
 
 
-/// HEREHERe
 
-void PrintActiveMidiNotes(void*){
-	last_function = 13347;
-  // Loop through all possible midi notes and clear them.
-
-  uint8_t bc = 0; // bar count
-  uint8_t sc = 0; // step count
-  uint8_t note = 0; // note
- 
-           for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
-            for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
-              for (note = 0; note <= 127; note++) {
-                if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
-                  rt_printf("Active midi note %d on bar %d step %d is active. Its voltage is : %f  \n", note, n, the_difference, channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].voltage);
-                }
-              }
-
-            }
-           }
-}
 
 
 
