@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.48-BelaSalt";
+const char version[16]= "v0.49-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -262,10 +262,10 @@ AuxiliaryTask gClearIncomingMidiNoteSet;
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in set up()
-int gNumOscillators = 2; // was 500
-int gWavetableLength = 1024;
-void recalculate_frequencies(void*);
-OscillatorBank osc_bank;
+//int gNumOscillators = 2; // was 500
+//int gWavetableLength = 1024;
+//void recalculate_frequencies(void*);
+//OscillatorBank osc_bank;
 
 Oscillator lfo_a_analog;
 Oscillator lfo_b_analog;
@@ -3864,21 +3864,21 @@ void cleanup(BelaContext *context, void *userData)
 // periodically when the analog inputs are enabled. By placing it at a lower priority,
 // it has minimal effect on the audio performance but it will take longer to
 // complete if the system is under heavy audio load.
-void recalculate_frequencies(void*)
-{
-		last_function = 628497;
+// void recalculate_frequencies(void*)
+// {
+// 		last_function = 628497;
 	
-        float freq = gNewMinFrequency;
-        float increment = (gNewMaxFrequency - gNewMinFrequency) / (float)gNumOscillators;
-        for(int n = 0; n < gNumOscillators; n++) {
-                // Update the frequencies to a regular spread, plus a small amount of randomness
-                // to avoid weird phase effects
-                float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
-                float newFreq = freq * randScale;
-                osc_bank.setFrequency(n, newFreq);
-                freq += increment;
-        }
-}
+//         float freq = gNewMinFrequency;
+//         float increment = (gNewMaxFrequency - gNewMinFrequency) / (float)gNumOscillators;
+//         for(int n = 0; n < gNumOscillators; n++) {
+//                 // Update the frequencies to a regular spread, plus a small amount of randomness
+//                 // to avoid weird phase effects
+//                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
+//                 float newFreq = freq * randScale;
+//                 osc_bank.setFrequency(n, newFreq);
+//                 freq += increment;
+//         }
+// }
 
 
 
