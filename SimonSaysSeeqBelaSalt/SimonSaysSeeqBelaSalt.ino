@@ -259,6 +259,8 @@ AuxiliaryTask gInitMidiSequenceNoForce;
 
 AuxiliaryTask gClearIncomingMidiNoteSet;
 
+AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
+
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
 // to passing a structure to userData in set up()
@@ -2395,7 +2397,7 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
  }
 }
 
-
+// Periodically we want to reset this set of notes.
 void ClearIncomingMidiNoteSet(void*){
 	last_function = 43347;
   // Loop through all possible midi notes and clear them.
@@ -2411,15 +2413,21 @@ void ClearIncomingMidiNoteSet(void*){
 
 
 // to be run on a button press
-void FilterMidiNotesViaIncomingMidiNoteSet(void*){
+void FilterCurrentMidiNotesByIncoming(void*){
 	
+// Filter the midi sequence based on the notes in the Incoming midi note set (which are in turn set by looking at the pitches over cv.)
+// 
+
 	last_function = 45434;
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
+
+
+    // Disable the notes not active in the incoming midi note set.
     if (incoming_midi_note_set[current_midi_lane][n].is_active == 0) {
-      DisableMidiNotes(n);
+      DisableMidiNotes(n); // this will disable notes in channel_x_midi_note_events
       // TODO MAKE SURE WE TURN OFF THE NOTE midi.writeNoteOff(channel, n, 0);
  
       rt_printf("Cleared midi note: %d because it is not active in IncomingMidiNoteSet \n",  n);
@@ -2996,10 +3004,23 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		fine_delay_frames_delta = rint(frames_per_24_ticks / 48.0);	
 		
 
-		// Fine Delay Time
-		// Smaller	
+    // Two simultanious functions for this button.
+		// 1
+    // Fine Delay Time
+		// Smaller
+    // 2 filter the midi sequence based on the notes in.	
+// FilterCurrentMidiNotesByIncoming -> FilterCurrentMidiNotesByIncoming
+
 		if (do_button_1_action == 1) {
 			
+      Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
+
+      //Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
+			//Bela_scheduleAuxiliaryTask(gAllNotesOff);
+      target_led_1_tri_state = 2; // yellow
+
+
+
 			if ((fine_delay_frames - fine_delay_frames_delta) < 0){
 				// Skip
 			} else { 
@@ -3307,9 +3328,16 @@ bool setup(BelaContext *context, void *userData){
 myUdpClient0 = new UdpClient(remoteUDPPort0,remoteUDPAddress0);
 myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 
+// FilterCurrentMidiNotesByIncoming
+
+// HEREHEREHERE
+
 
         // high prioity task (low number)        
         if((gClearIncomingMidiNoteSet = Bela_createAuxiliaryTask(&ClearIncomingMidiNoteSet, 5, "bela-clear-incoming-midi-note-set")) == 0)
+                return false;
+
+        if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 6, "bela-filter-current-midi-notes-by-incoming")) == 0)
                 return false;
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
@@ -3496,44 +3524,9 @@ void render(BelaContext *context, void *userData)
 		  }
 		  
 		  if (ch == CLOCK_DIVIDER_INPUT_PIN){
-
         clock_divider_input_value = floor(map(analogRead(context, n, CLOCK_DIVIDER_INPUT_PIN), 0, 1, MIN_CLOCK_DIVIDER_SETTING, MAX_CLOCK_DIVIDER_SETTING));
-
-// Now using this pot for clock devider
-
-		        // // Increment draw buffer write pointer
-		        // if(++draw_buf_write_pointer > DRAW_BUFFER_SIZE){
-		        //     draw_buf_write_pointer = 0;
-		        // }
-		        
-		        // // this might be set when we reset sequence (get to FIRST_STEP)
-		        // if (need_to_reset_draw_buf_pointer == true){
-		        // 	draw_buf_write_pointer = 0;
-		        // 	need_to_reset_draw_buf_pointer = false;
-		        // }
-		
-		        // // If button 3 is pressed, mirror the input to the output and write the value to the buffer for later use.
-		        // if (new_button_3_state == 1){
-		  		  //     analog_out_8 = analogRead(context,n,CLOCK_DIVIDER_INPUT_PIN);
-		        //     draw_buffer[draw_buf_write_pointer] = analog_out_8;
-		        // } else {
-		        // 	// Else use the buffer value
-		        //     // analog_out_8 = draw_buffer[(draw_buf_write_pointer - draw_total_frames + DRAW_BUFFER_SIZE) % DRAW_BUFFER_SIZE] * 1; // feedback gain is 1.
-		        // 	analog_out_8 = draw_buffer[draw_buf_write_pointer];
-		        	
-		        	
-		        // }     
-		
-				    // // Write output Draw Output
-		        // analogWrite(context, n, SEQUENCE_CV_OUTPUT_8_PIN, analog_out_8);
-
-
 		  }
-		  
-		  
-		  
-		  
-	      
+		  	      
 	      // ANALOG OUTPUTS
 	      // CV 1 ** GATE ** 
 	      if (ch == SEQUENCE_A_GATE_OUTPUT_1_PIN){
@@ -3825,30 +3818,13 @@ void render(BelaContext *context, void *userData)
 				}
 			}
 			
-		  
-
-	
-		// Temp code until we have clock
-	   //temp_count++;
-	   // if(temp_count % 1000 == 0) {
-	   // 	OnTick();	
-	   // }
-	
-
-
+		
   
 
         } 
 	} // End of render
    
-   
-
-
-
-   
-
-
-   
+  
 
 
 void cleanup(BelaContext *context, void *userData)
@@ -3856,32 +3832,4 @@ void cleanup(BelaContext *context, void *userData)
 	last_function = 588773;
 	
 	Bela_scheduleAuxiliaryTask(gAllNotesOff);
-}
-
-
-// BELA LGPL
-// This is a lower-priority call to update the frequencies which will happen
-// periodically when the analog inputs are enabled. By placing it at a lower priority,
-// it has minimal effect on the audio performance but it will take longer to
-// complete if the system is under heavy audio load.
-// void recalculate_frequencies(void*)
-// {
-// 		last_function = 628497;
-	
-//         float freq = gNewMinFrequency;
-//         float increment = (gNewMaxFrequency - gNewMinFrequency) / (float)gNumOscillators;
-//         for(int n = 0; n < gNumOscillators; n++) {
-//                 // Update the frequencies to a regular spread, plus a small amount of randomness
-//                 // to avoid weird phase effects
-//                 float randScale = 0.99 + .02 * (float)random() / (float)RAND_MAX;
-//                 float newFreq = freq * randScale;
-//                 osc_bank.setFrequency(n, newFreq);
-//                 freq += increment;
-//         }
-// }
-
-
-
-
-
-  
+}  
