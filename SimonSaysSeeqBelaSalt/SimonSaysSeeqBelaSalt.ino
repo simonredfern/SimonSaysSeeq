@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.51-BelaSalt";
+const char version[16]= "v0.52-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -738,9 +738,10 @@ void PrintIncomingMidiNoteSet(){
 rt_printf("\n Hello from PrintIncomingMidiNoteSet \n");
 
   uint8_t note = 0; // note
+  rt_printf("These notes are active in the incoming_midi_note_set: \n");
               for (note = 0; note <= 127; note++) {
                 if (incoming_midi_note_set[current_midi_lane][note].is_active == 1){
-                  rt_printf("Active incoming midi note Set %d . \n", note);
+                  rt_printf(" %d, ", note);
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
                 }
@@ -1793,10 +1794,15 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
       // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
+      
+     if (incoming_midi_note_set[current_midi_lane][n].is_active == 0) {
       incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
-        rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
-    } else {
-      //rt_printf(".");
+      rt_printf("Found a midi note close to the inputVoltage (%f) that was previously inactive. The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
+     } 
+      
+        } else {
+       //rt_printf("The note %d is far from the inputVoltage (%f) BTW, active is: %d \n", n, inputVoltage, incoming_midi_note_set[current_midi_lane][n].is_active);
+  
     }
   } 
  }
@@ -3587,16 +3593,9 @@ void render(BelaContext *context, void *userData)
 		  	//envelope_1_setting = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
 		    	lfo_osc_2_frequency = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.005, 1); // up to 1 Hz
 
-          // getting this twice
+             // getting this twice
           voltage_of_incoming_note_in = analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN);
 
-
-        // Try once in a while. once per block e.g. once per 16
-        // if (n==0){
-        //   if (sequence_is_running == HIGH){
-        //     AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
-        //   }
-        // }
 
       }
 		    
@@ -3711,8 +3710,8 @@ void render(BelaContext *context, void *userData)
 	      
 	    
 
- 
-	      scope.log(analog_out_1, analog_out_2, analog_out_3, analog_out_4);
+        // Show these values on the scope page of the Bela IDE
+	      //scope.log(analog_out_1, analog_out_2, analog_out_3, voltage_of_incoming_note_in);
 
 		}
 	}
