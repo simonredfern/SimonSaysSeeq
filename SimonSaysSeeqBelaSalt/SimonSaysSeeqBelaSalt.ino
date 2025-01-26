@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.50-BelaSalt";
+const char version[16]= "v0.51-BelaSalt";
 
 /*
  ____  _____ _        _    
@@ -489,6 +489,8 @@ float lfo_a_frequency_input_raw;
 float lfo_osc_1_frequency;
 float lfo_osc_2_frequency;
 float frequency_2;
+
+float voltage_of_incoming_note_in;
 
 
 unsigned int lfo_a_frequency_input = 20;
@@ -1463,8 +1465,10 @@ void printStatus(void*){
 
 		
 		
-		rt_printf("audio_left_in_raw is: %f \n", audio_left_in_raw);	
-		rt_printf("audio_right_in_raw is: %f \n", audio_right_in_raw);
+    rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
+
+		//rt_printf("audio_left_in_raw is: %f \n", audio_left_in_raw);	
+		//rt_printf("audio_right_in_raw is: %f \n", audio_right_in_raw);
 		
 
 		// Clock derived values
@@ -2425,7 +2429,11 @@ int BitClear (unsigned int number, unsigned int n) {
 
 void AddToIncomingMidiNoteSet(float inputVoltage){
 	
+ if (sequence_is_running == HIGH){
+
 	last_function = 4334;
+
+  rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
@@ -2437,11 +2445,14 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
       incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
-      //rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
+        rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
     } else {
       //rt_printf(".");
     }
+  } 
  }
+
+ rt_printf("Bye from AddToIncomingMidiNoteSet \n");
 }
 
 // Periodically we want to reset this set of notes.
@@ -2471,6 +2482,9 @@ void FilterCurrentMidiNotesByIncoming(void*){
 
 	last_function = 45434;
 
+if (sequence_is_running == HIGH){
+
+
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
@@ -2486,7 +2500,10 @@ void FilterCurrentMidiNotesByIncoming(void*){
       //rt_printf(".");
     }
  }
+} 
 }
+
+
 
 
 
@@ -3506,10 +3523,7 @@ void render(BelaContext *context, void *userData)
 
     // Very WIP this seems to cause CPU problem
 
-    // Try once in a while. once per block e.g. once per 16
-    if (n==0){
-      AddToIncomingMidiNoteSet(audio_left_in_raw);
-    }
+
 
   
 
@@ -3559,6 +3573,18 @@ void render(BelaContext *context, void *userData)
 		  	// used for various ADSR settings
 		  	//envelope_1_setting = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.01, 8.0); // Up to 8 seconds (when multipled by sample rate)
 		    	lfo_osc_2_frequency = map(analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN), 0, 1, 0.005, 1); // up to 1 Hz
+
+          // getting this twice
+          voltage_of_incoming_note_in = analogRead(context, n, LFO_OSC_2_FREQUENCY_INPUT_PIN);
+
+
+        // Try once in a while. once per block e.g. once per 16
+        if (n==0){
+          if (sequence_is_running == HIGH){
+            AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
+          }
+        }
+
       }
 		    
 		  
