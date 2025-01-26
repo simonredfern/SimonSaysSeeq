@@ -19,6 +19,19 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 const char version[16]= "v0.52-BelaSalt";
 
 /*
+NEXT
+
+check:
+
+Jan 26 21:40:01 bela stdbuf[102]: These notes are active in the incoming_midi_note_set:
+Jan 26 21:40:01 bela stdbuf[102]:  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,
+
+
+*/
+
+
+
+/*
  ____  _____ _        _    
 | __ )| ____| |      / \   
 |  _ \|  _| | |     / _ \  
@@ -1794,7 +1807,7 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
     float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
 
     // In a one volt per octave system, the distance between C and C# is 1/12 = 0.08333333 volts
-    // So if our voltage is within half of that, consider it a match
+    // So if our voltage is within half of that (above or below), consider it a match
     if (the_difference < 0.041666) {
       // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
@@ -2243,7 +2256,7 @@ void InitMidiSequence(bool force){
         // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
         incoming_midi_note_set[current_midi_lane][n].voltage = -2 + n / 12; 
 
-        incoming_midi_note_set[current_midi_lane][n].delta = 1000;
+        incoming_midi_note_set[current_midi_lane][n].delta = 1000; // what's this for?
 
 
        // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
@@ -2487,11 +2500,7 @@ void ClearIncomingMidiNoteSet(void*){
 
   // Loop through all possible midi notes and clear them.
   for (uint8_t n = 0; n <= 127; n++) {
-    if (1==1) {
       incoming_midi_note_set[current_midi_lane][n].is_active = 0;  
-    } else {
-      //rt_printf(".");
-    }
  }
  rt_printf("Bye from ClearIncomingMidiNoteSet \n");
 }
