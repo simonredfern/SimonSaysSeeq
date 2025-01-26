@@ -1793,7 +1793,9 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
 
     float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
 
-    if (the_difference < 0.1) {
+    // In a one volt per octave system, the distance between C and C# is 1/12 = 0.08333333 volts
+    // So if our voltage is within half of that, consider it a match
+    if (the_difference < 0.041666) {
       // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
@@ -2235,7 +2237,11 @@ void InitMidiSequence(bool force){
         // Init incoming_midi_note_set
         // this array is used to track incoming notes seen via audio in (CV)
         incoming_midi_note_set[current_midi_lane][n].is_active = 0;
-        incoming_midi_note_set[current_midi_lane][n].voltage = n / 12; // Midi note to voltage in a one volt per octave system.
+
+
+        // Minus 2 volts is C0 on the sinfonion so let's use that.
+        // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
+        incoming_midi_note_set[current_midi_lane][n].voltage = -2 + n / 12; 
 
         incoming_midi_note_set[current_midi_lane][n].delta = 1000;
 
@@ -2483,7 +2489,6 @@ void ClearIncomingMidiNoteSet(void*){
   for (uint8_t n = 0; n <= 127; n++) {
     if (1==1) {
       incoming_midi_note_set[current_midi_lane][n].is_active = 0;  
-      //rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
     } else {
       //rt_printf(".");
     }
