@@ -1765,11 +1765,44 @@ void SyncAndResetCv(){
 // Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
 // uint8_t ReadBit (int number, int b ){
 	
-// 	last_function = 28642;
-// 	(number & ( 1 << b )) >> b;
-// }
 
 
+
+
+// periodically check which midi note it is (convert voltage to note)
+// add it to the set of recent notes.
+
+// then
+// loop through our midi sequence
+// for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
+
+void AddToIncomingMidiNoteSet(float inputVoltage){
+	
+ if (sequence_is_running == HIGH){
+
+	last_function = 4334;
+
+  rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
+
+  // Loop through all possible midi notes to see if the voltage input is close to one of them.
+  for (uint8_t n = 0; n <= 127; n++) {
+
+    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
+
+    if (the_difference < 0.1) {
+      // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
+      // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
+      // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
+      incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
+        rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
+    } else {
+      //rt_printf(".");
+    }
+  } 
+ }
+
+ rt_printf("Bye from AddToIncomingMidiNoteSet \n");
+}
 
 
 
@@ -1819,6 +1852,15 @@ void OnStepA(){
      //rt_printf("OnStepA: %d ***-----***** NOT play \n", step_a_count);
    }
    
+
+       
+    // This is an OK place to call this because we know it will happen infrequently but predictably      
+    AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
+          
+        
+
+
+
    Bela_scheduleAuxiliaryTask(gPrintStatus);	
 
    //rt_printf("==== End of OnStepA: %d \n", step_a_count);
@@ -2419,45 +2461,15 @@ int BitClear (unsigned int number, unsigned int n) {
 
 
 
-// sample the audio 
-// periodically check which midi note it is (convert voltage to note)
-// add it to the set of recent notes.
-
-// then
-// loop through our midi sequence
-// for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
-
-void AddToIncomingMidiNoteSet(float inputVoltage){
-	
- if (sequence_is_running == HIGH){
-
-	last_function = 4334;
-
-  rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
-
-  // Loop through all possible midi notes to see if the voltage input is close to one of them.
-  for (uint8_t n = 0; n <= 127; n++) {
-
-    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
-
-    if (the_difference < 0.1) {
-      // Set the note to active. note we'd need to previously make all notes inactive for this approach to work.
-      // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
-      // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
-      incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
-        rt_printf("Found a midi note close to the inputVoltage %f The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
-    } else {
-      //rt_printf(".");
-    }
-  } 
- }
-
- rt_printf("Bye from AddToIncomingMidiNoteSet \n");
-}
 
 // Periodically we want to reset this set of notes.
+// This is called on reset. (what if no reset is happening?)
 void ClearIncomingMidiNoteSet(void*){
 	last_function = 43347;
+
+ rt_printf("Hello from ClearIncomingMidiNoteSet \n");
+ 
+
   // Loop through all possible midi notes and clear them.
   for (uint8_t n = 0; n <= 127; n++) {
     if (1==1) {
@@ -2467,6 +2479,7 @@ void ClearIncomingMidiNoteSet(void*){
       //rt_printf(".");
     }
  }
+ rt_printf("Bye from ClearIncomingMidiNoteSet \n");
 }
 
 
@@ -3579,11 +3592,11 @@ void render(BelaContext *context, void *userData)
 
 
         // Try once in a while. once per block e.g. once per 16
-        if (n==0){
-          if (sequence_is_running == HIGH){
-            AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
-          }
-        }
+        // if (n==0){
+        //   if (sequence_is_running == HIGH){
+        //     AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
+        //   }
+        // }
 
       }
 		    
