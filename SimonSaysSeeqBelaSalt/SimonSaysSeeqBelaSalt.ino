@@ -729,6 +729,26 @@ rt_printf("\n Hello from PrintActiveMidiNotes \n");
 }
 
 
+void PrintIncomingMidiNoteSet(){
+	last_function = 13847;
+  // Loop through all possible midi notes and clear them.
+
+rt_printf("\n Hello from PrintIncomingMidiNoteSet \n");
+
+  uint8_t note = 0; // note
+              for (note = 0; note <= 127; note++) {
+                if (incoming_midi_note_set[current_midi_lane][note].is_active == 1){
+                  rt_printf("Active incoming midi note Set %d . \n", note);
+                } else {
+                  //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
+                }
+              }
+        
+
+  rt_printf("\n Bye from PrintIncomingMidiNoteSet \n");         
+}
+
+
 /////////
 
 
@@ -1497,6 +1517,8 @@ void printStatus(void*){
 
 
       PrintActiveMidiNotes();
+
+      PrintIncomingMidiNoteSet();
 
       rt_printf("\n==== Bye from printStatus ======= \n");
       
