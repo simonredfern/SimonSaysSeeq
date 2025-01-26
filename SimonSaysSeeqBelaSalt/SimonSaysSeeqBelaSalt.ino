@@ -708,6 +708,7 @@ void PrintActiveMidiNotes(){
 	last_function = 13347;
   // Loop through all possible midi notes and clear them.
 
+rt_printf("\n Hello from PrintActiveMidiNotes \n");
   uint8_t bc = 0; // bar count
   uint8_t sc = 0; // step count
   uint8_t note = 0; // note
@@ -716,11 +717,15 @@ void PrintActiveMidiNotes(){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               for (note = 0; note <= 127; note++) {
                 if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
-                  rt_printf("Active midi note %d on bar %d step %d is active. \n", note, bc, sc);
+                  rt_printf("Active midi note %d on bar %d step %d. \n", note, bc, sc);
+                } else {
+                  //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
                 }
               }
             }
            }
+
+  rt_printf("\n Bye from PrintActiveMidiNotes \n");         
 }
 
 
@@ -1532,7 +1537,7 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
 
 	last_function = 466942;
 
-  rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is: %d - AND - bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
+  //rt_printf("Hi from OnMidiNoteInEvent I got MIDI note Event ON/OFF is %d, Note is %d, Velocity is %d, Channel is: %d - AND - bar_a_count is currently %d, step_a_count is currently %d \n", on_off, note, velocity, channel, bar_a_count, step_a_count);
   
   if (channel == midi_receive_channel){
   
@@ -2327,13 +2332,13 @@ void readMidiLoop(MidiChannelMessage message, void* arg){
 	// Check for a NOTE ON
     // Some keyboards send velocity 0 for note off instead of sending 0 for type, so we must check for that.
 	if(type_received == kmmNoteOn && velocity_received > 0){
-			rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
+			//rt_printf("note_received ON: type_received: %d, note_received: %d velocity_received: %d channel: %d \n", type_received, note_received, velocity_received, channel_received);
 			// Write any note ON into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_ON, note_received, velocity_received, channel_received);
 	// Check for a NOTE OFF	 
 	} else if (message.getType() == kmmNoteOff || message.getDataByte(1) == 0){
 		
-			rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received: %d channel: \n", type_received, note_received, velocity_received, channel_received);
+			//rt_printf("note_received OFF: type_received: %d, note_received: %d velocity_received: %d channel: \n", type_received, note_received, velocity_received, channel_received);
 			
 			// Write any note OFF into the sequence
 			OnMidiNoteInEvent(MIDI_NOTE_OFF, note_received, velocity_received, channel_received);
