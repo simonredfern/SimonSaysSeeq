@@ -710,7 +710,7 @@ void PrintActiveMidiNotes(){
 	last_function = 13347;
   // Loop through all possible midi notes and clear them.
 
-rt_printf("\n Hello from PrintActiveMidiNotes \n");
+  //rt_printf("\n Hello from PrintActiveMidiNotes \n");
   uint8_t bc = 0; // bar count
   uint8_t sc = 0; // step count
   uint8_t note = 0; // note
@@ -727,7 +727,7 @@ rt_printf("\n Hello from PrintActiveMidiNotes \n");
             }
            }
 
-  rt_printf("\n Bye from PrintActiveMidiNotes \n");         
+  //rt_printf("\n Bye from PrintActiveMidiNotes \n");         
 }
 
 
@@ -1556,6 +1556,9 @@ void DisableMidiNotes(uint8_t note){
               channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
+
+           // Turn off the note so we don't get stuck notes.
+           midi.writeNoteOff(midi_channel_x, note, 0);
 }
 
 
@@ -1783,7 +1786,7 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
 
 	last_function = 4334;
 
-  rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
+  //rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
@@ -1807,7 +1810,7 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
   } 
  }
 
- rt_printf("Bye from AddToIncomingMidiNoteSet \n");
+ //rt_printf("Bye from AddToIncomingMidiNoteSet \n");
 }
 
 
@@ -2503,6 +2506,8 @@ void FilterCurrentMidiNotesByIncoming(void*){
 
 if (sequence_is_running == HIGH){
 
+  rt_printf("Hello from FilterCurrentMidiNotesByIncoming. Will Disable notes not found in Incoming Midi Note Set \n");
+
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
@@ -2516,7 +2521,7 @@ if (sequence_is_running == HIGH){
  
       rt_printf("Cleared midi note: %d because it is not active in IncomingMidiNoteSet \n",  n);
     } else {
-      //rt_printf(".");
+      rt_printf(".");
     }
  }
 } 
@@ -3415,11 +3420,9 @@ bool setup(BelaContext *context, void *userData){
 myUdpClient0 = new UdpClient(remoteUDPPort0,remoteUDPAddress0);
 myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 
-// FilterCurrentMidiNotesByIncoming
 
-// HEREHEREHERE
 
-  // high prioity task (low number means hi prio) 
+  // high prioity tasks (first) (low number means hi prio) 
 
         if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 3, "bela-all-notes-off")) == 0)
                 return false;  
