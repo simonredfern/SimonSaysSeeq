@@ -120,6 +120,9 @@ The Bela software is distributed under the GNU Lesser General Public License
 #include <libraries/Midi/Midi.h>
 #include <stdlib.h>
 #include <cmath>
+#include <set>
+#include <sstream>  // For std::stringstream
+#include <cstring>  // For strdup
 
 #include <libraries/Scope/Scope.h>
 
@@ -326,10 +329,7 @@ int do_button_4_action = 0;
 
 //////////////////
 
-int fine_delay_frames_delta = 1;
-int fine_delay_frames = 0;
 
-//float feedback_delta = 1.0f;
 
 // LED Control: https://github.com/BelaPlatform/Bela/wiki/Salt#led-and-pwm
 int LED_1_PIN = 2;
@@ -710,17 +710,19 @@ class MidiNoteSet
  public:
    float voltage = 0;
    uint8_t is_active = 0;
-   float delta = 1000;
 };
 
 class MidiNoteSet incoming_midi_note_set[MAX_LANE+1][128]; 
 
 
 
-/// HEREHERe
+/// HEREHERS
 
 void PrintActiveMidiNotes(){
 	last_function = 13347;
+
+  std::set<int> mySet;
+
   // Loop through all possible midi notes and clear them.
 
   //rt_printf("\n Hello from PrintActiveMidiNotes \n");
@@ -732,7 +734,9 @@ void PrintActiveMidiNotes(){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               for (note = 0; note <= 127; note++) {
                 if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
-                  rt_printf("Active midi note %d on bar %d step %d. \n", note, bc, sc);
+                  //rt_printf("Active midi note %d on bar %d step %d. \n", note, bc, sc);
+                  mySet.insert(note);
+
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
                 }
@@ -740,7 +744,24 @@ void PrintActiveMidiNotes(){
             }
            }
 
-  //rt_printf("\n Bye from PrintActiveMidiNotes \n");         
+    // Use a stringstream to construct the sorted result
+    std::stringstream ss;
+    for (const auto& num : mySet) {
+        ss << num << " "; // Append each number, separated by a space
+    }
+
+    // Convert the resulting string to a const char*
+    std::string resultString = ss.str();
+    const char* message = strdup(resultString.c_str()); // Duplicate the string to a const char*
+
+    // Print the result using rt_printf
+    rt_printf("These are the active midi notes: %s\n", message);
+
+    // Free the allocated memory (important when using strdup)
+    free((void*)message);
+
+  //rt_printf("Bye from PrintActiveMidiNotes \n");
+
 }
 
 
@@ -1316,28 +1337,7 @@ void printStatus(void*){
     // 	rt_printf("detected_bpm is: %f \n", detected_bpm);
     //	rt_printf("frames_per_sequence is: %llu \n", frames_per_sequence);
     
-		// Delay Time
-		
-		//rt_printf("DELAY_BUFFER_SIZE is: %d \n", DELAY_BUFFER_SIZE);
-
-
-
-
-
-		//rt_printf("coarse_delay_input is: %d \n", coarse_delay_input);		
-		//rt_printf("coarse_delay_frames is: %d \n", coarse_delay_frames);
-		//rt_printf("fine_delay_frames_delta is: %d \n", fine_delay_frames_delta);
-		//rt_printf("fine_delay_frames is: %d \n", fine_delay_frames);
-		//rt_printf("total_delay_frames is: %d \n", total_delay_frames);		
-		
-		
-		// Delay Feedback
-		//rt_printf("feedback_delta is: %f \n", feedback_delta);
-
-	    
-		//rt_printf("delay_feedback_amount is: %f \n", delay_feedback_amount);
-		
-		
+				
 		// Analog / Digital Clock In.
   	//	rt_printf("last_quarter_note_frame is: %llu \n", last_quarter_note_frame);
 
@@ -1792,6 +1792,16 @@ void SyncAndResetCv(){
 // then
 // loop through our midi sequence
 // for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
+
+
+
+int8_t GetNoteOfScaleFromMidiNote(int8_t note) {
+  // Given any midi note 0 to 127, we want to return the note without octave.
+  last_function = 6102;
+    return note % 12;
+}
+
+
 
 void AddToIncomingMidiNoteSet(float inputVoltage){
 	
@@ -2256,7 +2266,6 @@ void InitMidiSequence(bool force){
         // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
         incoming_midi_note_set[current_midi_lane][n].voltage = -2 + n / 12; 
 
-        incoming_midi_note_set[current_midi_lane][n].delta = 1000; // what's this for?
 
 
        // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
@@ -3096,70 +3105,27 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       lfo_a_analog.setFrequency(lfo_osc_1_frequency); 
       lfo_b_analog.setFrequency(lfo_osc_2_frequency);
 		
-		
-		// We want to Delay Course Dial to span the DELAY_BUFFER_SIZE in jumps of frames_per_24_ticks
-		//float delay_coarse_dial_factor = DELAY_BUFFER_SIZE / (frames_per_24_ticks * MAX_COARSE_DELAY_TIME_INPUT);
-		
-		
-		// The course delay amount we dial in with the pot
-		//coarse_delay_frames = rint(frames_per_24_ticks * coarse_delay_input * delay_coarse_dial_factor);	    
-	    
-		// The amount we increment / decrement the delay using buttons 2 and 1
-		//fine_delay_frames_delta = rint(frames_per_24_ticks / 24.0);	
-		
-		//fine_delay_frames_delta = rint(frames_per_24_ticks / 48.0);	
-		
-
-    // Two simultanious functions for this button.
-		// 1
-    // Fine Delay Time
-		// Smaller
-    // 2 filter the midi sequence based on the notes in.	
-// FilterCurrentMidiNotesByIncoming -> FilterCurrentMidiNotesByIncoming
 
 		if (do_button_1_action == 1) {
 			
       Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
 
-      //Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
-			//Bela_scheduleAuxiliaryTask(gAllNotesOff);
+
       target_led_1_tri_state = 2; // yellow
 
 
-
-			// if ((fine_delay_frames - fine_delay_frames_delta) < 0){
-			// 	// Skip
-			// } else { 
-			// 	fine_delay_frames = fine_delay_frames - fine_delay_frames_delta;
-			// }			
+		
 			
 			do_button_1_action = 0;
 		
 		// Larger	
 		} else if (do_button_2_action == 1) {
 			
-			// if ((coarse_delay_frames + fine_delay_frames + fine_delay_frames_delta) >= DELAY_BUFFER_SIZE){
-			// 	// Skip
-			// } else {
-			// 	fine_delay_frames = fine_delay_frames + fine_delay_frames_delta;
-			// }
+
 			
 			do_button_2_action = 0;
 		} 
 			
-		//total_delay_frames = coarse_delay_frames + fine_delay_frames;
-
-		// Sanity Checks
-	  //   if (total_delay_frames > DELAY_BUFFER_SIZE){
-	  //   	total_delay_frames = DELAY_BUFFER_SIZE;
-		// }
-		
-		// if (total_delay_frames < 0){
-	  //   	total_delay_frames = 0;
-		// }
-
-
-
 		// Clear Audio Buffer (Delay)
 		if (do_button_3_action == 1) {
 			//InitAudioBuffer();
