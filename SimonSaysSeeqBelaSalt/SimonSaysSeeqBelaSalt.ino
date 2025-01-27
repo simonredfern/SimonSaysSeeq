@@ -701,6 +701,7 @@ int test_int = 8 ;
 NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
+std::set<int> ActiveMidiNoteSet; // this can be used to store the set of midi notes that are in the current channel_x_midi_note_events
 
 ////////////
 // These structures are used used to record which midi notes (and voltages are used in a given midi lane) - for use in pitch quantisation.
@@ -712,7 +713,23 @@ class MidiNoteSet
    uint8_t is_active = 0;
 };
 
-class MidiNoteSet incoming_midi_note_set[MAX_LANE+1][128]; 
+class MidiNoteSet incoming_midi_note_set[128]; // we are going to store the numbers 0 - 127 to represent midi notes
+
+
+void InitIncomingMidiNoteSet(){
+      // Loop through notes
+      for (uint8_t n = 0; n <= 127; n++) {
+        // Minus 2 volts is C0 on the sinfonion so let's use that.
+        // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
+        incoming_midi_note_set[n].voltage = -2 + (n / 12.0); 
+      }
+
+}
+
+
+
+
+std::set<int> IncomingMidiNoteSet; // this can be used to store the set of numbers in the current incoming_midi_note_set
 
 
 
@@ -721,7 +738,7 @@ class MidiNoteSet incoming_midi_note_set[MAX_LANE+1][128];
 void PrintActiveMidiNotes(){
 	last_function = 13347;
 
-  std::set<int> mySet;
+  
 
   // Loop through all possible midi notes and clear them.
 
@@ -735,7 +752,7 @@ void PrintActiveMidiNotes(){
               for (note = 0; note <= 127; note++) {
                 if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
                   //rt_printf("Active midi note %d on bar %d step %d. \n", note, bc, sc);
-                  mySet.insert(note);
+                  ActiveMidiNoteSet.insert(note);
 
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
@@ -746,7 +763,7 @@ void PrintActiveMidiNotes(){
 
     // Use a stringstream to construct the sorted result
     std::stringstream ss;
-    for (const auto& num : mySet) {
+    for (const auto& num : ActiveMidiNoteSet) {
         ss << num << " "; // Append each number, separated by a space
     }
 
@@ -755,7 +772,7 @@ void PrintActiveMidiNotes(){
     const char* message = strdup(resultString.c_str()); // Duplicate the string to a const char*
 
     // Print the result using rt_printf
-    rt_printf("These are the active midi notes: %s\n", message);
+    rt_printf("These are the active midi notes: %s \n", message);
 
     // Free the allocated memory (important when using strdup)
     free((void*)message);
@@ -774,7 +791,7 @@ rt_printf("\n Hello from PrintIncomingMidiNoteSet \n");
   uint8_t note = 0; // note
   rt_printf("These notes are active in the incoming_midi_note_set: \n");
               for (note = 0; note <= 127; note++) {
-                if (incoming_midi_note_set[current_midi_lane][note].is_active == 1){
+                if (incoming_midi_note_set[note].is_active == 1){
                   rt_printf(" %d, ", note);
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
@@ -1814,7 +1831,7 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
-    float the_difference = abs(inputVoltage - incoming_midi_note_set[current_midi_lane][n].voltage);
+    float the_difference = abs(inputVoltage - incoming_midi_note_set[n].voltage);
 
     // In a one volt per octave system, the distance between C and C# is 1/12 = 0.08333333 volts
     // So if our voltage is within half of that (above or below), consider it a match
@@ -1823,9 +1840,12 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
       
-     if (incoming_midi_note_set[current_midi_lane][n].is_active == 0) {
-      incoming_midi_note_set[current_midi_lane][n].is_active = 1;  
-      rt_printf("Found a midi note close to the inputVoltage (%f) that was previously inactive. The Note is: %d The difference is: %f is_active is: %d \n", inputVoltage, n, the_difference, incoming_midi_note_set[current_midi_lane][n].is_active);
+     if (incoming_midi_note_set[n].is_active == 0) {
+      incoming_midi_note_set[n].is_active = 1;  
+      rt_printf("Found a incoming_midi_note_set note close to the inputVoltage (%f) that was previously inactive. The Note is: %d which has voltage %f. (The difference is: %f) is_active is: %d \n", inputVoltage, n, incoming_midi_note_set[n].voltage, the_difference, incoming_midi_note_set[n].is_active);
+     
+      IncomingMidiNoteSet.insert(n);
+     
      } 
       
         } else {
@@ -2257,14 +2277,7 @@ void InitMidiSequence(bool force){
         channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
 
 
-        // Init incoming_midi_note_set
-        // this array is used to track incoming notes seen via audio in (CV)
-        incoming_midi_note_set[current_midi_lane][n].is_active = 0;
 
-
-        // Minus 2 volts is C0 on the sinfonion so let's use that.
-        // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
-        incoming_midi_note_set[current_midi_lane][n].voltage = -2 + n / 12; 
 
 
 
@@ -2509,8 +2522,11 @@ void ClearIncomingMidiNoteSet(void*){
 
   // Loop through all possible midi notes and clear them.
   for (uint8_t n = 0; n <= 127; n++) {
-      incoming_midi_note_set[current_midi_lane][n].is_active = 0;  
- }
+      incoming_midi_note_set[n].is_active = 0;  
+  }
+
+  IncomingMidiNoteSet.clear();
+
  rt_printf("Bye from ClearIncomingMidiNoteSet \n");
 }
 
@@ -2538,9 +2554,9 @@ if (sequence_is_running == HIGH){
 
 
     // Disable the notes not active in the incoming midi note set.
-    if (incoming_midi_note_set[current_midi_lane][n].is_active == 0) {
+    if (incoming_midi_note_set[n].is_active == 0) {
       DisableMidiNotes(n); // this will disable notes in channel_x_midi_note_events
-      // TODO MAKE SURE WE TURN OFF THE NOTE midi.writeNoteOff(channel, n, 0);
+      
  
       rt_printf("Cleared midi note: %d because it is not active in IncomingMidiNoteSet \n",  n);
     } else {
@@ -3452,6 +3468,9 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         
 	// Now that we have created the structure in memory above, we can populate it from files stored last time we shut down the sequencer nicely.
 	ReadSequenceFromFiles();
+
+
+  InitIncomingMidiNoteSet();
         
         rt_printf("Bye from Setup. - I hope you will send me a clock :-) \n");
 
