@@ -1814,13 +1814,13 @@ int8_t GetNoteOfScaleFromMidiNote(int8_t note) {
 
 
 
-void AddToMidiMaskNotesSet(float inputVoltage){
+void AddNoteToMidiMask(float inputVoltage){
 	
  if (sequence_is_running == HIGH){
 
 	last_function = 4334;
 
-  //rt_printf("Hello from AddToMidiMaskNotesSet input voltage is %f \n", inputVoltage);
+  //rt_printf("Hello from AddNoteToMidiMask input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
@@ -1849,7 +1849,7 @@ void AddToMidiMaskNotesSet(float inputVoltage){
   } 
  }
 
- //rt_printf("Bye from AddToMidiMaskNotesSet \n");
+ //rt_printf("Bye from AddNoteToMidiMask \n");
 }
 
 
@@ -1903,7 +1903,7 @@ void OnStepA(){
 
        
     // This is an OK place to call this because we know it will happen infrequently but predictably      
-    AddToMidiMaskNotesSet(voltage_of_incoming_note_in);
+    AddNoteToMidiMask(voltage_of_incoming_note_in);
           
         
 
