@@ -16,7 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.53-BelaSalt";
+const char version[16]= "v0.54-BelaSalt";
 
 
 
@@ -229,7 +229,7 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
-uint8_t midi_filter_active = 0;
+bool midi_filter_is_active = LOW;
 
 
 #include <math.h> //sinf
@@ -265,7 +265,7 @@ AuxiliaryTask gInitMidiSequenceNoForce;
 
 AuxiliaryTask gClearIncomingChromaticMidiNotesSet;
 
-AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
+//AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
 
 // These settings are carried over from main.cpp
 // Setting global variables is an alternative approach
@@ -764,7 +764,7 @@ void PrintActiveKeyboardMidiNotes(){
     const char* message = strdup(resultString.c_str()); // Duplicate the string to a const char*
 
     // Print the result using rt_printf
-    rt_printf("These are the active midi notes: %s \n", message);
+    rt_printf("This is the ActiveKeyboardMidiNoteSet: %s \n", message);
 
     // Free the allocated memory (important when using strdup)
     free((void*)message);
@@ -982,15 +982,15 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-  if (midi_filter_active == 1) {
-    rt_printf("midi_filter_active is active ");
+  if (midi_filter_is_active == HIGH) {
+    rt_printf("midi_filter_is_active is true \n");
     if (IncomingChromaticMidiNotesSet.count(note) > 0){
       midi.writeNoteOn(channel, note, velocity);
     } else {
-      rt_printf("NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d ", note);
+      rt_printf(" NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d \n", note);
     }
   } else {
-    rt_printf("midi filter is NOT active ");
+    rt_printf("midi filter NOT active so playing note normally %d \n", note);
     midi.writeNoteOn(channel, note, velocity);
 }
 
@@ -1297,8 +1297,7 @@ void ResetSequenceACounters(){
   
   need_to_reset_draw_buf_pointer = true;
 
-  // Every once and a while (try on reset), clear this set.
-  Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
+
 
   // target_led_2_tri_state = 1;
 
@@ -1342,13 +1341,13 @@ void printStatus(void*){
     // Might not want to print every time else we overload the CPU
     gCount++;
 	
-    // By setting this mod we can choose to print less frequently.  
+    // By setting this higher we can print less frequently.  
     if(gCount % 10 == 0) {
       
-		rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
+	//	rt_printf("======== Hello from printStatus. gCount is: %d ========= \n",gCount);
 		
 		
-		rt_printf("last_function is: %llu \n", last_function);
+	//	rt_printf("last_function is: %llu \n", last_function);
 
 
 // last_function_32
@@ -1416,8 +1415,8 @@ void printStatus(void*){
     //	rt_printf("loop_timing_a.tick_count_in_sequence is: %d \n", loop_timing_a.tick_count_in_sequence);
     //	rt_printf("loop_timing_a.tick_count_since_start is: %d \n", loop_timing_a.tick_count_since_start);
     	
-    	rt_printf("step_a_count is: %d \n", step_a_count);
-    	rt_printf("clock_divider_input_value is: %d \n", clock_divider_input_value);
+    //	rt_printf("step_a_count is: %d \n", step_a_count);
+    //	rt_printf("clock_divider_input_value is: %d \n", clock_divider_input_value);
 
 
     	/*
@@ -1502,7 +1501,7 @@ void printStatus(void*){
 
 		
 		
-    rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
+
 
 		//rt_printf("audio_left_in_raw is: %f \n", audio_left_in_raw);	
 		//rt_printf("audio_right_in_raw is: %f \n", audio_right_in_raw);
@@ -1519,9 +1518,9 @@ void printStatus(void*){
 
     	
 		
-		rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
-		print_binary(gray_code_sequence_a);
-		rt_printf("%c \n", 'B');
+	//	rt_printf("gray_code_sequence_a is: %d \n", gray_code_sequence_a);
+	//	print_binary(gray_code_sequence_a);
+	//	rt_printf("%c \n", 'B');
 		
 
 
@@ -1556,12 +1555,21 @@ void printStatus(void*){
     //rt_printf("target_analog_gate_a_out_state is: %d \n", target_analog_gate_a_out_state);
 		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
 
+    rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
+
+if (midi_filter_is_active == HIGH){
+  rt_printf("midi_filter_is_active TRUE \n");
+} else {
+  rt_printf("midi_filter_is_active FALSE \n");
+}
+
+      rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
 
       PrintActiveKeyboardMidiNotes();
 
       PrintAnalogIncomingMidiChromaticNotes();
 
-      rt_printf("\n==== Bye from printStatus ======= \n");
+    //  rt_printf("\n==== Bye from printStatus ======= \n");
       
 
     }
@@ -2545,33 +2553,33 @@ void ClearIncomingChromaticMidiNotesSet(void*){
 
 
 // to be run on a button press
-void FilterCurrentMidiNotesByIncoming(void*){
+// void FilterCurrentMidiNotesByIncoming(void*){
 	
-// Filter the midi sequence based on the notes in the Incoming midi note set (which are in turn set by looking at the pitches over cv.)
-// 
+// // Filter the midi sequence based on the notes in the Incoming midi note set (which are in turn set by looking at the pitches over cv.)
+// // 
 
-	last_function = 45434;
+// 	last_function = 45434;
 
-if (sequence_is_running == HIGH){
+// if (sequence_is_running == HIGH){
 
-  rt_printf("Hello from FilterCurrentMidiNotesByIncoming. Will Disable notes not found in Incoming Midi Note Set \n");
+//   rt_printf("Hello from FilterCurrentMidiNotesByIncoming. Will Disable notes not found in Incoming Midi Note Set \n");
 
 
-  // Loop through all possible midi notes 
-  for (uint8_t n = 0; n <= 127; n++) {
+//   // Loop through all possible midi notes 
+//   for (uint8_t n = 0; n <= 127; n++) {
 
-    // Disable the notes not active in the incoming midi note set.
-    if (incoming_chromatic_midi_notes[n].is_active == 0) {
-      DisableKeyboardMidiNotes(n); // this will disable notes in keyboard_midi_note_events
+//     // Disable the notes not active in the incoming midi note set.
+//     if (incoming_chromatic_midi_notes[n].is_active == 0) {
+//       DisableKeyboardMidiNotes(n); // this will disable notes in keyboard_midi_note_events
       
  
-      rt_printf("Cleared midi note: %d because it is not active in incoming_chromatic_midi_notes \n",  n);
-    } else {
-      rt_printf(".");
-    }
- }
-} 
-}
+//       rt_printf("Cleared midi note: %d because it is not active in incoming_chromatic_midi_notes \n",  n);
+//     } else {
+//       rt_printf(".");
+//     }
+//  }
+// } 
+// }
 
 
 
@@ -3130,27 +3138,27 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		
 
 		if (do_button_1_action == 1) {
-			
+			do_button_1_action = 0;
       //Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
 
+      // Turn filtering OFF
+      midi_filter_is_active = LOW;
+      // Here we can reset the incoming midi notes. and also turn off the filtering.
+      Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
 
-      midi_filter_active = 0;
       target_led_1_tri_state = 2; // yellow
-			
-			do_button_1_action = 0;
 		
-		// Larger	
 		} else if (do_button_2_action == 1) {
+      do_button_2_action = 0;
 			
-      midi_filter_active = 1;
+      // Turn midi filtering ON
+      midi_filter_is_active = HIGH;
       target_led_2_tri_state = 2; 
-			
-			do_button_2_action = 0;
 		} 
 			
 		// Clear Audio Buffer (Delay)
 		if (do_button_3_action == 1) {
-			//InitAudioBuffer();
+	
 			do_button_3_action = 0;
 		}
 
@@ -3158,10 +3166,10 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
+      do_button_4_action = 0;
       Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
 			Bela_scheduleAuxiliaryTask(gAllNotesOff);
       target_led_4_tri_state = 2; // yellow
-			do_button_4_action = 0;
 		}
 
 
@@ -3432,8 +3440,8 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gClearIncomingChromaticMidiNotesSet = Bela_createAuxiliaryTask(&ClearIncomingChromaticMidiNotesSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
                 return false;
 
-        if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
-                return false;
+        //if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
+        //        return false;
 
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
                 return false;
