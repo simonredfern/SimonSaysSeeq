@@ -229,7 +229,7 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
-uint8_t midi_mask_active = 0;
+uint8_t midi_filter_active = 0;
 
 
 #include <math.h> //sinf
@@ -263,7 +263,7 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
-AuxiliaryTask gClearMidiMask;
+AuxiliaryTask gClearIncomingChromaticMidiNotesSet;
 
 AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
 
@@ -663,7 +663,7 @@ if(frame_timer < 440000) {
 ////////////////////////////////////
 // Store extra data about the note (velocity, "exactly" when in a step etc)
 // Note name (number) and step information is stored in the array below.         
-class NoteInfo
+class SequenceNote
 {
  public:
    uint8_t velocity = 0 ;
@@ -681,39 +681,39 @@ int test_int = 8 ;
 
 
 ////////
-// For each sequence step / midi note number  / on-or-off we store a NoteInfo (which defines a bit more info)
+// For each sequence step / midi note number  / on-or-off we store a SequenceNote (which defines a bit more info)
 // Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.
 // This way we can easily access a step and the notes there.
 // [step][midi_note][on-or-off]
 // [step] will store a digit between 0 and 15 to represent the step of the sequence.
 // [midi_note] will store between 0 and 127
 // [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
-//NoteInfo channel_x_midi_note_events[MAX_STEP+1][128][2]; 
+//SequenceNote keyboard_midi_note_events[MAX_STEP+1][128][2]; 
 
-NoteInfo channel_x_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
+SequenceNote keyboard_midi_note_events[MAX_LANE+1][MAX_BAR+1][MAX_STEP+1][128][2]; 
 ////////
 
-std::set<int> ActiveMidiNoteSet; // this can be used to store the set of midi notes that are in the current channel_x_midi_note_events
+std::set<int> ActiveKeyboardMidiNoteSet; // this can be used to store the set of midi notes that are in the current keyboard_midi_note_events
 
 ////////////
 // These structures are used used to record which midi notes (and voltages are used in a given midi lane) - for use in pitch quantisation.
 
-class MidiNoteSet
+class VoltageNote
 {
  public:
    float voltage = 0;
    uint8_t is_active = 0;
 };
 
-class MidiNoteSet midi_mask_notes[128]; // we are going to store the numbers 0 - 127 to represent midi notes
+class VoltageNote incoming_chromatic_midi_notes[128]; // we are going to store the numbers 0 - 127 to represent midi notes
 
 
-void InitMidiMaskNotesSet(){
+void InitIncomingMidiChromaticNotes(){
       // Loop through notes
       for (uint8_t n = 0; n <= 127; n++) {
         // Minus 2 volts is C0 on the sinfonion so let's use that.
         // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
-        midi_mask_notes[n].voltage = -2 + (n / 12.0); 
+        incoming_chromatic_midi_notes[n].voltage = -2 + (n / 12.0); 
       }
 
 }
@@ -721,20 +721,20 @@ void InitMidiMaskNotesSet(){
 
 
 
-std::set<int> MidiMaskNotesSet; // this can be used to store the set of numbers in the current midi_mask_notes
+std::set<int> IncomingChromaticMidiNotesSet; // this can be used to store the set of numbers in the current incoming_chromatic_midi_notes
 
 
 
 /// HEREHERS
 
-void PrintActiveMidiNotes(){
+void PrintActiveKeyboardMidiNotes(){
 	last_function = 13347;
 
   
 
   // Loop through all possible midi notes and clear them.
 
-  //rt_printf("\n Hello from PrintActiveMidiNotes \n");
+  //rt_printf("\n Hello from PrintActiveKeyboardMidiNotes \n");
   uint8_t bc = 0; // bar count
   uint8_t sc = 0; // step count
   uint8_t note = 0; // note
@@ -742,9 +742,9 @@ void PrintActiveMidiNotes(){
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               for (note = 0; note <= 127; note++) {
-                if (channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
+                if (keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1){
                   //rt_printf("Active midi note %d on bar %d step %d. \n", note, bc, sc);
-                  ActiveMidiNoteSet.insert(note);
+                  ActiveKeyboardMidiNoteSet.insert(note);
 
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
@@ -755,7 +755,7 @@ void PrintActiveMidiNotes(){
 
     // Use a stringstream to construct the sorted result
     std::stringstream ss;
-    for (const auto& num : ActiveMidiNoteSet) {
+    for (const auto& num : ActiveKeyboardMidiNoteSet) {
         ss << num << " "; // Append each number, separated by a space
     }
 
@@ -769,21 +769,21 @@ void PrintActiveMidiNotes(){
     // Free the allocated memory (important when using strdup)
     free((void*)message);
 
-  //rt_printf("Bye from PrintActiveMidiNotes \n");
+  //rt_printf("Bye from PrintActiveKeyboardMidiNotes \n");
 
 }
 
 
-void PrintMidiMaskNotesSet(){
+void PrintAnalogIncomingMidiChromaticNotes(){
 	last_function = 13847;
   // Loop through all possible midi notes and clear them.
 
-//rt_printf("\n Hello from PrintMidiMaskNotesSet \n");
+//rt_printf("\n Hello from PrintAnalogIncomingMidiChromaticNotes \n");
 
   uint8_t note = 0; // note
-  rt_printf("These notes are active in the midi_mask_notes: \n");
+  rt_printf("These notes are active in the incoming_chromatic_midi_notes: \n");
               for (note = 0; note <= 127; note++) {
-                if (midi_mask_notes[note].is_active == 1){
+                if (incoming_chromatic_midi_notes[note].is_active == 1){
                   rt_printf(" %d, ", note);
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
@@ -791,7 +791,7 @@ void PrintMidiMaskNotesSet(){
               }
         
 
-  //rt_printf("\n Bye from PrintMidiMaskNotesSet \n");         
+  //rt_printf("\n Bye from PrintAnalogIncomingMidiChromaticNotes \n");         
 }
 
 
@@ -813,8 +813,8 @@ void SyncSequenceToFile(bool write_to_file){
 		//const int mkdir= system("mkdir -p /var/SimonSaysSeeqConfig");
       system("mkdir -p /var/SimonSaysSeeqConfig");
 		// hm what if we get -bash: /bin/rm: Argument list too long ?
-		//const int remove= system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
-      system("rm /var/SimonSaysSeeqConfig/_NoteInfo*");
+		//const int remove= system("rm /var/SimonSaysSeeqConfig/_SequenceNote*");
+      system("rm /var/SimonSaysSeeqConfig/_SequenceNote*");
     }
 	
 	
@@ -852,7 +852,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
           // TODO optimize loading of files e.g. only load the files that exist
 					//rt_printf(".");
 
-				  file_name = "/var/SimonSaysSeeqConfig/_NoteInfo_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
+				  file_name = "/var/SimonSaysSeeqConfig/_SequenceNote_lane_" + std::to_string(ln) + "_bar_" + std::to_string(bc) + "_step_" + std::to_string(sc) + "_note_" + std::to_string(n) + "_onoff_" + std::to_string(onoff);
 		    	
 		    
 		        if (write_to_file == true) {
@@ -861,22 +861,22 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 		        	
 
 					// Only write active notes. (we deleted all files above so should be ok. )
-					if (channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
+					if (keyboard_midi_note_events[ln][bc][sc][n][onoff].is_active == 1){
 						
 						// Open for writing in truncate mode (we will replace the contents)
 						output_file.open (file_name, std::ios::out | std::ios::trunc | std::ios::binary);
 
             			count_of_file_operations = count_of_file_operations + 1;
 						
-						//rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active);
-						//rt_printf("SyncSequenceToFile Write value velocity: %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
+						//rt_printf("SyncSequenceToFile Write Non Zero value is_active: %d \n", keyboard_midi_note_events[ln][bc][sc][n][onoff].is_active);
+						//rt_printf("SyncSequenceToFile Write value velocity: %d \n", keyboard_midi_note_events[ln][bc][sc][n][onoff].velocity);
 						
-						////rt_printf("SyncSequenceToFile Hope to write the value: %d \n", channel_x_midi_note_events[ln][bc][sc][n][1].velocity);
+						////rt_printf("SyncSequenceToFile Hope to write the value: %d \n", keyboard_midi_note_events[ln][bc][sc][n][1].velocity);
 					
 						// Must cast the value to int else it won't be written to the file.
-						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
-						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
-						output_file << (int) channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
+						output_file << (int) keyboard_midi_note_events[ln][bc][sc][n][onoff].velocity  << std::endl;
+						output_file << (int) keyboard_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step  << std::endl;
+						output_file << (int) keyboard_midi_note_events[ln][bc][sc][n][onoff].is_active << std::endl;
 
 					
 						output_file.close();
@@ -910,11 +910,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
+					    keyboard_midi_note_events[ln][bc][sc][n][onoff].velocity = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_x_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].velocity);
+								rt_printf("Should have set keyboard_midi_note_events[bc][sc][n][onoff].velocity Did I? : %d \n", keyboard_midi_note_events[ln][bc][sc][n][onoff].velocity);
 							}
 							
 						////////////
@@ -933,11 +933,11 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
+					    keyboard_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step = (uint8_t) long_integer_from_file;
 					    
 					    
 					    if (long_integer_from_file != 0){
-								rt_printf("Should have set channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", channel_x_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
+								rt_printf("Should have set keyboard_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step Did I? : %d \n", keyboard_midi_note_events[ln][bc][sc][n][onoff].tick_count_since_step);
 							}
 					    
 					    
@@ -955,7 +955,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 						}
 					      
 					    // Must cast int to uint8_t
-					    channel_x_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
+					    keyboard_midi_note_events[ln][bc][sc][n][onoff].is_active = (uint8_t) long_integer_from_file;
 					    
 					    
 			
@@ -980,8 +980,14 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 ///////
 
+void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-
+  if (IncomingChromaticMidiNotesSet.count(note) > 0){
+    midi.writeNoteOn(channel, note, velocity);
+  } else {
+    rt_printf("NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d ", note);
+  }
+}
 
 
 void WriteSequenceToFiles(void*){
@@ -1002,7 +1008,7 @@ void ReadSequenceFromFiles(){
 
 
 
-// "Ghost notes" are created to cancel out a note-off in channel_x_midi_note_events that is created  during the note off of low velocity notes.
+// "Ghost notes" are created to cancel out a note-off in keyboard_midi_note_events that is created  during the note off of low velocity notes.
 // class GhostNote
 // {
 //  public:
@@ -1284,7 +1290,7 @@ void ResetSequenceACounters(){
   need_to_reset_draw_buf_pointer = true;
 
   // Every once and a while (try on reset), clear this set.
-  Bela_scheduleAuxiliaryTask(gClearMidiMask); 
+  Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
 
   // target_led_2_tri_state = 1;
 
@@ -1543,9 +1549,9 @@ void printStatus(void*){
 		//rt_printf("current_analog_gate_a_out_state is: %d \n", current_analog_gate_a_out_state);      
 
 
-      PrintActiveMidiNotes();
+      PrintActiveKeyboardMidiNotes();
 
-      PrintMidiMaskNotesSet();
+      PrintAnalogIncomingMidiChromaticNotes();
 
       rt_printf("\n==== Bye from printStatus ======= \n");
       
@@ -1562,7 +1568,7 @@ void printStatus(void*){
 
 ////////////////////////
 
-void DisableMidiNotes(uint8_t note){
+void DisableKeyboardMidiNotes(uint8_t note){
 	
 	last_function = 28749;
 	
@@ -1572,22 +1578,22 @@ void DisableMidiNotes(uint8_t note){
            for (bc = FIRST_BAR; bc <= MAX_BAR; bc++){
             for (sc = FIRST_STEP; sc <= MAX_STEP; sc++){
               // WRITE MIDI MIDI_DATA
-              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
-              channel_x_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
-              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
-              channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0;
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0;
+              //keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0;
+              //keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
 
-           ActiveMidiNoteSet.erase(note);
+           ActiveKeyboardMidiNoteSet.erase(note);
 
            // Turn off the note so we don't get stuck notes.
-           midi.writeNoteOff(midi_channel_x, note, 0);
+           //midi.writeNoteOff(midi_channel_x, note, 0);
 }
 
 
 void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int channel){
-	// This function writes midi notes into channel_x_midi_note_events based on the current step_a_count
+	// This function writes midi notes into keyboard_midi_note_events based on the current step_a_count
 
 	last_function = 466942;
 
@@ -1618,11 +1624,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
           
           // Disable the note on all steps
           //Serial.println(String("DISABLE Note (for all steps) ") + note + String(" because ON velocity is ") + velocity );
-          DisableMidiNotes(note);
+          DisableKeyboardMidiNotes(note);
           
           last_note_disabled = note;
 
-          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in channel_x_midi_note_events
+          // Now, when we release this note on the keyboard, the keyboard obviously generates a note off which gets stored in keyboard_midi_note_events
           // and can interfere with subsequent note ONs i.e. cause the note to end earlier than expected.
           // Since velocity of Note OFF is not respected by keyboard manufactuers, we need to find a way remove (or prevent?)
           // these Note OFF events. 
@@ -1634,9 +1640,11 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
           if (current_midi_lane != SILENT_MIDI_LANE){ 
             rt_printf("Setting MIDI note ON for note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
             // WRITE MIDI MIDI_DATA
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step; // Only one of these per step.
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1;
+
+            // note the midi note is not sent here but later in PlayMidi
             
           } else {
             rt_printf("SILENT lane so NOT Writing note %d When step is %d velocity is %d \n", note, step_a_count, velocity );
@@ -1649,8 +1657,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
         if (sequence_is_running == 0){
 
           // note this when we actually send the midi note out
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0;
+          keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+          keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0;
 
           midi.writeNoteOn(channel, note, velocity); // echo midi to the output
         }
@@ -1666,9 +1674,9 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
           
           // WRITE MIDI MIDI_DATA (unless on silent lane) Note Off
           if (current_midi_lane != SILENT_MIDI_LANE){ 
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1;
           
           } else {
             rt_printf("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d \n", note,  bar_a_count, step_a_count );
@@ -1679,8 +1687,8 @@ void OnMidiNoteInEvent(uint8_t on_off, uint8_t note, uint8_t velocity, int chann
           // Echo Midi but only if the sequencer is stopped, else we get double notes because PlayMidi gets called each Tick
           if (sequence_is_running == 0){ 
 
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0;
-            channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0;
+            keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
 
 
             midi.writeNoteOff(channel, note, 0);
@@ -1814,18 +1822,18 @@ int8_t GetNoteOfScaleFromMidiNote(int8_t note) {
 
 
 
-void AddNoteToMidiMask(float inputVoltage){
+void AddNoteToIncomingChromaticMidiNotes(float inputVoltage){
 	
  if (sequence_is_running == HIGH){
 
 	last_function = 4334;
 
-  //rt_printf("Hello from AddNoteToMidiMask input voltage is %f \n", inputVoltage);
+  //rt_printf("Hello from AddNoteToIncomingChromaticMidiNotes input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
-    float the_difference = abs(inputVoltage - midi_mask_notes[n].voltage);
+    float the_difference = abs(inputVoltage - incoming_chromatic_midi_notes[n].voltage);
 
     // In a one volt per octave system, the distance between C and C# is 1/12 = 0.08333333 volts
     // So if our voltage is within half of that (above or below), consider it a match
@@ -1834,22 +1842,21 @@ void AddNoteToMidiMask(float inputVoltage){
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
       
-     if (midi_mask_notes[n].is_active == 0) {
-      midi_mask_notes[n].is_active = 1;  
-      rt_printf("Found a midi_mask_notes note close to the inputVoltage (%f) that was previously inactive. The Note is: %d which has voltage %f. (The difference is: %f) is_active is: %d \n", inputVoltage, n, midi_mask_notes[n].voltage, the_difference, midi_mask_notes[n].is_active);
+     if (incoming_chromatic_midi_notes[n].is_active == 0) {
+      incoming_chromatic_midi_notes[n].is_active = 1;  
+      rt_printf("Found a note in incoming_chromatic_midi_notes which is close to the inputVoltage (%f) that was previously inactive. The Note is: %d which has voltage %f. (The difference is: %f) is_active is: %d \n", inputVoltage, n, incoming_chromatic_midi_notes[n].voltage, the_difference, incoming_chromatic_midi_notes[n].is_active);
      
-      MidiMaskNotesSet.insert(n);
-     
+      IncomingChromaticMidiNotesSet.insert(n);
      } 
       
         } else {
-       //rt_printf("The note %d is far from the inputVoltage (%f) BTW, active is: %d \n", n, inputVoltage, midi_mask_notes[current_midi_lane][n].is_active);
+       //rt_printf("The note %d is far from the inputVoltage (%f) BTW, active is: %d \n", n, inputVoltage, incoming_chromatic_midi_notes[current_midi_lane][n].is_active);
   
     }
   } 
  }
 
- //rt_printf("Bye from AddNoteToMidiMask \n");
+ //rt_printf("Bye from AddNoteToIncomingChromaticMidiNotes \n");
 }
 
 
@@ -1903,7 +1910,7 @@ void OnStepA(){
 
        
     // This is an OK place to call this because we know it will happen infrequently but predictably      
-    AddNoteToMidiMask(voltage_of_incoming_note_in);
+    AddNoteToIncomingChromaticMidiNotes(voltage_of_incoming_note_in);
           
         
 
@@ -2024,11 +2031,11 @@ int gAudioFramesPerAnalogFrame = 0;
 
 void PlayMidi(){
 
-  // This function only plays midi based on the current state of step_a_play and whatever is in the channel_x_midi_note_events array.
+  // This function only plays midi based on the current state of step_a_play and whatever is in the keyboard_midi_note_events array.
 	
 	last_function = 364892;
 	
-  //rt_printf("midi_note  ") + i + String(" value is ") + channel_x_midi_note_events[step_a_count][i]  );
+  //rt_printf("midi_note  ") + i + String(" value is ") + keyboard_midi_note_events[step_a_count][i]  );
 
 			// midi_byte_t statusByte = 0xB0; // control change on channel 0
 			// midi_byte_t controller = 30; // controller number 30
@@ -2039,12 +2046,12 @@ void PlayMidi(){
 
   // n represents each MIDI note from 0 to 127
   for (uint8_t n = 0; n <= 127; n++) {
-    //rt_printf("** OnStepA  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + channel_x_midi_note_events[step_a_count][n][1]);
+    //rt_printf("** OnStepA  ") + step_a_count + String(" Note ") + n +  String(" ON value is ") + keyboard_midi_note_events[step_a_count][n][1]);
     
     // READ MIDI sequence (note ONs at the current global step_a_play)
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
+    if (keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].is_active == 1) { 
            // The note could be on one of 6 ticks in the sequence
-           if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
+           if (keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1].tick_count_since_step == loop_timing_a.tick_count_since_step){
             	//rt_printf("PlayMidi step_a_play: %d : tick_count_since_step %d Found and will send Note ON for %d \n", step_a_play, loop_timing_a.tick_count_since_step, n );
             	
               // Set LED 4 high
@@ -2052,24 +2059,24 @@ void PlayMidi(){
 
               
               // Note the fact that we sent a midi note ON (any record of a note OFF is now invalid)
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
-              channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0;
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0;
               
-              midi.writeNoteOn (midi_channel_x, n, channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
+              ConditionalWriteMidiNoteOn (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
     // READ MIDI MIDI_DATA (note OFFs)
-    if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
-       if (channel_x_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
+    if (keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].is_active == 1) {
+       if (keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0].tick_count_since_step == loop_timing_a.tick_count_since_step){ 
            //rt_printf("Step:Ticks ") + step_a_count + String(":") + ticks_after_step_a +  String(" Found and will send Note OFF for ") + n );
 
            // Set LED 4 low
            target_led_4_tri_state = 0;
 
           // Note the fact that we sent a midi note OFF (any record of a note ON is now invalid)
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = 0;
-          channel_x_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
+          keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = 0;
+          keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start;
 
           midi.writeNoteOff(midi_channel_x, n, 0);
        }
@@ -2259,32 +2266,32 @@ void InitMidiSequence(bool force){
       // Loop through notes
       for (uint8_t n = 0; n <= 127; n++) {
 
-        if (channel_x_midi_note_events[ln][bc][sc][n][1].is_active == 1){	
-          rt_printf("ACTIVE Init Step is: %d Note is: %d Note ON is_active is: %d tick_count_since_start is %d \n", sc, n, channel_x_midi_note_events[ln][bc][sc][n][1].is_active, channel_x_midi_note_events[ln][bc][sc][n][1].tick_count_since_start);
+        if (keyboard_midi_note_events[ln][bc][sc][n][1].is_active == 1){	
+          rt_printf("ACTIVE Init Step is: %d Note is: %d Note ON is_active is: %d tick_count_since_start is %d \n", sc, n, keyboard_midi_note_events[ln][bc][sc][n][1].is_active, keyboard_midi_note_events[ln][bc][sc][n][1].tick_count_since_start);
         } else {
           rt_printf(".");
         }
 
         // Initialise and print Note on (1) and Off (2) contents of the array.
         // WRITE MIDI MIDI_DATA
-        channel_x_midi_note_events[ln][bc][sc][n][1].is_active = 0;
-        channel_x_midi_note_events[ln][bc][sc][n][0].is_active = 0;
+        keyboard_midi_note_events[ln][bc][sc][n][1].is_active = 0;
+        keyboard_midi_note_events[ln][bc][sc][n][0].is_active = 0;
 
 
 
 
 
 
-       // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
+       // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + keyboard_midi_note_events[sc][n][0].is_active);
 
 
 
 
-//rt_printf("Init Step ") + sc + " Note " + n +  " OFF ticks value is " + channel_x_midi_note_events[sc][n][0].is_active);
+//rt_printf("Init Step ") + sc + " Note " + n +  " OFF ticks value is " + keyboard_midi_note_events[sc][n][0].is_active);
 
   
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + channel_x_midi_note_events[sc][n][1].is_active);
-      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + channel_x_midi_note_events[sc][n][0].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + keyboard_midi_note_events[sc][n][1].is_active);
+      //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + keyboard_midi_note_events[sc][n][0].is_active);
       } 
     }
   }
@@ -2508,20 +2515,20 @@ int BitClear (unsigned int number, unsigned int n) {
 
 // Periodically we want to reset this set of notes.
 // This is called on reset. (what if no reset is happening?)
-void ClearMidiMask(void*){
+void ClearIncomingChromaticMidiNotesSet(void*){
 	last_function = 43347;
 
- rt_printf("Hello from ClearMidiMask \n");
+ rt_printf("Hello from ClearIncomingChromaticMidiNotesSet \n");
  
 
   // Loop through all possible midi notes and clear them.
   for (uint8_t n = 0; n <= 127; n++) {
-      midi_mask_notes[n].is_active = 0;  
+      incoming_chromatic_midi_notes[n].is_active = 0;  
   }
 
-  MidiMaskNotesSet.clear();
+  IncomingChromaticMidiNotesSet.clear();
 
- rt_printf("Bye from ClearMidiMask \n");
+ rt_printf("Bye from ClearIncomingChromaticMidiNotesSet \n");
 }
 
 
@@ -2546,11 +2553,11 @@ if (sequence_is_running == HIGH){
   for (uint8_t n = 0; n <= 127; n++) {
 
     // Disable the notes not active in the incoming midi note set.
-    if (midi_mask_notes[n].is_active == 1) {
-      DisableMidiNotes(n); // this will disable notes in channel_x_midi_note_events
+    if (incoming_chromatic_midi_notes[n].is_active == 0) {
+      DisableKeyboardMidiNotes(n); // this will disable notes in keyboard_midi_note_events
       
  
-      rt_printf("Cleared midi note: %d because it is not active in midi_mask_notes \n",  n);
+      rt_printf("Cleared midi note: %d because it is not active in incoming_chromatic_midi_notes \n",  n);
     } else {
       rt_printf(".");
     }
@@ -3415,7 +3422,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 3, "bela-all-notes-off")) == 0)
                 return false;  
 
-        if((gClearMidiMask = Bela_createAuxiliaryTask(&ClearMidiMask, 4, "bela-clear-incoming-midi-note-set")) == 0)
+        if((gClearIncomingChromaticMidiNotesSet = Bela_createAuxiliaryTask(&ClearIncomingChromaticMidiNotesSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
                 return false;
 
         if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
@@ -3462,7 +3469,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 	ReadSequenceFromFiles();
 
 
-  InitMidiMaskNotesSet();
+  InitIncomingMidiChromaticNotes();
         
         rt_printf("Bye from Setup. - I hope you will send me a clock :-) \n");
 
