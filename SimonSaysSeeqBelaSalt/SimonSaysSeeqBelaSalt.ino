@@ -263,7 +263,7 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
-AuxiliaryTask gClearMidiMaskNotesSet;
+AuxiliaryTask gClearMidiMask;
 
 AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
 
@@ -1284,7 +1284,7 @@ void ResetSequenceACounters(){
   need_to_reset_draw_buf_pointer = true;
 
   // Every once and a while (try on reset), clear this set.
-  Bela_scheduleAuxiliaryTask(gClearMidiMaskNotesSet); 
+  Bela_scheduleAuxiliaryTask(gClearMidiMask); 
 
   // target_led_2_tri_state = 1;
 
@@ -2508,10 +2508,10 @@ int BitClear (unsigned int number, unsigned int n) {
 
 // Periodically we want to reset this set of notes.
 // This is called on reset. (what if no reset is happening?)
-void ClearMidiMaskNotesSet(void*){
+void ClearMidiMask(void*){
 	last_function = 43347;
 
- rt_printf("Hello from ClearMidiMaskNotesSet \n");
+ rt_printf("Hello from ClearMidiMask \n");
  
 
   // Loop through all possible midi notes and clear them.
@@ -2521,7 +2521,7 @@ void ClearMidiMaskNotesSet(void*){
 
   MidiMaskNotesSet.clear();
 
- rt_printf("Bye from ClearMidiMaskNotesSet \n");
+ rt_printf("Bye from ClearMidiMask \n");
 }
 
 
@@ -3417,7 +3417,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 3, "bela-all-notes-off")) == 0)
                 return false;  
 
-        if((gClearMidiMaskNotesSet = Bela_createAuxiliaryTask(&ClearMidiMaskNotesSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
+        if((gClearMidiMask = Bela_createAuxiliaryTask(&ClearMidiMask, 4, "bela-clear-incoming-midi-note-set")) == 0)
                 return false;
 
         if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
