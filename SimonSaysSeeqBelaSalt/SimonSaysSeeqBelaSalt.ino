@@ -982,11 +982,19 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-  if (IncomingChromaticMidiNotesSet.count(note) > 0){
-    midi.writeNoteOn(channel, note, velocity);
+  if (midi_filter_active == 1) {
+    rt_printf("midi_filter_active is active ");
+    if (IncomingChromaticMidiNotesSet.count(note) > 0){
+      midi.writeNoteOn(channel, note, velocity);
+    } else {
+      rt_printf("NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d ", note);
+    }
   } else {
-    rt_printf("NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d ", note);
-  }
+    rt_printf("midi filter is NOT active ");
+    midi.writeNoteOn(channel, note, velocity);
+}
+
+
 }
 
 
@@ -3123,20 +3131,19 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 
 		if (do_button_1_action == 1) {
 			
-      Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
+      //Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
 
 
+      midi_filter_active = 0;
       target_led_1_tri_state = 2; // yellow
-
-
-		
 			
 			do_button_1_action = 0;
 		
 		// Larger	
 		} else if (do_button_2_action == 1) {
 			
-
+      midi_filter_active = 1;
+      target_led_2_tri_state = 2; 
 			
 			do_button_2_action = 0;
 		} 
