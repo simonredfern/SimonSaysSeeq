@@ -138,7 +138,7 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
-bool midi_filter_is_active = LOW;
+bool midi_filter_is_active = false;
 
 
 #include <math.h> //sinf
@@ -880,7 +880,7 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-  if (midi_filter_is_active == HIGH) {
+  if (midi_filter_is_active == true) {
     rt_printf("midi_filter_is_active is true \n");
     if (IncomingChromaticMidiNotesSet.count(note) > 0){
       midi.writeNoteOn(channel, note, velocity);
@@ -1435,10 +1435,10 @@ void printStatus(void*){
 
     rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
 
-if (midi_filter_is_active == HIGH){
-  rt_printf("midi_filter_is_active TRUE \n");
+if (midi_filter_is_active == true){
+  rt_printf("midi_filter_is_active true \n");
 } else {
-  rt_printf("midi_filter_is_active FALSE \n");
+  rt_printf("midi_filter_is_active false \n");
 }
 
    //   rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
@@ -2985,7 +2985,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       //Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
 
       // Turn filtering OFF
-      SetMidiFilteringIsActive(LOW);
+      SetMidiFilteringIsActive(false);
 
  
       // Here we can reset the incoming midi notes. and also turn off the filtering.
@@ -2997,7 +2997,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       do_button_2_action = 0;
 			
       // Turn midi filtering ON
-      SetMidiFilteringIsActive(HIGH);
+      SetMidiFilteringIsActive(true);
 
       target_led_2_tri_state = 2; 
 		} 
