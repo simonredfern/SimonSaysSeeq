@@ -2542,17 +2542,15 @@ if (sequence_is_running == HIGH){
   rt_printf("Hello from FilterCurrentMidiNotesByIncoming. Will Disable notes not found in Incoming Midi Note Set \n");
 
 
-  // Loop through all possible midi notes to see if the voltage input is close to one of them.
+  // Loop through all possible midi notes 
   for (uint8_t n = 0; n <= 127; n++) {
 
-
-
     // Disable the notes not active in the incoming midi note set.
-    if (midi_mask_notes[n].is_active == 0) {
+    if (midi_mask_notes[n].is_active == 1) {
       DisableMidiNotes(n); // this will disable notes in channel_x_midi_note_events
       
  
-      rt_printf("Cleared midi note: %d because it is not active in MidiMaskNotesSet \n",  n);
+      rt_printf("Cleared midi note: %d because it is not active in midi_mask_notes \n",  n);
     } else {
       rt_printf(".");
     }
