@@ -38,71 +38,6 @@ The Bela software is distributed under the GNU Lesser General Public License
 (LGPL 3.0), available here: https://www.gnu.org/licenses/lgpl-3.0.txt
 */
 
-// TO Understand render see the example in Fundamentals: minimal/render.cpp
-
-// In general, see https://www.youtube.com/watch?v=XJ2fFqGexCM
-
-
-// So Bela can get to the internet via a Mac with ethernet over USB
-
-// ssh root@bela.local
-// vi /etc/network/interfaces
-// auto usb0
-// iface usb0 inet dhcp
-// auto usb1
-// iface usb1 inet dhcp
-// And enable Mac OS Sharing like this:
-// Mac OS Preferences. Sharing From = Wifi. (drop down list) To Computers using = Bela (check box). Internet Sharing = Yes. (ticked)  
-// then on Bela: systemctl restart networking.service
-// Login again and
-// ping 8.8.8.8
-
-
-
-
-// Note: Bela might run out of disk space
-// du -h --max-depth=1
-// #!/bin/bash
-// dir=/path/to/directory/you/want/to/check
-// num=[number of top largest directories to list)
-// du -ah $dir | sort -n -r | head -n $num
-// du -hs /var/*
-
-// Can apparently delete /var/cache/apt
-
-
-// Add this to your /etc/init.d
-
-// root@bela:/etc/init.d# cat bela_startup.sh 
-// #!/bin/bash
-// rm -f /var/log/*.log || true
-// echo > /var/log/syslog
-// rm -f /var/log/*.gz || true
-// echo > /var/log/syslog.1
-// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" >> /var/log/bela_startup.log.keep
-
-
-// echo > /var/log/*.log
-
-
-// Make it executable with 
-// chmod u+x bela_startup.sh
-// chmod +x bela_startup.sh <- Need this else it doesn't run.
-
-// add it to crontab (edited via, for example, crontab -e)
-// not sure how successfully this runs
-// @reboot sleep 60 && /etc/init.d/bela_startup.sh
-
-
-
-//root@bela:/var/log# rm /var/log/*.log
-//root@bela:/var/log# rm /var/log/syslog
-//root@bela:/var/log# rm /var/log/*.gz
-//root@bela:/var/log# rm /var/log/syslog.1 
-
-
-
-
 
 
 #include <Bela.h>
@@ -140,32 +75,6 @@ Scope scope;
 // Use a class compliant USB Midi device
 Midi midi;
 
-// To find midi ports Bela can see, type "amidi -l" in the Bela command line.
-// Also  lsusb -t via ssh 
-
-/*
-root@bela:~/bin# cat log_usb.sh
-#!/bin/bash
-echo Hello
-amidi -l
-lsusb -t
-*/
-
-/*
-root@bela:~/bin/SimonSaysSeeq# amidi -l
-Dir Device    Name
-IO  hw:0,0    f_midi <-- This is the connection to your computer (device port on Bela)
-IO  hw:1,0,0  USB MIDI Interface MIDI 1 <-- This is the device connected to USB host port on the Bela
-*/
-
-// NOTE: It seems there is a timing / loading issue with the USB midi port...
-// In order for USB host midi port to work, either: 
-// 1) save two copies of this patch under loop_A and loop_B, set the settings to start with loop_* and after booting the Salt, press the left button on Salt for more than two seconds 
-// or 
-// 2) Save this patch via the IDE after the USB cables are plugged in.
-  
-
-//const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
 const char* gMidiPort0 = "hw:1,0,0"; // This is the first external USB Midi device. Keyboard is connected to the USB host port on Bela / Salt+
 //const char* gMidiPort0 = "hw:0,0,0"; // try me
 
@@ -238,11 +147,6 @@ bool midi_filter_is_active = LOW;
 #include <libraries/OscillatorBank/OscillatorBank.h>
 
 
-//#define DELAY_BUFFER_SIZE 6400000
-//#define DRAW_BUFFER_SIZE 6400000
-
-
-
 
 // Not sure if we should use  Bela AuxiliaryTask (i.e.: a Xenomai thread) for all these
 // https://forum.bela.io/d/4219-cpu-time-limit-exceeded
@@ -265,15 +169,6 @@ AuxiliaryTask gInitMidiSequenceNoForce;
 
 AuxiliaryTask gClearIncomingChromaticMidiNotesSet;
 
-//AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
-
-// These settings are carried over from main.cpp
-// Setting global variables is an alternative approach
-// to passing a structure to userData in set up()
-//int gNumOscillators = 2; // was 500
-//int gWavetableLength = 1024;
-//void recalculate_frequencies(void*);
-//OscillatorBank osc_bank;
 
 Oscillator lfo_a_analog;
 Oscillator lfo_b_analog;
@@ -281,12 +176,6 @@ Oscillator lfo_b_analog;
 
 int gAudioChannelNum; // number of audio channels to iterate over
 int gAnalogChannelNum; // number of analog channels to iterate over
-
-//SWITCH1 in digital channel 6	(LEFT BUTTON)
-//T1 in digital channel 15
-//T2/SWITCH2 in digital channel 14 (RIGHT BUTTON)
-//T3/SWITCH3 in digital channel 1 (maybe this is for Salt+)
-//T4/SWITCH4 in digital channel 3 (maybe this is for Salt+?)
 
 
 int button_1_PIN = 6; 
@@ -330,9 +219,6 @@ int LED_3_PIN = 8;
 int	LED_4_PIN = 9;
 int	LED_PWM_PIN = 7;
 
-// - set the LED pin as an INPUT: LED off
-// - set the LED pin as an OUTPUT, value 0: LED ON, red
-// - set the LED pin as an OUTPUT, value 1: LED ON, blue
 
 
 int remoteUDPPort0 =7001;	
@@ -410,15 +296,6 @@ const int SEQUENCE_CV_OUTPUT_7_PIN = 6; // CV 7 output
 
 
 
-////////////////////////////////////////////////
-
-
-// const uint8_t BRIGHT_0 = 0;
-// const uint8_t BRIGHT_1 = 10;
-// const uint8_t BRIGHT_2 = 20;
-// const uint8_t BRIGHT_3 = 75;
-// const uint8_t BRIGHT_4 = 100;
-// const uint8_t BRIGHT_5 = 255;
 
 // Use zero based index for sequencer. i.e. step_a_count for the first step is 0.
 const uint8_t FIRST_STEP = 0;
@@ -724,6 +601,27 @@ void InitIncomingMidiChromaticNotes(){
 std::set<int> IncomingChromaticMidiNotesSet; // this can be used to store the set of numbers in the current incoming_chromatic_midi_notes
 
 
+void SetMidiFilteringIsActive (bool myInput){
+
+
+
+  rt_printf("Previous last_function was: %llu \n", last_function);
+
+  last_function = 24962982;
+
+  if (myInput == true){
+    rt_printf("**** Setting midi_filter_is_active to true **** \n");
+  } else {
+    rt_printf("==== Setting midi_filter_is_active to false ====\n");
+  }
+
+
+   midi_filter_is_active = myInput;
+
+}
+
+
+
 
 /// HEREHERS
 
@@ -1016,18 +914,7 @@ void ReadSequenceFromFiles(){
 
 
 
-// "Ghost notes" are created to cancel out a note-off in keyboard_midi_note_events that is created  during the note off of low velocity notes.
-// class GhostNote
-// {
-//  public:
-//    uint8_t tick_count_in_sequence = 0;
-//    uint8_t is_active = 0;
-// };
 
-//GhostNote channel_x_ghost_events[128];
-
-////////////////////////////////////////
-// Bit Constants for bit wise operations 
 
 
  
@@ -1326,15 +1213,6 @@ void ResetSequenceBCounters(){
 
 
 
-
-
-
-/// end for ADSR
-
-
-
-
-
 void printStatus(void*){
   // This is used to print periodically. 
 
@@ -1374,8 +1252,8 @@ void printStatus(void*){
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
-		// rt_printf("do_button_1_action is: %d \n", do_button_1_action);
-		// rt_printf("do_button_2_action is: %d \n", do_button_2_action);
+		 rt_printf("do_button_1_action is: %d \n", do_button_1_action);
+		 rt_printf("do_button_2_action is: %d \n", do_button_2_action);
 		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
 		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
@@ -1563,7 +1441,7 @@ if (midi_filter_is_active == HIGH){
   rt_printf("midi_filter_is_active FALSE \n");
 }
 
-      rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
+   //   rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
 
       PrintActiveKeyboardMidiNotes();
 
@@ -1579,10 +1457,6 @@ if (midi_filter_is_active == HIGH){
 
 } 
 
-
-
-
-////////////////////////
 
 void DisableKeyboardMidiNotes(uint8_t note){
 	
@@ -1755,10 +1629,7 @@ void GateALow(){
   
   target_led_1_tri_state = 0;
   
-  //per_sequence_adsr_a.gate(false); // always reset it here but not trigger it
-  //per_sequence_adsr_b.gate(false); // always reset it here but not trigger it
-  //per_sequence_adsr_c.gate(false); // always reset it here but not trigger it
-  
+
 }
 
 void GateBHigh(){
@@ -1814,19 +1685,7 @@ void SyncAndResetCv(){
 
 
 
-// Return bth bit of number from https://stackoverflow.com/questions/2249731/how-do-i-get-bit-by-bit-data-from-an-integer-value-in-c
-// uint8_t ReadBit (int number, int b ){
-	
 
-
-
-
-// periodically check which midi note it is (convert voltage to note)
-// add it to the set of recent notes.
-
-// then
-// loop through our midi sequence
-// for each active note, check if it is found in our incoming note set. if its there, leave alone, else remove it.
 
 
 
@@ -1878,7 +1737,6 @@ void AddNoteToIncomingChromaticMidiNotes(float inputVoltage){
 
 
 
-/////////////////////////////////////////////////////////////
 // These are the possible beats of the sequence
 void OnStepA(){
 	
@@ -2018,24 +1876,9 @@ void OnNotStepB(){
 }
 
 
-
-
-
-//////
-
-float gFreq;
-float gPhaseIncrement = 0;
-bool gIsNoteOn = 0;
-int gVelocity = 0;
-
-int my_note = 0;
-
-
 float gSamplingPeriod = 0;
-//int gSampleCount = 44100; // how often to send out a control change
 
 
-float gPhase;
 float gInverseSampleRate;
 int gAudioFramesPerAnalogFrame = 0;
 
@@ -3142,7 +2985,9 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       //Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
 
       // Turn filtering OFF
-      midi_filter_is_active = LOW;
+      SetMidiFilteringIsActive(LOW);
+
+ 
       // Here we can reset the incoming midi notes. and also turn off the filtering.
       Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
 
@@ -3152,7 +2997,8 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       do_button_2_action = 0;
 			
       // Turn midi filtering ON
-      midi_filter_is_active = HIGH;
+      SetMidiFilteringIsActive(HIGH);
+
       target_led_2_tri_state = 2; 
 		} 
 			
@@ -3365,9 +3211,6 @@ bool setup(BelaContext *context, void *userData){
 	// Useful calculations
 	if(context->analogFrames)
 		gAudioFramesPerAnalogFrame = context->audioFrames / context->analogFrames;
-	gInverseSampleRate = 1.0 / context->audioSampleRate;
-	gPhase = 0.0;
-        
 
         audio_sample_rate = context->audioSampleRate;
         analog_sample_rate = context->analogSampleRate;
@@ -3443,7 +3286,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         //if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
         //        return false;
 
-        if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 83, "bela-change-sequence")) == 0)
+        if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 5, "bela-change-sequence")) == 0)
                 return false;
 
         if((gInitMidiSequenceForce = Bela_createAuxiliaryTask(&InitMidiSequenceForce, 82, "bela-init-midi-sequence-force")) == 0)
@@ -3830,15 +3673,6 @@ void render(BelaContext *context, void *userData)
             if ((new_digital_clock_in_state == LOW) && (current_digital_clock_in_state == HIGH)){
               current_digital_clock_in_state = LOW;
               
-              //last_clock_falling_edge = frame_timer;
-            	
-            	
-				// the pulse width of our clock (half actually)
-            	//clock_width = last_clock_falling_edge - last_quarter_note_frame;
-            	//rt_printf("clock_width is: %llu \n", clock_width);
-            	
-            	// currently a constant 
-            	//clock_patience = clock_width * 100;
             }
             
             
@@ -3878,10 +3712,7 @@ void render(BelaContext *context, void *userData)
             
       }
       
-     
-      
-      
-      /////////////////////////////////////////////////////////////////////////////////
+    
 		// When relying on the analogue / digital (non midi) clock, we don't have a stop as such, so if we don't detect a clock for a while, then assume its stopped.
 		// Note that the Beat Step Pro takes a while to kill its clock out after pressing the Stop button.
 		if (midi_clock_detected == LOW){
