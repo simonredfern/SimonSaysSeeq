@@ -16,18 +16,7 @@ An intro to what this does: https://www.twitch.tv/videos/885185134
 
 */
 
-const char version[16]= "v0.52-BelaSalt";
-
-/*
-NEXT
-
-check:
-
-Jan 26 21:40:01 bela stdbuf[102]: These notes are active in the incoming_midi_note_set:
-Jan 26 21:40:01 bela stdbuf[102]:  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,
-
-
-*/
+const char version[16]= "v0.53-BelaSalt";
 
 
 
@@ -240,6 +229,9 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
+uint8_t midi_mask_active = 0;
+
+
 #include <math.h> //sinf
 #include <time.h> //time
 #include <libraries/Oscillator/Oscillator.h>
@@ -271,7 +263,7 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
-AuxiliaryTask gClearIncomingMidiNoteSet;
+AuxiliaryTask gClearMidiMaskNotesSet;
 
 AuxiliaryTask gFilterCurrentMidiNotesByIncoming;
 
@@ -713,15 +705,15 @@ class MidiNoteSet
    uint8_t is_active = 0;
 };
 
-class MidiNoteSet incoming_midi_note_set[128]; // we are going to store the numbers 0 - 127 to represent midi notes
+class MidiNoteSet midi_mask_notes[128]; // we are going to store the numbers 0 - 127 to represent midi notes
 
 
-void InitIncomingMidiNoteSet(){
+void InitMidiMaskNotesSet(){
       // Loop through notes
       for (uint8_t n = 0; n <= 127; n++) {
         // Minus 2 volts is C0 on the sinfonion so let's use that.
         // Midi note to voltage in a one volt per octave system. Say C0 is 0, C1 is 12 etc.
-        incoming_midi_note_set[n].voltage = -2 + (n / 12.0); 
+        midi_mask_notes[n].voltage = -2 + (n / 12.0); 
       }
 
 }
@@ -729,7 +721,7 @@ void InitIncomingMidiNoteSet(){
 
 
 
-std::set<int> IncomingMidiNoteSet; // this can be used to store the set of numbers in the current incoming_midi_note_set
+std::set<int> MidiMaskNotesSet; // this can be used to store the set of numbers in the current midi_mask_notes
 
 
 
@@ -782,16 +774,16 @@ void PrintActiveMidiNotes(){
 }
 
 
-void PrintIncomingMidiNoteSet(){
+void PrintMidiMaskNotesSet(){
 	last_function = 13847;
   // Loop through all possible midi notes and clear them.
 
-rt_printf("\n Hello from PrintIncomingMidiNoteSet \n");
+//rt_printf("\n Hello from PrintMidiMaskNotesSet \n");
 
   uint8_t note = 0; // note
-  rt_printf("These notes are active in the incoming_midi_note_set: \n");
+  rt_printf("These notes are active in the midi_mask_notes: \n");
               for (note = 0; note <= 127; note++) {
-                if (incoming_midi_note_set[note].is_active == 1){
+                if (midi_mask_notes[note].is_active == 1){
                   rt_printf(" %d, ", note);
                 } else {
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
@@ -799,7 +791,7 @@ rt_printf("\n Hello from PrintIncomingMidiNoteSet \n");
               }
         
 
-  rt_printf("\n Bye from PrintIncomingMidiNoteSet \n");         
+  //rt_printf("\n Bye from PrintMidiMaskNotesSet \n");         
 }
 
 
@@ -1292,7 +1284,7 @@ void ResetSequenceACounters(){
   need_to_reset_draw_buf_pointer = true;
 
   // Every once and a while (try on reset), clear this set.
-  Bela_scheduleAuxiliaryTask(gClearIncomingMidiNoteSet); 
+  Bela_scheduleAuxiliaryTask(gClearMidiMaskNotesSet); 
 
   // target_led_2_tri_state = 1;
 
@@ -1553,7 +1545,7 @@ void printStatus(void*){
 
       PrintActiveMidiNotes();
 
-      PrintIncomingMidiNoteSet();
+      PrintMidiMaskNotesSet();
 
       rt_printf("\n==== Bye from printStatus ======= \n");
       
@@ -1586,6 +1578,8 @@ void DisableMidiNotes(uint8_t note){
               channel_x_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0;         
             }
            }
+
+           ActiveMidiNoteSet.erase(note);
 
            // Turn off the note so we don't get stuck notes.
            midi.writeNoteOff(midi_channel_x, note, 0);
@@ -1820,18 +1814,18 @@ int8_t GetNoteOfScaleFromMidiNote(int8_t note) {
 
 
 
-void AddToIncomingMidiNoteSet(float inputVoltage){
+void AddToMidiMaskNotesSet(float inputVoltage){
 	
  if (sequence_is_running == HIGH){
 
 	last_function = 4334;
 
-  //rt_printf("Hello from AddToIncomingMidiNoteSet input voltage is %f \n", inputVoltage);
+  //rt_printf("Hello from AddToMidiMaskNotesSet input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
 
-    float the_difference = abs(inputVoltage - incoming_midi_note_set[n].voltage);
+    float the_difference = abs(inputVoltage - midi_mask_notes[n].voltage);
 
     // In a one volt per octave system, the distance between C and C# is 1/12 = 0.08333333 volts
     // So if our voltage is within half of that (above or below), consider it a match
@@ -1840,22 +1834,22 @@ void AddToIncomingMidiNoteSet(float inputVoltage){
       // Maybe pressing a button would inactivate all notes, then turn on the ones we find over several render cycles
       // So clear then learn (continuously ) then activate i.e. filter the current midi sequence based on this list.
       
-     if (incoming_midi_note_set[n].is_active == 0) {
-      incoming_midi_note_set[n].is_active = 1;  
-      rt_printf("Found a incoming_midi_note_set note close to the inputVoltage (%f) that was previously inactive. The Note is: %d which has voltage %f. (The difference is: %f) is_active is: %d \n", inputVoltage, n, incoming_midi_note_set[n].voltage, the_difference, incoming_midi_note_set[n].is_active);
+     if (midi_mask_notes[n].is_active == 0) {
+      midi_mask_notes[n].is_active = 1;  
+      rt_printf("Found a midi_mask_notes note close to the inputVoltage (%f) that was previously inactive. The Note is: %d which has voltage %f. (The difference is: %f) is_active is: %d \n", inputVoltage, n, midi_mask_notes[n].voltage, the_difference, midi_mask_notes[n].is_active);
      
-      IncomingMidiNoteSet.insert(n);
+      MidiMaskNotesSet.insert(n);
      
      } 
       
         } else {
-       //rt_printf("The note %d is far from the inputVoltage (%f) BTW, active is: %d \n", n, inputVoltage, incoming_midi_note_set[current_midi_lane][n].is_active);
+       //rt_printf("The note %d is far from the inputVoltage (%f) BTW, active is: %d \n", n, inputVoltage, midi_mask_notes[current_midi_lane][n].is_active);
   
     }
   } 
  }
 
- //rt_printf("Bye from AddToIncomingMidiNoteSet \n");
+ //rt_printf("Bye from AddToMidiMaskNotesSet \n");
 }
 
 
@@ -1909,7 +1903,7 @@ void OnStepA(){
 
        
     // This is an OK place to call this because we know it will happen infrequently but predictably      
-    AddToIncomingMidiNoteSet(voltage_of_incoming_note_in);
+    AddToMidiMaskNotesSet(voltage_of_incoming_note_in);
           
         
 
@@ -2514,20 +2508,20 @@ int BitClear (unsigned int number, unsigned int n) {
 
 // Periodically we want to reset this set of notes.
 // This is called on reset. (what if no reset is happening?)
-void ClearIncomingMidiNoteSet(void*){
+void ClearMidiMaskNotesSet(void*){
 	last_function = 43347;
 
- rt_printf("Hello from ClearIncomingMidiNoteSet \n");
+ rt_printf("Hello from ClearMidiMaskNotesSet \n");
  
 
   // Loop through all possible midi notes and clear them.
   for (uint8_t n = 0; n <= 127; n++) {
-      incoming_midi_note_set[n].is_active = 0;  
+      midi_mask_notes[n].is_active = 0;  
   }
 
-  IncomingMidiNoteSet.clear();
+  MidiMaskNotesSet.clear();
 
- rt_printf("Bye from ClearIncomingMidiNoteSet \n");
+ rt_printf("Bye from ClearMidiMaskNotesSet \n");
 }
 
 
@@ -2554,11 +2548,11 @@ if (sequence_is_running == HIGH){
 
 
     // Disable the notes not active in the incoming midi note set.
-    if (incoming_midi_note_set[n].is_active == 0) {
+    if (midi_mask_notes[n].is_active == 0) {
       DisableMidiNotes(n); // this will disable notes in channel_x_midi_note_events
       
  
-      rt_printf("Cleared midi note: %d because it is not active in IncomingMidiNoteSet \n",  n);
+      rt_printf("Cleared midi note: %d because it is not active in MidiMaskNotesSet \n",  n);
     } else {
       rt_printf(".");
     }
@@ -3423,7 +3417,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gAllNotesOff = Bela_createAuxiliaryTask(&AllNotesOff, 3, "bela-all-notes-off")) == 0)
                 return false;  
 
-        if((gClearIncomingMidiNoteSet = Bela_createAuxiliaryTask(&ClearIncomingMidiNoteSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
+        if((gClearMidiMaskNotesSet = Bela_createAuxiliaryTask(&ClearMidiMaskNotesSet, 4, "bela-clear-incoming-midi-note-set")) == 0)
                 return false;
 
         if((gFilterCurrentMidiNotesByIncoming = Bela_createAuxiliaryTask(&FilterCurrentMidiNotesByIncoming, 5, "bela-filter-current-midi-notes-by-incoming")) == 0)
@@ -3470,7 +3464,7 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
 	ReadSequenceFromFiles();
 
 
-  InitIncomingMidiNoteSet();
+  InitMidiMaskNotesSet();
         
         rt_printf("Bye from Setup. - I hope you will send me a clock :-) \n");
 
