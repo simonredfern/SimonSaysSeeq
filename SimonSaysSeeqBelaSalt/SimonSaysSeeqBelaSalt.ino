@@ -251,6 +251,30 @@ void print_binary(unsigned int number)
 
 // T2 (Trigger 2) is Physical Channel / Pin 14 
 
+
+//SWITCH1 in digital channel 6	(LEFT BUTTON)
+//T1 in digital channel 15
+//T2/SWITCH2 in digital channel 14 (RIGHT BUTTON)
+//T3/SWITCH3 in digital channel 1 (maybe this is for Salt+)
+//T4/SWITCH4 in digital channel 3 (maybe this is for Salt+?)
+
+
+// from github
+//SWITCH1 in 	digital channel 6 -- this can be used for an action
+//T1 in 	digital channel 15 -- this is used clock.
+//T2/SWITCH2 in 	digital channel 14 - this is used for RESET
+//T3/SWITCH3 in 	digital channel 1 - this can be used for a manual.
+//T4/SWITCH4 in 	digital channel 3 -- this is used for manual midi clear
+
+
+
+
+// - set the LED pin as an INPUT: LED off
+// - set the LED pin as an OUTPUT, value 0: LED ON, red
+// - set the LED pin as an OUTPUT, value 1: LED ON, blue
+
+
+
 // T1 in is	digital channel 15
 const int CLOCK_INPUT_DIGITAL_PIN = 15;
 const int RESET_A_INPUT_DIGITAL_PIN = 14; //T2/SWITCH2 in	digital channel 14
@@ -609,14 +633,16 @@ void SetMidiFilteringIsActive (bool myInput){
 
   last_function = 24962982;
 
-  if (myInput == true){
+  if (myInput){
     rt_printf("**** Setting midi_filter_is_active to true **** \n");
+    midi_filter_is_active = true;
   } else {
     rt_printf("==== Setting midi_filter_is_active to false ====\n");
+    midi_filter_is_active = false;
   }
 
 
-   midi_filter_is_active = myInput;
+   
 
 }
 
@@ -1254,8 +1280,8 @@ void printStatus(void*){
 
 		 rt_printf("do_button_1_action is: %d \n", do_button_1_action);
 		 rt_printf("do_button_2_action is: %d \n", do_button_2_action);
-		// rt_printf("do_button_3_action is: %d \n", do_button_3_action);
-		// rt_printf("do_button_4_action is: %d \n", do_button_4_action);
+		 rt_printf("do_button_3_action is: %d \n", do_button_3_action);
+		 rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
     //rt_printf("\n==== MIDI ======= \n");
 
@@ -2979,39 +3005,31 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       lfo_a_analog.setFrequency(lfo_osc_1_frequency); 
       lfo_b_analog.setFrequency(lfo_osc_2_frequency);
 		
-
 		if (do_button_1_action == 1) {
+      // THIS PIN IS SEPARATE FROM THE TRIGGER IN (WHICH IS USED BY CLOCK)
 			do_button_1_action = 0;
-      //Bela_scheduleAuxiliaryTask(gFilterCurrentMidiNotesByIncoming);
-
       // Turn filtering OFF
       SetMidiFilteringIsActive(false);
-
- 
       // Here we can reset the incoming midi notes. and also turn off the filtering.
       Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
-
       target_led_1_tri_state = 2; // yellow
 		
 		} else if (do_button_2_action == 1) {
-      do_button_2_action = 0;
-			
-      // Turn midi filtering ON
-      SetMidiFilteringIsActive(true);
-
-      target_led_2_tri_state = 2; 
+      // DON'T PUT AN ACTION HERE. THIS PIN IS USED FOR RESET.
+      do_button_2_action = 0;		
 		} 
 			
-		// Clear Audio Buffer (Delay)
+		// 
 		if (do_button_3_action == 1) {
-	
+      // DON'T PUT A CABLE TRIGGER HERE
 			do_button_3_action = 0;
+      SetMidiFilteringIsActive(true);
+      target_led_2_tri_state = 2; 
 		}
-
-
 
 		// Clear Midi sequence
 		if (do_button_4_action == 1) {
+      // DON'T PUT A CABLE TRIGGER HERE
       do_button_4_action = 0;
       Bela_scheduleAuxiliaryTask(gInitMidiSequenceForce);
 			Bela_scheduleAuxiliaryTask(gAllNotesOff);
@@ -3609,22 +3627,27 @@ void render(BelaContext *context, void *userData)
         	
 	        	// Left button newly pressed get smaller
 	        	if ((new_button_1_state != old_button_1_state) && new_button_1_state == 1){
-	        		do_button_1_action = 1;
+	        		// NOTE this is *not* the same PIN as clock so we can use it.   
+              do_button_1_action = 1;
 	        	}
 	        	
 	        	 // Right button newly pressed 
 	        	if ((new_button_2_state != old_button_2_state) && new_button_2_state == 1){
-	        		do_button_2_action = 1;
+               // This is the SAME pin as reset so can't use it as a separate function 
+              // DO NOT USE THIS BUTTON FOR AN ACTION 
+              // BECAUSE RESET TRIGGERS IT  
+	        		//do_button_2_action = 1;
 	        	}
-        	
         	
         		if ((new_button_3_state != old_button_3_state) && new_button_3_state == 1){
 	        		do_button_3_action = 1;
+              // NOTE: Don't plug in a trigger else it will trigger this
 	        	}
 	        	
 	        	 // Right button newly pressed 
 	        	if ((new_button_4_state != old_button_4_state) && new_button_4_state == 1){
-	        		do_button_4_action = 1;
+	        		// This is used to clear midi.
+              do_button_4_action = 1;
 	        	}
         	
         	        	
