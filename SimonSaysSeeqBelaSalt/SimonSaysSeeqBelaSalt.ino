@@ -705,7 +705,7 @@ void PrintAnalogIncomingMidiChromaticNotes(){
 //rt_printf("\n Hello from PrintAnalogIncomingMidiChromaticNotes \n");
 
   uint8_t note = 0; // note
-  rt_printf("These notes are active in the incoming_chromatic_midi_notes: \n");
+  rt_printf("These notes are active in the incoming_chromatic_midi_notes: ");
               for (note = 0; note <= 127; note++) {
                 if (incoming_chromatic_midi_notes[note].is_active == 1){
                   rt_printf(" %d, ", note);
@@ -713,7 +713,7 @@ void PrintAnalogIncomingMidiChromaticNotes(){
                   //rt_printf("NOT active note %d on bar %d step %d. \n", note, bc, sc);
                 }
               }
-        
+   rt_printf("\n ");      
 
   //rt_printf("\n Bye from PrintAnalogIncomingMidiChromaticNotes \n");         
 }
@@ -914,7 +914,7 @@ void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
       rt_printf(" NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d \n", note);
     }
   } else {
-    rt_printf("midi filter NOT active so playing note %d normally \n", note);
+    //rt_printf("midi filter NOT active so playing note %d normally \n", note);
     midi.writeNoteOn(channel, note, velocity);
 }
 
@@ -1461,11 +1461,11 @@ void printStatus(void*){
 
     rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
 
-if (midi_filter_is_active == true){
-  rt_printf("midi_filter_is_active true \n");
-} else {
-  rt_printf("midi_filter_is_active false \n");
-}
+// if (midi_filter_is_active == true){
+//   rt_printf("midi_filter_is_active true \n");
+// } else {
+//   rt_printf("midi_filter_is_active false \n");
+// }
 
    //   rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
 
