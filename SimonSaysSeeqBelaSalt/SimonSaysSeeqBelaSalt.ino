@@ -914,7 +914,7 @@ void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
       rt_printf(" NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d \n", note);
     }
   } else {
-    rt_printf("midi filter NOT active so playing note normally %d \n", note);
+    rt_printf("midi filter NOT active so playing note %d normally \n", note);
     midi.writeNoteOn(channel, note, velocity);
 }
 
@@ -1278,10 +1278,10 @@ void printStatus(void*){
 		// rt_printf("new_button_4_state is: %d \n", new_button_4_state);
 		
 
-		 rt_printf("do_button_1_action is: %d \n", do_button_1_action);
-		 rt_printf("do_button_2_action is: %d \n", do_button_2_action);
-		 rt_printf("do_button_3_action is: %d \n", do_button_3_action);
-		 rt_printf("do_button_4_action is: %d \n", do_button_4_action);
+		 //rt_printf("do_button_1_action is: %d \n", do_button_1_action);
+		 //rt_printf("do_button_2_action is: %d \n", do_button_2_action);
+		 //rt_printf("do_button_3_action is: %d \n", do_button_3_action);
+		 //rt_printf("do_button_4_action is: %d \n", do_button_4_action);
 		
     //rt_printf("\n==== MIDI ======= \n");
 
@@ -2162,18 +2162,9 @@ void InitMidiSequence(bool force){
         keyboard_midi_note_events[ln][bc][sc][n][1].is_active = 0;
         keyboard_midi_note_events[ln][bc][sc][n][0].is_active = 0;
 
-
-
-
-
-
        // rt_printf("Init Step ") + %d sc + " Note " + n +  " OFF ticks value is " + keyboard_midi_note_events[sc][n][0].is_active);
 
-
-
-
 //rt_printf("Init Step ") + sc + " Note " + n +  " OFF ticks value is " + keyboard_midi_note_events[sc][n][0].is_active);
-
   
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" ON ticks value is ") + keyboard_midi_note_events[sc][n][1].is_active);
       //rt_printf("Init Step ") + sc + String(" Note ") + n +  String(" OFF ticks value is ") + keyboard_midi_note_events[sc][n][0].is_active);
@@ -2186,6 +2177,8 @@ void InitMidiSequence(bool force){
      //rt_printf("Init Step with ghost Note: %s is_active false", n );
   //}
   
+    // This is denormalised data but useful   
+    ActiveKeyboardMidiNoteSet.clear();
 
 
     init_midi_sequence_has_run = true;
