@@ -437,13 +437,13 @@ greetings_done = false
 ---------------------- -------------------------------------
 -- From C++ code
 -- Constants
-local FIRST_BAR = 0
-local MAX_BAR = 7  -- Memory User!
+local FIRST_BAR = 1
+local MAX_BAR = 8  -- Memory User!
 
-local MIN_LANE = 0
-local MAX_LANE = 7  -- Memory User!
+local MIN_LANE = 1
+local MAX_LANE = 2  -- Memory User!
 
-local MAX_STEP = 15
+local MAX_STEP = 16
 
 -- Define the SequenceNote class
 SequenceNote = {}
@@ -482,11 +482,11 @@ function create_keyboard_midi_note_events()
         keyboard_midi_note_events[lane] = {}
         for bar = FIRST_BAR, MAX_BAR do
             keyboard_midi_note_events[lane][bar] = {}
-            for step = 0, MAX_STEP do
+            for step = 1, MAX_STEP do
                 keyboard_midi_note_events[lane][bar][step] = {}
-                for note = 0, 127 do
+                for note = 1, 127 do
                     keyboard_midi_note_events[lane][bar][step][note] = {}
-                    for index = 1, 2 do
+                    for index = 0, 1 do
                         keyboard_midi_note_events[lane][bar][step][note][index] = SequenceNote:new()
                     end
                 end
@@ -634,12 +634,12 @@ normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
 
 
  -- defaults
- normal_midi_note_on = false
- normal_midi_note_off = false
+ normal_midi_note_is_on = false
+ normal_midi_note_is_off = false
  normal_midi_note_in = -1
 
 
- captured_normal_midi_note_in = -1
+ captured_midi_note_in = -1
  midi_note_key_pressed = -1
 
  direction = 1 
@@ -2336,7 +2336,7 @@ end
 
 
 
-captured_normal_midi_note_in = -1
+captured_midi_note_in = -1
 
 
  
@@ -2344,6 +2344,9 @@ captured_normal_midi_note_in = -1
 
 -- Capture MIDI IN
 normal_midi_device.event = function(data)
+
+
+
 
     -- Something is sending lots of midi messages. is it the USB to DIN adapter?
   if data[1] == 254 then
@@ -2358,13 +2361,14 @@ normal_midi_device.event = function(data)
 
   -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
   if data[1] == 144 and data[3] ~= 0 then
-    normal_midi_note_on = true
-    normal_midi_note_off = false
+    normal_midi_note_is_on = true
+    normal_midi_note_is_off = false
     normal_midi_note_in = data[2]
-    captured_normal_midi_note_in = data[2] -- store this so we can act on a later step press
+    captured_midi_note_in = data[2] -- store this so we can act on a later step press
     
+      -- HERE me now OnMidiNoteInEvent
 
-    -- set_mozart_and_grid_based_on_held_key(captured_normal_midi_note_in)
+    -- set_mozart_and_grid_based_on_held_key(captured_midi_note_in)
 
 
 
@@ -2372,30 +2376,30 @@ normal_midi_device.event = function(data)
 
   -- NOTE OFF  
   if data[1] == 128 or data[3] == 0 then
-    normal_midi_note_on = false
-    normal_midi_note_off = true
+    normal_midi_note_is_on = false
+    normal_midi_note_is_off = true
     normal_midi_note_in = data[2]
-    captured_normal_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
+    captured_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
                                       -- Also, we ONLY want note off to reset this.    
   end 
 
 
 
-  if normal_midi_note_on == true then
-    print ("NOTE ON: " .. captured_normal_midi_note_in)
+  if normal_midi_note_is_on == true then
+    print ("NOTE ON: " .. captured_midi_note_in)
 
 
     -- To quote dan_dirks, "any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)"
     -- https://llllllll.co/t/frequencies-and-cv-converting-back-and-forth-in-lua-math-math-math/50984
 
-   -- crow.output[1].volts = captured_normal_midi_note_in / 12
+   -- crow.output[1].volts = captured_midi_note_in / 12
     --crow.output[1].slew = tick_count / 10
 
 
   end  
 
 
-  if normal_midi_note_off == true then
+  if normal_midi_note_is_off == true then
     print ("NOTE OFF: " .. normal_midi_note_in)
   end 
 
@@ -2977,7 +2981,7 @@ my_grid.key = function(x,y,z)
 print("Hello from ----------- my_grid.key = function -----------------")
 print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_state[y][y])
 
-print("arm_control is: ".. arm_control .. " captured_normal_midi_note_in is: " ..  captured_normal_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+print("arm_control is: ".. arm_control .. " captured_midi_note_in is: " ..  captured_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
 
 -- First lets capture the combination of buttons pressed (up to three groups i.e. one sequence button, one row7 and one row8 (control))
