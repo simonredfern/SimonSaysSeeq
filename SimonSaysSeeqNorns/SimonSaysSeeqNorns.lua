@@ -2315,7 +2315,7 @@ function reset_row_settings(row)
 
   row_settings[row]["first_step"] = first_step
   row_settings[row]["last_step"] = last_step
-  row_settings[row]["current_step"] = first_step   
+  -- row_settings[row]["current_step"] = first_step   
 
 end  
 
