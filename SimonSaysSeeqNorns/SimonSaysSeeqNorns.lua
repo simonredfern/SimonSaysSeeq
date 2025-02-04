@@ -434,6 +434,164 @@ PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 greetings_done = false
 
 
+---------------------- -------------------------------------
+-- From C++ code
+-- Constants
+local FIRST_BAR = 0
+local MAX_BAR = 7  -- Memory User!
+
+local MIN_LANE = 0
+local MAX_LANE = 7  -- Memory User!
+
+local MAX_STEP = 15
+
+-- Define the SequenceNote class
+SequenceNote = {}
+SequenceNote.__index = SequenceNote
+
+-- Constructor for SequenceNote
+-- Store extra data about the note (velocity, "exactly" when in a step etc)
+-- Note name (number) and step information is stored in the array below. 
+
+-- For each sequence step / midi note number  / on-or-off we store a SequenceNote (which defines a bit more info)
+-- Arrays are ZERO INDEXED but here we define the SIZE of each DIMENSION of the Array.
+-- This way we can easily access a step and the notes there.
+-- [step][midi_note][on-or-off]
+-- [step] will store a digit between 0 and 15 to represent the step of the sequence.
+-- [midi_note] will store between 0 and 127
+-- [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
+-- SequenceNote keyboard_midi_note_events[MAX_STEP+1][128][2]; 
+
+
+function SequenceNote:new()
+    return setmetatable({
+        velocity = 0,
+        tick_count_since_step = 0,
+        is_active = 0,
+        tick_count_since_start = 0
+    }, SequenceNote)
+end
+
+-- Create a multidimensional table
+function create_keyboard_midi_note_events()
+    local keyboard_midi_note_events = {}
+
+    
+
+    for lane = MIN_LANE, MAX_LANE do
+        keyboard_midi_note_events[lane] = {}
+        for bar = FIRST_BAR, MAX_BAR do
+            keyboard_midi_note_events[lane][bar] = {}
+            for step = 0, MAX_STEP do
+                keyboard_midi_note_events[lane][bar][step] = {}
+                for note = 0, 127 do
+                    keyboard_midi_note_events[lane][bar][step][note] = {}
+                    for index = 1, 2 do
+                        keyboard_midi_note_events[lane][bar][step][note][index] = SequenceNote:new()
+                    end
+                end
+            end
+        end
+    end
+
+    return keyboard_midi_note_events
+end
+
+-- Initialize the data structure
+keyboard_midi_note_events = create_keyboard_midi_note_events()
+
+-- Example usage: Modify a note
+keyboard_midi_note_events[1][2][3][4][1].velocity = 100
+
+-- Print a value
+print(keyboard_midi_note_events[1][2][3][4][1].velocity)  -- Output: 100
+
+-------------------------------
+
+-- Function to disable MIDI notes
+function DisableKeyboardMidiNotes(note)
+  last_function = 28749
+
+  -- Disable that note for all steps
+  for bc = FIRST_BAR, MAX_BAR do
+      for sc = FIRST_STEP, MAX_STEP do
+          keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
+          keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
+      end
+  end
+
+  ActiveKeyboardMidiNoteSet[note] = nil  -- Remove note from active set
+end
+
+-- Function to process incoming MIDI note events
+function OnMidiNoteInEvent(on_off, note, velocity, channel)
+  last_function = 466942
+
+  if channel == midi_receive_channel then
+      if note >= lowest_midi_note and note <= highest_midi_note then
+          if on_off == MIDI_NOTE_ON then
+              -- If velocity is low, treat as note off
+              if velocity < 40 then
+                  print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
+                  
+                  target_led_4_tri_state = 2
+                  midi.writeNoteOff(channel, note, 0)
+
+                  DisableKeyboardMidiNotes(note)
+                  last_note_disabled = note
+              else
+                  -- Process note on
+                  if current_midi_lane ~= SILENT_MIDI_LANE then
+                      print(string.format("Setting MIDI note ON for note %d When step is %d velocity is %d", note, step_a_count, velocity))
+                      
+                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step
+                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity
+                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1
+                  else
+                      print(string.format("SILENT lane so NOT Writing note %d When step is %d velocity is %d", note, step_a_count, velocity))
+                  end
+              end
+
+              -- Echo MIDI if sequencer is stopped
+              if sequence_is_running == 0 then
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0
+                  midi.writeNoteOn(channel, note, velocity)
+              end
+
+              last_note_on = note
+              print(string.format("Done setting MIDI note ON for note %d when step is %d velocity is %d", note, step_a_count, velocity))
+          else
+              -- Process MIDI note off
+              print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+
+              if current_midi_lane ~= SILENT_MIDI_LANE then
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1
+              else
+                  print(string.format("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+              end
+
+              last_note_off = note
+
+              if sequence_is_running == 0 then
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0
+                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  midi.writeNoteOff(channel, note, 0)
+              end
+
+              print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+          end
+      else
+          print(string.format("###### Note %d out of range (Allowed: %d to %d)", note, lowest_midi_note, highest_midi_note))
+      end
+  else
+      print(string.format("###### Ignoring MIDI event on channel %d (Expected: %d)", channel, midi_receive_channel))
+  end
+end
+
+--------------------------------
 
 my_grid = grid.connect()
 
@@ -856,7 +1014,7 @@ end
       -- Advance the step for each row each_row_step
       for row = 1, TOTAL_SEQUENCE_ROWS do
         row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"]  + 1, row_settings[row]["first_step"], row_settings[row]["last_step"] )
-        print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+        --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
       end
 
 
