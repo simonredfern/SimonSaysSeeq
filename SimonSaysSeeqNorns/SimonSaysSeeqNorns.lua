@@ -272,6 +272,9 @@ LOWEST_MIDI_NOTE_NUMBER_FOR_GATE = 47 -- at least 1 will be added to this.
 MIDI_NOTE_ON_VELOCITY = 127
 MIDI_NOTE_OFF_VELOCITY = 0
 
+C_MIDI_NOTE_ON = 1;
+C_MIDI_NOTE_OFF = 0;
+
 MOZART_BASE_MIDI_NOTE = 24 -- C1  -- 33 = A1
 MOZART_INTERVAL_PERFECT_FIFTH = 7 -- go up in fifths
 MOZART_INTERVAL_PERFECT_FOURTH = 4
@@ -774,10 +777,49 @@ end
 
 
 
+function PlayMidi()
+  -- This function plays MIDI based on step_a_play and keyboard_midi_note_events.
+  last_function = 364892
 
+  -- Iterate over all MIDI notes (0 to 127)
+  for n = 0, 127 do
+      -- Read MIDI sequence (Note ONs at the current global step_a_play)
+      local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
+      
+      if note_on_event.is_active == 1 then
+          if note_on_event.tick_count_since_step == loop_timing_a.tick_count_since_step then
+              -- Set LED 4 high
+              target_led_4_tri_state = 1
 
+              -- Mark MIDI note ON event
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0
 
-------------- TICK FUNCTION - THIS IS THE MAIN TIMING LOOP ---------------------------
+              -- Send MIDI Note ON
+              ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
+          end
+      end
+      
+      -- Read MIDI sequence (Note OFFs)
+      local note_off_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0]
+      
+      if note_off_event.is_active == 1 then
+          if note_off_event.tick_count_since_step == loop_timing_a.tick_count_since_step then
+              -- Set LED 4 low
+              target_led_4_tri_state = 0
+
+              -- Mark MIDI note OFF event
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = 0
+              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+
+              -- Send MIDI Note OFF
+              midi.writeNoteOff(midi_channel_x, n, 0)
+          end
+      end
+  end
+end
+
+------------- TICK FUNCTION - THIS IS THE MAIN TIMING LOOP - The Main Loop!---------------------------
 function tick()
   while true do
 
@@ -897,6 +939,9 @@ end
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
 
+-- TODO - where in here should we play midi ?
+
+
     -- if swing_mode == 1 then
     --    -- No swing, normal clock
     --   clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
@@ -931,6 +976,7 @@ end
         if tick_count % 2 == 0 then
          
          if (enable_audio_clock_out == 1) then
+          -- this doesn't work - not using.
           softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
           softcut.play(1,1)
          end
@@ -939,6 +985,7 @@ end
 
          -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
          if (enable_audio_clock_out == 1) then
+          -- This doesn't work. not using
            softcut.play(1,0)
          end
 
@@ -2339,7 +2386,27 @@ end
 captured_midi_note_in = -1
 
 
- 
+ ----
+
+--  m = midi.connect() -- Connect to the first available MIDI device
+
+-- 2. Set Up an Event Handler
+
+-- You need to define a function that will be triggered when a MIDI event (like a Note On) is received:
+
+-- m.event = function(data)
+--   local msg = midi.to_msg(data) -- Convert raw MIDI data to a structured table
+
+--   if msg.type == "note_on" then
+--     print("Note: " .. msg.note .. " Velocity: " .. msg.vel)
+--   elseif msg.type == "note_off" then
+--     print("Note Off: " .. msg.note)
+--   end
+-- end
+
+
+
+ ------
 
 
 -- Capture MIDI IN
@@ -2348,45 +2415,61 @@ normal_midi_device.event = function(data)
 
 
 
+
+
+
     -- Something is sending lots of midi messages. is it the USB to DIN adapter?
-  if data[1] == 254 then
+ -- if data[1] == 254 then
     -- Ignore this MIDI message 
     --print("Noisy MIDI normal_midi_device")
 
-  else  
+ -- else  
     --for key, value in pairs(data) do
     --  print(key, " -- ", value)
     --end
 
 
   -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
-  if data[1] == 144 and data[3] ~= 0 then
-    normal_midi_note_is_on = true
-    normal_midi_note_is_off = false
-    normal_midi_note_in = data[2]
-    captured_midi_note_in = data[2] -- store this so we can act on a later step press
+ -- if data[1] == 144 and data[3] ~= 0 then
+ --store this so we can act on a later step press
     
-      -- HERE me now OnMidiNoteInEvent
+      -- HERE me now 
 
-    -- set_mozart_and_grid_based_on_held_key(captured_midi_note_in)
+      local midi_msg = midi.to_msg(data) -- Convert raw MIDI data to a structured table
+
+      if (midi_msg.type == "note_on" and midi_msg.vel ~= 0) then
+        print("Note: " .. midi_msg.note .. " Velocity: " .. midi_msg.vel)
+
+        normal_midi_note_is_on = true
+        normal_midi_note_is_off = false
+        normal_midi_note_in = midi_msg.note -- data[2]
+        captured_midi_note_in = midi_msg.note -- data[2] -- 
 
 
+        OnMidiNoteInEvent(C_MIDI_NOTE_ON, normal_midi_note_in, midi_msg.vel, 1)
 
-  end
+
+  --end
 
   -- NOTE OFF  
-  if data[1] == 128 or data[3] == 0 then
+  --if data[1] == 128 or data[3] == 0 then
+
+  elseif (midi_msg.type == "note_off" or midi_msg.vel == 0) then  
     normal_midi_note_is_on = false
     normal_midi_note_is_off = true
-    normal_midi_note_in = data[2]
+    normal_midi_note_in = midi_msg.note --data[2]
     captured_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
                                       -- Also, we ONLY want note off to reset this.    
+  
+  else
+    print("something else midi like: " .. midi_msg.note)
+  
   end 
 
+end
 
-
-  if normal_midi_note_is_on == true then
-    print ("NOTE ON: " .. captured_midi_note_in)
+  --if normal_midi_note_is_on == true then
+  --  print ("NOTE ON: " .. normal_midi_note_in)
 
 
     -- To quote dan_dirks, "any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)"
@@ -2396,16 +2479,16 @@ normal_midi_device.event = function(data)
     --crow.output[1].slew = tick_count / 10
 
 
-  end  
+  --end  
 
 
-  if normal_midi_note_is_off == true then
-    print ("NOTE OFF: " .. normal_midi_note_in)
-  end 
+  --if normal_midi_note_is_off == true then
+  --  print ("NOTE OFF: " .. normal_midi_note_in)
+  --end 
 
-end -- end test for 254
+--end -- end test for 254
 
-end   
+--end   
 
 
 -- bug here
@@ -2414,15 +2497,6 @@ function set_sequence(x,y,midi_note)
   sequence_button_x = x
   sequence_button_y = y
   sequence_button_midi = midi_note
-
-
-  -- the midi_note ~= 0  test caused a bug
-
---  if x ~= 0 and y ~= 0 and midi_note ~= 0 then
---    sequence_button_is_pressed = true
---  else 
---    sequence_button_is_pressed = false
---  end
 
   if x ~= 0 and y ~= 0 then
     sequence_button_is_pressed = true
