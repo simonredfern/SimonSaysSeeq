@@ -8,6 +8,8 @@ version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
+
+
 function get_script_path()
   local info = debug.getinfo(1,'S');
   local script_path = info.source:match[[^@?(.*[\/])[^\/]-$]]
@@ -538,7 +540,8 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
                   target_led_4_tri_state = 2
-                  midi.writeNoteOff(channel, note, 0)
+                  -- midi_keyboard_device.writeNoteOff(channel, note, 0)
+                  midi_keyboard_device:note_on (channel, note, 0)
 
                   DisableKeyboardMidiNotes(note)
                   last_note_disabled = note
@@ -559,7 +562,8 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0
-                  midi.writeNoteOn(channel, note, velocity)
+                  --midi_keyboard_device.writeNoteOn(channel, note, velocity)
+                  midi_keyboard_device:note_on (note, channel, velocity)
               end
 
               last_note_on = note
@@ -581,7 +585,8 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0
                   keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
-                  midi.writeNoteOff(channel, note, 0)
+                  --midi.writeNoteOff(channel, note, 0)
+                  midi_keyboard_device:note_off (note, channel, 0)
               end
 
               print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
@@ -629,11 +634,39 @@ print (my_grid)
 
 -- TODO make parameters so we can change in the UI
 MIDI_GATES_PORT = 1
-NORMAL_MIDI_PORT = 2
+KEYBOARD_MIDI_PORT = 2
 
+
+-- NEXT here
 
 midi_gates_device = midi.connect(MIDI_GATES_PORT)
-normal_midi_device = midi.connect(NORMAL_MIDI_PORT)
+midi_keyboard_device = midi.connect(KEYBOARD_MIDI_PORT)
+
+
+
+  -- create a parameter for midi_device
+  params:add{type = "number", id = "midi_keyboard_device_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = 1, action = function(value)
+    midi_keyboard_device.event = nil
+    midi_keyboard_device = midi.connect(value)
+    midi_keyboard_device.event = midi_event
+
+    print("i changed the midi keyboard parameter !")
+
+  end}
+
+  params:add{type = "number", id = "midi_gates_device_id", name = "Gates MIDI Device", min = 1, max = 4, default = 1, action = function(value)
+    midi_gates_device.event = nil
+    midi_gates_device = midi.connect(value)
+    midi_gates_device.event = midi_event
+
+    print("i changed the midi_gates_device parameter !")
+
+  end}
+
+
+
+
+
 
 
  -- defaults
@@ -813,7 +846,7 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
 
               -- Send MIDI Note OFF
-              midi.writeNoteOff(midi_channel_x, n, 0)
+              midi_keyboard_device.writeNoteOff(midi_channel_x, n, 0)
           end
       end
   end
@@ -1256,7 +1289,7 @@ function process_step()
       if (enable_midi_clock_out == 1 ) then
         print ("Send MIDI Start current_step is: " .. current_step)
         midi_gates_device:start()
-        normal_midi_device:start()
+        midi_keyboard_device:start()
       else
         print ("NOT Send MIDI Start (disabled) current_step is: " .. current_step)
       end
@@ -1580,7 +1613,7 @@ function request_midi_stop()
 
 if (enable_midi_clock_out == 1) then
   midi_gates_device:stop ()
-  normal_midi_device:stop ()
+  midi_keyboard_device:stop ()
 end 
 
 
@@ -1727,9 +1760,38 @@ end
 
 
 
+
+
+
+
+local mo = midi.connect(1) -- defaults to port 1
+mo.event = midi_event
+
+-- process incoming midi
+--local midi_event = function(data) 
+--  d = midi.to_msg(data)
+--  -- etc.
+--end
+
+
+
+
+
+
+
 function init()
 
   print ("Hello from init")
+
+
+  params:add_number('simon_number', 'the simon number',0,60,30)
+
+print(params:get('simon_number'))
+
+
+
+
+
 
   -- clear buffer
   softcut.buffer_clear()
@@ -2410,7 +2472,7 @@ captured_midi_note_in = -1
 
 
 -- Capture MIDI IN
-normal_midi_device.event = function(data)
+midi_keyboard_device.event = function(data)
 
 
 
@@ -2421,7 +2483,7 @@ normal_midi_device.event = function(data)
     -- Something is sending lots of midi messages. is it the USB to DIN adapter?
  -- if data[1] == 254 then
     -- Ignore this MIDI message 
-    --print("Noisy MIDI normal_midi_device")
+    --print("Noisy MIDI midi_keyboard_device")
 
  -- else  
     --for key, value in pairs(data) do
