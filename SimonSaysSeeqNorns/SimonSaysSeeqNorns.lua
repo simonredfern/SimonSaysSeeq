@@ -265,7 +265,9 @@ output_text = ""
 
 Tab = require "lib/tabutil"
 
+-- note probably on different ports 
 MIDI_CHANNEL_GATES = 1
+MIDI_KEYBOARD_CHANNEL = 1
 
 -- This works well with Flame MGTV factory default settings. 
 --  http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
@@ -276,6 +278,11 @@ MIDI_NOTE_OFF_VELOCITY = 0
 
 C_MIDI_NOTE_ON = 1;
 C_MIDI_NOTE_OFF = 0;
+
+lowest_keyboard_midi_note = 1
+highest_keyboard_midi_note = 127
+
+
 
 MOZART_BASE_MIDI_NOTE = 24 -- C1  -- 33 = A1
 MOZART_INTERVAL_PERFECT_FIFTH = 7 -- go up in fifths
@@ -532,8 +539,8 @@ end
 function OnMidiNoteInEvent(on_off, note, velocity, channel)
   last_function = 466942
 
-  if channel == midi_receive_channel then
-      if note >= lowest_midi_note and note <= highest_midi_note then
+  if channel == MIDI_KEYBOARD_CHANNEL then
+      if note >= lowest_keyboard_midi_note and note <= highest_keyboard_midi_note then
           if on_off == MIDI_NOTE_ON then
               -- If velocity is low, treat as note off
               if velocity < 40 then
@@ -592,10 +599,10 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
           end
       else
-          print(string.format("###### Note %d out of range (Allowed: %d to %d)", note, lowest_midi_note, highest_midi_note))
+          print(string.format("###### Note %d out of range (Allowed: %d to %d)", note, lowest_keyboard_midi_note, highest_keyboard_midi_note))
       end
   else
-      print(string.format("###### Ignoring MIDI event on channel %d (Expected: %d)", channel, midi_receive_channel))
+      print("###### Ignoring MIDI event on channel " .. channel ..  " Expected: " .. MIDI_KEYBOARD_CHANNEL)
   end
 end
 
@@ -633,28 +640,30 @@ print (my_grid)
 
 
 -- TODO make parameters so we can change in the UI
-MIDI_GATES_PORT = 1
-KEYBOARD_MIDI_PORT = 2
+KEYBOARD_MIDI_PORT = 1
+MIDI_GATES_PORT = 2
 
 
--- NEXT here
 
-midi_gates_device = midi.connect(MIDI_GATES_PORT)
+-- Which USB midi ports we should use (defaults)
 midi_keyboard_device = midi.connect(KEYBOARD_MIDI_PORT)
+midi_gates_device = midi.connect(MIDI_GATES_PORT)
 
 
 
-  -- create a parameter for midi_device
-  params:add{type = "number", id = "midi_keyboard_device_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = 1, action = function(value)
-    midi_keyboard_device.event = nil
-    midi_keyboard_device = midi.connect(value)
-    midi_keyboard_device.event = midi_event
 
-    print("i changed the midi keyboard parameter !")
+params:add{type = "number", id = "midi_keyboard_device_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = KEYBOARD_MIDI_PORT, action = function(value)
+  midi_keyboard_device.event = nil
+  midi_keyboard_device = midi.connect(value)
+  midi_keyboard_device.event = midi_event
 
-  end}
+  print("i changed the midi keyboard parameter !")
 
-  params:add{type = "number", id = "midi_gates_device_id", name = "Gates MIDI Device", min = 1, max = 4, default = 1, action = function(value)
+end}
+
+
+  -- And we can change them and connect after changes.
+  params:add{type = "number", id = "midi_gates_device_id", name = "Gates MIDI Device", min = 1, max = 4, default = MIDI_GATES_PORT, action = function(value)
     midi_gates_device.event = nil
     midi_gates_device = midi.connect(value)
     midi_gates_device.event = midi_event
@@ -2474,16 +2483,13 @@ captured_midi_note_in = -1
 -- Capture MIDI IN
 midi_keyboard_device.event = function(data)
 
+  print("midi_keyboard_device.event ")
 
 
 
 
 
 
-    -- Something is sending lots of midi messages. is it the USB to DIN adapter?
- -- if data[1] == 254 then
-    -- Ignore this MIDI message 
-    --print("Noisy MIDI midi_keyboard_device")
 
  -- else  
     --for key, value in pairs(data) do
@@ -2524,8 +2530,11 @@ midi_keyboard_device.event = function(data)
                                       -- Also, we ONLY want note off to reset this.    
   
   else
-    print("something else midi like: " .. midi_msg.note)
-  
+    -- print("something else midi like: ")
+    -- Something is sending lots of midi messages. is it the USB to DIN adapter?
+ -- if data[1] == 254 then
+    -- Ignore this MIDI message 
+    --print("Noisy MIDI midi_keyboard_device")  
   end 
 
 end
