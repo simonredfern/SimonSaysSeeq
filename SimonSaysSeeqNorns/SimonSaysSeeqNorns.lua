@@ -143,7 +143,11 @@ GATE_8 = 8
 GATE_7 = 7
 
 first_step = 1
+midi_step_count = first_step
 last_step = COLS
+
+midi_bar_count = 1
+
 
 arm_feature = NO_FEATURE
 preset_grid_button = 0
@@ -414,7 +418,8 @@ table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 
 function reset_step_counters()
-  current_step = first_step
+  --current_step = first_step
+  midi_step_count = first_step
   total_step_co2_count = 1 -- This will loop around the co2 ppm rows
   total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
 
@@ -555,48 +560,48 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               else
                   -- Process note on
                   if current_midi_lane ~= SILENT_MIDI_LANE then
-                      print(string.format("Setting MIDI note ON for note %d When step is %d velocity is %d", note, step_a_count, velocity))
+                      print(string.format("Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                       
-                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step
-                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].velocity = velocity
-                      keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].is_active = 1
+                      keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step
+                      keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
+                      keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
                   else
-                      print(string.format("SILENT lane so NOT Writing note %d When step is %d velocity is %d", note, step_a_count, velocity))
+                      print(string.format("SILENT lane so NOT Writing note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                   end
               end
 
               -- Echo MIDI if sequencer is stopped
               if sequence_is_running == 0 then
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = 0
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
                   --midi_keyboard_device.writeNoteOn(channel, note, velocity)
                   midi_keyboard_device:note_on (note, channel, velocity)
               end
 
               last_note_on = note
-              print(string.format("Done setting MIDI note ON for note %d when step is %d velocity is %d", note, step_a_count, velocity))
+              print(string.format("Done setting MIDI note ON for note %d when step is %d velocity is %d", note, midi_step_count, velocity))
           else
               -- Process MIDI note off
-              print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+              print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
               if current_midi_lane ~= SILENT_MIDI_LANE then
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].velocity = velocity
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].is_active = 1
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity = velocity
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
               else
-                  print(string.format("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+                  print(string.format("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
               end
 
               last_note_off = note
 
               if sequence_is_running == 0 then
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][1].tick_count_since_start = 0
-                  keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
                   --midi.writeNoteOff(channel, note, 0)
                   midi_keyboard_device:note_off (note, channel, 0)
               end
 
-              print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, bar_a_count, step_a_count))
+              print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
           end
       else
           print(string.format("###### Note %d out of range (Allowed: %d to %d)", note, lowest_keyboard_midi_note, highest_keyboard_midi_note))
@@ -834,8 +839,8 @@ function PlayMidi()
               target_led_4_tri_state = 1
 
               -- Mark MIDI note ON event
-              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start
-              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
 
               -- Send MIDI Note ON
               ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
@@ -843,7 +848,7 @@ function PlayMidi()
       end
       
       -- Read MIDI sequence (Note OFFs)
-      local note_off_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][0]
+      local note_off_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(midi_step_count)][n][0]
       
       if note_off_event.is_active == 1 then
           if note_off_event.tick_count_since_step == loop_timing_a.tick_count_since_step then
@@ -851,8 +856,8 @@ function PlayMidi()
               target_led_4_tri_state = 0
 
               -- Mark MIDI note OFF event
-              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = 0
-              keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = 0
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
 
               -- Send MIDI Note OFF
               midi_keyboard_device.writeNoteOff(midi_channel_x, n, 0)
@@ -1096,8 +1101,8 @@ end
 
       -- This is the master (original step) 
       -- Always advance the step based on tick_count mod 12.    
-      current_step = util.wrap(current_step + 1, first_step, last_step)
-      -- print ("Advanced step to: " .. current_step)
+      midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
+      -- print ("Advanced step to: " .. midi_step_count)
     
 
       -- Advance the step for each row each_row_step
@@ -1111,8 +1116,8 @@ end
 
       total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)  --- total_step_co2_count + 1
         
-      -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step.
-      if current_step == 3 then
+      -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step. Huh??
+      if midi_step_count == 3 then
         blip_count = 6
       else   
         blip_count = 12
@@ -1280,7 +1285,7 @@ end
 
 
 function process_step()
-  --print ("process_step current_step is:  " .. current_step)
+  --print ("process_step midi_step_count is:  " .. midi_step_count)
 
   
   local ratchet_mode = 1 -- default is 1 but it will be set
@@ -1289,25 +1294,25 @@ function process_step()
 
   if need_to_start_midi == true then
   
-    if current_step == first_step then
+    if midi_step_count == first_step then
 
      --engine.hz(800) -- just to give some audible sign for debugging timing
 
       -- we only want to start midi clock at the right time!
 
       if (enable_midi_clock_out == 1 ) then
-        print ("Send MIDI Start current_step is: " .. current_step)
+        print ("Send MIDI Start midi_step_count is: " .. midi_step_count)
         midi_gates_device:start()
         midi_keyboard_device:start()
       else
-        print ("NOT Send MIDI Start (disabled) current_step is: " .. current_step)
+        print ("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
       end
       run_conditional_clocks = true -- so our 24PPQN etc stays on when midi clock is on 
       need_to_start_midi = false
 
     else
       if (enable_midi_clock_out == 1 ) then
-      print ("Waiting to MIDI Start current_step is: " .. current_step)
+      print ("Waiting to MIDI Start midi_step_count is: " .. midi_step_count)
       else
         print (" MIDI Clock out disabled")
       end  
@@ -3511,25 +3516,25 @@ end -- stable tempo check
     end_of_line_text = output_text
   end
 
-  if current_step <= 4 then
+  if midi_step_count <= 4 then
     conductor_text = "1.."
-  elseif current_step > 4 and current_step <= 8 then
+  elseif midi_step_count > 4 and midi_step_count <= 8 then
     conductor_text = "2["
-  elseif current_step > 8 and current_step <= 12 then
+  elseif midi_step_count > 8 and midi_step_count <= 12 then
     conductor_text = "3 ]"
-  elseif  current_step > 12 and current_step <= 16 then 
+  elseif  midi_step_count > 12 and midi_step_count <= 16 then 
     conductor_text = "4^^"
   end  
   
   -- print (conductor_text)
 
 
--- status_text = conductor_text .. " " .. current_tempo .. " BPM. Step " .. current_step .. " " .. end_of_line_text
+-- status_text = conductor_text .. " " .. current_tempo .. " BPM. Step " .. midi_step_count .. " " .. end_of_line_text
 -- current_tempo no decimal points
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
 
-  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", current_step) .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " "  .. end_of_line_text .. " "  
+  status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", midi_step_count) .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " "  .. end_of_line_text .. " "  
   
   
   
