@@ -2513,9 +2513,12 @@ captured_midi_note_in = -1
 -- Capture MIDI IN
 midi_keyboard_device.event = function(data)
 
-  print("midi_keyboard_device.event ")
+ 
 
-
+  if data[1] == 254 and data[2] == nil and data[3] == nil then
+   -- Do nothing! Filter out Active Sensing messages from Yamaha keyboard. 
+  else
+    print("midi_keyboard_device.event ")   
 
 
 
@@ -2531,7 +2534,7 @@ midi_keyboard_device.event = function(data)
  -- if data[1] == 144 and data[3] ~= 0 then
  --store this so we can act on a later step press
     
-      -- HERE me now 
+   
 
       local midi_msg = midi.to_msg(data) -- Convert raw MIDI data to a structured table
 
@@ -2546,12 +2549,6 @@ midi_keyboard_device.event = function(data)
 
         OnMidiNoteInEvent(C_MIDI_NOTE_ON, midi_msg.note, midi_msg.vel, midi_msg.ch)
 
-
-  --end
-
-  -- NOTE OFF  
-  --if data[1] == 128 or data[3] == 0 then
-
   elseif (midi_msg.type == "note_off" or midi_msg.vel == 0) then  
     normal_midi_note_is_on = false
     normal_midi_note_is_off = true
@@ -2565,15 +2562,15 @@ midi_keyboard_device.event = function(data)
 
     if midi_msg.type == "cc" then
       print("midi cc " .. d.cc .. " = " .. d.val)
+    else
+      -- hopefully we have filtered out 254 above but there might be other stuff.
+      print("other midi data: ")
+      print (data[1])
+      print (data[2])
+      print (data[3])
+      -- print("midi type: " .. midi_msg.type and midi_msg.type or "type is nil")
     end
     
-
-
-    -- print("something else midi like: ")
-    -- Something is sending lots of midi messages. is it the USB to DIN adapter?
- -- if data[1] == 254 then
-    -- Ignore this MIDI message 
-    --print("Noisy MIDI midi_keyboard_device")  
   end 
 
 end
@@ -2596,9 +2593,9 @@ end
   --  print ("NOTE OFF: " .. normal_midi_note_in)
   --end 
 
---end -- end test for 254
+end -- end test for 254
 
---end   
+  
 
 
 -- bug here
