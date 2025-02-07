@@ -259,6 +259,15 @@ last_grid_value = 0
 last_mozart_value = 0
 last_slide_value = 0
 
+
+last_midi_note = -1
+last_midi_velocity = -1
+last_midi_channel = -1
+last_midi_on_off = -1
+last_midi_device = -1
+
+
+
 held_x = 0
 held_y = 0
 
@@ -272,6 +281,12 @@ Tab = require "lib/tabutil"
 -- note probably on different ports 
 MIDI_CHANNEL_GATES = 1
 MIDI_KEYBOARD_CHANNEL = 1
+
+
+current_midi_lane = 1 -- so far in norns we only have one any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)
+
+SILENT_MIDI_LANE = 2 
+
 
 -- This works well with Flame MGTV factory default settings. 
 --  http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
@@ -540,9 +555,15 @@ function DisableKeyboardMidiNotes(note)
   ActiveKeyboardMidiNoteSet[note] = nil  -- Remove note from active set
 end
 
--- Function to process incoming MIDI note events
+-- Function to process incoming MIDI note events HEREHERE
 function OnMidiNoteInEvent(on_off, note, velocity, channel)
   last_function = 466942
+
+
+  last_midi_note = note
+last_midi_velocity = velocity
+last_midi_channel = channel
+last_midi_on_off = on_off
 
   if channel == MIDI_KEYBOARD_CHANNEL then
       if note >= lowest_keyboard_midi_note and note <= highest_keyboard_midi_note then
@@ -1266,6 +1287,10 @@ function greetings()
 
     screen.move(1,y_position)  
     screen.text(midi_text)
+
+  
+
+
     print ("midi_text is: " .. midi_text)
     y_position = y_position + 10
     -- screen.update()
@@ -2519,7 +2544,7 @@ midi_keyboard_device.event = function(data)
         captured_midi_note_in = midi_msg.note -- data[2] -- 
 
 
-        OnMidiNoteInEvent(C_MIDI_NOTE_ON, normal_midi_note_in, midi_msg.vel, 1)
+        OnMidiNoteInEvent(C_MIDI_NOTE_ON, midi_msg.note, midi_msg.vel, 1)
 
 
   --end
@@ -2532,7 +2557,9 @@ midi_keyboard_device.event = function(data)
     normal_midi_note_is_off = true
     normal_midi_note_in = midi_msg.note --data[2]
     captured_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
-                                      -- Also, we ONLY want note off to reset this.    
+                                      -- Also, we ONLY want note off to reset this.   
+                                      
+    OnMidiNoteInEvent(C_MIDI_NOTE_OFF, midi_msg.note, midi_msg.vel, 1)                                  
   
   else
     -- print("something else midi like: ")
@@ -3533,6 +3560,17 @@ end -- stable tempo check
 -- current_tempo no decimal points
 -- pad current step with a 0 so the display doesn't move about
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
+
+
+  midi_status_text = "  Last MIDI " .. string.format("%.3d", last_midi_note) .. " " .. string.format("%.3d", last_midi_velocity) .. " " .. string.format("%.1d", last_midi_on_off) .. " " .. string.format("%.2d", last_midi_channel)  
+
+
+
+
+  screen.move(1,56)   
+  screen.text(midi_status_text)
+
+
 
   status_text = string.format("%.2f",current_tempo) .. " " .. string.format("%.2d", midi_step_count) .. " " .. last_action_method  .. " " .. string.format("%.1d", last_x) .. "," .. string.format("%.1d", last_y) .. " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " "  .. end_of_line_text .. " "  
   
