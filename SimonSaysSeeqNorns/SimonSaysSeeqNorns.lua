@@ -2544,7 +2544,7 @@ midi_keyboard_device.event = function(data)
         captured_midi_note_in = midi_msg.note -- data[2] -- 
 
 
-        OnMidiNoteInEvent(C_MIDI_NOTE_ON, midi_msg.note, midi_msg.vel, 1)
+        OnMidiNoteInEvent(C_MIDI_NOTE_ON, midi_msg.note, midi_msg.vel, midi_msg.ch)
 
 
   --end
@@ -2559,9 +2559,16 @@ midi_keyboard_device.event = function(data)
     captured_midi_note_in = -1 -- We only want to have a captured note (one at a time) whilst the note is held down.
                                       -- Also, we ONLY want note off to reset this.   
                                       
-    OnMidiNoteInEvent(C_MIDI_NOTE_OFF, midi_msg.note, midi_msg.vel, 1)                                  
+    OnMidiNoteInEvent(C_MIDI_NOTE_OFF, midi_msg.note, midi_msg.vel, midi_msg.ch)                                  
   
   else
+
+    if midi_msg.type == "cc" then
+      print("midi cc " .. d.cc .. " = " .. d.val)
+    end
+    
+
+
     -- print("something else midi like: ")
     -- Something is sending lots of midi messages. is it the USB to DIN adapter?
  -- if data[1] == 254 then
