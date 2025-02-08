@@ -460,6 +460,8 @@ tick_count = 0
 
 blip_count = 0
 
+the_current_tick_count_since_step = 0 -- TODO make this count
+
 PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 
 
@@ -583,7 +585,7 @@ last_midi_on_off = on_off
                   if current_midi_lane ~= SILENT_MIDI_LANE then
                       print(string.format("Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                       
-                      keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = loop_timing_a.tick_count_since_step
+                      keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = the_current_tick_count_since_step
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
                   else
@@ -606,7 +608,7 @@ last_midi_on_off = on_off
               print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
               if current_midi_lane ~= SILENT_MIDI_LANE then
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = loop_timing_a.tick_count_since_step
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = the_current_tick_count_since_step
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity = velocity
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
               else
@@ -857,7 +859,7 @@ function PlayMidi()
       local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
       
       if note_on_event.is_active == 1 then
-          if note_on_event.tick_count_since_step == loop_timing_a.tick_count_since_step then
+          if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Set LED 4 high
               target_led_4_tri_state = 1
 
@@ -874,7 +876,7 @@ function PlayMidi()
       local note_off_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(midi_step_count)][n][0]
       
       if note_off_event.is_active == 1 then
-          if note_off_event.tick_count_since_step == loop_timing_a.tick_count_since_step then
+          if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Set LED 4 low
               target_led_4_tri_state = 0
 
