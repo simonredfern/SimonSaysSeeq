@@ -8,7 +8,7 @@ version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
-
+the_current_tick_count_since_start = 0 -- TODO need this / fix this?
 
 function get_script_path()
   local info = debug.getinfo(1,'S');
@@ -535,10 +535,10 @@ end
 keyboard_midi_note_events = create_keyboard_midi_note_events()
 
 -- Example usage: Modify a note
-keyboard_midi_note_events[1][2][3][4][1].velocity = 100
+--keyboard_midi_note_events[1][2][3][4][1].velocity = 100
 
 -- Print a value
-print(keyboard_midi_note_events[1][2][3][4][1].velocity)  -- Output: 100
+--print(keyboard_midi_note_events[1][2][3][4][1].velocity)  -- Output: 100
 
 -------------------------------
 
@@ -595,7 +595,7 @@ last_midi_on_off = on_off
 
               -- Echo MIDI if sequencer is stopped
               if sequence_is_running == 0 then
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = the_current_tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
                   --midi_keyboard_usb_device_port.writeNoteOn(channel, note, velocity)
                   midi_keyboard_usb_device_port:note_on (note, channel, velocity)
@@ -619,7 +619,7 @@ last_midi_on_off = on_off
 
               if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = the_current_tick_count_since_start
                   --midi.writeNoteOff(channel, note, 0)
                   midi_keyboard_usb_device_port:note_off (note, channel, 0)
               end
@@ -856,15 +856,26 @@ function PlayMidi()
   -- Iterate over all MIDI notes (0 to 127)
   for n = 0, 127 do
       -- Read MIDI sequence (Note ONs at the current global step_a_play)
-      local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
+      -- local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
       
+      print (current_midi_lane)
+      print (midi_bar_count)
+      print (midi_step_count)
+      print (keyboard_midi_note_events)
+
+
+      local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
+      
+
+
       if note_on_event.is_active == 1 then
           if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Set LED 4 high
-              target_led_4_tri_state = 1
+              -- target_led_4_tri_state = 1
+              -- Can we flash the screen here or flash the new grids? 
 
               -- Mark MIDI note ON event
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = the_current_tick_count_since_start
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
 
               -- Send MIDI Note ON
@@ -873,7 +884,7 @@ function PlayMidi()
       end
       
       -- Read MIDI sequence (Note OFFs)
-      local note_off_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(midi_step_count)][n][0]
+      local note_off_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0]
       
       if note_off_event.is_active == 1 then
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
@@ -882,7 +893,7 @@ function PlayMidi()
 
               -- Mark MIDI note OFF event
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = 0
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = the_current_tick_count_since_start
 
               -- Send MIDI Note OFF
               midi_keyboard_usb_device_port.writeNoteOff(midi_channel_x, n, 0)
@@ -1352,7 +1363,7 @@ function process_step()
 
    end -- End check midi start
 
- 
+ PlayMidi() -- not sure if its good here.
 
   
   -- For each sequence row...
@@ -3573,7 +3584,7 @@ end -- stable tempo check
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
 
 
-  midi_status_text = "  Last MIDI " .. string.format("%.3d", last_midi_note) .. " " .. string.format("%.3d", last_midi_velocity) .. " " .. string.format("%.1d", last_midi_on_off) .. " " .. string.format("%.2d", last_midi_channel)  
+  midi_status_text = "  MIDI IN " .. string.format("%.3d", last_midi_note) .. " " .. string.format("%.3d", last_midi_velocity) .. " " .. string.format("%.1d", last_midi_on_off) .. " " .. string.format("%.2d", last_midi_channel)  
 
 
 
