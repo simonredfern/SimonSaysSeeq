@@ -298,7 +298,7 @@ MIDI_NOTE_OFF_VELOCITY = 0
 C_MIDI_NOTE_ON = 1;
 C_MIDI_NOTE_OFF = 0;
 
-lowest_keyboard_midi_note = 1
+lowest_keyboard_midi_note = 0
 highest_keyboard_midi_note = 127
 
 
@@ -569,7 +569,8 @@ last_midi_on_off = on_off
 
   if channel == MIDI_KEYBOARD_CHANNEL then
       if note >= lowest_keyboard_midi_note and note <= highest_keyboard_midi_note then
-          if on_off == MIDI_NOTE_ON then
+        print ("on_off is " .. on_off)
+          if on_off == C_MIDI_NOTE_ON then
               -- If velocity is low, treat as note off
               if velocity < 40 then
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
@@ -583,7 +584,7 @@ last_midi_on_off = on_off
               else
                   -- Process note on
                   if current_midi_lane ~= SILENT_MIDI_LANE then
-                      print(string.format("Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
+                      print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                       
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = the_current_tick_count_since_step
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
@@ -853,7 +854,7 @@ function PlayMidi()
   -- This function plays MIDI based on step_a_play and keyboard_midi_note_events.
   last_function = 364892
 
-  print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
+  -- print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
 
   for n = 0, 127 do
       -- Read MIDI sequence (Note ONs at the current global step_a_play)
@@ -886,6 +887,9 @@ function PlayMidi()
 
               print ("play " .. n)
           end
+      
+        else     
+          -- print ("note " .. n .. " is not active ")
       end
       
       -- Read MIDI sequence (Note OFFs)
