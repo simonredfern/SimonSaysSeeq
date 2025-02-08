@@ -518,7 +518,7 @@ function create_keyboard_midi_note_events()
             keyboard_midi_note_events[lane][bar] = {}
             for step = 1, MAX_STEP do
                 keyboard_midi_note_events[lane][bar][step] = {}
-                for note = 1, 127 do
+                for note = 0, 127 do
                     keyboard_midi_note_events[lane][bar][step][note] = {}
                     for index = 0, 1 do
                         keyboard_midi_note_events[lane][bar][step][note][index] = SequenceNote:new()
@@ -853,16 +853,18 @@ function PlayMidi()
   -- This function plays MIDI based on step_a_play and keyboard_midi_note_events.
   last_function = 364892
 
-  -- Iterate over all MIDI notes (0 to 127)
+  print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
+
   for n = 0, 127 do
       -- Read MIDI sequence (Note ONs at the current global step_a_play)
       -- local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
       
-      print (current_midi_lane)
-      print (midi_bar_count)
-      print (midi_step_count)
-      print (keyboard_midi_note_events)
+      --print (current_midi_lane)
+      --print (midi_bar_count)
+      --print (midi_step_count)
+      --print (keyboard_midi_note_events)
 
+      
 
       local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
       
@@ -879,7 +881,10 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
 
               -- Send MIDI Note ON
-              ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
+              midi_keyboard_usb_device_port:note_on (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
+              -- ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
+
+              print ("play " .. n)
           end
       end
       
@@ -896,7 +901,7 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = the_current_tick_count_since_start
 
               -- Send MIDI Note OFF
-              midi_keyboard_usb_device_port.writeNoteOff(midi_channel_x, n, 0)
+              midi_keyboard_usb_device_port:note_on (midi_channel_x, n, 0)
           end
       end
   end
