@@ -142,6 +142,10 @@ GATE_9 = 9
 GATE_8 = 8
 GATE_7 = 7
 
+
+midi_first_step = 1
+midi_last_step = 16
+
 first_step = 1
 midi_step_count = first_step
 last_step = COLS
@@ -548,13 +552,13 @@ function DisableKeyboardMidiNotes(note)
 
   -- Disable that note for all steps
   for bc = FIRST_BAR, MAX_BAR do
-      for sc = FIRST_STEP, MAX_STEP do
+      for sc = midi_first_step, midi_last_step do
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
       end
   end
 
-  ActiveKeyboardMidiNoteSet[note] = nil  -- Remove note from active set
+  -- TODO ActiveKeyboardMidiNoteSet[note] = nil  -- Remove note from active set
 end
 
 -- Function to process incoming MIDI note events HEREHERE
@@ -885,7 +889,7 @@ function PlayMidi()
               midi_keyboard_usb_device_port:note_on (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
               -- ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
 
-              print ("play " .. n)
+              print ("play note " .. n .. " on step " .. midi_step_count)
           end
       
         else     
