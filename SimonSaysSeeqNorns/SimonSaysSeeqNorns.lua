@@ -573,8 +573,8 @@ last_midi_on_off = on_off
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
                   target_led_4_tri_state = 2
-                  -- midi_keyboard_device.writeNoteOff(channel, note, 0)
-                  midi_keyboard_device:note_on (channel, note, 0)
+                  -- midi_keyboard_usb_device_port.writeNoteOff(channel, note, 0)
+                  midi_keyboard_usb_device_port:note_on (channel, note, 0)
 
                   DisableKeyboardMidiNotes(note)
                   last_note_disabled = note
@@ -595,8 +595,8 @@ last_midi_on_off = on_off
               if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = loop_timing_a.tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
-                  --midi_keyboard_device.writeNoteOn(channel, note, velocity)
-                  midi_keyboard_device:note_on (note, channel, velocity)
+                  --midi_keyboard_usb_device_port.writeNoteOn(channel, note, velocity)
+                  midi_keyboard_usb_device_port:note_on (note, channel, velocity)
               end
 
               last_note_on = note
@@ -619,7 +619,7 @@ last_midi_on_off = on_off
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = loop_timing_a.tick_count_since_start
                   --midi.writeNoteOff(channel, note, 0)
-                  midi_keyboard_device:note_off (note, channel, 0)
+                  midi_keyboard_usb_device_port:note_off (note, channel, 0)
               end
 
               print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
@@ -665,38 +665,40 @@ print (my_grid)
 
 
 
--- TODO make parameters so we can change in the UI
-KEYBOARD_MIDI_PORT = 1
-MIDI_GATES_PORT = 2
+INITIAL_MIDI_GATES_PORT = 1 -- In the currrent cable setup this is CLOCK IN and GATES OUT
+INITIAL_MIDI_KEYBOARD_PORT = 2
+
 
 
 
 -- Which USB midi ports we should use (defaults)
-midi_keyboard_device = midi.connect(KEYBOARD_MIDI_PORT)
-midi_gates_device = midi.connect(MIDI_GATES_PORT)
+
+midi_gates_usb_device_port = midi.connect(INITIAL_MIDI_GATES_PORT)
+midi_keyboard_usb_device_port = midi.connect(INITIAL_MIDI_KEYBOARD_PORT)
 
 
+  -- And we can change them and connect after changes.
+  params:add{type = "number", id = "midi_gates_usb_device_port_id", name = "Gates MIDI Device", min = 1, max = 4, default = INITIAL_MIDI_GATES_PORT, action = function(value)
+    midi_gates_usb_device_port.event = nil
+    midi_gates_usb_device_port = midi.connect(value)
+    midi_gates_usb_device_port.event = midi_event
+
+    print("i changed the midi_gates_usb_device_port parameter !")
+
+  end}
 
 
-params:add{type = "number", id = "midi_keyboard_device_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = KEYBOARD_MIDI_PORT, action = function(value)
-  midi_keyboard_device.event = nil
-  midi_keyboard_device = midi.connect(value)
-  midi_keyboard_device.event = midi_event
+params:add{type = "number", id = "midi_keyboard_usb_device_port_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = INITIAL_MIDI_KEYBOARD_PORT, action = function(value)
+  midi_keyboard_usb_device_port.event = nil
+  midi_keyboard_usb_device_port = midi.connect(value)
+  midi_keyboard_usb_device_port.event = midi_event
 
   print("i changed the midi keyboard parameter !")
 
 end}
 
 
-  -- And we can change them and connect after changes.
-  params:add{type = "number", id = "midi_gates_device_id", name = "Gates MIDI Device", min = 1, max = 4, default = MIDI_GATES_PORT, action = function(value)
-    midi_gates_device.event = nil
-    midi_gates_device = midi.connect(value)
-    midi_gates_device.event = midi_event
 
-    print("i changed the midi_gates_device parameter !")
-
-  end}
 
 
 
@@ -881,7 +883,7 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = loop_timing_a.tick_count_since_start
 
               -- Send MIDI Note OFF
-              midi_keyboard_device.writeNoteOff(midi_channel_x, n, 0)
+              midi_keyboard_usb_device_port.writeNoteOff(midi_channel_x, n, 0)
           end
       end
   end
@@ -1123,6 +1125,9 @@ end
       -- This is the master (original step) 
       -- Always advance the step based on tick_count mod 12.    
       midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
+
+      -- do we need to calc tick_count_since_step = bla somewhere around here?
+
       -- print ("Advanced step to: " .. midi_step_count)
     
 
@@ -1268,7 +1273,7 @@ function greetings()
       if sub_key == "port" then
         midi_text = midi_text .. " P" .. sub_value 
 
-       if sub_value == MIDI_GATES_PORT then
+       if sub_value == INITIAL_MIDI_GATES_PORT then
         midi_text = midi_text .. "GTES"
        end
 
@@ -1327,8 +1332,8 @@ function process_step()
 
       if (enable_midi_clock_out == 1 ) then
         print ("Send MIDI Start midi_step_count is: " .. midi_step_count)
-        midi_gates_device:start()
-        midi_keyboard_device:start()
+        midi_gates_usb_device_port:start()
+        midi_keyboard_usb_device_port:start()
       else
         print ("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
       end
@@ -1566,12 +1571,12 @@ end
  
 function gate_on(output)
        --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-  midi_gates_device:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY, MIDI_CHANNEL_GATES)
+  midi_gates_usb_device_port:note_on (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY, MIDI_CHANNEL_GATES)
 end 
   
 function gate_off(output)
   --print ("A OFF LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-  midi_gates_device:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY, MIDI_CHANNEL_GATES)
+  midi_gates_usb_device_port:note_off (LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY, MIDI_CHANNEL_GATES)
 end 
 
 
@@ -1651,8 +1656,8 @@ function request_midi_stop()
   -- can stop the midi clock at any time.
 
 if (enable_midi_clock_out == 1) then
-  midi_gates_device:stop ()
-  midi_keyboard_device:stop ()
+  midi_gates_usb_device_port:stop ()
+  midi_keyboard_usb_device_port:stop ()
 end 
 
 
@@ -2478,8 +2483,8 @@ end
 
 
 -- probably not used (but does get called becuase lots of prints)
-midi_gates_device.event = function(data)
-  -- print("---------------------- midi_gates_device IN ---------------------------------------")
+midi_gates_usb_device_port.event = function(data)
+  -- print("---------------------- midi_gates_usb_device_port IN ---------------------------------------")
 end
 
 
@@ -2511,14 +2516,14 @@ captured_midi_note_in = -1
 
 
 -- Capture MIDI IN
-midi_keyboard_device.event = function(data)
+midi_keyboard_usb_device_port.event = function(data)
 
  
 
   if data[1] == 254 and data[2] == nil and data[3] == nil then
    -- Do nothing! Filter out Active Sensing messages from Yamaha keyboard. 
   else
-    print("midi_keyboard_device.event ")   
+    print("midi_keyboard_usb_device_port.event ")   
 
 
 
