@@ -1,8 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-
-version = "1.5.3"
+version = "1.5.4"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -571,7 +570,7 @@ end
 
 function SendMidiKeyboardNoteOn (note, velocity, channel)
 
-print("SendMidiKeyboardNoteOn note: " .. note .. " velocity: " .. velocity .. " channel: " .. channel)
+  print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
   midi_keyboard_usb_device_port:note_on (note, velocity, channel)
 
@@ -602,7 +601,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               if velocity < 40 then
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
-                  SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
+                  --SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
 
                   DisableKeyboardMidiNotes(note)
                   last_note_disabled = note
@@ -620,12 +619,14 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               end
 
               -- Echo MIDI if sequencer is stopped
-              if sequence_is_running == 0 then
+              if transport_is_active == false then
+              --if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = the_current_tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
                   --midi_keyboard_usb_device_port.writeNoteOn(channel, note, velocity)
 
-                  SendMidiKeyboardNoteOn(note, 0, channel)
+                  -- TODO do we need this causes grid and screen to freeze?
+                  -- SendMidiKeyboardNoteOn(note, 0, channel)
             
                   
               end
@@ -646,11 +647,14 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
               -- last_note_off = note
 
-              if sequence_is_running == 0 then
+              if transport_is_active == false then -- TODO hmm - how can we even get here?
+              -- if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = the_current_tick_count_since_start
                   --midi.writeNoteOff(channel, note, 0)
-                  midi_keyboard_usb_device_port:note_off (note, channel, 0)
+                  -- TODO hmm
+                  -- SendMidiKeyboardNoteOn(note, 0, channel)
+                  -- midi_keyboard_usb_device_port:note_off (note, channel, 0)
               end
 
               print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
@@ -955,7 +959,7 @@ function PlayMidi()
   end
 end
 
-------------- TICK FUNCTION - THIS IS THE MAIN TIMING LOOP - The Main Loop!---------------------------
+------------- ON TICK ontick FUNCTION - THIS IS THE MAIN TIMING LOOP - The Main Loop!---------------------------
 function tick()
   while true do
 
@@ -2587,7 +2591,7 @@ midi_keyboard_usb_device_port.event = function(data)
 
 --  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " data[2] is: " .. data[2] .. " data[3]: is " .. data[3]) 
 
-  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start) 
+  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
 
 
   if data[1] == 254 and data[2] == nil and data[3] == nil then
