@@ -568,6 +568,22 @@ function DisableKeyboardMidiNotes(note)
   -- TODO ActiveKeyboardMidiNoteSet[note] = nil  -- Remove note from active set
 end
 
+
+function SendMidiKeyboardNoteOn (note, velocity, channel)
+
+print("SendMidiKeyboardNoteOn note: " .. note .. " velocity: " .. velocity .. " channel: " .. channel)
+
+  midi_keyboard_usb_device_port:note_on (note, velocity, channel)
+
+  last_midi_note_out = note
+  last_midi_velocity_out = velocity
+  last_midi_channel_out = channel
+  last_midi_on_off_out = 1
+  -- last_midi_device_out = 
+
+end
+
+
 -- Function to process incoming MIDI note events HEREHERE
 function OnMidiNoteInEvent(on_off, note, velocity, channel)
   last_function = 466942
@@ -586,9 +602,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               if velocity < 40 then
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
-                  target_led_4_tri_state = 2
-                  -- midi_keyboard_usb_device_port.writeNoteOff(channel, note, 0)
-                  midi_keyboard_usb_device_port:note_on (channel, note, 0)
+                  SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
 
                   DisableKeyboardMidiNotes(note)
                   last_note_disabled = note
@@ -610,10 +624,13 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = the_current_tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
                   --midi_keyboard_usb_device_port.writeNoteOn(channel, note, velocity)
-                  midi_keyboard_usb_device_port:note_on (note, channel, velocity)
+
+                  SendMidiKeyboardNoteOn(note, 0, channel)
+            
+                  
               end
 
-              last_note_on = note
+              -- last_note_on = note
               print(string.format("Done setting MIDI note ON for note %d when step is %d velocity is %d", note, midi_step_count, velocity))
           else
               -- Process MIDI note off
@@ -627,7 +644,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                   print(string.format("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
               end
 
-              last_note_off = note
+              -- last_note_off = note
 
               if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
@@ -893,8 +910,14 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
 
               -- Send MIDI Note ON
-              midi_keyboard_usb_device_port:note_on (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
+
+              SendMidiKeyboardNoteOn(n, note_on_event.velocity, midi_channel_x)
+
+              -- midi_keyboard_usb_device_port:note_on (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
               -- ConditionalWriteMidiNoteOn(midi_channel_x, n, note_on_event.velocity)
+
+
+ 
 
               print ("play note " .. n .. " on step " .. midi_step_count)
           end
@@ -916,7 +939,17 @@ function PlayMidi()
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = the_current_tick_count_since_start
 
               -- Send MIDI Note OFF
-              midi_keyboard_usb_device_port:note_on (midi_channel_x, n, 0)
+
+              SendMidiKeyboardNoteOn(n, 0, midi_channel_x)
+
+              -- midi_keyboard_usb_device_port:note_on (midi_channel_x, n, 0)
+
+
+              --last_midi_note_out = n
+              --last_midi_velocity_out = note_off_event.velocity
+              --last_midi_channel_out = note_off_event.ch
+              --last_midi_on_off_out = 1
+
           end
       end
   end
