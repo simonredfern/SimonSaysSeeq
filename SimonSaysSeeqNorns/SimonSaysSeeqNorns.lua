@@ -8,7 +8,7 @@ version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
-the_current_tick_count_since_start = 0 -- TODO need this / fix this?
+the_current_tick_count_since_start = 0 
 
 function get_script_path()
   local info = debug.getinfo(1,'S');
@@ -932,7 +932,7 @@ function PlayMidi()
       if note_off_event.is_active == 1 then
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Set LED 4 low
-              target_led_4_tri_state = 0
+              -- target_led_4_tri_state = 0
 
               -- Mark MIDI note OFF event
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = 0
@@ -1225,6 +1225,7 @@ end
 
   -- So tick_count doesn't get too big over the course of a long running session. (would end up slowing down modulus calcs?)
   tick_count = tick_count + 1
+  the_current_tick_count_since_start = the_current_tick_count_since_start + 1
 
 
   wow_window_tick_position = wow_window_tick_position + 1
@@ -2584,7 +2585,10 @@ captured_midi_note_in = -1
 -- Capture MIDI IN
 midi_keyboard_usb_device_port.event = function(data)
 
- 
+--  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " data[2] is: " .. data[2] .. " data[3]: is " .. data[3]) 
+
+  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start) 
+
 
   if data[1] == 254 and data[2] == nil and data[3] == nil then
    -- Do nothing! Filter out Active Sensing messages from Yamaha keyboard. 
