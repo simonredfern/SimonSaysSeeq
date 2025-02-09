@@ -264,11 +264,18 @@ last_mozart_value = 0
 last_slide_value = 0
 
 
-last_midi_note = -1
-last_midi_velocity = -1
-last_midi_channel = -1
-last_midi_on_off = -1
-last_midi_device = -1
+last_midi_note_in = -1
+last_midi_velocity_in = -1
+last_midi_channel_in = -1
+last_midi_on_off_in = -1
+last_midi_device_in = -1
+
+last_midi_note_out = -1
+last_midi_velocity_out = -1
+last_midi_channel_out = -1
+last_midi_on_off_out = -1
+last_midi_device_out = -1
+
 
 
 
@@ -566,10 +573,10 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
   last_function = 466942
 
 
-  last_midi_note = note
-last_midi_velocity = velocity
-last_midi_channel = channel
-last_midi_on_off = on_off
+  last_midi_note_in = note
+  last_midi_velocity_in = velocity
+  last_midi_channel_in = channel
+  last_midi_on_off_in = on_off
 
   if channel == MIDI_KEYBOARD_CHANNEL then
       if note >= lowest_keyboard_midi_note and note <= highest_keyboard_midi_note then
@@ -3470,9 +3477,6 @@ function display_tempo_status()
   screen.text(string.format("%.4f",current_tempo) )
   screen.update() 
 
- 
-
-
 end  
 
 
@@ -3490,27 +3494,51 @@ function refresh_grid_and_screen()
 
   if (tempo_wow_is_good == 1 and tempo_flutter_is_good == 1) then
 
-    -- Show min stability info
     screen.move(1,7)
-    screen.text("W")
+    screen.text("N")
     screen.move(1,14)
-    screen.text(wow_tempo_episodes)
+    screen.text(last_midi_note_out)
   
     screen.move(1,21)
-    screen.text("F")
+    screen.text("V")
     screen.move(1,28)
-    screen.text(flutter_tempo_episodes)
+    screen.text(last_midi_velocity_out)
 
     screen.move(1,35)
-    screen.text("w")
+    screen.text("C")
     screen.move(1,42)
-    screen.text(total_wow_tempo_ticks)
+    screen.text(last_midi_channel_out)
     -- screen.text(string.format("%X", total_wow_tempo_ticks * 255))
 
     screen.move(1,49)
-    screen.text("t")
+    screen.text("B")
     screen.move(1,56)
-    screen.text(total_flutter_tempo_ticks)
+    screen.text(last_midi_on_off_out)
+
+
+
+
+    -- Show min stability info
+    -- screen.move(1,7)
+    -- screen.text("W")
+    -- screen.move(1,14)
+    -- screen.text(wow_tempo_episodes)
+  
+    -- screen.move(1,21)
+    -- screen.text("F")
+    -- screen.move(1,28)
+    -- screen.text(flutter_tempo_episodes)
+
+    -- screen.move(1,35)
+    -- screen.text("w")
+    -- screen.move(1,42)
+    -- screen.text(total_wow_tempo_ticks)
+    -- -- screen.text(string.format("%X", total_wow_tempo_ticks * 255))
+
+    -- screen.move(1,49)
+    -- screen.text("t")
+    -- screen.move(1,56)
+    -- screen.text(total_flutter_tempo_ticks)
 
 
   -- NOTE This is only for display purposes.  
@@ -3597,7 +3625,7 @@ end -- stable tempo check
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
 
 
-  midi_status_text = "  MIDI IN " .. string.format("%.3d", last_midi_note) .. " " .. string.format("%.3d", last_midi_velocity) .. " " .. string.format("%.1d", last_midi_on_off) .. " " .. string.format("%.2d", last_midi_channel)  
+  midi_status_text = "  MIDI IN " .. string.format("%.3d", last_midi_note_in) .. " " .. string.format("%.3d", last_midi_velocity_in) .. " " .. string.format("%.1d", last_midi_on_off_in) .. " " .. string.format("%.2d", last_midi_channel_in)  
 
 
 
