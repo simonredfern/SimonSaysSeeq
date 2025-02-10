@@ -905,6 +905,8 @@ function SanityCheckMidiChannel(channel, caller)
     error("SanityCheckMidiChannel says channel is out of bounds with the value: " .. tostring(channel) .. " caller is: " .. caller)
   end 
 
+  return tonumber(channel)
+
 end  
 
 function PlayMidi()
@@ -940,7 +942,7 @@ function PlayMidi()
 
               -- Send MIDI Note ON
 
-              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(1, "PlayMidi A"), "PlayMidi A2")
+              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL, "PlayMidi A"), "PlayMidi A2")
 
               -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
               -- ConditionalWriteMidiNoteOn(MIDI_KEYBOARD_CHANNEL, n, note_on_event.velocity)
