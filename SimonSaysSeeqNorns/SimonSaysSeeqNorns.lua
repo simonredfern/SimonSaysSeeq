@@ -577,7 +577,7 @@ if not (tonumber(note) >= 0 and tonumber(note) <= 127) then
 end 
 
 if not (tonumber(velocity) >= 0 and tonumber(velocity) <= 127) then
-  error("SendMidiKeyboardNoteOn says velocity is out of bounds with the value: " .. tostring(novelocityte))
+  error("SendMidiKeyboardNoteOn says velocity is out of bounds with the value: " .. tostring(velocity))
 end 
 
 SanityCheckMidiChannel(channel, "SendMidiKeyboardNoteOn A")
@@ -896,6 +896,11 @@ function SanityCheckMidiChannel(channel, caller)
   last_function = 987643
   print ("Hello from SanityCheckMidiChannel caller is: " .. caller)
 
+
+  if (channel == nil) then
+    error("SCMC channel nil caller:" .. caller) 
+  end
+
   if not (tonumber(channel) >= 0 and tonumber(channel) <= 16) then
     error("SanityCheckMidiChannel says channel is out of bounds with the value: " .. tostring(channel) .. " caller is: " .. caller)
   end 
@@ -935,7 +940,7 @@ function PlayMidi()
 
               -- Send MIDI Note ON
 
-              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL, "PlayMidi A"), "PlayMidi A2")
+              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(1, "PlayMidi A"), "PlayMidi A2")
 
               -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
               -- ConditionalWriteMidiNoteOn(MIDI_KEYBOARD_CHANNEL, n, note_on_event.velocity)
@@ -964,6 +969,8 @@ function PlayMidi()
 
               -- Send MIDI Note OFF
 
+
+              print ("MIDI_KEYBOARD_CHANNEL is " .. MIDI_KEYBOARD_CHANNEL)
               SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL, "PlayMidi B"), "PlayMidi B 2")
 
               -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, 0)
