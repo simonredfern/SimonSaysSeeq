@@ -892,6 +892,34 @@ function init_flutter_window()
   flutter_tempo_sum = 0
 end  
 
+
+
+function SanityCheckMidiNote(note)
+  last_function = 9822243
+  print ("Hello from SanityCheckMidiNote")
+
+
+  if (note == nil) then
+    error("SanityCheckMidiNote says note is nil") 
+  end
+
+  if not (tonumber(note) >= 0 and tonumber(note) <= 127) then
+    error("SanityCheckMidiNote says note is out of bounds with the value: " .. tostring(note))
+  end 
+
+  return tonumber(note)
+
+end  
+
+
+
+
+
+
+
+
+
+
 function SanityCheckMidiChannel(channel)
   last_function = 987643
   print ("Hello from SanityCheckMidiChannel")
