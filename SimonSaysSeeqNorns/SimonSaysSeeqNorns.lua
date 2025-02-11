@@ -911,7 +911,22 @@ function SanityCheckMidiNote(note)
 
 end  
 
+function SanityCheckMidiVelocity(velocity)
+  last_function = 9122243
+  print ("Hello from SanityCheckMidiVelocity")
 
+
+  if (velocity == nil) then
+    error("SanityCheckMidiVelocity says velocity is nil") 
+  end
+
+  if not (tonumber(velocity) >= 0 and tonumber(velocity) <= 127) then
+    error("SanityCheckMidiVelocity says velocity is out of bounds with the value: " .. tostring(velocity))
+  end 
+
+  return tonumber(velocity)
+
+end  
 
 
 
