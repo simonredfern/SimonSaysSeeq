@@ -269,10 +269,10 @@ last_midi_channel_in = -1
 last_midi_on_off_in = -1
 last_midi_device_in = -1
 
-last_midi_note_out = -1
-last_midi_velocity_out = -1
+last_midi_note_on_out = -1
+last_midi_on_velocity_out = -1
 last_midi_channel_out = -1
-last_midi_on_off_out = -1
+last_midi_note_off_out = -1
 last_midi_device_out = -1
 
 
@@ -570,21 +570,27 @@ end
 
 function SendMidiKeyboardNoteOn (note, velocity, channel)
 
-print ("Hello from SendMidiKeyboardNoteOn")
+  print ("Hello from SendMidiKeyboardNoteOn")
 
-SanityCheckMidiNote(note)
-SanityCheckMidiVelocity(velocity)
-SanityCheckMidiChannel(channel) -- don't need to return this, just check it and carry on.
+  SanityCheckMidiNote(note)
+  SanityCheckMidiVelocity(velocity)
+  SanityCheckMidiChannel(channel) -- don't need to return this, just check it and carry on.
 
   print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
   midi_keyboard_usb_device_port:note_on (note, velocity, channel)
 
-  last_midi_note_out = note
-  last_midi_velocity_out = velocity
-  last_midi_channel_out = channel
-  last_midi_on_off_out = 1
-  -- last_midi_device_out = 
+
+  if velocity > 0 then
+    last_midi_note_on_out = note
+    last_midi_on_velocity_out = velocity
+  else 
+    last_midi_note_off_out = note
+  end
+
+  last_midi_channel_out = note
+  
+
 
 end
 
@@ -1011,17 +1017,8 @@ function PlayMidi()
 
               -- Send MIDI Note OFF
 
-
               print ("MIDI_KEYBOARD_CHANNEL is " .. MIDI_KEYBOARD_CHANNEL)
               SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
-
-              -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, 0)
-
-
-              --last_midi_note_out = n
-              --last_midi_velocity_out = note_off_event.velocity
-              --last_midi_channel_out = note_off_event.ch
-              --last_midi_on_off_out = 1
 
           end
       end
@@ -3595,14 +3592,14 @@ function refresh_grid_and_screen()
   if (tempo_wow_is_good == 1 and tempo_flutter_is_good == 1) then
 
     screen.move(1,7)
-    screen.text("N")
+    screen.text(last_midi_note_on_out)
     screen.move(1,14)
-    screen.text(last_midi_note_out)
+    screen.text(last_midi_on_velocity_out)
   
     screen.move(1,21)
-    screen.text("V")
+    screen.text(last_midi_note_off_out)
     screen.move(1,28)
-    screen.text(last_midi_velocity_out)
+    
 
     screen.move(1,35)
     screen.text("C")
@@ -3613,7 +3610,7 @@ function refresh_grid_and_screen()
     screen.move(1,49)
     screen.text("B")
     screen.move(1,56)
-    screen.text(last_midi_on_off_out)
+    screen.text(last_midi_note_off_out)
 
 
 
