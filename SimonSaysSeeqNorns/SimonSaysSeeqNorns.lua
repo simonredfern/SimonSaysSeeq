@@ -597,6 +597,7 @@ function SendMidiKeyboardNoteOn (note, velocity, channel)
   midi_keyboard_usb_device_port:note_on (note, velocity, channel)
 
 
+  -- for display
   if velocity > 0 then
     last_midi_note_on_out = note
     last_midi_on_velocity_out = velocity
@@ -3740,7 +3741,7 @@ end -- stable tempo check
 -- https://www.cprogramming.com/tutorial/printf-format-strings.html
 
 
-  midi_status_text = "  MIDI IN " .. string.format("%.3d", last_midi_note_in) .. " " .. string.format("%.3d", last_midi_velocity_in) .. " " .. string.format("%.1d", last_midi_on_off_in) .. " " .. string.format("%.2d", last_midi_channel_in)  
+  midi_status_text = "  MIDI IN " .. midiNoteToName (last_midi_note_in) .. " " .. string.format("%.3d", last_midi_velocity_in) .. " " .. string.format("%.1d", last_midi_on_off_in) .. " " .. string.format("%.2d", last_midi_channel_in)  
 
 
 
