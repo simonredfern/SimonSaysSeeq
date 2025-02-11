@@ -572,14 +572,8 @@ function SendMidiKeyboardNoteOn (note, velocity, channel)
 
 print ("Hello from SendMidiKeyboardNoteOn")
 
-if not (tonumber(note) >= 0 and tonumber(note) <= 127) then
-  error("SendMidiKeyboardNoteOn says note is out of bounds with the value: " .. tostring(note))
-end 
-
-if not (tonumber(velocity) >= 0 and tonumber(velocity) <= 127) then
-  error("SendMidiKeyboardNoteOn says velocity is out of bounds with the value: " .. tostring(velocity))
-end 
-
+SanityCheckMidiNote(note)
+SanityCheckMidiVelocity(velocity)
 SanityCheckMidiChannel(channel) -- don't need to return this, just check it and carry on.
 
   print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
@@ -994,6 +988,9 @@ function PlayMidi()
  
 
               print ("play note " .. n .. " on step " .. midi_step_count)
+          else
+            print("note_on_event.tick_count_since_step did not equal the_current_tick_count_since_step" .. note_on_event.tick_count_since_step .. " " .. the_current_tick_count_since_step)
+          
           end
       
         else     
@@ -2672,19 +2669,9 @@ midi_keyboard_usb_device_port.event = function(data)
     print("midi_keyboard_usb_device_port.event ")   
 
 
-
-
-
- -- else  
-    --for key, value in pairs(data) do
-    --  print(key, " -- ", value)
-    --end
-
-
+    -- TODO MIGHT BE BETTER TO USE THIS WHITE LIST INSTEAD OF BLACK LIST ABOVE.
   -- If NOTE ON (MIDI specification states that note off can either be a note off event OR a zero velocity note on event - so we must handle that.)
  -- if data[1] == 144 and data[3] ~= 0 then
- --store this so we can act on a later step press
-    
    
 
       local midi_msg = midi.to_msg(data) -- Convert raw MIDI data to a structured table
