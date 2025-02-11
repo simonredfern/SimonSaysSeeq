@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.5.4"
+version = "1.5.5"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -477,6 +477,8 @@ PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 
 greetings_done = false
 
+  
+
 
 ---------------------- -------------------------------------
 -- From C++ code
@@ -543,14 +545,10 @@ end
 
 -- Initialize the data structure
 keyboard_midi_note_events = create_keyboard_midi_note_events()
+-- AllMidiNotesOff()
 
--- Example usage: Modify a note
---keyboard_midi_note_events[1][2][3][4][1].velocity = 100
 
--- Print a value
---print(keyboard_midi_note_events[1][2][3][4][1].velocity)  -- Output: 100
 
--------------------------------
 
 -- Function to disable MIDI notes
 function DisableKeyboardMidiNotes(note)
@@ -559,6 +557,8 @@ function DisableKeyboardMidiNotes(note)
   -- Disable that note for all steps
   for bc = FIRST_BAR, MAX_BAR do
       for sc = midi_first_step, midi_last_step do
+          keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
+          keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
       end
@@ -606,9 +606,15 @@ function SendMidiKeyboardNoteOn (note, velocity, channel)
   end
 
   last_midi_channel_out = channel
-  
 
+end
 
+function AllMidiNotesOff()
+  -- this should only be used for a panic.
+  -- with normal clear behaviour should only note off the notes that are active.
+  for note = 0, 127 do
+    SendMidiKeyboardNoteOn(note,0,1)
+  end
 end
 
 
@@ -627,13 +633,17 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
         print ("on_off is " .. on_off)
           if on_off == C_MIDI_NOTE_ON then
               -- If velocity is low, treat as note off
-              if velocity < 40 then
+              if velocity < 50 then
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
-                  --SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
+                  
 
                   DisableKeyboardMidiNotes(note)
                   last_note_disabled = note
+
+                  -- Turn the note offa
+                  SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
+
               else
                   -- Process note on
                   if current_midi_lane ~= SILENT_MIDI_LANE then
@@ -913,7 +923,7 @@ end
 
 function SanityCheckMidiNote(note)
   last_function = 9822243
-  print ("Hello from SanityCheckMidiNote")
+  -- print ("Hello from SanityCheckMidiNote")
 
 
   if (note == nil) then
@@ -930,7 +940,7 @@ end
 
 function SanityCheckMidiVelocity(velocity)
   last_function = 9122243
-  print ("Hello from SanityCheckMidiVelocity")
+  -- print ("Hello from SanityCheckMidiVelocity")
 
 
   if (velocity == nil) then
@@ -954,7 +964,7 @@ end
 
 function SanityCheckMidiChannel(channel)
   last_function = 987643
-  print ("Hello from SanityCheckMidiChannel")
+  -- print ("Hello from SanityCheckMidiChannel")
 
 
   if (channel == nil) then
@@ -2713,7 +2723,16 @@ midi_keyboard_usb_device_port.event = function(data)
   else
 
     if midi_msg.type == "cc" then
-      print("midi cc " .. d.cc .. " = " .. d.val)
+      print("midi cc " .. midi_msg.cc .. " = " .. midi_msg.val)
+      
+      -- Look for sustain pedal on.
+      if midi_msg.cc ==  64 and midi_msg.val ==  127 then
+        -- init the midi sequence
+        keyboard_midi_note_events = create_keyboard_midi_note_events()
+        AllMidiNotesOff()
+      end
+
+
     else
       -- hopefully we have filtered out 254 above but there might be other stuff.
       print("other midi data: ")
