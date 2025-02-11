@@ -568,6 +568,22 @@ function DisableKeyboardMidiNotes(note)
 end
 
 
+local noteNames = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+
+function midiNoteToName(midiNote)
+  if midiNote < 0 or midiNote > 127 then
+    return "---" -- unknown
+    --  return nil, "Invalid MIDI note number"
+  end
+  
+  local noteIndex = (midiNote % 12) + 1  -- Lua indices start at 1
+  local octave = math.floor(midiNote / 12) - 1  -- MIDI note 0 is in octave -1
+  
+  return noteNames[noteIndex] .. octave
+end
+
+
+
 function SendMidiKeyboardNoteOn (note, velocity, channel)
 
   print ("Hello from SendMidiKeyboardNoteOn")
@@ -588,7 +604,7 @@ function SendMidiKeyboardNoteOn (note, velocity, channel)
     last_midi_note_off_out = note
   end
 
-  last_midi_channel_out = note
+  last_midi_channel_out = channel
   
 
 
@@ -3592,12 +3608,14 @@ function refresh_grid_and_screen()
   if (tempo_wow_is_good == 1 and tempo_flutter_is_good == 1) then
 
     screen.move(1,7)
-    screen.text(last_midi_note_on_out)
+    
+
+    screen.text(midiNoteToName(last_midi_note_on_out))
     screen.move(1,14)
     screen.text(last_midi_on_velocity_out)
   
     screen.move(1,21)
-    screen.text(last_midi_note_off_out)
+    screen.text(midiNoteToName(last_midi_note_off_out))
     screen.move(1,28)
     
 
