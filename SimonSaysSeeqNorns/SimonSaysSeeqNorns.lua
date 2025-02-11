@@ -568,9 +568,9 @@ function DisableKeyboardMidiNotes(note)
 end
 
 
-function SendMidiKeyboardNoteOn (note, velocity, channel, caller)
+function SendMidiKeyboardNoteOn (note, velocity, channel)
 
-print ("Hello from SendMidiKeyboardNoteOn caller is: " .. caller)
+print ("Hello from SendMidiKeyboardNoteOn")
 
 if not (tonumber(note) >= 0 and tonumber(note) <= 127) then
   error("SendMidiKeyboardNoteOn says note is out of bounds with the value: " .. tostring(note))
@@ -942,7 +942,7 @@ function PlayMidi()
 
               -- Send MIDI Note ON
 
-              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL), "PlayMidi A2")
+              SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
               -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
               -- ConditionalWriteMidiNoteOn(MIDI_KEYBOARD_CHANNEL, n, note_on_event.velocity)
@@ -973,7 +973,7 @@ function PlayMidi()
 
 
               print ("MIDI_KEYBOARD_CHANNEL is " .. MIDI_KEYBOARD_CHANNEL)
-              SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL), "PlayMidi B 2")
+              SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
               -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, 0)
 
