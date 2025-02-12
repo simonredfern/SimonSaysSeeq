@@ -655,10 +655,9 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
                       -- Pass through the note 
                       -- NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.
-                      -- Espeically if sequencer is stopped.   
+                      -- Echo the midi note through norns to the synth.
+                      -- TODO this should be configurable via the grid easily turn on / off midi echo for different keyboard / synth setups.  
                       PlayMidi(note, velocity, channel) 
-
-
               end
 
               -- last_note_on = note
@@ -673,7 +672,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
 
               -- Echo the midi note through norns to the synth.
-
+              -- TODO this should be configurable via the grid easily turn on / off midi echo for different keyboard / synth setups.  
               SendMidiKeyboardNoteOn(note, 0, channel)    
 
               -- last_note_off = note
