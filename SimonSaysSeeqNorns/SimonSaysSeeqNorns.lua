@@ -1000,15 +1000,9 @@ function PlayMidi()
           if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Can we flash the screen here or flash the new grids? 
 
-              -- Mark MIDI note ON event -- why do we need this??
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = the_current_tick_count_since_start
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
-
               -- Send MIDI Note ON
-
               SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
-
-              print ("I sent Midi note " .. n .. " on step " .. midi_step_count)
+              -- print ("I sent Midi note " .. n .. " on step " .. midi_step_count)
           else
             -- print("note_on_event.tick_count_since_step did not equal the_current_tick_count_since_step " .. note_on_event.tick_count_since_step .. " vs " .. the_current_tick_count_since_step)
           
@@ -1023,15 +1017,7 @@ function PlayMidi()
       
       if note_off_event.is_active == 1 then
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
-
-
-              -- Mark MIDI note OFF event
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = 0
-              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = the_current_tick_count_since_start
-
               -- Send MIDI Note OFF
-
-              print ("MIDI_KEYBOARD_CHANNEL is " .. MIDI_KEYBOARD_CHANNEL)
               SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
           end
