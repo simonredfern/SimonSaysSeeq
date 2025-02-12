@@ -653,22 +653,12 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
 
-                      -- Pass through the note NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.   
+                      -- Pass through the note 
+                      -- NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.
+                      -- Espeically if sequencer is stopped.   
                       PlayMidi(note, velocity, channel) 
 
 
-              end
-
-              -- Echo MIDI if sequencer is stopped
-              if transport_is_active == false then
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = the_current_tick_count_since_start
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
-
-
-                  -- TODO do we need this causes grid and screen to freeze?
-                  -- SendMidiKeyboardNoteOn(note, 0, channel)
-            
-                  
               end
 
               -- last_note_on = note
@@ -678,22 +668,16 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
    
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = the_current_tick_count_since_step
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity = velocity
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = the_current_tick_count_since_step
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity = velocity
+              keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
 
+              -- Echo the midi note through norns to the synth.
+
+              SendMidiKeyboardNoteOn(note, 0, channel)    
 
               -- last_note_off = note
 
-              if transport_is_active == false then -- TODO hmm - how can we even get here?
-              -- if sequence_is_running == 0 then
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = 0
-                  keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = the_current_tick_count_since_start
-                  --midi.writeNoteOff(channel, note, 0)
-                  -- TODO hmm
-                  -- SendMidiKeyboardNoteOn(note, 0, channel)
-                  -- midi_keyboard_usb_device_port:note_off (note, channel, 0)
-              end
 
               print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
           end
@@ -1740,6 +1724,10 @@ function clock.transport.start()
   print("====================== transport.start says Hello ========================")
 
   init_tick_count()
+  InitStepCountSinceStep()
+
+  the_current_tick_count_since_start = 0
+
 
   transport_is_active = true
 
