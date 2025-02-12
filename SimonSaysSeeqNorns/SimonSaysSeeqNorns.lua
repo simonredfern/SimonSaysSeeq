@@ -980,33 +980,27 @@ function SanityCheckMidiChannel(channel)
 end  
 
 function PlayMidi()
-  -- This function plays MIDI based on step_a_play and keyboard_midi_note_events.
+  -- This function, which gets called every tick,
+  -- loops through all 127 midi notes,
+  -- and GETS the note on event that matches the current midi lane, bar and step. 
+  -- (which we WILL becuase we init a table with all possible lane,bar,step,note combinations.)
+  -- Then we check if the note is active.
+  -- Then we check if the note should be played on this particular tick.
+  -- This means we can have only ONE note name (e.g. C4) per step, but it can be on any tick within the step which is kind of nice.
+
   last_function = 364892
 
   -- print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
 
   for n = 0, 127 do
-      -- Read MIDI sequence (Note ONs at the current global step_a_play)
-      -- local note_on_event = keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_play)][n][1]
-      
-      --print (current_midi_lane)
-      --print (midi_bar_count)
-      --print (midi_step_count)
-      --print (keyboard_midi_note_events)
-
-      
 
       local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
-      
-
 
       if note_on_event.is_active == 1 then
           if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
-              -- Set LED 4 high
-              -- target_led_4_tri_state = 1
               -- Can we flash the screen here or flash the new grids? 
 
-              -- Mark MIDI note ON event
+              -- Mark MIDI note ON event -- why do we need this??
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = the_current_tick_count_since_start
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0].tick_count_since_start = 0
 
@@ -1014,15 +1008,9 @@ function PlayMidi()
 
               SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
-              -- midi_keyboard_usb_device_port:note_on (MIDI_KEYBOARD_CHANNEL, n, keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].velocity)
-              -- ConditionalWriteMidiNoteOn(MIDI_KEYBOARD_CHANNEL, n, note_on_event.velocity)
-
-
- 
-
-              print ("play note " .. n .. " on step " .. midi_step_count)
+              print ("I sent Midi note " .. n .. " on step " .. midi_step_count)
           else
-            print("note_on_event.tick_count_since_step did not equal the_current_tick_count_since_step" .. note_on_event.tick_count_since_step .. " " .. the_current_tick_count_since_step)
+            -- print("note_on_event.tick_count_since_step did not equal the_current_tick_count_since_step " .. note_on_event.tick_count_since_step .. " vs " .. the_current_tick_count_since_step)
           
           end
       
@@ -1035,8 +1023,7 @@ function PlayMidi()
       
       if note_off_event.is_active == 1 then
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
-              -- Set LED 4 low
-              -- target_led_4_tri_state = 0
+
 
               -- Mark MIDI note OFF event
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1].tick_count_since_start = 0
@@ -1066,6 +1053,7 @@ function tick()
 
     print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
 
+    PlayMidi() -- play on every tick because we record notes to tick accuracy
 
    -- In clock sync, 1 refers to a quarter note so if we clock.sync(1) we will count 4 beats per bar
    -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
@@ -1528,7 +1516,7 @@ function process_step()
 
    end -- End check midi start
 
- PlayMidi() -- not sure if its good here.
+
 
   
   -- For each sequence row...
