@@ -464,7 +464,18 @@ tick_count = 0
 
 blip_count = 0
 
-the_current_tick_count_since_step = 0
+
+
+function InitStepCountSinceStep ()
+  the_current_tick_count_since_step = 0 
+end
+
+function IncrementStepCountSinceStep ()
+  the_current_tick_count_since_step = the_current_tick_count_since_step + 1 
+end 
+
+InitStepCountSinceStep()
+
 
 PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 
@@ -1041,7 +1052,13 @@ function PlayMidi()
   end
 end
 
+
+
+
 ------------- ON TICK ontick FUNCTION - THIS IS THE MAIN TIMING LOOP - The Main Loop!---------------------------
+
+
+
 function tick()
   while true do
 
@@ -1273,7 +1290,7 @@ end
 
     if tick_count % 12 == 0 then
   
-      the_current_tick_count_since_step = 0
+      InitStepCountSinceStep()
 
       --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
@@ -1373,12 +1390,13 @@ end
    
 
     end 
-    the_current_tick_count_since_step = the_current_tick_count_since_step + 1  
+  
+    IncrementStepCountSinceStep ()
   end -- end while
   
 end -- end on tick function
 
-
+ 
 
 
 function init_tick_count()
