@@ -462,7 +462,7 @@ tick_count = 0
 
 
 
-blip_count = 0
+-- blip_count = 0
 
 
 
@@ -1246,11 +1246,11 @@ end
   if transport_is_active then 
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
 
-    if blip_count == 0 then
+    --if blip_count == 0 then
 
       -- print("i would process the step here " .. blip_count)
       -- process_step() 
-    end  
+    --end  
 
         -- Less frequently triggered gates
 
@@ -1318,17 +1318,17 @@ end
       total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)  --- total_step_co2_count + 1
         
       -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step. Huh??
-      if midi_step_count == 3 then
-        blip_count = 6
-      else   
-        blip_count = 12
-      end
+      -- if midi_step_count == 3 then
+      --   blip_count = 6
+      -- else   
+      --   blip_count = 12
+      -- end
 
       redraw()
 
     end -- end mod 12
 
-    blip_count = blip_count - 1
+    --blip_count = blip_count - 1
 
   end   
 
