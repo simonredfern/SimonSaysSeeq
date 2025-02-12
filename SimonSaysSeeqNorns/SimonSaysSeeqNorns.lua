@@ -295,7 +295,7 @@ MIDI_KEYBOARD_CHANNEL = 1
 
 current_midi_lane = 1 -- so far in norns we only have one any MIDI note number divided by 12 is how the pitch is expressed in voltage (assuming volt per octave)
 
-SILENT_MIDI_LANE = 2 
+
 
 
 -- This works well with Flame MGTV factory default settings. 
@@ -621,7 +621,7 @@ function AllMidiNotesOff()
 end
 
 
--- Function to process incoming MIDI note events HEREHERE
+-- Function to process incoming MIDI note events 
 function OnMidiNoteInEvent(on_off, note, velocity, channel)
   last_function = 466942
 
@@ -646,23 +646,24 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
               else
                   -- Process note on
-                  if current_midi_lane ~= SILENT_MIDI_LANE then
+    
                       print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                       
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = the_current_tick_count_since_step
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
-                  else
-                      print(string.format("SILENT lane so NOT Writing note %d When step is %d velocity is %d", note, midi_step_count, velocity))
-                  end
+
+                      -- Pass through the note NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.   
+                      PlayMidi(note, velocity, channel) 
+
+
               end
 
               -- Echo MIDI if sequencer is stopped
               if transport_is_active == false then
-              --if sequence_is_running == 0 then
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_start = the_current_tick_count_since_start
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_start = 0
-                  --midi_keyboard_usb_device_port.writeNoteOn(channel, note, velocity)
+
 
                   -- TODO do we need this causes grid and screen to freeze?
                   -- SendMidiKeyboardNoteOn(note, 0, channel)
@@ -676,13 +677,11 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               -- Process MIDI note off
               print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
-              if current_midi_lane ~= SILENT_MIDI_LANE then
+   
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = the_current_tick_count_since_step
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity = velocity
                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
-              else
-                  print(string.format("SILENT lane so NOT setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
-              end
+
 
               -- last_note_off = note
 
@@ -781,7 +780,7 @@ end}
 
 
  -- defaults
- normal_midi_note_is_on = false
+ normal_midi_note_is_on = false -- what is this for?
  normal_midi_note_is_off = false
  normal_midi_note_in = -1
 
@@ -1036,7 +1035,7 @@ function tick()
   while true do
 
 
-
+    -- quick question. why is this never zero?
     print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
 
     PlayMidi() -- play on every tick because we record notes to tick accuracy
@@ -2667,6 +2666,7 @@ captured_midi_note_in = -1
  ------
 
 
+ -- On MIDI note receive -  on midi note input - on midi in
 -- Capture MIDI IN
 midi_keyboard_usb_device_port.event = function(data)
 
