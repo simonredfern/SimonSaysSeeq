@@ -350,12 +350,6 @@ SCREEN_INFO_Y = 49
 
 audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/modular-pulse.wav"
 
--- audio_clock_file = _path.dust.."audio/SimonSaysSeeqAudio/hermit_leaves.wav"
-
--- audio_clock_file = _path.dust.."audio/x0x/606/606-CH.wav"
-
--- PRESET_GRID_BUTTON = {x=1, y=2}
-
 BUTTONS = {}
 
 --7th Row -- Probably not used because now using for gates
@@ -470,7 +464,7 @@ tick_count = 0
 
 blip_count = 0
 
-the_current_tick_count_since_step = 0 -- TODO make this count
+the_current_tick_count_since_step = 0
 
 PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 
@@ -521,8 +515,6 @@ end
 -- Create a multidimensional table
 function create_keyboard_midi_note_events()
     local keyboard_midi_note_events = {}
-
-    
 
     for lane = MIN_LANE, MAX_LANE do
         keyboard_midi_note_events[lane] = {}
@@ -633,15 +625,12 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
         print ("on_off is " .. on_off)
           if on_off == C_MIDI_NOTE_ON then
               -- If velocity is low, treat as note off
-              if velocity < 50 then
+              if velocity < 40 then
                   print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
-                  
-
                   DisableKeyboardMidiNotes(note)
-                  last_note_disabled = note
 
-                  -- Turn the note offa
+                  -- Turn the note off
                   SendMidiKeyboardNoteOn(note, 0, channel) -- not send explicit note off or this is the same?
 
               else
@@ -1056,6 +1045,11 @@ end
 function tick()
   while true do
 
+
+
+    print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
+
+
    -- In clock sync, 1 refers to a quarter note so if we clock.sync(1) we will count 4 beats per bar
    -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
    -- if we clock.sync(1/24) this is 24PPQN Pulses Per Quarter Note, I.e. standard MIDI clock
@@ -1279,6 +1273,7 @@ end
 
     if tick_count % 12 == 0 then
   
+      the_current_tick_count_since_step = 0
 
       --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
@@ -1314,7 +1309,7 @@ end
 
       redraw()
 
-    end
+    end -- end mod 12
 
     blip_count = blip_count - 1
 
@@ -1377,10 +1372,11 @@ end
 
    
 
-    end  
-
-  end
-end
+    end 
+    the_current_tick_count_since_step = the_current_tick_count_since_step + 1  
+  end -- end while
+  
+end -- end on tick function
 
 
 
