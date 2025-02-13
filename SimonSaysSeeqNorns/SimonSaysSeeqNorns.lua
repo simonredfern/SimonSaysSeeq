@@ -81,8 +81,6 @@ end
 
 
 
--- TODO - add total_wow_tempo_ticks to display
-
 
 -- To measure / display tempo instability
 -- Two windows for averaging the tempo. 
@@ -108,7 +106,7 @@ flutter_threshold = 0.25
 
 
 sequence_button_x = 0 
-sequence_button_x = 0
+sequence_button_y = 0
 sequence_button_midi = 0
 sequence_button_is_pressed = false
 
@@ -462,8 +460,6 @@ tick_count = 0
 
 
 
--- blip_count = 0
-
 
 
 function InitStepCountSinceStep ()
@@ -489,10 +485,10 @@ greetings_done = false
 -- From C++ code
 -- Constants
 local FIRST_BAR = 1
-local MAX_BAR = 8  -- Memory User!
+local MAX_BAR = 8  
 
 local MIN_LANE = 1
-local MAX_LANE = 2  -- Memory User!
+local MAX_LANE = 2 
 
 local MAX_STEP = 16
 
@@ -696,30 +692,6 @@ grid_state_dirty = false
 
 print (my_grid)
 
--- Note the *ports*
--- midi.devices are:
--- 1	 -- 	table: 0x52be78
---   id	 -- 	1
---   dev	 -- 	userdata: 0x3f15a0
---   name	 -- 	virtual
--- 3	 -- 	table: 0x53fe78
---   id	 -- 	3
---   name	 -- 	Teensy MIDI
---   dev	 -- 	userdata: 0x554ea0
---   port	 -- 	1
--- 4	 -- 	table: 0x554ca0
---   id	 -- 	4
---   name	 -- 	USB MIDI Interface
---   dev	 -- 	userdata: 0x5557a8
---   port	 -- 	3
--- 5	 -- 	table: 0x52c338
---   id	 -- 	5
---   name	 -- 	Teensy MIDI 2
---   dev	 -- 	userdata: 0x555d08
---   port	 -- 	2
-
-
-
 
 INITIAL_MIDI_GATES_PORT = 1 -- In the currrent cable setup this is CLOCK IN and GATES OUT
 INITIAL_MIDI_KEYBOARD_PORT = 2
@@ -755,13 +727,6 @@ end}
 
 
 
-
-
-
-
-
-
-
  -- defaults
  normal_midi_note_is_on = false -- what is this for?
  normal_midi_note_is_off = false
@@ -780,11 +745,6 @@ math.random() -- call a few times so it gets more random (apparently)
 math.random() 
 math.random()
 
--- engine.name = 'PolyPerc'
-
-
-
-
 
 function Set (list)
   local set = {}
@@ -802,82 +762,6 @@ SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 -- Fonts: Note, we can use the Foundry app to view all the fonts.
 -- Tried to find a fixed font (so strings don't jump around), but currently using the default font
 -- Best approach probably is not to have long strings and instead place short strings at specific locations on the screen.
-
--- 2 at 8 works 
--- not 29, 40
--- Most of these fonts don't look good on Norns Shield
-  -- 1 04B_03 (norns default) 
-  -- 2 ALEPH 
-  -- 3 Roboto Thin 
-  -- 4 Roboto Light 
-  -- 5 Roboto Regular 
-  -- 6 Roboto Medium 
-  -- 7 Roboto Bold 
-  -- 8 Roboto Black 
-  -- 9 Roboto Thin Italic 
-  -- 10 Roboto Light Italic 
-  -- 11 Roboto Italic 
-  -- 12 Roboto Medium Italic 
-  -- 13 Roboto Bold Italic 
-  -- 14 Roboto Black Italic 
-  -- 15 VeraBd 
-  -- 16 VeraBI 
-  -- 17 VeraIt 
-  -- 18 VeraMoBd 
-  -- 19 VeraMoBI 
-  -- 20 VeraMoIt 
-  -- 21 VeraMono 
-  -- 22 VeraSeBd 
-  -- 23 VeraSe 
-  -- 24 Vera 
-  -- 25 bmp/tom-thumb 
-  -- 26 creep 
-  -- 27 ctrld-fixed-10b 
-  -- 28 ctrld-fixed-10r 
-  -- 29 ctrld-fixed-13b 
-  -- 30 ctrld-fixed-13b-i 
-  -- 31 ctrld-fixed-13r 
-  -- 32 ctrld-fixed-13r-i 
-  -- 33 ctrld-fixed-16b 
-  -- 34 ctrld-fixed-16b-i 
-  -- 35 ctrld-fixed-16r 
-  -- 36 ctrld-fixed-16r-i 
-  -- 37 scientifica-11 
-  -- 38 scientificaBold-11 
-  -- 39 scientificaItalic-11 
-  -- 40 ter-u12b 
-  -- 41 ter-u12n 
-  -- 42 ter-u14b 
-  -- 43 ter-u14n 
-  -- 44 ter-u14v 
-  -- 45 ter-u16b 
-  -- 46 ter-u16n 
-  -- 47 ter-u16v 
-  -- 48 ter-u18b 
-  -- 49 ter-u18n 
-  -- 50 ter-u20b 
-  -- 51 ter-u20n 
-  -- 52 ter-u22b 
-  -- 53 ter-u22n 
-  -- 54 ter-u24b 
-  -- 55 ter-u24n 
-  -- 56 ter-u28b 
-  -- 57 ter-u28n 
-  -- 58 ter-u32b 
-  -- 59 ter-u32n 
-  -- 60 unscii-16-full.pcf 
-  -- 61 unscii-16.pcf 
-  -- 62 unscii-8-alt.pcf 
-  -- 63 unscii-8-fantasy.pcf 
-  -- 64 unscii-8-mcr.pcf 
-  -- 65 unscii-8.pcf 
-  -- 66 unscii-8-tall.pcf 
-  -- 67 unscii-8-thin.pcf
-
-
-  -- See notes above
--- screen.font_face(1)
--- screen.font_size(7)
 
 
 function init_wow_and_flutter_counters()
@@ -1139,7 +1023,6 @@ end
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
 
--- TODO - where in here should we play midi ?
 
 
     -- if swing_mode == 1 then
@@ -1162,39 +1045,33 @@ end
     -- end  
 
 
-  
+    --     if PPQN24_GATES_ARE_ENABLED == true then
 
+    --       if run_conditional_clocks == true then
 
-
-
-
-        if PPQN24_GATES_ARE_ENABLED == true then
-
-          if run_conditional_clocks == true then
-
-        -- 24 PPQN clock -- This is a 50 50 duty cycle
-        if tick_count % 2 == 0 then
+    --     -- 24 PPQN clock -- This is a 50 50 duty cycle
+    --     -- if tick_count % 2 == 0 then
          
-         if (enable_audio_clock_out == 1) then
-          -- this doesn't work - not using.
-          softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
-          softcut.play(1,1)
-         end
+    --     --  if (enable_audio_clock_out == 1) then
+    --     --   -- this doesn't work - not using.
+    --     --   softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
+    --     --   softcut.play(1,1)
+    --     --  end
 
-        else
+    --     -- else
 
-         -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
-         if (enable_audio_clock_out == 1) then
-          -- This doesn't work. not using
-           softcut.play(1,0)
-         end
+    --     --  -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
+    --     --  if (enable_audio_clock_out == 1) then
+    --     --   -- This doesn't work. not using
+    --     --    softcut.play(1,0)
+    --     --  end
 
-        end  
+    --     -- end  
 
 
-      end -- End conditional clocks check 
+    --   end -- End conditional clocks check 
 
-    end -- End check for 24 PPQN clocks
+    -- end -- End check for 24 PPQN clocks
 
 
 
@@ -1202,11 +1079,7 @@ end
   if transport_is_active then 
     -- Every 12 ticks we want to advance the sequencer (if transport is active) 
 
-    --if blip_count == 0 then
 
-      -- print("i would process the step here " .. blip_count)
-      -- process_step() 
-    --end  
 
         -- Less frequently triggered gates
 
@@ -1441,7 +1314,7 @@ function greetings()
   --print("now awake")
   greetings_done = true
 
-  print_audio_file_info(audio_clock_file)
+  -- print_audio_file_info(audio_clock_file)
   
 end
 
@@ -1841,13 +1714,9 @@ function key(n,z)
     -- START Right button pressed
     if n == 3 and z == 1 then
 
-      -- try moving pointer to loud part of sample
-
-    --  softcut.tape_play_start ()
-
-
       if not transport_is_active then
         clock.transport.start()
+        -- TODO get rid of this midi start stuff. (don't want to use as clock master.)
         request_midi_start() -- Just send MIDI start instead of requesting?
 
         
@@ -1928,17 +1797,17 @@ end -- end function definition
 
 
 -- Originally copied from https://github.com/monome/softcut-studies/blob/master/1-basics.lua
-function print_audio_file_info(file)
-  if util.file_exists(file) == true then
-    local ch, samples, samplerate = audio.file_info(file)
-    local duration = samples/samplerate
-    print("loading file: "..file)
-    print("  channels:\t"..ch)
-    print("  samples:\t"..samples)
-    print("  sample rate:\t"..samplerate.."hz")
-    print("  duration:\t"..duration.." sec")
-  else print "ERROR read_wav(): file not found" end
-end
+-- function print_audio_file_info(file)
+--   if util.file_exists(file) == true then
+--     local ch, samples, samplerate = audio.file_info(file)
+--     local duration = samples/samplerate
+--     print("loading file: "..file)
+--     print("  channels:\t"..ch)
+--     print("  samples:\t"..samples)
+--     print("  sample rate:\t"..samplerate.."hz")
+--     print("  duration:\t"..duration.." sec")
+--   else print "ERROR read_wav(): file not found" end
+-- end
 
 
 
@@ -1949,11 +1818,7 @@ end
 local mo = midi.connect(1) -- defaults to port 1
 mo.event = midi_event
 
--- process incoming midi
---local midi_event = function(data) 
---  d = midi.to_msg(data)
---  -- etc.
---end
+
 
 
 
@@ -1966,60 +1831,51 @@ function init()
   print ("Hello from init")
 
 
-  params:add_number('simon_number', 'the simon number',0,60,30)
-
-print(params:get('simon_number'))
-
-
-
-
-
-
-  -- clear buffer
-  softcut.buffer_clear()
-  -- read file into buffer
-  -- buffer_read_mono (file, start_src, start_dst, dur, ch_src, ch_dst)
-  softcut.buffer_read_mono(audio_clock_file,0,0,-1,1,1,1,1)
+  -- -- clear buffer
+  -- softcut.buffer_clear()
+  -- -- read file into buffer
+  -- -- buffer_read_mono (file, start_src, start_dst, dur, ch_src, ch_dst)
+  -- softcut.buffer_read_mono(audio_clock_file,0,0,-1,1,1,1,1)
   
 
 
-  -- softcut.buffer_read_stereo(audio_clock_file, 0, 0, -1)
+  -- -- softcut.buffer_read_stereo(audio_clock_file, 0, 0, -1)
 
 
-  -- audio.tape_play_open (audio_clock_file)
+  -- -- audio.tape_play_open (audio_clock_file)
 
 
-  -- enable voice 1
-  softcut.enable(1,1)
-  -- set voice 1 to buffer 1
-  softcut.buffer(1,1)
-  -- set voice 1 level to 1.0
-  softcut.level(1,1.0)
+  -- -- enable voice 1
+  -- softcut.enable(1,1)
+  -- -- set voice 1 to buffer 1
+  -- softcut.buffer(1,1)
+  -- -- set voice 1 level to 1.0
+  -- softcut.level(1,1.0)
   
   
   
-  -- voice 1  loop
-   softcut.loop(1,0) -- loop off
-  -- set voice 1 loop start to 1
-  softcut.loop_start(1,0)
-  -- set voice 1 loop end to 2
-  softcut.loop_end(1,5)
-  -- set voice 1 position to 0
+  -- -- voice 1  loop
+  --  softcut.loop(1,0) -- loop off
+  -- -- set voice 1 loop start to 1
+  -- softcut.loop_start(1,0)
+  -- -- set voice 1 loop end to 2
+  -- softcut.loop_end(1,5)
+  -- -- set voice 1 position to 0
   
-  softcut.fade_time(1,0)
+  -- softcut.fade_time(1,0)
   
-  softcut.position(1,0.0)
+  -- softcut.position(1,0.0)
 
-  -- set voice 1 rate to 1.0
-  softcut.rate(1,1.0)
+  -- -- set voice 1 rate to 1.0
+  -- softcut.rate(1,1.0)
   
   
   
-  audio:rev_off ()
-  audio:comp_off ()
+  -- audio:rev_off ()
+  -- audio:comp_off ()
 
-  -- enable voice 1 play
-  softcut.play(1,1)
+  -- -- enable voice 1 play
+  -- softcut.play(1,1)
 
 
 
@@ -2100,11 +1956,8 @@ init_flutter_window()
 
 
 
-   print("init says: Starting main sequencer timing called tick.")
+   print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..  the_current_tick_count_since_step)
    clock.run(tick)       -- start the sequencer
-
-
-  print_audio_file_info(audio_clock_file)
 
 
   end -- end init
