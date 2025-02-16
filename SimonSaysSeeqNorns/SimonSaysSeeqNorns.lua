@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.5.5"
+version = "1.5.6"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -1082,8 +1082,9 @@ end
 
 
         -- Less frequently triggered gates
-
-        if tick_count % (192 * 1) == 0 then
+        if tick_count % (192 * 1) == 0 then -- At 12 ticks per step, this is every 16 steps.but this is independent of any step_count.
+            -- HEREHEREHERE
+            midi_bar_count = util.wrap(midi_bar_count + 1, 1, 4) 
             clock.run(process_clock_gate, GATE_12)
             --print("tick_count is: " .. tick_count .. " GATE_12 ")
         end 
@@ -1129,6 +1130,9 @@ end
       -- This is the master (original step) 
       -- Always advance the step based on tick_count mod 12.    
       midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
+
+
+
 
       -- do we need to calc tick_count_since_step = bla somewhere around here?
 
@@ -3474,9 +3478,9 @@ function refresh_grid_and_screen()
     -- screen.text(string.format("%X", total_wow_tempo_ticks * 255))
 
     screen.move(1,49)
-    screen.text("B")
+    screen.text("Bar")
     screen.move(1,56)
-    screen.text(last_midi_note_off_out)
+    screen.text(midi_bar_count)
 
 
 
