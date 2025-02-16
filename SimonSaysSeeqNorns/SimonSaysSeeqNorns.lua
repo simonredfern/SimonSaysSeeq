@@ -434,9 +434,9 @@ table.insert(BUTTONS, {name = ARM_SLIDE_OFF_BUTTON, x = 15, y = 8})
 table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 
 
-function reset_step_counters()
-  --current_step = first_step
-  midi_step_count = first_step
+function reset_all_sequence_counters()
+
+  init_midi_step_count()
   init_midi_bar_count()
 
 
@@ -536,6 +536,32 @@ function init_keyboard_midi_note_events()
         end
     end
 
+end
+
+
+
+
+
+function DisableAndTurnOffActiveKeyboardMidiNotes()
+  last_function = 21741
+
+  -- Disable that note for all steps
+  for bc = MIN_BAR, MAX_BAR do
+      for sc = midi_first_step, midi_last_step do
+        for note = 0, 127 do
+          if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+            
+            SendMidiKeyboardNoteOn(note,0,1) -- send midi off for that one note
+          end
+        end  
+      end
+  end
+
+  
 end
 
 
@@ -1079,7 +1105,7 @@ end
         -- Less frequently triggered gates
         if tick_count % (192 * 1) == 0 then -- At 12 ticks per step, this is every 16 steps.but this is independent of any step_count.
             -- HEREHEREHERE
-            midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR) 
+             
             clock.run(process_clock_gate, GATE_12)
             --print("tick_count is: " .. tick_count .. " GATE_12 ")
         end 
@@ -1126,6 +1152,9 @@ end
       -- Always advance the step based on tick_count mod 12.    
       midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
 
+      if (midi_step_count == 1) then
+        midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR)
+      end
 
 
 
@@ -1231,8 +1260,14 @@ function init_tick_count()
   tick_count = 0
 end  
 
+
+function init_midi_step_count()
+  midi_step_count = 1
+end  
+
+
 function init_midi_bar_count()
-  midi_bar_count = 1
+  midi_bar_count = 1 
 end  
 
 
@@ -1591,7 +1626,7 @@ end
 
 
 
-function clock.transport.start() 
+function clock.transport.start() -- transport start
   -- This function is maybe called
   -- 1) Via code attached to the Norns Right Button
   -- 2) Via the system when midi start is detected. ? check this.
@@ -1605,7 +1640,7 @@ function clock.transport.start()
   the_current_tick_count_since_start = 0
 
 
-  transport_is_active = true
+  
 
   screen.clear()
 
@@ -1620,6 +1655,18 @@ function clock.transport.start()
   screen.move(1,63)
   screen.text("Transport Start")
   screen.update()
+
+  print("end of transport start")
+
+  if (transport_is_active == true) then -- if we are already running just clear the midi stuff.
+    -- init_keyboard_midi_note_events()
+    DisableAndTurnOffActiveKeyboardMidiNotes()
+
+  end 
+
+  transport_is_active = true
+
+
 end
 
 function request_midi_start()
@@ -1631,7 +1678,7 @@ end
 
 
 
-function clock.transport.stop()
+function clock.transport.stop() -- transport stop
 
   -- This function is maybe called
   -- 1) Via code attached to the Norns Right Button
@@ -1643,7 +1690,11 @@ function clock.transport.stop()
   print("total_flutter_tempo_ticks since last start: " .. total_flutter_tempo_ticks)
   print("flutter_tempo_episodes since last start: " .. flutter_tempo_episodes)
 
-  reset_step_counters()
+  reset_all_sequence_counters()
+
+
+
+  refresh_grid_and_screen()
 
 
 --  screen.clear()
@@ -1653,7 +1704,7 @@ function clock.transport.stop()
   --screen.text("Transport STOP")
   --screen.update()
 
-
+  clock.sleep(5)
 
 
   display_tempo_status()
@@ -1698,12 +1749,10 @@ function key(n,z)
     if n == 2 and z == 1 then
    
         clock.transport.stop()
-        -- request_midi_stop()
-
         
-        reset_step_counters()
+        reset_all_sequence_counters()
 
-     -- end
+     
       
       screen_dirty = true
     end
@@ -1852,7 +1901,7 @@ function init()
   print ("before init_held_state_table")
   init_held_state_table()
 
-  reset_step_counters()
+  reset_all_sequence_counters()
 
   refresh_grid_and_screen()
 
@@ -2503,8 +2552,8 @@ midi_keyboard_usb_device_port.event = function(data)
       -- Look for sustain pedal on.
       if midi_msg.cc ==  64 and midi_msg.val ==  127 then
         -- init the midi sequence
-        keyboard_midi_note_events = init_keyboard_midi_note_events()
-        AllMidiNotesOff()
+        init_keyboard_midi_note_events()
+        AllMidiNotesOff() -- panic.
       end
 
 
