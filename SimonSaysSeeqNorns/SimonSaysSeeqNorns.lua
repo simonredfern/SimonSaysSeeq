@@ -437,12 +437,13 @@ table.insert(BUTTONS, {name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8})
 function reset_step_counters()
   --current_step = first_step
   midi_step_count = first_step
+  init_midi_bar_count()
+
+
   total_step_co2_count = 1 -- This will loop around the co2 ppm rows
   total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
 
   for row = 1, TOTAL_SEQUENCE_ROWS do
-    
-
     row_settings[row]["first_step"] = first_step
     row_settings[row]["last_step"] = last_step
     row_settings[row]["current_step"] = row_settings[row]["first_step"]
@@ -479,18 +480,13 @@ PPQN24_GATES_ARE_ENABLED = true -- kind of duplicated setting
 greetings_done = false
 
   
+MIN_BAR = 1
+MAX_BAR = 4  
 
+MIN_LANE = 1
+MAX_LANE = 2 
 
----------------------- -------------------------------------
--- From C++ code
--- Constants
-local FIRST_BAR = 1
-local MAX_BAR = 8  
-
-local MIN_LANE = 1
-local MAX_LANE = 2 
-
-local MAX_STEP = 16
+MAX_STEP = 16
 
 -- Define the SequenceNote class
 SequenceNote = {}
@@ -519,13 +515,14 @@ function SequenceNote:new()
     }, SequenceNote)
 end
 
--- Create a multidimensional table
-function create_keyboard_midi_note_events()
-    local keyboard_midi_note_events = {}
+
+function init_keyboard_midi_note_events()
+   -- this is a global
+    keyboard_midi_note_events = {}
 
     for lane = MIN_LANE, MAX_LANE do
         keyboard_midi_note_events[lane] = {}
-        for bar = FIRST_BAR, MAX_BAR do
+        for bar = MIN_BAR, MAX_BAR do
             keyboard_midi_note_events[lane][bar] = {}
             for step = 1, MAX_STEP do
                 keyboard_midi_note_events[lane][bar][step] = {}
@@ -539,12 +536,9 @@ function create_keyboard_midi_note_events()
         end
     end
 
-    return keyboard_midi_note_events
 end
 
--- Initialize the data structure
-keyboard_midi_note_events = create_keyboard_midi_note_events()
--- AllMidiNotesOff()
+
 
 
 
@@ -554,7 +548,7 @@ function DisableKeyboardMidiNotes(note)
   last_function = 28749
 
   -- Disable that note for all steps
-  for bc = FIRST_BAR, MAX_BAR do
+  for bc = MIN_BAR, MAX_BAR do
       for sc = midi_first_step, midi_last_step do
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
           keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
@@ -859,6 +853,7 @@ function PlayMidi()
   -- print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
 
   for n = 0, 127 do
+      -- print ("PlayMidi says current_midi_lane is " .. current_midi_lane .. " midi_bar_count is " .. midi_bar_count .. " midi_step_count is " .. midi_step_count .. " n is " .. n)
 
       local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
 
@@ -903,7 +898,7 @@ function tick()
 
 
     -- quick question. why is this never zero?
-    print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
+    -- print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
 
     PlayMidi() -- play on every tick because we record notes to tick accuracy
 
@@ -1084,7 +1079,7 @@ end
         -- Less frequently triggered gates
         if tick_count % (192 * 1) == 0 then -- At 12 ticks per step, this is every 16 steps.but this is independent of any step_count.
             -- HEREHEREHERE
-            midi_bar_count = util.wrap(midi_bar_count + 1, 1, 4) 
+            midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR) 
             clock.run(process_clock_gate, GATE_12)
             --print("tick_count is: " .. tick_count .. " GATE_12 ")
         end 
@@ -1234,6 +1229,10 @@ end -- end on tick function
 
 function init_tick_count()
   tick_count = 0
+end  
+
+function init_midi_bar_count()
+  midi_bar_count = 1
 end  
 
 
@@ -1601,6 +1600,7 @@ function clock.transport.start()
 
   init_tick_count()
   InitStepCountSinceStep()
+  init_midi_bar_count()
 
   the_current_tick_count_since_start = 0
 
@@ -1696,18 +1696,11 @@ function key(n,z)
 
     -- STOP left button pressed 
     if n == 2 and z == 1 then
-
-      -- try moving pointer to quiet part of
-
-    -- softcut.tape_play_stop ()
-
-     -- if transport_is_active then -- currently running so Stop     
+   
         clock.transport.stop()
-        request_midi_stop()
+        -- request_midi_stop()
 
         
-     -- else -- Not currently running so reset. 
-       -- effectively we press this again.
         reset_step_counters()
 
      -- end
@@ -1721,10 +1714,7 @@ function key(n,z)
       if not transport_is_active then
         clock.transport.start()
         -- TODO get rid of this midi start stuff. (don't want to use as clock master.)
-        request_midi_start() -- Just send MIDI start instead of requesting?
-
-        
-
+        -- request_midi_start() -- Just send MIDI start instead of requesting?
       end
       
       screen_dirty = true
@@ -1834,56 +1824,6 @@ function init()
 
   print ("Hello from init")
 
-
-  -- -- clear buffer
-  -- softcut.buffer_clear()
-  -- -- read file into buffer
-  -- -- buffer_read_mono (file, start_src, start_dst, dur, ch_src, ch_dst)
-  -- softcut.buffer_read_mono(audio_clock_file,0,0,-1,1,1,1,1)
-  
-
-
-  -- -- softcut.buffer_read_stereo(audio_clock_file, 0, 0, -1)
-
-
-  -- -- audio.tape_play_open (audio_clock_file)
-
-
-  -- -- enable voice 1
-  -- softcut.enable(1,1)
-  -- -- set voice 1 to buffer 1
-  -- softcut.buffer(1,1)
-  -- -- set voice 1 level to 1.0
-  -- softcut.level(1,1.0)
-  
-  
-  
-  -- -- voice 1  loop
-  --  softcut.loop(1,0) -- loop off
-  -- -- set voice 1 loop start to 1
-  -- softcut.loop_start(1,0)
-  -- -- set voice 1 loop end to 2
-  -- softcut.loop_end(1,5)
-  -- -- set voice 1 position to 0
-  
-  -- softcut.fade_time(1,0)
-  
-  -- softcut.position(1,0.0)
-
-  -- -- set voice 1 rate to 1.0
-  -- softcut.rate(1,1.0)
-  
-  
-  
-  -- audio:rev_off ()
-  -- audio:comp_off ()
-
-  -- -- enable voice 1 play
-  -- softcut.play(1,1)
-
-
-
---  params:set("clock_source",4)
   
     -- Last In First Out (LIFO) tables for Undo and Redo of grid state functionality
   undo_grid_lifo = {}
@@ -1915,6 +1855,9 @@ function init()
   reset_step_counters()
 
   refresh_grid_and_screen()
+
+  print ("before init_keyboard_midi_note_events")
+  init_keyboard_midi_note_events()
 
   print("hello")
   -- my_grid:all(2)
@@ -2560,7 +2503,7 @@ midi_keyboard_usb_device_port.event = function(data)
       -- Look for sustain pedal on.
       if midi_msg.cc ==  64 and midi_msg.val ==  127 then
         -- init the midi sequence
-        keyboard_midi_note_events = create_keyboard_midi_note_events()
+        keyboard_midi_note_events = init_keyboard_midi_note_events()
         AllMidiNotesOff()
       end
 
