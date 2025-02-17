@@ -542,20 +542,33 @@ end
 
 
 
-function DisableAndTurnOffActiveKeyboardMidiNotes()
+function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
   last_function = 21741
+
+if skip <= 0 or skip > 10 then
+  error("skip should be 1 to 10.")
+end
+
+  local count_disabled = 0
 
   -- Disable that note for all steps
   for bc = MIN_BAR, MAX_BAR do
       for sc = midi_first_step, midi_last_step do
         for note = 0, 127 do
           if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+            if count_disabled % skip == 0 then
             
-            SendMidiKeyboardNoteOn(note,0,1) -- send midi off for that one note
+            
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+            
+              SendMidiKeyboardNoteOn(note,0,1) -- send midi off for that one note
+
+            end
+
+            count_disabled = count_disabled + 1
           end
         end  
       end
@@ -631,6 +644,7 @@ end
 function AllMidiNotesOff()
   -- this should only be used for a panic.
   -- with normal clear behaviour should only note off the notes that are active.
+  print("hello from AllMidiNotesOff")
   for note = 0, 127 do
     SendMidiKeyboardNoteOn(note,0,1)
   end
@@ -865,6 +879,11 @@ function SanityCheckMidiChannel(channel)
 
 end  
 
+g_count_of_active_midi_on = 0
+g_count_of_active_midi_off = 0
+
+
+
 function PlayMidi()
   -- This function, which gets called every tick,
   -- loops through all 127 midi notes,
@@ -876,6 +895,9 @@ function PlayMidi()
 
   last_function = 364892
 
+  local count_of_active_midi_on = 0
+  local count_of_active_midi_off = 0
+
   -- print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
 
   for n = 0, 127 do
@@ -884,6 +906,9 @@ function PlayMidi()
       local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
 
       if note_on_event.is_active == 1 then
+        count_of_active_midi_on = count_of_active_midi_on + 1
+
+
           if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Can we flash the screen here or flash the new grids? 
 
@@ -903,13 +928,21 @@ function PlayMidi()
       local note_off_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0]
       
       if note_off_event.is_active == 1 then
+        count_of_active_midi_off = count_of_active_midi_off + 1
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Send MIDI Note OFF
+              print("before SendMidiKeyboardNoteOn for note off current_midi_lane is "  .. current_midi_lane .. " midi_bar_count " .. midi_bar_count .. " midi_step_count " .. midi_step_count .. " n " .. n)
               SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
           end
       end
   end
+
+  g_count_of_active_midi_on = count_of_active_midi_on
+  g_count_of_active_midi_off = count_of_active_midi_off
+
+  print ("Bye from PlayMidi count_of_active_midi_on is " .. count_of_active_midi_on .. " count_of_active_midi_off is " .. count_of_active_midi_off)
+
 end
 
 
@@ -1104,7 +1137,6 @@ end
 
         -- Less frequently triggered gates
         if tick_count % (192 * 1) == 0 then -- At 12 ticks per step, this is every 16 steps.but this is independent of any step_count.
-            -- HEREHEREHERE
              
             clock.run(process_clock_gate, GATE_12)
             --print("tick_count is: " .. tick_count .. " GATE_12 ")
@@ -1628,8 +1660,9 @@ end
 
 function clock.transport.start() -- transport start
   -- This function is maybe called
-  -- 1) Via code attached to the Norns Right Button
-  -- 2) Via the system when midi start is detected. ? check this.
+  -- Via the system when midi start is detected. Confirmed.
+
+  -- Note: See right button for other actions.
 
   print("====================== transport.start says Hello ========================")
 
@@ -1638,10 +1671,6 @@ function clock.transport.start() -- transport start
   init_midi_bar_count()
 
   the_current_tick_count_since_start = 0
-
-
-  
-
   screen.clear()
 
 
@@ -1658,9 +1687,9 @@ function clock.transport.start() -- transport start
 
   print("end of transport start")
 
-  if (transport_is_active == true) then -- if we are already running just clear the midi stuff.
+  if (transport_is_active == true) then -- see right button
     -- init_keyboard_midi_note_events()
-    DisableAndTurnOffActiveKeyboardMidiNotes()
+    
 
   end 
 
@@ -1762,8 +1791,15 @@ function key(n,z)
 
       if not transport_is_active then
         clock.transport.start()
-        -- TODO get rid of this midi start stuff. (don't want to use as clock master.)
-        -- request_midi_start() -- Just send MIDI start instead of requesting?
+        screen.move(1,63)
+        screen.text("Transport Start")
+        screen.update()
+
+      else
+        DisableAndTurnOffActiveKeyboardMidiNotes(4) -- only want to clear this when we are running.
+        screen.move(1,63)
+        screen.text("Cleared Active MIDI")
+        screen.update()
       end
       
       screen_dirty = true
@@ -1839,27 +1875,9 @@ function grid_button_function_name (x,y)
 end -- end function definition
 
 
--- Originally copied from https://github.com/monome/softcut-studies/blob/master/1-basics.lua
--- function print_audio_file_info(file)
---   if util.file_exists(file) == true then
---     local ch, samples, samplerate = audio.file_info(file)
---     local duration = samples/samplerate
---     print("loading file: "..file)
---     print("  channels:\t"..ch)
---     print("  samples:\t"..samples)
---     print("  sample rate:\t"..samplerate.."hz")
---     print("  duration:\t"..duration.." sec")
---   else print "ERROR read_wav(): file not found" end
--- end
 
-
-
-
-
-
-
-local mo = midi.connect(1) -- defaults to port 1
-mo.event = midi_event
+--local mo = midi.connect(1) -- defaults to port 1
+--mo.event = midi_event
 
 
 
@@ -3462,11 +3480,10 @@ function refresh_grid_and_screen()
     screen.text(midiNoteToName(last_midi_note_off_out))
     screen.move(1,28)
     
-
     screen.move(1,35)
-    screen.text("C")
+    screen.text("1:" .. g_count_of_active_midi_on)
     screen.move(1,42)
-    screen.text(last_midi_channel_out)
+    screen.text("0:" .. g_count_of_active_midi_off)
     -- screen.text(string.format("%X", total_wow_tempo_ticks * 255))
 
     screen.move(1,49)
