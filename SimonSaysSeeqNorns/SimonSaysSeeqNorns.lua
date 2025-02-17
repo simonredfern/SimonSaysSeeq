@@ -542,23 +542,45 @@ end
 
 
 
+
 function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
+-- An approach to thin out the midi sequence
+-- if skip is 1, actually we don't skip any notes.
+-- TODO find a way to better balance the active on and off events of one note number.
+-- i.e. if we disable on ON note event, we could scroll forward to disable the next OFF event for the same note.
+-- calling this function repeatedly should thin the midi sequence to empty (which it does).
+-- (it might be a bit weird on the way).
+-- Note we want to explicitly also disable note off events even at the risk of creating stuck notes because otherwise
+-- we end up with many more send note off events.
+
+
+
+
   last_function = 21741
 
-if skip <= 0 or skip > 10 then
-  error("skip should be 1 to 10.")
-end
+  if skip <= 0 or skip > 10 then
+    error("skip should be 1 to 10.")
+  end
 
-  local count_disabled = 0
+  local count_active_on_disabled = 0
+  local count_active_off_disabled = 0
+
+
 
   -- Disable that note for all steps
   for bc = MIN_BAR, MAX_BAR do
       for sc = midi_first_step, midi_last_step do
         for note = 0, 127 do
-          if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
-            if count_disabled % skip == 0 then
-            
-            
+
+          -- From the perspective of active on notes:
+
+          if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 then --and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
+          
+            if count_active_on_disabled % skip == 0 then
+
+              -- Hmm we should be disabling the note across all steps not just the step where we find it.
+              -- or, how do we disable the corresponding off note?
+                    
               keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
               keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
               keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
@@ -568,7 +590,25 @@ end
 
             end
 
-            count_disabled = count_disabled + 1
+            count_active_on_disabled = count_active_on_disabled + 1
+          end
+
+          -- From the perspective of active off notes: (see note above)
+
+          if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active == 1 then 
+          
+            if count_active_off_disabled % skip == 0 then
+                    
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+              keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+            
+              SendMidiKeyboardNoteOn(note,0,1) -- send midi off for that one note
+
+            end
+
+            count_active_off_disabled = count_active_off_disabled + 1
           end
         end  
       end
@@ -879,8 +919,8 @@ function SanityCheckMidiChannel(channel)
 
 end  
 
-g_count_of_active_midi_on = 0
-g_count_of_active_midi_off = 0
+g_count_of_active_midi_on = 0 -- effectively gives a count of active note on events at the current midi step
+g_count_of_active_midi_off = 0 -- effectively gives a count of active note OFF events at the current midi step
 
 
 
@@ -938,10 +978,11 @@ function PlayMidi()
       end
   end
 
+  -- so we can track active on / off notes per step or however often we call play midi
   g_count_of_active_midi_on = count_of_active_midi_on
   g_count_of_active_midi_off = count_of_active_midi_off
 
-  print ("Bye from PlayMidi count_of_active_midi_on is " .. count_of_active_midi_on .. " count_of_active_midi_off is " .. count_of_active_midi_off)
+  -- print ("Bye from PlayMidi count_of_active_midi_on is " .. count_of_active_midi_on .. " count_of_active_midi_off is " .. count_of_active_midi_off)
 
 end
 
