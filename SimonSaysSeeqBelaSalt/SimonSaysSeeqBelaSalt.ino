@@ -167,6 +167,9 @@ AuxiliaryTask gInitMidiSequenceForce;
 
 AuxiliaryTask gInitMidiSequenceNoForce;
 
+AuxiliaryTask gInitMidiSequenceNoForcePartial;
+
+
 AuxiliaryTask gClearIncomingChromaticMidiNotesSet;
 
 
@@ -2129,8 +2132,11 @@ void AdvanceSequenceBChronology(){
 }
 
 
-void InitMidiSequence(bool force){
+void InitMidiSequence(bool force, int8_t skip){
 	
+
+  // NOTE: skip is not handled yet. See SimonSaysSeeq lua code for possible approach.
+
 	last_function = 32786;
 	
   if (init_midi_sequence_has_run == false || force == true){	
@@ -2181,7 +2187,7 @@ void InitMidiSequence(bool force){
     ActiveKeyboardMidiNoteSet.clear();
 
 
-    init_midi_sequence_has_run = true;
+    init_midi_sequence_has_run = true; // note: if run with skip better not set this to true. TODO only set to true if full or force.
 
 	rt_printf("InitMidiSequence Done \n");
 	
@@ -2195,13 +2201,21 @@ void InitMidiSequence(bool force){
 
 void InitMidiSequenceForce(void*){
   last_function = 56811;
-  InitMidiSequence(true);
+  InitMidiSequence(true, 1);
 }
 
 void InitMidiSequenceNoForce(void*){
   last_function = 78911;
-  InitMidiSequence(false);
+  InitMidiSequence(false, 1);
 }
+
+
+void InitMidiSequenceNoForcePartial(void*){
+  last_function = 238921;
+  InitMidiSequence(false, 4);
+}
+
+
 
 
 void OnTick(){
@@ -3300,10 +3314,13 @@ myUdpClient1 = new UdpClient(remoteUDPPort1,remoteUDPAddress1);
         if((gChangeSequenceTask = Bela_createAuxiliaryTask(&ChangeSequence, 5, "bela-change-sequence")) == 0)
                 return false;
 
-        if((gInitMidiSequenceForce = Bela_createAuxiliaryTask(&InitMidiSequenceForce, 82, "bela-init-midi-sequence-force")) == 0)
+        if((gInitMidiSequenceForce = Bela_createAuxiliaryTask(&InitMidiSequenceForce, 7, "bela-init-midi-sequence-force")) == 0)
                 return false;
 
-        if((gInitMidiSequenceNoForce = Bela_createAuxiliaryTask(&InitMidiSequenceNoForce, 82, "bela-init-midi-sequence-no-force")) == 0)
+        if((gInitMidiSequenceNoForce = Bela_createAuxiliaryTask(&InitMidiSequenceNoForce, 83, "bela-init-midi-sequence-no-force")) == 0)
+                return false;
+
+        if((gInitMidiSequenceNoForcePartial = Bela_createAuxiliaryTask(&InitMidiSequenceNoForcePartial, 84, "bela-init-midi-sequence-no-force-partial")) == 0)
                 return false;
 
 
