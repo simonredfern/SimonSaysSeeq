@@ -138,7 +138,7 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
-bool midi_filter_is_active = false;
+bool analog_pitch_quantiizer_is_active = false;
 
 
 #include <math.h> //sinf
@@ -628,31 +628,25 @@ void InitIncomingMidiChromaticNotes(){
 std::set<int> IncomingChromaticMidiNotesSet; // this can be used to store the set of numbers in the current incoming_chromatic_midi_notes
 
 
-void SetMidiFilteringIsActive (bool myInput){
-
-
+void SetAnalogPitchQuantizeOutIsActive (bool myInput){
 
   rt_printf("Previous last_function was: %llu \n", last_function);
 
   last_function = 24962982;
 
   if (myInput){
-    rt_printf("**** Setting midi_filter_is_active to true **** \n");
-    midi_filter_is_active = true;
+    rt_printf("**** Setting analog_pitch_quantiizer_is_active to true **** \n");
+    analog_pitch_quantiizer_is_active = true;
   } else {
-    rt_printf("==== Setting midi_filter_is_active to false ====\n");
-    midi_filter_is_active = false;
+    rt_printf("==== Setting analog_pitch_quantiizer_is_active to false ====\n");
+    analog_pitch_quantiizer_is_active = false;
   }
-
-
-   
 
 }
 
 
 
 
-/// HEREHERS
 
 void PrintActiveKeyboardMidiNotes(){
 	last_function = 13347;
@@ -909,8 +903,8 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-  if (midi_filter_is_active == true) {
-    rt_printf("midi_filter_is_active is true \n");
+  if (analog_pitch_quantiizer_is_active == true) {
+    rt_printf("analog_pitch_quantiizer_is_active is true \n");
     if (IncomingChromaticMidiNotesSet.count(note) > 0){
       midi.writeNoteOn(channel, note, velocity);
     } else {
@@ -1464,13 +1458,13 @@ void printStatus(void*){
 
     rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
 
-// if (midi_filter_is_active == true){
-//   rt_printf("midi_filter_is_active true \n");
+// if (analog_pitch_quantiizer_is_active == true){
+//   rt_printf("analog_pitch_quantiizer_is_active true \n");
 // } else {
-//   rt_printf("midi_filter_is_active false \n");
+//   rt_printf("analog_pitch_quantiizer_is_active false \n");
 // }
 
-   //   rt_printf("midi_filter_is_active is: %d \n", midi_filter_is_active);
+   //   rt_printf("analog_pitch_quantiizer_is_active is: %d \n", analog_pitch_quantiizer_is_active);
 
       PrintActiveKeyboardMidiNotes();
 
@@ -3016,13 +3010,13 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       // THIS PIN IS SEPARATE FROM THE TRIGGER IN (WHICH IS USED BY CLOCK)
 			do_button_1_action = 0;
       // Turn filtering OFF
-      SetMidiFilteringIsActive(false);
+      SetAnalogPitchQuantizeOutIsActive(false);
       // Here we can reset the incoming midi notes. and also turn off the filtering.
       Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
       target_led_1_tri_state = 2; // yellow
 		
 		} else if (do_button_2_action == 1) {
-      // DON'T PUT AN ACTION HERE. THIS PIN IS USED FOR RESET.
+      // !!!!DO NOT!!! PUT AN ACTION HERE. THIS PIN IS USED FOR RESET.
       do_button_2_action = 0;		
 		} 
 			
@@ -3030,7 +3024,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		if (do_button_3_action == 1) {
       // DON'T PUT A CABLE TRIGGER HERE
 			do_button_3_action = 0;
-      SetMidiFilteringIsActive(true);
+      SetAnalogPitchQuantizeOutIsActive(true);
       target_led_2_tri_state = 2; 
 		}
 
