@@ -138,7 +138,7 @@ float draw_delay_feedback_amount = 0.999;
 uint8_t midi_lane_input = 0; // normal
 uint8_t clock_divider_input_value = 1;
 
-bool analog_pitch_quantiizer_is_active = false;
+bool learn_chromatic_midi_note_set = false;
 
 
 #include <math.h> //sinf
@@ -628,20 +628,19 @@ void InitIncomingMidiChromaticNotes(){
 std::set<int> IncomingChromaticMidiNotesSet; // this can be used to store the set of numbers in the current incoming_chromatic_midi_notes
 
 
-void SetAnalogPitchQuantizeOutIsActive (bool myInput){
+void StartLearnChromaticMidiNoteSet(){
+  last_function = 249632;
+  rt_printf("**** Setting learn_chromatic_midi_note_set to true **** \n");
+  learn_chromatic_midi_note_set = true;
+}
 
-  rt_printf("Previous last_function was: %llu \n", last_function);
 
-  last_function = 24962982;
 
-  if (myInput){
-    rt_printf("**** Setting analog_pitch_quantiizer_is_active to true **** \n");
-    analog_pitch_quantiizer_is_active = true;
-  } else {
-    rt_printf("==== Setting analog_pitch_quantiizer_is_active to false ====\n");
-    analog_pitch_quantiizer_is_active = false;
-  }
-
+void FreezeChromaticMidiNoteSet(){
+  last_function = 2462982;
+  rt_printf("==== Setting learn_chromatic_midi_note_set to false ====\n");
+  learn_chromatic_midi_note_set = false;
+  // TODO we could create a sorted list  
 }
 
 
@@ -713,6 +712,22 @@ void PrintAnalogIncomingMidiChromaticNotes(){
    rt_printf("\n ");      
 
   //rt_printf("\n Bye from PrintAnalogIncomingMidiChromaticNotes \n");         
+}
+
+
+void AddNoteToIncomingChromaticMidiNoteSetByNote(int8_t note){
+	
+	last_function = 4334;
+
+  //rt_printf("Hello from AddNoteToIncomingChromaticMidiNoteSetByNote input voltage is %f \n", inputVoltage);
+
+
+      IncomingChromaticMidiNotesSet.insert(note);
+     
+    
+ 
+
+ //rt_printf("Bye from AddNoteToIncomingChromaticMidiNoteSetByNote \n");
 }
 
 
@@ -901,19 +916,25 @@ for (ln = MIN_LANE; ln <= MAX_LANE; ln++){
 
 ///////
 
-void ConditionalWriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
+void WriteMidiNoteOn(int8_t channel, int8_t note, int8_t velocity){
 
-  if (analog_pitch_quantiizer_is_active == true) {
-    rt_printf("analog_pitch_quantiizer_is_active is true \n");
-    if (IncomingChromaticMidiNotesSet.count(note) > 0){
-      midi.writeNoteOn(channel, note, velocity);
-    } else {
-      rt_printf(" NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d \n", note);
-    }
-  } else {
+
+
+  if (learn_chromatic_midi_note_set == true) {
+    AddNoteToIncomingChromaticMidiNoteSetByNote(note);
+  }
+
+
+ //   rt_printf("learn_chromatic_midi_note_set is true \n");
+ //   if (IncomingChromaticMidiNotesSet.count(note) > 0){
+ //     midi.writeNoteOn(channel, note, velocity);
+ //   } else {
+ //     rt_printf(" NOT playing note %d becuase it is not in IncomingChromaticMidiNotesSet %d \n", note);
+ //   }
+ // } else {
     //rt_printf("midi filter NOT active so playing note %d normally \n", note);
     midi.writeNoteOn(channel, note, velocity);
-}
+//}
 
 
 }
@@ -1458,13 +1479,13 @@ void printStatus(void*){
 
     rt_printf("voltage_of_incoming_note_in is: %f \n", voltage_of_incoming_note_in);
 
-// if (analog_pitch_quantiizer_is_active == true){
-//   rt_printf("analog_pitch_quantiizer_is_active true \n");
+// if (learn_chromatic_midi_note_set == true){
+//   rt_printf("learn_chromatic_midi_note_set true \n");
 // } else {
-//   rt_printf("analog_pitch_quantiizer_is_active false \n");
+//   rt_printf("learn_chromatic_midi_note_set false \n");
 // }
 
-   //   rt_printf("analog_pitch_quantiizer_is_active is: %d \n", analog_pitch_quantiizer_is_active);
+   //   rt_printf("learn_chromatic_midi_note_set is: %d \n", learn_chromatic_midi_note_set);
 
       PrintActiveKeyboardMidiNotes();
 
@@ -1720,13 +1741,13 @@ int8_t GetNoteOfScaleFromMidiNote(int8_t note) {
 
 
 
-void AddNoteToIncomingChromaticMidiNotes(float inputVoltage){
+void AddNoteToIncomingChromaticMidiNotesByVoltage(float inputVoltage){
 	
  if (sequence_is_running == HIGH){
 
 	last_function = 4334;
 
-  //rt_printf("Hello from AddNoteToIncomingChromaticMidiNotes input voltage is %f \n", inputVoltage);
+  //rt_printf("Hello from AddNoteToIncomingChromaticMidiNotesByVoltage input voltage is %f \n", inputVoltage);
 
   // Loop through all possible midi notes to see if the voltage input is close to one of them.
   for (uint8_t n = 0; n <= 127; n++) {
@@ -1754,8 +1775,24 @@ void AddNoteToIncomingChromaticMidiNotes(float inputVoltage){
   } 
  }
 
- //rt_printf("Bye from AddNoteToIncomingChromaticMidiNotes \n");
+ //rt_printf("Bye from AddNoteToIncomingChromaticMidiNotesByVoltage \n");
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1807,7 +1844,7 @@ void OnStepA(){
 
        
     // This is an OK place to call this because we know it will happen infrequently but predictably      
-    AddNoteToIncomingChromaticMidiNotes(voltage_of_incoming_note_in);
+    AddNoteToIncomingChromaticMidiNotesByVoltage(voltage_of_incoming_note_in);
           
         
 
@@ -1944,7 +1981,10 @@ void PlayMidi(){
               keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][1].tick_count_since_start = loop_timing_a.tick_count_since_start;
               keyboard_midi_note_events[current_midi_lane][bar_a_count][step_a_count][n][0].tick_count_since_start = 0;
               
-              ConditionalWriteMidiNoteOn (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
+              
+
+              // Probably doesn't need to be conditional anymore.
+              WriteMidiNoteOn (midi_channel_x, n, keyboard_midi_note_events[current_midi_lane][BarCountSanity(bar_a_play)][StepCountSanity(step_a_count)][n][1].velocity);
            }
     } 
 
@@ -3007,10 +3047,10 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
       lfo_b_analog.setFrequency(lfo_osc_2_frequency);
 		
 		if (do_button_1_action == 1) {
-      // THIS PIN IS SEPARATE FROM THE TRIGGER IN (WHICH IS USED BY CLOCK)
+      // THIS PIN IS *DISTINCT* FROM THE TRIGGER IN (WHICH IS USED BY CLOCK)
 			do_button_1_action = 0;
       // Turn filtering OFF
-      SetAnalogPitchQuantizeOutIsActive(false);
+      StartLearnChromaticMidiNoteSet();
       // Here we can reset the incoming midi notes. and also turn off the filtering.
       Bela_scheduleAuxiliaryTask(gClearIncomingChromaticMidiNotesSet); 
       target_led_1_tri_state = 2; // yellow
@@ -3024,7 +3064,7 @@ sequence_b_pattern_upper_limit = pow(2, current_sequence_b_length_in_steps) - 1;
 		if (do_button_3_action == 1) {
       // DON'T PUT A CABLE TRIGGER HERE
 			do_button_3_action = 0;
-      SetAnalogPitchQuantizeOutIsActive(true);
+      FreezeChromaticMidiNoteSet();
       target_led_2_tri_state = 2; 
 		}
 
@@ -3054,12 +3094,6 @@ void MaybeOnTick(){
     OnTick();
   }
 }
-
-
-
-//#include <libraries/WriteFile/WriteFile.h>
-//WriteFile file1;
-//WriteFile file2;
 
 
 
@@ -3524,21 +3558,13 @@ void render(BelaContext *context, void *userData)
 	      if (ch == SEQUENCE_CV_OUTPUT_3_PIN){
 	      	//rt_printf("amp is: %f", amp);
 	      	
-
-	      	
-
-	      	
-	      	
-          if (analog_pitch_quantiizer_is_active){
-
-
             // HEREHEREHERE
 
-            rt_printf("I would quantize the pitch here based on the notes in the active midi note set ");
+            // rt_printf("I would quantize the pitch here based on the notes in the active midi note set ");
 
             analog_out_3 = (lfo_a_result_analog + lfo_b_result_analog) / 2.0;
 
-            // TODO
+            // TODO NEXT
             // 1) See the voltage of the proposed output
             // 2) Sort the ActiveKeyboardMidiNoteSet by voltage
             // 3) Note: Might want to create a ScaleNoteSet (with one octave) and sort that by voltage
@@ -3546,18 +3572,6 @@ void render(BelaContext *context, void *userData)
             // 5) Output this voltage. This is the quantized version.
 
             // Note: we still have to populate ActiveKeyboardMidiNoteSet from midi notes played rather than incoming analog voltages.
-
-
-            // ActiveKeyboardMidiNoteSet
-
-          } else {
-	      	  // Difference 
-	      	  analog_out_3 = (lfo_a_result_analog - lfo_b_result_analog) / 2.0;
-
-          }
-
-
-
 	      	
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
