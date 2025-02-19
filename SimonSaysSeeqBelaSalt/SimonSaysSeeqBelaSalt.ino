@@ -3566,13 +3566,16 @@ void render(BelaContext *context, void *userData)
 
             // TODO NEXT
             // 1) See the voltage of the proposed output
-            // 2) Sort the ActiveKeyboardMidiNoteSet by voltage
+            // 2) Sort the IncomingChromaticMidiNotesSet by voltage
             // 3) Note: Might want to create a ScaleNoteSet (with one octave) and sort that by voltage
             // 4) loop through the sorted set and stop when we get to a close voltage.
             // 5) Output this voltage. This is the quantized version.
 
-            // Note: we still have to populate ActiveKeyboardMidiNoteSet from midi notes played rather than incoming analog voltages.
+            // Note: we still have to populate IncomingChromaticMidiNotesSet from midi notes played rather than incoming analog voltages.
 	      	
+          // IncomingChromaticMidiNotesSet
+
+
 	      	analogWrite(context, n, ch, analog_out_3);
 	      }
 	      
