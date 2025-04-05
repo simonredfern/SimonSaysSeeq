@@ -1176,39 +1176,51 @@ end
 
       process_step() 
 
+
+------------------------------------------------------------------------
+
+-- Collect and display the NOTE ON events for the current step. HEREHEREHERE
+
       local count_of_active_midi_on = 0
+      local collected_note_ons = {}
+   
 
-       
-
-
-      -- reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
-      for y = 0, 6 do
-        my_grid_two:led(midi_step_count, y, 0)
+      -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
+      for i = 1, 6 do 
+        collected_note_ons[i] = {} -- create a table for each col
+        my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
       end
 
-      -- loop through all notes and if we have an active note on.
-
-     
+      -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
       for n = 0, 127 do
 
         local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
 
+        -- For each proper note on event we find,
         if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
 
+          -- store it so we can come back to it once we've collected them.
           count_of_active_midi_on = count_of_active_midi_on + 1
+          -- our index on the table will start at 1 and go up.
+          collected_note_ons[count_of_active_midi_on] = note_on_event
+          
+        end
+      end 
 
-        -- Turn an led on on grid_two to show there is an active note here
+       -- Turn an led on on grid_two to show there is an active note here
         -- we are interested in the first 6 notes on one step.
 
-          my_grid_two:led(midi_step_count, 8 - count_of_active_midi_on, note_on_event.velocity)
-
-
-
+      if count_of_active_midi_on > 0 then  
+        for y = 1, count_of_active_midi_on do
+          my_grid_two:led(midi_step_count, 8 - y, collected_note_ons[y].velocity)
         end
-
       end 
+
       
       my_grid_two:refresh()
+
+------------------------------------------------------
+
 
       -- Advance the midi step based on tick_count mod 12.    
       midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
@@ -2023,6 +2035,7 @@ init_flutter_window()
   clock.run(function()
     while true do
       clock.sleep(5)
+      -- TODO fix bug here, we only save table if grid_one has changed.
         if (grid_one_state_dirty == true) then
 
            if (transport_is_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
