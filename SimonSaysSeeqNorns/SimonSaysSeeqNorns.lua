@@ -170,7 +170,7 @@ swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 7 -- was 6
 
-GRID_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
+GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
@@ -760,9 +760,17 @@ end
 
 --------------------------------
 
-my_grid_one = grid.connect()
 
-grid_state_dirty = false
+
+
+my_grid_one = grid.connect(1)
+my_grid_two = grid.connect(2)
+
+
+
+
+
+grid_one_state_dirty = false
 
 print (my_grid_one)
 
@@ -1475,9 +1483,9 @@ function process_step()
   for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
     -- on the current step...
     -- Prior to POLYR
-    --ratchet_mode = grid_state[current_step][sequence_row]
+    --ratchet_mode = grid_one_state[current_step][sequence_row]
 
-    ratchet_mode = grid_state[row_settings[sequence_row]["current_step"]][sequence_row]
+    ratchet_mode = grid_one_state[row_settings[sequence_row]["current_step"]][sequence_row]
 
     -- process step should run independently
     clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -1513,7 +1521,7 @@ function conditional_change_crow_output(current_step, sequence_row)
 
 
     -- only change slew and voltage if the sequence step is active
-    if grid_state[current_step][sequence_row]  ~= 0 then
+    if grid_one_state[current_step][sequence_row]  ~= 0 then
 
       if slide_state[current_step][sequence_row] == 1 then
         crow.output[crow_output].slew = 0.1
@@ -1930,9 +1938,16 @@ end -- end function definition
 
 function init()
 
-  print ("Hello from init")
+  print ("Hello from init. Version is " .. version)
 
   
+  print("#### Here are the grids ####")
+
+  for id, dev in pairs(grid.devices) do
+    print("Grid ID: " .. id .. ", Device: " .. tostring(dev))
+  end
+
+
     -- Last In First Out (LIFO) tables for Undo and Redo of grid state functionality
   undo_grid_lifo = {}
   redo_grid_lifo = {}
@@ -1946,8 +1961,8 @@ function init()
   init_row_settings_table()
 
 
-  print ("before init_grid_state_table")
-  init_grid_state_table()
+  print ("before init_grid_one_state_table")
+  init_grid_one_state_table()
     
 
   print ("before init_mozart_state_table")
@@ -1970,6 +1985,7 @@ function init()
   print("hello")
   -- my_grid_one:all(2)
   my_grid_one:refresh() -- refresh the LEDs
+  my_grid_two:refresh()
     
     
   print("my_grid_one follows: ")
@@ -1979,13 +1995,13 @@ function init()
   print("my_grid_one.rows is: " .. my_grid_one.rows)
   
 
-  print ("midi.devices are:")
-  for key, value in pairs(midi.devices) do
-    print(key, " -- ", value)
-    for sub_key, sub_value in pairs(value) do
-      print("  " .. sub_key, " -- ", sub_value)
-    end
-  end -- end loop of midi devices
+  --print ("midi.devices are:")
+  --for key, value in pairs(midi.devices) do
+  --  print(key, " -- ", value)
+  --  for sub_key, sub_value in pairs(value) do
+  --    print("  " .. sub_key, " -- ", sub_value)
+  --  end
+  --end -- end loop of midi devices
 
 
   -- Set the starting tempo. Can be changed with right knob
@@ -2025,11 +2041,11 @@ init_flutter_window()
   clock.run(function()
     while true do
       clock.sleep(5)
-        if (grid_state_dirty == true) then
+        if (grid_one_state_dirty == true) then
 
            if (transport_is_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
 
-            Tab.save(grid_state, GRID_STATE_FILE)
+            Tab.save(grid_one_state, GRID_ONE_STATE_FILE)
 
             -- for now do mozart at the same time.
             Tab.save(mozart_state, MOZART_STATE_FILE)
@@ -2038,7 +2054,7 @@ init_flutter_window()
             Tab.save(slide_state, SLIDE_STATE_FILE)
 
 
-            grid_state_dirty = false
+            grid_one_state_dirty = false
 
             print("I saved tables.")
 
@@ -2054,12 +2070,12 @@ init_flutter_window()
 
 
 
-function load_grid_state()
-  grid_state = Tab.load (GRID_STATE_FILE)
+function load_grid_one_state()
+  grid_one_state = Tab.load (GRID_ONE_STATE_FILE)
   -- NOTE: get_tally serves to check the table is at least kind of OK.
   -- if error pcall will return false which makes us create the table
-  print (get_tally(grid_state))
-  return grid_state
+  print (get_tally(grid_one_state))
+  return grid_one_state
 end
   
 
@@ -2095,33 +2111,33 @@ function create_a_grid()
 end 
 
 
-function init_grid_state_table()
+function init_grid_one_state_table()
   
-  print ("Hello from init_grid_state_table")
+  print ("Hello from init_grid_one_state_table")
   
   -- Try to load the table
-  local success, err = pcall(load_grid_state) -- note grid_state is loaded into a global
+  local success, err = pcall(load_grid_one_state) -- note grid_one_state is loaded into a global
 
   if success then
-    print ("load grid state seems ok. grid_state is:")
-    print (grid_state)
-    print (get_tally(grid_state))
+    print ("load grid state seems ok. grid_one_state is:")
+    print (grid_one_state)
+    print (get_tally(grid_one_state))
   else
-    print ("Seems we got an error - setting grid_state to nil so we will create it and save it: ")
+    print ("Seems we got an error - setting grid_one_state to nil so we will create it and save it: ")
     print(err)
-    grid_state = nil
+    grid_one_state = nil
   end  
   
   -- if it doesn't exist
-  if grid_state == nil then
+  if grid_one_state == nil then
     print ("No table, I will generate a structure and save that")
 
-    grid_state = create_a_grid()
+    grid_one_state = create_a_grid()
 
-    Tab.save(grid_state, GRID_STATE_FILE)
-    grid_state = Tab.load (GRID_STATE_FILE)  
+    Tab.save(grid_one_state, GRID_ONE_STATE_FILE)
+    grid_one_state = Tab.load (GRID_ONE_STATE_FILE)  
   else
-    print ("I already have a grid_state table, no need to generate one")
+    print ("I already have a grid_one_state table, no need to generate one")
   end
 
   -- We want to make sure rown 8 are all off. 
@@ -2134,7 +2150,7 @@ function init_grid_state_table()
   end
 
   
- print ("grid tally is: " .. get_tally(grid_state))
+ print ("grid tally is: " .. get_tally(grid_one_state))
 
  print ("clock.get_tempo() is: " .. clock.get_tempo())
  
@@ -2145,10 +2161,10 @@ function init_grid_state_table()
   push_grid_undo()
 
   
-  print ("Bye from init_grid_state_table")
+  print ("Bye from init_grid_one_state_table")
   
 
-end -- end init_grid_state_table
+end -- end init_grid_one_state_table
 
 
 ----
@@ -2267,9 +2283,9 @@ function push_grid_undo()
   --print("push_grid_undo says hello. Store Undo LIFO")
   -- TODO check memory / count of states? - if this gets very large, truncate from the other side
 
-  -- When we push to the undo_grid_lifo, we want to *copy* the grid_state (not reference) so that any subsequent changes to grid_state are not saved on the undo_grid_lifo 
+  -- When we push to the undo_grid_lifo, we want to *copy* the grid_one_state (not reference) so that any subsequent changes to grid_one_state are not saved on the undo_grid_lifo 
   -- Inserts in the last position of the table (push)
-  table.insert (undo_grid_lifo, get_copy_of_grid(grid_state))
+  table.insert (undo_grid_lifo, get_copy_of_grid(grid_one_state))
 
   --print ("undo_grid_lifo size is: ".. lifo_size(undo_grid_lifo))
 
@@ -2291,7 +2307,7 @@ function pop_grid_undo()
     -- Removes from the last element of the table (pop)
     local undo_state = table.remove (undo_grid_lifo)
 
-    grid_state = get_copy_of_grid(undo_state)
+    grid_one_state = get_copy_of_grid(undo_state)
 
     --print ("undo_grid_lifo size is: ".. lifo_size(undo_grid_lifo))
     
@@ -2299,7 +2315,7 @@ function pop_grid_undo()
     
     --    ABCDEFG
     --        *
-    -- grid_state: E
+    -- grid_one_state: E
     --
     -- undo_grid_lifo       redo_grid_lifo
     --    D                F 
@@ -2329,9 +2345,9 @@ end
 
 function push_grid_redo()
     -- 1) Push the current state to the redo_grid_lifo so we can get back to it.
-    -- Similarly we want to *copy* the grid_state (not reference) 
-    -- so any subsequent changes to the grid_state are not reflected in the redo_grid_lifo
-    table.insert (redo_grid_lifo, get_copy_of_grid(grid_state))
+    -- Similarly we want to *copy* the grid_one_state (not reference) 
+    -- so any subsequent changes to the grid_one_state are not reflected in the redo_grid_lifo
+    table.insert (redo_grid_lifo, get_copy_of_grid(grid_one_state))
     
     --print ("redo_grid_lifo size is: ".. lifo_size(redo_grid_lifo))
 end  
@@ -2352,7 +2368,7 @@ function pop_grid_redo()
 
       -- TODO need to copy this?
       local redo_state = table.remove (redo_grid_lifo) 
-      grid_state = get_copy_of_grid(redo_state)
+      grid_one_state = get_copy_of_grid(redo_state)
 
       --print ("redo_grid_lifo size is: ".. lifo_size(redo_grid_lifo))
     else 
@@ -2424,7 +2440,7 @@ function unconditional_set_grid_non_seq_button(x, y, integer)
       integer = 1
     end
   
-    grid_state[x][y] = integer
+    grid_one_state[x][y] = integer
 
   else
     print ("Error: unconditional_set_grid_non_seq_button will not set state of sequence button ")
@@ -2445,7 +2461,7 @@ if y >= 0 and y <= TOTAL_SEQUENCE_ROWS then
     integer = 9
   end 
 
-  grid_state[x][y] = integer
+  grid_one_state[x][y] = integer
 
   last_x = x
   last_y = y 
@@ -2567,13 +2583,14 @@ midi_keyboard_usb_device_port.event = function(data)
 
 --  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " data[2] is: " .. data[2] .. " data[3]: is " .. data[3]) 
 
-  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
+  -- print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
 
 
   if data[1] == 254 and data[2] == nil and data[3] == nil then
    -- Do nothing! Filter out Active Sensing messages from Yamaha keyboard. 
-  else
-    print("midi_keyboard_usb_device_port.event ")   
+  else 
+    print("Got a (noteish) midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active)) 
+ 
 
 
     -- TODO MIGHT BE BETTER TO USE THIS WHITE LIST INSTEAD OF BLACK LIST ABOVE.
@@ -2728,25 +2745,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 1
+        grid_one_state[2][y] = 0
+        grid_one_state[3][y] = 0
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 1
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 1
+        grid_one_state[6][y] = 0
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 1
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 1
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 1
-        grid_state[14][y] = 0
-        grid_state[15][y] = 0
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 1
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 0
+        grid_one_state[16][y] = 0
       
       else
 
@@ -2762,25 +2779,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 0
-        grid_state[2][y] = 0
-        grid_state[3][y] = 1
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 0
+        grid_one_state[2][y] = 0
+        grid_one_state[3][y] = 1
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 1
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 0
+        grid_one_state[6][y] = 0
+        grid_one_state[7][y] = 1
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 1
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 0
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 1
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 0
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 1
+        grid_one_state[16][y] = 0
 
       else
         random_dense_grid(x, y)
@@ -2792,25 +2809,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 1
-        grid_state[2][y] = 1
-        grid_state[3][y] = 0
-        grid_state[4][y] = 1
+        grid_one_state[1][y] = 1
+        grid_one_state[2][y] = 1
+        grid_one_state[3][y] = 0
+        grid_one_state[4][y] = 1
 
-        grid_state[5][y] = 1
-        grid_state[6][y] = 1
-        grid_state[7][y] = 0
-        grid_state[8][y] = 1
+        grid_one_state[5][y] = 1
+        grid_one_state[6][y] = 1
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 1
 
-        grid_state[9][y]  = 1
-        grid_state[10][y] = 1
-        grid_state[11][y] = 0
-        grid_state[12][y] = 1
+        grid_one_state[9][y]  = 1
+        grid_one_state[10][y] = 1
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 1
 
-        grid_state[13][y] = 1
-        grid_state[14][y] = 1
-        grid_state[15][y] = 0
-        grid_state[16][y] = 1
+        grid_one_state[13][y] = 1
+        grid_one_state[14][y] = 1
+        grid_one_state[15][y] = 0
+        grid_one_state[16][y] = 1
 
       else
         random_dense_grid(x, y)
@@ -2822,25 +2839,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 0
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 0
+        grid_one_state[2][y] = 0
+        grid_one_state[3][y] = 0
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 0
+        grid_one_state[6][y] = 0
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 0
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 0
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 1
+        grid_one_state[16][y] = 0
 
       else
         random_dense_grid(x, y)
@@ -2852,25 +2869,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 1
+        grid_one_state[2][y] = 0
+        grid_one_state[3][y] = 0
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 0
+        grid_one_state[6][y] = 0
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 0
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 0
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 1
+        grid_one_state[16][y] = 0
 
       else
         random_dense_grid(x, y)
@@ -2882,25 +2899,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 1
-        grid_state[2][y] = 0
-        grid_state[3][y] = 0
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 1
+        grid_one_state[2][y] = 0
+        grid_one_state[3][y] = 0
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 0
-        grid_state[6][y] = 1
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 0
+        grid_one_state[6][y] = 1
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 0
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 1
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 0
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 1
+        grid_one_state[16][y] = 0
 
       else
         random_dense_grid(x, y)
@@ -2913,25 +2930,25 @@ function preset_grid (x,y)
 
       if x == 1 then
 
-        grid_state[1][y] = 1
-        grid_state[2][y] = 1
-        grid_state[3][y] = 1
-        grid_state[4][y] = 0
+        grid_one_state[1][y] = 1
+        grid_one_state[2][y] = 1
+        grid_one_state[3][y] = 1
+        grid_one_state[4][y] = 0
 
-        grid_state[5][y] = 0
-        grid_state[6][y] = 0
-        grid_state[7][y] = 0
-        grid_state[8][y] = 0
+        grid_one_state[5][y] = 0
+        grid_one_state[6][y] = 0
+        grid_one_state[7][y] = 0
+        grid_one_state[8][y] = 0
 
-        grid_state[9][y]  = 0
-        grid_state[10][y] = 0
-        grid_state[11][y] = 0
-        grid_state[12][y] = 0
+        grid_one_state[9][y]  = 0
+        grid_one_state[10][y] = 0
+        grid_one_state[11][y] = 0
+        grid_one_state[12][y] = 0
 
-        grid_state[13][y] = 0
-        grid_state[14][y] = 0
-        grid_state[15][y] = 0
-        grid_state[16][y] = 0
+        grid_one_state[13][y] = 0
+        grid_one_state[14][y] = 0
+        grid_one_state[15][y] = 0
+        grid_one_state[16][y] = 0
 
       else
         random_dense_grid(x, y)
@@ -3011,18 +3028,18 @@ end
 end  
 
 function cycle_ratchet(x,y)
-    -- We look at the current value of the grid_state and increment / Cycle around to produce a rest, normal and various ratchets
-  if grid_state[x][y] == 0 then
+    -- We look at the current value of the grid_one_state and increment / Cycle around to produce a rest, normal and various ratchets
+  if grid_one_state[x][y] == 0 then
     unconditional_set_grid(x,y,1) -- this is not a ratchet, just a normal hit.
-  elseif grid_state[x][y] == 1 then
+  elseif grid_one_state[x][y] == 1 then
     unconditional_set_grid(x,y,2) 
-  elseif grid_state[x][y] == 2 then
+  elseif grid_one_state[x][y] == 2 then
     unconditional_set_grid(x,y,3) 
-  elseif grid_state[x][y] == 3 then
+  elseif grid_one_state[x][y] == 3 then
     unconditional_set_grid(x,y,4) 
-  elseif grid_state[x][y] == 4 then
+  elseif grid_one_state[x][y] == 4 then
     unconditional_set_grid(x,y,5) 
-  elseif grid_state[x][y] == 5 then
+  elseif grid_one_state[x][y] == 5 then
     unconditional_set_grid(x,y,0) -- This is a rest
   end
 
@@ -3043,7 +3060,7 @@ end
 function toggle_sequence_grid(x,y)
   -- Is this used?
   -- This TOGGLES the grid states i.e. because z=1 push on/off push off/on etc.
-  if grid_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
+  if grid_one_state[x][y] ~= 0 then -- "on" might be 1 or something else if its a ratchet etc.
     unconditional_set_grid(x,y,0)
     held_x = 0
     held_y = 0
@@ -3083,15 +3100,15 @@ function undo_grid()
 
 
       -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state BEFORE push_grid_redo is:")
-      -- print (grid_state)
+      -- print ("grid_one_state BEFORE push_grid_redo is:")
+      -- print (grid_one_state)
       -- print ("tally is:" .. tally)
 
       push_grid_redo()
 
       -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state BEFORE pop_grid_undo is:")
-      -- print (grid_state)
+      -- print ("grid_one_state BEFORE pop_grid_undo is:")
+      -- print (grid_one_state)
       -- print ("tally is:" .. tally)
 
 
@@ -3099,14 +3116,14 @@ function undo_grid()
       pop_grid_undo()
 
       -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state AFTER pop_grid_undo is:")
-      -- print (grid_state)
-      --print ("grid_state: " .. get_tally(grid_state))
+      -- print ("grid_one_state AFTER pop_grid_undo is:")
+      -- print (grid_one_state)
+      --print ("grid_one_state: " .. get_tally(grid_one_state))
 
 
   
-      -- print ("grid_state is:")
-      -- print (grid_state)
+      -- print ("grid_one_state is:")
+      -- print (grid_one_state)
 
     else
       print ("undo_grid_lifo is NOT populated")
@@ -3119,8 +3136,8 @@ function redo_grid()
    -- REDO  
       -- print ("Pressed 2,8: REDO")
       -- local tally = refresh_grid_and_screen()
-      -- print ("grid_state BEFORE push_grid_undo is:")
-      -- print (grid_state)
+      -- print ("grid_one_state BEFORE push_grid_undo is:")
+      -- print (grid_one_state)
       -- print ("tally is:" .. tally)
 
           -- Only do this if we know we can pop from undo 
@@ -3130,19 +3147,19 @@ function redo_grid()
             push_grid_undo()
     
             -- local tally = refresh_grid_and_screen()
-            -- print ("grid_state BEFORE pop_grid_redo is:")
-            -- print (grid_state)
+            -- print ("grid_one_state BEFORE pop_grid_redo is:")
+            -- print (grid_one_state)
             -- print ("tally is:" .. tally)
             pop_grid_redo()
     
           --  refresh_grid_and_screen()
     
             -- local tally = refresh_grid_and_screen()
-            -- print ("grid_state AFTER pop_grid_redo is:")
-            -- print (grid_state)
+            -- print ("grid_one_state AFTER pop_grid_redo is:")
+            -- print (grid_one_state)
             -- print ("tally is:" .. tally)
     
-            --print ("grid_state: " .. get_tally(grid_state))
+            --print ("grid_one_state: " .. get_tally(grid_one_state))
           else
             print ("redo_grid_lifo is NOT populated")
           end  
@@ -3195,8 +3212,8 @@ function on_sequence_button_press_down (x,y,z)
   
       -- So we save the table to file
       -- (don't bother with control rows)
-      --print ("Before set grid_state_dirty = true")
-      grid_state_dirty = true
+      --print ("Before set grid_one_state_dirty = true")
+      grid_one_state_dirty = true
 
 
 end 
@@ -3214,7 +3231,7 @@ my_grid_one.key = function(x,y,z)
 -- z == 1 means key down, z == 0 means key up
 
 print("Hello from ----------- my_grid_one.key = function -----------------")
-print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_state[y][y])
+print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_one_state[y][y])
 
 print("arm_control is: ".. arm_control .. " captured_midi_note_in is: " ..  captured_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
@@ -3358,6 +3375,21 @@ end
 
 
 end -- End of my_grid_one.key function definition
+-- /////////////////////////////////////////////////
+
+
+my_grid_two.key = function(x,y,z)
+  -- x is the column
+  -- y is the row
+  -- z == 1 means key down, z == 0 means key up
+  
+  print("Hello from ----------- my_grid_two.key = function -----------------")
+  print("Captured value for monome grid two row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_two_state[y][y])
+
+end
+
+
+
 
 -- //////////////////////////////////////////////
 -------------------------/////////////////////////
@@ -3499,7 +3531,7 @@ end
 function refresh_grid_and_screen()
   
   --print ("Hello from refresh_grid_and_screen for grid at:")
-  --print (grid_state)
+  --print (grid_one_state)
   
 
   local tally = ""
@@ -3561,10 +3593,10 @@ function refresh_grid_and_screen()
   -- NOTE This is only for display purposes.  
   for col = 1,COLS do 
     for row = 1,TOTAL_SEQUENCE_ROWS do -- don't want to set (or display) non sequence rows in this place
-      tally = tally .. grid_state[col][row]
+      tally = tally .. grid_one_state[col][row]
 
       screen.move(10 + (col * 7),row * 7)
-      --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_state[row][column])
+      --screen.text("table[" .. row .. "]["..col.."] is: " ..grid_one_state[row][column])
       
 
       -- Show the scrolling of the steps with the sequence rows of LEDS. (Others will be used for other controls)
@@ -3577,10 +3609,10 @@ function refresh_grid_and_screen()
           -- This is the scrolling cursor
           screen.text("*")
         
-        if (grid_state[col][row] >= 2) then -- ratchet 
+        if (grid_one_state[col][row] >= 2) then -- ratchet 
           -- If current step and key is on, highlight it.
           my_grid_one:led(col,row,12) 
-        elseif (grid_state[col][row] == 1) then 
+        elseif (grid_one_state[col][row] == 1) then 
           -- If current step and key is on, highlight it.
           my_grid_one:led(col,row,9) 
         else
@@ -3588,9 +3620,9 @@ function refresh_grid_and_screen()
           my_grid_one:led(col,row,4)
         end
       else
-        if (grid_state[col][row] >= 2) then
+        if (grid_one_state[col][row] >= 2) then
           my_grid_one:led(col,row,8) -- ratchet
-        elseif (grid_state[col][row] == 1) then
+        elseif (grid_one_state[col][row] == 1) then
             -- Not current step but Grid square is On
           my_grid_one:led(col,row,5)
         else 
@@ -3598,7 +3630,7 @@ function refresh_grid_and_screen()
           my_grid_one:led(col,row,0)
         end
         -- Show the stored value on screen
-        screen.text(grid_state[col][row])
+        screen.text(grid_one_state[col][row])
       end
 
 
@@ -3664,7 +3696,7 @@ end -- stable tempo check
   screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
   my_grid_one:refresh()
-  
+  my_grid_two:refresh()
   -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
   
   return tally
