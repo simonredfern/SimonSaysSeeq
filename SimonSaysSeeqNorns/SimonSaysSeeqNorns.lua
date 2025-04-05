@@ -956,6 +956,14 @@ function PlayMidi()
       local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
 
       if note_on_event.is_active == 1 then
+
+        -- Turn an led on on grid_two to show there is an active note here
+        -- we are interested in the first 6 notes on one step.
+
+        my_grid_two:led(midi_step_count, 6 - count_of_active_midi_on, note_on_event.velocity)
+
+        my_grid_two:refresh()
+
         count_of_active_midi_on = count_of_active_midi_on + 1
 
 
@@ -1113,72 +1121,9 @@ end
     end  
 
 
-    -- elseif swing_mode == 13 then
-    --   swing_amount = 1/56
-    -- elseif swing_mode == 14 then
-    --   swing_amount = 1/70  
-    -- elseif swing_mode == 15 then
-    --   swing_amount = 1/80
-    -- elseif swing_mode == 16 then
-    --   swing_amount = 1/96
-    -- end 
-
-
     --print ("tick says: current_step is: " .. current_step .. " tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
     clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
-
-
-
-    -- if swing_mode == 1 then
-    --    -- No swing, normal clock
-    --   clock.sync(1/48) -- Run at twice 24 PPQN so the even we can send gate on (for clock) and on the odd we can send gate off.
-    -- else   
-    --   -- print ("swing_mode is: " .. swing_mode)
-
-
-    --   -- note probably better to check on odd / even. in any case they must be balanced. what if changge pattern length?
-
-    --   if SWING_STEPS[current_step] then
-    --     print ("swinging step " .. current_step .. " amount is: + " .. swing_amount)
-    --     clock.sync(1/48 + swing_amount)
-    --   else
-    --     -- Non swing step
-    --     print ("swinging step " .. current_step .. " amount is: - " .. swing_amount)
-    --     clock.sync(1/48 - swing_amount)
-    --   end    
-    -- end  
-
-
-    --     if PPQN24_GATES_ARE_ENABLED == true then
-
-    --       if run_conditional_clocks == true then
-
-    --     -- 24 PPQN clock -- This is a 50 50 duty cycle
-    --     -- if tick_count % 2 == 0 then
-         
-    --     --  if (enable_audio_clock_out == 1) then
-    --     --   -- this doesn't work - not using.
-    --     --   softcut.position(1,0) -- at 0 seconds there is the transient click BUT no click is produced.doesn't do much, so try at 5 seconds 1000 HZ tone, but needless to say it doesn't work
-    --     --   softcut.play(1,1)
-    --     --  end
-
-    --     -- else
-
-    --     --  -- softcut.position(1, 1)-- at this this position (1 second) there should be no sound
-    --     --  if (enable_audio_clock_out == 1) then
-    --     --   -- This doesn't work. not using
-    --     --    softcut.play(1,0)
-    --     --  end
-
-    --     -- end  
-
-
-    --   end -- End conditional clocks check 
-
-    -- end -- End check for 24 PPQN clocks
-
-
 
 
   if transport_is_active then 
@@ -1231,13 +1176,48 @@ end
 
       process_step() 
 
-      -- This is the master (original step) 
-      -- Always advance the step based on tick_count mod 12.    
+      local count_of_active_midi_on = 0
+
+       
+
+
+      -- reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
+      for y = 0, 6 do
+        my_grid_two:led(midi_step_count, y, 0)
+      end
+
+      -- loop through all notes and if we have an active note on.
+
+     
+      for n = 0, 127 do
+
+        local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
+
+        if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
+
+          count_of_active_midi_on = count_of_active_midi_on + 1
+
+        -- Turn an led on on grid_two to show there is an active note here
+        -- we are interested in the first 6 notes on one step.
+
+          my_grid_two:led(midi_step_count, 8 - count_of_active_midi_on, note_on_event.velocity)
+
+
+
+        end
+
+      end 
+      
+      my_grid_two:refresh()
+
+      -- Advance the midi step based on tick_count mod 12.    
       midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
 
       if (midi_step_count == 1) then
         midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR)
       end
+
+
 
 
 
@@ -1470,7 +1450,7 @@ function process_step()
 
     else
       if (enable_midi_clock_out == 1 ) then
-      print ("Waiting to MIDI Start midi_step_count is: " .. midi_step_count)
+        print ("Waiting to MIDI Start midi_step_count is: " .. midi_step_count)
       else
         print (" MIDI Clock out disabled")
       end  
@@ -1479,6 +1459,15 @@ function process_step()
    end -- End check midi start
 
 
+
+  --for second_grid_row = 1, 6 do
+
+    --my_grid_two:led(midi_step_count,second_grid_row,24)
+
+    
+   -- keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
+
+  --end   
 
   
   -- For each sequence row...
@@ -1924,15 +1913,6 @@ function grid_button_function_name (x,y)
   return ret
 
 end -- end function definition
-
-
-
---local mo = midi.connect(1) -- defaults to port 1
---mo.event = midi_event
-
-
-
-
 
 
 
@@ -3380,6 +3360,8 @@ end -- End of my_grid_one.key function definition
 -- /////////////////////////////////////////////////
 
 
+
+-- Main loop for the second grid. This gets called every time a grid button is pressed.
 my_grid_two.key = function(x,y,z)
   -- x is the column
   -- y is the row
@@ -3400,14 +3382,9 @@ end
 
   my_grid_two:refresh()
 
-end
-
-
-
-
+end -- End of function for my_grid_two
 -- //////////////////////////////////////////////
--------------------------/////////////////////////
--------------------------/////////////////////////
+
 
 function set_first_step(x, y)
   -- x is the step
