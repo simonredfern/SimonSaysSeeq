@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.5.6"
+version = "1.5.7"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -760,11 +760,11 @@ end
 
 --------------------------------
 
-my_grid = grid.connect()
+my_grid_one = grid.connect()
 
 grid_state_dirty = false
 
-print (my_grid)
+print (my_grid_one)
 
 
 INITIAL_MIDI_GATES_PORT = 1 -- In the currrent cable setup this is CLOCK IN and GATES OUT
@@ -1360,16 +1360,16 @@ function greetings()
   
   grid_text = "Unknown"
   
-  if (not my_grid) then
+  if (not my_grid_one) then
     grid_text = "Grid NOT CONNECTED"
   else
-    grid_text = "Grid: " .. tostring(my_grid.name)
+    grid_text = "Grid: " .. tostring(my_grid_one.name)
   end 
   
   screen.text(grid_text)
   
   screen.move(1,30)   
-  screen.text(my_grid.cols .. " X " .. my_grid.rows)
+  screen.text(my_grid_one.cols .. " X " .. my_grid_one.rows)
 
   local y_position = 40
 
@@ -1968,15 +1968,15 @@ function init()
   init_keyboard_midi_note_events()
 
   print("hello")
-  -- my_grid:all(2)
-  my_grid:refresh() -- refresh the LEDs
+  -- my_grid_one:all(2)
+  my_grid_one:refresh() -- refresh the LEDs
     
     
-  print("my_grid follows: ")
-  print(my_grid)
-  print("my_grid.name is: " .. my_grid.name)
-  print("my_grid.cols is: " .. my_grid.cols)
-  print("my_grid.rows is: " .. my_grid.rows)
+  print("my_grid_one follows: ")
+  print(my_grid_one)
+  print("my_grid_one.name is: " .. my_grid_one.name)
+  print("my_grid_one.cols is: " .. my_grid_one.cols)
+  print("my_grid_one.rows is: " .. my_grid_one.rows)
   
 
   print ("midi.devices are:")
@@ -3208,12 +3208,12 @@ end
 -- We capture monome grid key presses - Grid Key Presses
 -- Main Grid button loop
 
-my_grid.key = function(x,y,z)
+my_grid_one.key = function(x,y,z)
 -- x is the column
 -- y is the row
 -- z == 1 means key down, z == 0 means key up
 
-print("Hello from ----------- my_grid.key = function -----------------")
+print("Hello from ----------- my_grid_one.key = function -----------------")
 print("Captured value for monome grid row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_state[y][y])
 
 print("arm_control is: ".. arm_control .. " captured_midi_note_in is: " ..  captured_midi_note_in .. " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
@@ -3230,11 +3230,11 @@ if z == 1 then
   elseif y == 7 then
     print("Row7 On")
     arm_row7 = grid_button_function_name(x,y)
-    my_grid:led(x,y,12) -- just show that the button is pressed
+    my_grid_one:led(x,y,12) -- just show that the button is pressed
   elseif y == 8 then
     print("Control On")
     arm_control = grid_button_function_name(x,y)
-    my_grid:led(x,y,12) 
+    my_grid_one:led(x,y,12) 
   else
     print("Error")
   end  
@@ -3247,11 +3247,11 @@ else
   elseif y == 7 then
     print("Row7 Reset")
     arm_row7 = NO_FEATURE
-    my_grid:led(x,y,0) 
+    my_grid_one:led(x,y,0) 
   elseif y == 8 then
     print("Control Reset")
     arm_control = NO_FEATURE
-    my_grid:led(x,y,0) 
+    my_grid_one:led(x,y,0) 
   else
     print("Error")
   end
@@ -3357,7 +3357,7 @@ end
   refresh_grid_and_screen()
 
 
-end -- End of my_grid.key function definition
+end -- End of my_grid_one.key function definition
 
 -- //////////////////////////////////////////////
 -------------------------/////////////////////////
@@ -3579,23 +3579,23 @@ function refresh_grid_and_screen()
         
         if (grid_state[col][row] >= 2) then -- ratchet 
           -- If current step and key is on, highlight it.
-          my_grid:led(col,row,12) 
+          my_grid_one:led(col,row,12) 
         elseif (grid_state[col][row] == 1) then 
           -- If current step and key is on, highlight it.
-          my_grid:led(col,row,9) 
+          my_grid_one:led(col,row,9) 
         else
           -- Else use scrolling brightness
-          my_grid:led(col,row,4)
+          my_grid_one:led(col,row,4)
         end
       else
         if (grid_state[col][row] >= 2) then
-          my_grid:led(col,row,8) -- ratchet
+          my_grid_one:led(col,row,8) -- ratchet
         elseif (grid_state[col][row] == 1) then
             -- Not current step but Grid square is On
-          my_grid:led(col,row,5)
+          my_grid_one:led(col,row,5)
         else 
             -- Not current step and key is off
-          my_grid:led(col,row,0)
+          my_grid_one:led(col,row,0)
         end
         -- Show the stored value on screen
         screen.text(grid_state[col][row])
@@ -3663,7 +3663,7 @@ end -- stable tempo check
 
   screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
-  my_grid:refresh()
+  my_grid_one:refresh()
   
   -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
   
