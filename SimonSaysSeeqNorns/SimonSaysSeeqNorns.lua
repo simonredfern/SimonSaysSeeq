@@ -1186,7 +1186,7 @@ end
    
 
       -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
-      for i = 1, 6 do 
+      for i = 1, 8 do 
         collected_note_ons[i] = {} -- create a table for each col
         my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
       end
@@ -1202,6 +1202,7 @@ end
           -- store it so we can come back to it once we've collected them.
           count_of_active_midi_on = count_of_active_midi_on + 1
           -- our index on the table will start at 1 and go up.
+          -- The lowest midi notes will be earlier in the table.
           collected_note_ons[count_of_active_midi_on] = note_on_event
           
         end
@@ -1212,7 +1213,10 @@ end
 
       if count_of_active_midi_on > 0 then  
         for y = 1, count_of_active_midi_on do
-          my_grid_two:led(midi_step_count, 8 - y, collected_note_ons[y].velocity)
+          -- Grid x,y starts from top left
+          if y <= 8 then
+            my_grid_two:led(midi_step_count, 1 + math.abs(y - 8), collected_note_ons[y].velocity)
+          end
         end
       end 
 
