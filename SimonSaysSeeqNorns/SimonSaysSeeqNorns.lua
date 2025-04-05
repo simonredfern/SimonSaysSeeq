@@ -1203,6 +1203,9 @@ end
           count_of_active_midi_on = count_of_active_midi_on + 1
           -- our index on the table will start at 1 and go up.
           -- The lowest midi notes will be earlier in the table.
+
+
+          -- this is not enough information we need to store the midi_bar_coudn and midi_step_count too
           collected_note_ons[count_of_active_midi_on] = note_on_event
           
         end
@@ -1214,7 +1217,8 @@ end
       if count_of_active_midi_on > 0 then  
         for y = 1, count_of_active_midi_on do
           -- Grid x,y starts from top left
-          if y <= 8 then
+          if y <= 8 then -- show a max of 8 notes.
+            -- we might want to spread these notes out over the 8 grid notes we have.
             my_grid_two:led(midi_step_count, 1 + math.abs(y - 8), collected_note_ons[y].velocity)
           end
         end
@@ -1222,6 +1226,14 @@ end
 
       
       my_grid_two:refresh()
+      
+
+
+      -- NEXT 
+      ---We want to turn off a note when we click it on the grid - but the grid is scrolling.
+      --so for each grid button that is lit, we must have recorded the midi_bar, the midi_step and the note number
+      --then when we press it off we can use that tripple to disable the note in mozart_state
+
 
 ------------------------------------------------------
 
