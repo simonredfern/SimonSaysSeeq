@@ -764,7 +764,9 @@ end
 
 
 my_grid_one = grid.connect(1)
+print (my_grid_one)
 my_grid_two = grid.connect(2)
+print (my_grid_two)
 
 
 
@@ -772,7 +774,7 @@ my_grid_two = grid.connect(2)
 
 grid_one_state_dirty = false
 
-print (my_grid_one)
+
 
 
 INITIAL_MIDI_GATES_PORT = 1 -- In the currrent cable setup this is CLOCK IN and GATES OUT
@@ -3384,7 +3386,19 @@ my_grid_two.key = function(x,y,z)
   -- z == 1 means key down, z == 0 means key up
   
   print("Hello from ----------- my_grid_two.key = function -----------------")
-  print("Captured value for monome grid two row,column " ..  x .. ","..y .. " is " .. z.. " the value before change was: " .. grid_two_state[y][y])
+  print("Captured value for monome grid two row,column " ..  x .. ","..y .. " is " .. z.. "") 
+  -- the value before change was: " .. grid_two_state[y][y])
+
+
+if z == 1 then
+  
+  my_grid_two:led(x,y,12)
+else 
+  my_grid_two:led(x,y,0)
+end
+
+
+  my_grid_two:refresh()
 
 end
 
