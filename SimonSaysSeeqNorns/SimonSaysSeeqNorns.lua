@@ -675,13 +675,13 @@ end
 
 function SendMidiKeyboardNoteOn (note, velocity, channel)
 
-  print ("Hello from SendMidiKeyboardNoteOn")
+--  print ("Hello from SendMidiKeyboardNoteOn")
 
   SanityCheckMidiNote(note)
   SanityCheckMidiVelocity(velocity)
   SanityCheckMidiChannel(channel) -- don't need to return this, just check it and carry on.
 
-  print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
+ -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
   midi_keyboard_usb_device_port:note_on (note, velocity, channel)
 
@@ -1235,16 +1235,7 @@ end
           scroll_state[midi_step_count][count_of_active_midi_on].midi_step_count = midi_step_count
           scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number = n
           
-          
-          
-        --  MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
-
---test = new MozartPosition(1, 2, 3, 4)
-
---print (test)
-
-
-        --  scroll_state[midi_step_count][count_of_active_midi_on] = new MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
+        
         end
       end 
 
@@ -3489,11 +3480,15 @@ else
   my_grid_two:led(x,y,0)
 
 
---  local mozart_position = scroll_state[x][y]
   
- -- print ("mozart_position gives lane " .. mozart_position.current_midi_lane .. " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
+-- TODO need to initialize this scroll_state completely 
+local mozart_position = scroll_state[x][y]
 
+print (mozart_position)
+  
+-- print ("mozart_position gives lane " .. mozart_position.current_midi_lane .. " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
 
+ -- todo turn off this scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
 
 
 
