@@ -491,17 +491,17 @@ MAX_LANE = 2
 MAX_STEP = 16
 
 
-MozartPosition = {}
-MozartPosition.__index = MozartPosition
+MozartPointer = {}
+MozartPointer.__index = MozartPointer
 
-function MozartPosition:new()
+function MozartPointer:new()
   return setmetatable({
+    is_active = 0,
     current_midi_lane = 0,
-      midi_bar_count = 0,
-      midi_step_count = 0,
-      midi_note_number = 0,
-      is_active = 0
-  }, MozartPosition)
+    midi_bar_count = 0,
+    midi_step_count = 0,
+    midi_note_number = 0
+  }, MozartPointer)
 end
 
 
@@ -1222,8 +1222,10 @@ end
           -- The lowest midi notes will be earlier in the table.
 
 
-          -- this is not enough information we need to store the midi_bar_count and midi_step_count too
-          collected_note_ons[count_of_active_midi_on] = note_on_event
+          -- hmm
+          collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
+          collected_note_ons[count_of_active_midi_on].midi_note_number = n
+
 
 
         
@@ -1249,12 +1251,12 @@ end
           -- This table stores the relationship between the grid x,y and the mozart note it represents.
           -- so we can later press the button and turn off a note in the mozart table.
 
-          scroll_state[midi_step_count][y] = MozartPosition:new()
+          scroll_state[midi_step_count][y] = MozartPointer:new()
           scroll_state[midi_step_count][y].is_active = true
           scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
           scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
           scroll_state[midi_step_count][y].midi_step_count = midi_step_count
-          scroll_state[midi_step_count][y].midi_note_number = n
+          scroll_state[midi_step_count][y].midi_note_number = collected_note_ons[c].midi_note_number
 
           --print ("midi_note_number is: ")
           --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
@@ -2176,8 +2178,8 @@ function create_a_grid(is_scroll_in)
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
-        if (is_scroll == true) then -- If we are creating a scroll table, each entry points to a MozartPosition so we can manipulate mozart_state
-          local_grid[col][row] = MozartPosition:new()
+        if (is_scroll == true) then -- If we are creating a scroll table, each entry points to a MozartPointer so we can manipulate mozart_state
+          local_grid[col][row] = MozartPointer:new()
         else
           local_grid[col][row] = 0
         end
