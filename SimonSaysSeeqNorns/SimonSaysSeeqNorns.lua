@@ -174,7 +174,7 @@ GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid-v2.tbl"
 
 MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart-v2.tbl"
 
-SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll-v3.tbl"
+SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll-v5.tbl"
 
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide-v2.tbl"
 
@@ -498,7 +498,7 @@ function MozartPosition:new()
   return setmetatable({
     current_midi_lane = 0,
       midi_bar_count = 0,
-      midi_step = 0,
+      midi_step_count = 0,
       midi_note_number = 0,
       is_active = 0
   }, MozartPosition)
@@ -1225,16 +1225,7 @@ end
           -- this is not enough information we need to store the midi_bar_count and midi_step_count too
           collected_note_ons[count_of_active_midi_on] = note_on_event
 
-          -- This table stores the relationship between the grid x,y and the mozart note it represents.
-          -- so we can later press the button and turn off a note in the mozart table.
 
-          scroll_state[midi_step_count][count_of_active_midi_on] = SequenceNote:new()
-          scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
-          scroll_state[midi_step_count][count_of_active_midi_on].current_midi_lane = current_midi_lane
-          scroll_state[midi_step_count][count_of_active_midi_on].midi_bar_count = midi_bar_count
-          scroll_state[midi_step_count][count_of_active_midi_on].midi_step_count = midi_step_count
-          scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number = n
-          
         
         end
       end 
@@ -1243,11 +1234,40 @@ end
         -- we are interested in the first 6 notes on one step.
 
       if count_of_active_midi_on > 0 then  
-        for y = 1, count_of_active_midi_on do
+        for c = 1, count_of_active_midi_on do
           -- Grid x,y starts from top left
-          if y <= 8 then -- show a max of 8 notes.
+          if c <= 8 then -- show a max of 8 notes.
             -- we might want to spread these notes out over the 8 grid notes we have.
-            my_grid_two:led(midi_step_count, 1 + math.abs(y - 8), collected_note_ons[y].velocity)
+
+            -- We want the lowest note to be at the bottom of the grid
+            local y = 1 + math.abs(c - 8)
+
+
+            my_grid_two:led(midi_step_count, y, collected_note_ons[c].velocity)
+
+
+          -- This table stores the relationship between the grid x,y and the mozart note it represents.
+          -- so we can later press the button and turn off a note in the mozart table.
+
+          scroll_state[midi_step_count][y] = MozartPosition:new()
+          scroll_state[midi_step_count][y].is_active = true
+          scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
+          scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
+          scroll_state[midi_step_count][y].midi_step_count = midi_step_count
+          scroll_state[midi_step_count][y].midi_note_number = n
+
+          --print ("midi_note_number is: ")
+          --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
+          --print ("is_active: ")
+          --print (scroll_state[midi_step_count][count_of_active_midi_on].is_active)
+          --print ("midi_note_number: ")
+          --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
+
+
+
+
+
+
           end
         end
       end 
@@ -2156,8 +2176,8 @@ function create_a_grid(is_scroll_in)
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
-        if (is_scroll == true) then
-          local_grid[col][row] = SequenceNote:new()
+        if (is_scroll == true) then -- If we are creating a scroll table, each entry points to a MozartPosition so we can manipulate mozart_state
+          local_grid[col][row] = MozartPosition:new()
         else
           local_grid[col][row] = 0
         end
@@ -2277,7 +2297,7 @@ function init_scroll_state_table()
   if success then
     print ("load scroll state seems ok. scroll_state is:")
     print (scroll_state)
-    print (get_tally(scroll_state))
+    --print (get_tally(scroll_state)) -- problematic here
   else
     print ("Seems we got an error - setting scroll_state to nil so we will create it and save it: ")
     print (err)
@@ -2288,14 +2308,14 @@ function init_scroll_state_table()
   if scroll_state == nil then
     print ("No table, I will generate a structure and save that")
 
-    scroll_state = create_a_grid()
+    scroll_state = create_a_grid(true)
     Tab.save(scroll_state, SCROLL_STATE_FILE)
     scroll_state = Tab.load (SCROLL_STATE_FILE)  
   else
     print ("I already have a scroll_state table, no need to generate one")
   end
   
- print ("tally is: " .. get_tally(scroll_state))
+-- print ("tally is: " .. get_tally(scroll_state))
 
 
   print ("Bye from init_scroll_state_table")
@@ -3509,40 +3529,32 @@ if z == 1 then
   
   my_grid_two:led(x,y,12)
 else 
+  -- 1) Turn the LED off to give feedback to the user
   my_grid_two:led(x,y,0)
 
+  -- 2) Get the mozart_pointer for the button we just pressed off 
+  local mozart_pointer = scroll_state[x][y]
 
+
+  -- print_table(scroll_state)
   
 -- TODO need to initialize this scroll_state completely 
-local mozart_position = scroll_state[x][y]
-
-
-
-print ("here is the scroll_state[x][y] ")
-print(scroll_state[x][y])
-
-print ("here is the mozart_position ")
-print (mozart_position)
-
-print_table(mozart_position)
 
 
 
 
---print ("mozart_position gives lane " .. mozart_position.current_midi_lane) 
---print ( " bar " .. mozart_position.midi_bar_count)
-print ( " step " .. mozart_position.SequenceNote.midi_step_count)
---print ( " note " .. mozart_position.midi_note_number)
+print ("here is the pointer for x " .. x .. " y " .. y)
+print ("lane " .. mozart_pointer.current_midi_lane) 
+print ("bar " .. mozart_pointer.midi_bar_count)
+print ("step " .. mozart_pointer.midi_step_count)
+print ("note " .. mozart_pointer.midi_note_number)
 
--- " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
-
-
-
+-- 3) Now make the mozart_grid inactive
 
 
+ -- 4) turn off this scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
 
- -- todo turn off this scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
-
+ -- By now we should have removed the note from the mozart_state / grid (difference?)
 
 
 end
@@ -3587,6 +3599,7 @@ function get_tally(input_grid)
   local tally = "id:" ..input_grid["id"] .. " colsXrows:"
   for col = 1,COLS do 
     for row = 1,ROWS do
+      -- This line throws an error if the table hasn't been dimensioned to col X row or is_active is missing.
       tally = tally .. input_grid[col][row]
     end 
   end
