@@ -499,7 +499,8 @@ function MozartPosition:new()
     current_midi_lane = 0,
       midi_bar_count = 0,
       midi_step = 0,
-      midi_note_number = 0
+      midi_note_number = 0,
+      is_active = 0
   }, MozartPosition)
 end
 
@@ -1226,8 +1227,24 @@ end
 
           -- This table stores the relationship between the grid x,y and the mozart note it represents.
           -- so we can later press the button and turn off a note in the mozart table.
-          -- scroll_state[midi_step_count][count_of_active_midi_on] = MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
+
+          scroll_state[midi_step_count][count_of_active_midi_on] = SequenceNote:new()
+          scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
+          scroll_state[midi_step_count][count_of_active_midi_on].current_midi_lane = current_midi_lane
+          scroll_state[midi_step_count][count_of_active_midi_on].midi_bar_count = midi_bar_count
+          scroll_state[midi_step_count][count_of_active_midi_on].midi_step_count = midi_step_count
+          scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number = n
           
+          
+          
+        --  MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
+
+--test = new MozartPosition(1, 2, 3, 4)
+
+--print (test)
+
+
+        --  scroll_state[midi_step_count][count_of_active_midi_on] = new MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
         end
       end 
 
