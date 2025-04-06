@@ -3538,23 +3538,23 @@ else
   local mozart_pointer = scroll_state[x][y]
 
 
-  -- print_table(scroll_state)
-  
--- TODO need to initialize this scroll_state completely 
-
-
-
-
 print ("here is the pointer for x " .. x .. " y " .. y)
 print ("lane " .. mozart_pointer.current_midi_lane) 
 print ("bar " .. mozart_pointer.midi_bar_count)
 print ("step " .. mozart_pointer.midi_step_count)
 print ("note " .. mozart_pointer.midi_note_number)
 
--- 3) Now make the mozart_grid inactive
+-- 3) Turn off the keyboard_midi_note
+keyboard_midi_note_events[mozart_pointer.current_midi_lane][mozart_pointer.midi_bar_count][mozart_pointer.midi_step_count][mozart_pointer.midi_note_number][1].is_active = 0
+
 
 
  -- 4) turn off this scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
+
+
+ scroll_state[x][y].is_active = 0
+
+ print ("note should be turned off soon " .. mozart_pointer.midi_note_number)
 
  -- By now we should have removed the note from the mozart_state / grid (difference?)
 
