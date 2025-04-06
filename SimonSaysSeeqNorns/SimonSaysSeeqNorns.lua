@@ -2139,14 +2139,20 @@ end
 
 
 -- a general grid. This is used for grid, mozart, slide etc.
-function create_a_grid()
+function create_a_grid(is_scroll)
+  is_scroll = is_scroll or false
   local local_grid = {}
+  
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
 
   for col = 1, COLS do 
     local_grid[col] = {} -- create a table for each col
     for row = 1, ROWS do
-        local_grid[col][row] = 0
+        if (is_scroll == true) then
+          local_grid[col][row] = SequenceNote:new()
+        else
+          local_grid[col][row] = 0
+        end
     end
   end
   return local_grid
