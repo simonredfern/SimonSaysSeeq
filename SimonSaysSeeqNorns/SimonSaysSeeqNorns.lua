@@ -170,15 +170,15 @@ swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 7 -- was 6
 
-GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
+GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid-v2.tbl"
 
-MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
+MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart-v2.tbl"
 
-SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll.tbl"
+SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll-v3.tbl"
 
-SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
+SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide-v2.tbl"
 
-ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settingsB.tbl"
+ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settings-v2.tbl"
 
 function get_row_settings_tally(row_settings)
   -- A helper debug function to show the state the row_settings table
@@ -724,7 +724,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
           if on_off == C_MIDI_NOTE_ON then
               -- If velocity is low, treat as note off
               if velocity < 40 then
-                  print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
+                 -- print(string.format("*** I GOT A LOW VELOCITY %d so will remove note %d from the sequence ***", velocity, note))
                   
                   DisableKeyboardMidiNotes(note)
 
@@ -734,7 +734,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               else
                   -- Process note on
     
-                      print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
+                     -- print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
                       
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step = the_current_tick_count_since_step
                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity = velocity
@@ -751,7 +751,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               print(string.format("Done setting MIDI note ON for note %d when step is %d velocity is %d", note, midi_step_count, velocity))
           else
               -- Process MIDI note off
-              print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
+              -- print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
    
               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step = the_current_tick_count_since_step
@@ -765,7 +765,7 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
               -- last_note_off = note
 
 
-              print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
+              -- print(string.format("Done setting MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
           end
       else
           print(string.format("###### Note %d out of range (Allowed: %d to %d)", note, lowest_keyboard_midi_note, highest_keyboard_midi_note))
@@ -1006,7 +1006,7 @@ function PlayMidi()
         count_of_active_midi_off = count_of_active_midi_off + 1
           if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
               -- Send MIDI Note OFF
-              print("before SendMidiKeyboardNoteOn for note off current_midi_lane is "  .. current_midi_lane .. " midi_bar_count " .. midi_bar_count .. " midi_step_count " .. midi_step_count .. " n " .. n)
+              --print("before SendMidiKeyboardNoteOn for note off current_midi_lane is "  .. current_midi_lane .. " midi_bar_count " .. midi_bar_count .. " midi_step_count " .. midi_step_count .. " n " .. n)
               SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
 
           end
@@ -2129,20 +2129,28 @@ function load_mozart_state()
   return mozart_state
 end
 
+function load_scroll_state()
+  scroll_state = Tab.load (SCROLL_STATE_FILE)
+  -- NOTE: get_tally serves to check the table is at least kind of OK. 
+  print (get_tally(scroll_state))
+  return scroll_state
+end
+
+
 
 function load_slide_state()
   slide_state = Tab.load (SLIDE_STATE_FILE) 
   -- NOTE: get_tally serves to check the table is at least kind of OK.
-  print (get_tally(slide_state))
-  return slide_state
+  print (get_tally(scroll_state))
+  return scroll_state
 end
 
 
 -- a general grid. This is used for grid, mozart, slide etc.
-function create_a_grid(is_scroll)
-  is_scroll = is_scroll or false
+function create_a_grid(is_scroll_in)
+  local is_scroll = is_scroll_in or false
   local local_grid = {}
-  
+
   local_grid["id"]=math.random(1,99999999999999) -- an ID for debugging purposes
 
   for col = 1, COLS do 
@@ -3291,6 +3299,24 @@ function redo_mozart()
 
 end  
 
+
+function print_table(t, indent)
+  indent = indent or ""
+  for k, v in pairs(t) do
+    local key = tostring(k)
+    if type(v) == "table" then
+      print(indent .. key .. " = {")
+      print_table(v, indent .. "  ")
+      print(indent .. "}")
+    else
+      print(indent .. key .. " = " .. tostring(v))
+    end
+  end
+end
+
+
+
+
 function on_sequence_button_press_down (x,y,z)
 
       -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
@@ -3490,9 +3516,30 @@ else
 -- TODO need to initialize this scroll_state completely 
 local mozart_position = scroll_state[x][y]
 
+
+
+print ("here is the scroll_state[x][y] ")
+print(scroll_state[x][y])
+
+print ("here is the mozart_position ")
 print (mozart_position)
-  
--- print ("mozart_position gives lane " .. mozart_position.current_midi_lane .. " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
+
+print_table(mozart_position)
+
+
+
+
+--print ("mozart_position gives lane " .. mozart_position.current_midi_lane) 
+--print ( " bar " .. mozart_position.midi_bar_count)
+print ( " step " .. mozart_position.SequenceNote.midi_step_count)
+--print ( " note " .. mozart_position.midi_note_number)
+
+-- " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
+
+
+
+
+
 
  -- todo turn off this scroll_state[midi_step_count][count_of_active_midi_on].is_active = true
 
