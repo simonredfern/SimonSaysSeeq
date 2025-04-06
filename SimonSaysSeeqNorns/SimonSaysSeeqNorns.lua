@@ -174,6 +174,8 @@ GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid.tbl"
 
 MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart.tbl"
 
+SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll.tbl"
+
 SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide.tbl"
 
 ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settingsB.tbl"
@@ -1205,7 +1207,7 @@ end
           -- The lowest midi notes will be earlier in the table.
 
 
-          -- this is not enough information we need to store the midi_bar_coudn and midi_step_count too
+          -- this is not enough information we need to store the midi_bar_count and midi_step_count too
           collected_note_ons[count_of_active_midi_on] = note_on_event
           
         end
@@ -1978,6 +1980,9 @@ function init()
   print ("before init_mozart_state_table")
   init_mozart_state_table()
 
+  print ("before init_scroll_state_table")
+  init_scroll_state_table()
+
   print ("before init_slide_state_table")
   init_slide_state_table()
 
@@ -2219,6 +2224,45 @@ function init_mozart_state_table()
   
 
 end -- end init_mozart_state_table
+
+
+
+function init_scroll_state_table()
+  
+  print ("Hello from init_scroll_state_table")
+  
+  -- Try to load the table
+  local success, err = pcall(load_scroll_state) -- note scroll_state is loaded into a global
+
+  if success then
+    print ("load scroll state seems ok. scroll_state is:")
+    print (scroll_state)
+    print (get_tally(scroll_state))
+  else
+    print ("Seems we got an error - setting scroll_state to nil so we will create it and save it: ")
+    print (err)
+    scroll_state = nil
+  end  
+  
+  -- if it doesn't exist
+  if scroll_state == nil then
+    print ("No table, I will generate a structure and save that")
+
+    scroll_state = create_a_grid()
+    Tab.save(scroll_state, SCROLL_STATE_FILE)
+    scroll_state = Tab.load (SCROLL_STATE_FILE)  
+  else
+    print ("I already have a scroll_state table, no need to generate one")
+  end
+  
+ print ("tally is: " .. get_tally(scroll_state))
+
+
+  print ("Bye from init_scroll_state_table")
+  
+
+end -- end init_scroll_state_table
+
 
 
 
