@@ -490,6 +490,20 @@ MAX_LANE = 2
 
 MAX_STEP = 16
 
+
+MozartPosition = {}
+MozartPosition.__index = MozartPosition
+
+function MozartPosition:new()
+  return setmetatable({
+    current_midi_lane = 0,
+      midi_bar_count = 0,
+      midi_step = 0,
+      midi_note_number = 0
+  }, MozartPosition)
+end
+
+
 -- Define the SequenceNote class
 SequenceNote = {}
 SequenceNote.__index = SequenceNote
@@ -774,7 +788,7 @@ print (my_grid_two)
 
 
 
-grid_one_state_dirty = false
+grids_are_dirty = false
 
 
 
@@ -1209,6 +1223,10 @@ end
 
           -- this is not enough information we need to store the midi_bar_count and midi_step_count too
           collected_note_ons[count_of_active_midi_on] = note_on_event
+
+          -- This table stores the relationship between the grid x,y and the mozart note it represents.
+          -- so we can later press the button and turn off a note in the mozart table.
+          -- scroll_state[midi_step_count][count_of_active_midi_on] = MozartPosition(current_midi_lane, midi_bar_count, midi_step_count, n)
           
         end
       end 
@@ -2057,7 +2075,7 @@ init_flutter_window()
     while true do
       clock.sleep(5)
       -- TODO fix bug here, we only save table if grid_one has changed.
-        if (grid_one_state_dirty == true) then
+        if (grids_are_dirty == true) then
 
            if (transport_is_active == false) then -- only save if we're stopped. (not sure we really need this) for sure we don't want to write to disk when playing
 
@@ -2070,7 +2088,7 @@ init_flutter_window()
             Tab.save(slide_state, SLIDE_STATE_FILE)
 
 
-            grid_one_state_dirty = false
+            grids_are_dirty = false
 
             print("I saved tables.")
 
@@ -2477,6 +2495,8 @@ function unconditional_set_mozart(x, y, midi_note_number, set_grid_on)
   if set_grid_on == 1 then
     unconditional_set_grid(x, y, 1)
   end
+
+  grids_are_dirty = true
 
   print ("unconditional_set_mozart says: Just set x: " .. x .. " y: " ..  y ..  " to midi note: " .. midi_note_number)
 
@@ -3267,8 +3287,8 @@ function on_sequence_button_press_down (x,y,z)
   
       -- So we save the table to file
       -- (don't bother with control rows)
-      --print ("Before set grid_one_state_dirty = true")
-      grid_one_state_dirty = true
+      --print ("Before set grids_are_dirty = true")
+      grids_are_dirty = true
 
 
 end 
@@ -3450,6 +3470,16 @@ if z == 1 then
   my_grid_two:led(x,y,12)
 else 
   my_grid_two:led(x,y,0)
+
+
+--  local mozart_position = scroll_state[x][y]
+  
+ -- print ("mozart_position gives lane " .. mozart_position.current_midi_lane .. " bar " .. mozart_position.midi_bar_count .. " step " .. mozart_position.midi_step_count .. " note " .. mozart_position.midi_note_number)
+
+
+
+
+
 end
 
 
