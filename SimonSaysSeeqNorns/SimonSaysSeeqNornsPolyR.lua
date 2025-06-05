@@ -1529,7 +1529,7 @@ function load_row_settings()
     print (get_row_settings_tally(row_settings))
   
     return row_settings
-  end
+end
 
 
 

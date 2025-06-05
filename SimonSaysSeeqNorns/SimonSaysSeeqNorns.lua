@@ -76,7 +76,7 @@ if (file_exists(all_days_path)) then
     --   print(i, v.the_co2_ppm_value)
 
     -- end
-    we_have_all_daily_co2_ppm_value = true
+    we_have_all_daily_co2_ppm_values = true
 else
     print("We do NOT have ALL daily co2 ppm ");
     we_have_all_daily_co2_ppm_values = false

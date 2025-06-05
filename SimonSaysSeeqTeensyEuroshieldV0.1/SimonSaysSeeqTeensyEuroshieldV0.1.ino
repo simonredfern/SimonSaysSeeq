@@ -14,7 +14,7 @@
 
 const char hardware[16]= "Euroshield";
 
-const float simon_says_seq_version = 0.30; 
+const float simon_says_seq_version = 0.31; 
 
 
 #include <Audio.h>
@@ -449,8 +449,8 @@ void setup() {
 
    /////////////////////////////////////////////////////////
    // Say hello by flashing the LEDs, show we are ready to sequence. 
-  uint8_t my_delay_time = 50;
-  uint8_t my_no_of_times = 10;
+  uint8_t my_delay_time = 150;
+  uint8_t my_no_of_times = 100;
 
   // Get values at setup so isCrossing etc works later
   upper_input_raw = analogRead(upper_pot_pin);

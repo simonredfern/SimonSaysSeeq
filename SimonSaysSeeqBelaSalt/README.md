@@ -158,4 +158,138 @@ http://daniel-bytes.github.io/serialosc_example/
 
 
 
+========
+
+
+// TO Understand render see the example in Fundamentals: minimal/render.cpp
+
+// In general, see https://www.youtube.com/watch?v=XJ2fFqGexCM
+
+
+// So Bela can get to the internet via a Mac with ethernet over USB
+
+// ssh root@bela.local
+// vi /etc/network/interfaces
+// auto usb0
+// iface usb0 inet dhcp
+// auto usb1
+// iface usb1 inet dhcp
+// And enable Mac OS Sharing like this:
+// Mac OS Preferences. Sharing From = Wifi. (drop down list) To Computers using = Bela (check box). Internet Sharing = Yes. (ticked)  
+// then on Bela: systemctl restart networking.service
+// Login again and
+// ping 8.8.8.8
+
+
+
+
+// Note: Bela might run out of disk space
+// du -h --max-depth=1
+// #!/bin/bash
+// dir=/path/to/directory/you/want/to/check
+// num=[number of top largest directories to list)
+// du -ah $dir | sort -n -r | head -n $num
+// du -hs /var/*
+
+// Can apparently delete /var/cache/apt
+
+
+// Add this to your /etc/init.d
+
+// root@bela:/etc/init.d# cat bela_startup.sh 
+// #!/bin/bash
+// rm -f /var/log/*.log || true
+// echo > /var/log/syslog
+// rm -f /var/log/*.gz || true
+// echo > /var/log/syslog.1
+// echo $(date -u) "I ran /etc/init.d/bela_startup.sh on startup" >> /var/log/bela_startup.log.keep
+
+
+// echo > /var/log/*.log
+
+
+// Make it executable with 
+// chmod u+x bela_startup.sh
+// chmod +x bela_startup.sh <- Need this else it doesn't run.
+
+// add it to crontab (edited via, for example, crontab -e)
+// not sure how successfully this runs
+// @reboot sleep 60 && /etc/init.d/bela_startup.sh
+
+
+
+//root@bela:/var/log# rm /var/log/*.log
+//root@bela:/var/log# rm /var/log/syslog
+//root@bela:/var/log# rm /var/log/*.gz
+//root@bela:/var/log# rm /var/log/syslog.1 
+
+
+==========
+
+// To find midi ports Bela can see, type "amidi -l" in the Bela command line.
+// Also  lsusb -t via ssh 
+
+/*
+root@bela:~/bin# cat log_usb.sh
+#!/bin/bash
+echo Hello
+amidi -l
+lsusb -t
+*/
+
+/*
+root@bela:~/bin/SimonSaysSeeq# amidi -l
+Dir Device    Name
+IO  hw:0,0    f_midi <-- This is the connection to your computer (device port on Bela)
+IO  hw:1,0,0  USB MIDI Interface MIDI 1 <-- This is the device connected to USB host port on the Bela
+*/
+
+// NOTE: It seems there is a timing / loading issue with the USB midi port...
+// In order for USB host midi port to work, either: 
+// 1) save two copies of this patch under loop_A and loop_B, set the settings to start with loop_* and after booting the Salt, press the left button on Salt for more than two seconds 
+// or 
+// 2) Save this patch via the IDE after the USB cables are plugged in.
+  
+
+//const char* gMidiPort0 = "hw:0,0"; // This is the computer via USB cable
+
+
+
+
+
+
+
+==========
+
+
+
+////////////////////////////////////////////////
+
+
+// const uint8_t BRIGHT_0 = 0;
+// const uint8_t BRIGHT_1 = 10;
+// const uint8_t BRIGHT_2 = 20;
+// const uint8_t BRIGHT_3 = 75;
+// const uint8_t BRIGHT_4 = 100;
+// const uint8_t BRIGHT_5 = 255;
+
+
+=======
+
+
+// "Ghost notes" are created to cancel out a note-off in keyboard_midi_note_events that is created  during the note off of low velocity notes.
+// class GhostNote
+// {
+//  public:
+//    uint8_t tick_count_in_sequence = 0;
+//    uint8_t is_active = 0;
+// };
+
+//GhostNote channel_x_ghost_events[128];
+
+////////////////////////////////////////
+// Bit Constants for bit wise operations 
+
+
+
 
