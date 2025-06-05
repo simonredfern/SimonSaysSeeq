@@ -896,8 +896,8 @@ function SanityCheckMidiChannel(channel)
     if (channel == nil) then
         error("SanityCheckMidiChannel says channel is nil")
     end
-    -- TODO check the valid range 0 to 15 ?
-    if not (tonumber(channel) >= 0 and tonumber(channel) <= 16) then
+    -- MIDI channels are 1-16 based on code usage
+    if not (tonumber(channel) >= 1 and tonumber(channel) <= 16) then
         error("SanityCheckMidiChannel says channel is out of bounds with the value: " .. tostring(channel))
     end
 
