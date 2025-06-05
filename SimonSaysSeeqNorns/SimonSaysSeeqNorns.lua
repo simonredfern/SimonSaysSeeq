@@ -119,7 +119,7 @@ arm_row7 = NO_FEATURE
 arm_control = NO_FEATURE
 
 print("Current matrix is " ..
-sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
+    sequence_button_x .. " " .. sequence_button_y .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
 
 
 
