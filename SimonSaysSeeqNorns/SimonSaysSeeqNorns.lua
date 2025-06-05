@@ -937,7 +937,7 @@ function SanityCheckMidiChannel(channel)
   if (channel == nil) then
     error("SanityCheckMidiChannel says channel is nil") 
   end
-
+-- TODO check the valid range 0 to 15 ?
   if not (tonumber(channel) >= 0 and tonumber(channel) <= 16) then
     error("SanityCheckMidiChannel says channel is out of bounds with the value: " .. tostring(channel))
   end 
@@ -1221,6 +1221,10 @@ end
           -- our index on the table will start at 1 and go up.
           -- The lowest midi notes will be earlier in the table.
 
+          -- Initialize table entry if it doesn't exist
+          if not collected_note_ons[count_of_active_midi_on] then
+            collected_note_ons[count_of_active_midi_on] = {}
+          end
 
           -- hmm
           collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
@@ -1851,7 +1855,7 @@ function clock.transport.stop() -- transport stop
   --screen.text("Transport STOP")
   --screen.update()
 
-  clock.sleep(5)
+  --clock.sleep(5)
 
 
   display_tempo_status()
