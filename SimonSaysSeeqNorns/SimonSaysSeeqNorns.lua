@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.5.8"
+version = "1.5.9"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -35,14 +35,16 @@ function file_exists(name)
     if f ~= nil then
         io.close(f)
         return true
-    else return false end
+    else
+        return false
+    end
 end
 
 -- See gml.noaa.gov/ccgg/trends/ for additional details.
 
 
 local co2_ppm_daily_latest_value = tonumber(read_file(
-"/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
+    "/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
 
 if (co2_ppm_daily_latest_value) then
     print("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
@@ -65,8 +67,14 @@ if (file_exists(all_days_path)) then
     no_of_co2_ppm_records = 0
     for line in io.lines(all_days_path) do
         local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
-        co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value =
-        the_co2_ppm_value }
+        co2_ppm_list[#co2_ppm_list + 1] = {
+            year = year,
+            month = month,
+            day = day,
+            something = something,
+            the_co2_ppm_value =
+                the_co2_ppm_value
+        }
         no_of_co2_ppm_records = no_of_co2_ppm_records + 1
     end
 
@@ -119,7 +127,7 @@ arm_row7 = NO_FEATURE
 arm_control = NO_FEATURE
 
 print("Current matrix is " ..
-sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
+    sequence_button_x .. " " .. sequence_button_x .. " " .. sequence_button_midi .. " " .. arm_row7 .. " " .. arm_control)
 
 
 
@@ -191,9 +199,9 @@ function get_row_settings_tally(row_settings)
     local tally = "id:" .. row_settings["id"] .. " "
     for row = 1, ROWS do
         tally = tally ..
-        " Row: " ..
-        row ..
-        " first_step is: " .. row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
+            " Row: " ..
+            row ..
+            " first_step is: " .. row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
     end
     return tally
 end
@@ -203,7 +211,7 @@ function create_row_settings()
 
     local row_settings = {}
     for row = 1, ROWS do
-        row_settings[row] = {}   -- create a table for each row
+        row_settings[row] = {} -- create a table for each row
         row_settings[row]["first_step"] = 1
         row_settings[row]["last_step"] = 16
         row_settings[row]["current_step"] = 1
@@ -583,11 +591,11 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
                         -- or, how do we disable the corresponding off note?
 
                         keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0  -- make the note velocity zero
                         keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0  -- make any note off zero velocity.
 
-                        SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
+                        SendMidiKeyboardNoteOn(note, 0, 1)                                          -- send midi off for that one note
                     end
 
                     count_active_on_disabled = count_active_on_disabled + 1
@@ -598,11 +606,11 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
                 if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active == 1 then
                     if count_active_off_disabled % skip == 0 then
                         keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0  -- make the note velocity zero
                         keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0  -- make any note off zero velocity.
 
-                        SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
+                        SendMidiKeyboardNoteOn(note, 0, 1)                                          -- send midi off for that one note
                     end
 
                     count_active_off_disabled = count_active_off_disabled + 1
@@ -637,7 +645,7 @@ function midiNoteToName(midiNote)
         --  return nil, "Invalid MIDI note number"
     end
 
-    local noteIndex = (midiNote % 12) + 1      -- Lua indices start at 1
+    local noteIndex = (midiNote % 12) + 1        -- Lua indices start at 1
     local octave = math.floor(midiNote / 12) - 1 -- MIDI note 0 is in octave -1
 
     return noteNames[noteIndex] .. octave
@@ -703,9 +711,9 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                     -- print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
 
                     keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step =
-                    the_current_tick_count_since_step
+                        the_current_tick_count_since_step
                     keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity =
-                    velocity
+                        velocity
                     keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
 
                     -- Pass through the note
@@ -724,9 +732,9 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
 
                 keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step =
-                the_current_tick_count_since_step
+                    the_current_tick_count_since_step
                 keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity =
-                velocity
+                    velocity
                 keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
 
                 -- Echo the midi note through norns to the synth.
@@ -801,7 +809,7 @@ end }
 
 
 -- defaults
-normal_midi_note_is_on = false  -- what is this for?
+normal_midi_note_is_on = false -- what is this for?
 normal_midi_note_is_off = false
 normal_midi_note_in = -1
 
@@ -1117,7 +1125,9 @@ function tick()
             end
 
 
-            total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records)
+            if no_of_co2_ppm_records > 0 then
+                total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records)
+            end
 
             if tick_count % 12 == 0 then
                 InitStepCountSinceStep()
@@ -1138,14 +1148,14 @@ function tick()
 
                 -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
                 for i = 1, 8 do
-                    collected_note_ons[i] = {} -- create a table for each col
+                    collected_note_ons[i] = {}             -- create a table for each col
                     my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
                 end
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
                 for n = 0, 127 do
                     local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
-                    [n][1]
+                        [n][1]
 
                     -- For each proper note on event we find,
                     if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
@@ -1241,7 +1251,9 @@ function tick()
 
                 -- total_step_co2_count = total_step_co2_count + 1
 
-                total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records) --- total_step_co2_count + 1
+                if no_of_co2_ppm_records > 0 then
+                    total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records) --- total_step_co2_count + 1
+                end
 
                 -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step. Huh??
                 -- if midi_step_count == 3 then
@@ -1313,7 +1325,7 @@ function tick()
 
         IncrementStepCountSinceStep()
     end -- end while
-end   -- end on tick function
+end     -- end on tick function
 
 function init_tick_count()
     tick_count = 0
@@ -1475,7 +1487,7 @@ function process_step()
             conditional_change_crow_output(row_settings[sequence_row]["current_step"], sequence_row)
         end
     end -- end for
-end -- end function
+end     -- end function
 
 function conditional_change_crow_output(current_step, sequence_row)
     crow_output = sequence_row - 2
@@ -1494,16 +1506,25 @@ function conditional_change_crow_output(current_step, sequence_row)
         if (sequence_row == 3) then
             --print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
-            co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
+            if we_have_all_daily_co2_ppm_value and no_of_co2_ppm_records > 0 and co2_ppm_list[total_step_co2_count] then
+                co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
+                crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
+            else
+                -- Fallback when CO2 data is not available
+                crow.output[crow_output].volts = 0
+            end
 
             --print (co2_ppm_step_offset)
-
-            crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
         elseif (sequence_row == 4) then
-            co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
+            if we_have_all_daily_co2_ppm_value and no_of_co2_ppm_records > 0 and co2_ppm_list[total_tick_co2_count] then
+                co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
+                crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
+            else
+                -- Fallback when CO2 data is not available
+                crow.output[crow_output].volts = 0
+            end
 
             --print (co2_ppm_tick_offset)
-            crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
         else
             -- use the notes from the grid
             crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
@@ -1821,7 +1842,7 @@ function grid_button_function_name(x, y)
         if found == 2 then
             break -- break out of outer loop
         end
-    end -- end outer loop
+    end           -- end outer loop
 
     -- print ("grid_button_function_name says Bye. I will return: " .. ret)
 
@@ -1926,9 +1947,9 @@ function init()
 
 
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
-    the_current_tick_count_since_step)
+        the_current_tick_count_since_step)
     clock.run(tick) -- start the sequencer
-end   -- end init
+end                 -- end init
 
 -- Periodically check if we need to save the grid state to file.
 -- TODO - if we're not saving this when running then might as well just save it when we stop (rather than have a loop)
@@ -1999,7 +2020,7 @@ function create_a_grid(is_scroll_in)
     local_grid["id"] = math.random(1, 99999999999999) -- an ID for debugging purposes
 
     for col = 1, COLS do
-        local_grid[col] = {}        -- create a table for each col
+        local_grid[col] = {}            -- create a table for each col
         for row = 1, ROWS do
             if (is_scroll == true) then -- If we are creating a scroll table, each entry points to a MozartPointer so we can manipulate mozart_state
                 local_grid[col][row] = MozartPointer:new()
@@ -2457,9 +2478,9 @@ midi_keyboard_usb_device_port.event = function(data)
         -- Do nothing! Filter out Active Sensing messages from Yamaha keyboard.
     else
         print("Got a (noteish) midi_keyboard_usb_device_port.event. The data[1] is: " ..
-        data[1] ..
-        " the_current_tick_count_since_start is: " ..
-        the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
+            data[1] ..
+            " the_current_tick_count_since_start is: " ..
+            the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
 
 
 
@@ -2475,7 +2496,7 @@ midi_keyboard_usb_device_port.event = function(data)
 
             normal_midi_note_is_on = true
             normal_midi_note_is_off = false
-            normal_midi_note_in = midi_msg.note -- data[2]
+            normal_midi_note_in = midi_msg.note   -- data[2]
             captured_midi_note_in = midi_msg.note -- data[2] --
 
 
@@ -2484,7 +2505,7 @@ midi_keyboard_usb_device_port.event = function(data)
             normal_midi_note_is_on = false
             normal_midi_note_is_off = true
             normal_midi_note_in = midi_msg.note --data[2]
-            captured_midi_note_in = -1  -- We only want to have a captured note (one at a time) whilst the note is held down.
+            captured_midi_note_in = -1          -- We only want to have a captured note (one at a time) whilst the note is held down.
             -- Also, we ONLY want note off to reset this.
 
             OnMidiNoteInEvent(C_MIDI_NOTE_OFF, midi_msg.note, midi_msg.vel, midi_msg.ch)
@@ -2818,7 +2839,7 @@ function preset_mozart(x_button_pressed, y)
         elseif x_button_pressed == 2 then
             unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 12, 0) -- same note low
         elseif x_button_pressed == 3 then
-            unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 0, 0) -- same note
+            unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE - 0, 0)  -- same note
         else
             unconditional_set_mozart(x, y, get_interesting_note_value(x, y, x_button_pressed), 0)
         end
@@ -2995,7 +3016,7 @@ end
 function on_sequence_button_press_down(x, y, z)
     -- Every time we change state of sequence rows (non control rows), record the new state in the undo_grid_lifo
     push_grid_undo()
-    push_mozart_undo()   -- TODO check this is not too much.
+    push_mozart_undo() -- TODO check this is not too much.
 
     toggle_sequence_grid(x, y)
 
@@ -3016,13 +3037,13 @@ my_grid_one.key = function(x, y, z)
 
     print("Hello from ----------- my_grid_one.key = function -----------------")
     print("Captured value for monome grid row,column " ..
-    x .. "," .. y .. " is " .. z .. " the value before change was: " .. grid_one_state[y][y])
+        x .. "," .. y .. " is " .. z .. " the value before change was: " .. grid_one_state[y][y])
 
     print("arm_control is: " ..
-    arm_control ..
-    " captured_midi_note_in is: " ..
-    captured_midi_note_in ..
-    " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
+        arm_control ..
+        " captured_midi_note_in is: " ..
+        captured_midi_note_in ..
+        " preset_mozart_button is: " .. preset_mozart_button .. " midi_note_key_pressed is: " .. midi_note_key_pressed)
 
 
     -- First lets capture the combination of buttons pressed (up to three groups i.e. one sequence button, one row7 and one row8 (control))
@@ -3064,14 +3085,14 @@ my_grid_one.key = function(x, y, z)
     end
 
     operation_matix_string = "x:" ..
-    sequence_button_x ..
-    " y:" ..
-    sequence_button_x ..
-    " z:" ..
-    z ..
-    " sequence_button_is_pressed: " ..
-    tostring(sequence_button_is_pressed) ..
-    " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
+        sequence_button_x ..
+        " y:" ..
+        sequence_button_x ..
+        " z:" ..
+        z ..
+        " sequence_button_is_pressed: " ..
+        tostring(sequence_button_is_pressed) ..
+        " midi:" .. sequence_button_midi .. " arm_row7:" .. arm_row7 .. " arm_control:" .. arm_control
 
 
     print("Operation matrix is: " .. operation_matix_string)
@@ -3165,7 +3186,7 @@ my_grid_one.key = function(x, y, z)
 
     if y == 7 or y == 8 then
         last_action_method = grid_button_function_name(x, y):gsub("Button", ""):gsub("Arm", ""):gsub("Preset", "Pre")
-        :gsub("Mozart", "Mz"):gsub("Grid", "Grd"):gsub("Randomise", "Rnd")                                                                                                             -- used in display
+            :gsub("Mozart", "Mz"):gsub("Grid", "Grd"):gsub("Randomise", "Rnd") -- used in display
     end
 
     -- Always do this else results are not shown to user.
@@ -3443,7 +3464,7 @@ function refresh_grid_and_screen()
                     screen.text(grid_one_state[col][row])
                 end
             end -- end rows loop
-        end -- end cols loop
+        end     -- end cols loop
     else
         display_tempo_status()
     end -- stable tempo check
@@ -3477,10 +3498,10 @@ function refresh_grid_and_screen()
 
 
     midi_status_text = "  MIDI IN " ..
-    midiNoteToName(last_midi_note_in) ..
-    " " ..
-    string.format("%.3d", last_midi_velocity_in) ..
-    " " .. string.format("%.1d", last_midi_on_off_in) .. " " .. string.format("%.2d", last_midi_channel_in)
+        midiNoteToName(last_midi_note_in) ..
+        " " ..
+        string.format("%.3d", last_midi_velocity_in) ..
+        " " .. string.format("%.1d", last_midi_on_off_in) .. " " .. string.format("%.2d", last_midi_channel_in)
 
 
 
@@ -3491,15 +3512,15 @@ function refresh_grid_and_screen()
 
 
     status_text = string.format("%.2f", current_tempo) ..
-    " " ..
-    string.format("%.2d", midi_step_count) ..
-    " " ..
-    last_action_method ..
-    " " ..
-    string.format("%.1d", last_x) ..
-    "," ..
-    string.format("%.1d", last_y) ..
-    " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " " .. end_of_line_text .. " "
+        " " ..
+        string.format("%.2d", midi_step_count) ..
+        " " ..
+        last_action_method ..
+        " " ..
+        string.format("%.1d", last_x) ..
+        "," ..
+        string.format("%.1d", last_y) ..
+        " " .. last_grid_value .. "-" .. last_mozart_value .. " " .. conductor_text .. " " .. end_of_line_text .. " "
 
 
 
