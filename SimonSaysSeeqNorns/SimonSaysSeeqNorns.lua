@@ -1,27 +1,13 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.8.0"
+version = "1.6.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
--- Debug levels: 0=NONE, 1=ERROR, 2=WARNING, 3=INFO, 4=DEBUG
-DEBUG_LEVEL = 3  -- Temporarily set to 3 to debug MIDI issues
-
--- Performance mode for live use - disables non-essential operations
-PERFORMANCE_MODE = false  -- Default true for optimal live performance
-
-function debug_print(level, message)
-    if level <= DEBUG_LEVEL then
-        print(message)
-    end
-end
-
 the_current_tick_count_since_start = 0
-
-tick_count = 0
 
 function get_script_path()
     local info = debug.getinfo(1, 'S');
@@ -65,390 +51,15 @@ function validate_co2_value(raw_value)
     end
 end
 
--- Helper function for safe division operations
-function safe_divide(numerator, denominator, fallback)
-    fallback = fallback or 0
-    if denominator == nil or denominator == 0 then
-        return fallback
-    end
-    if numerator == nil then
-        return fallback
-    end
-    return numerator / denominator
-end
+local co2_ppm_daily_latest_value = tonumber(read_file(
+_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
 
--- Helper function for safe array access with bounds checking
-function safe_array_access(array, index, fallback)
-    if array == nil or index == nil then
-        return fallback
-    end
-    if type(array) ~= "table" then
-        return fallback
-    end
-    return array[index] or fallback
-end
-
--- Helper function for safe multi-dimensional array access
-function safe_multi_array_access(array, indices, fallback)
-    if array == nil or indices == nil or type(indices) ~= "table" then
-        return fallback
-    end
-
-    local current = array
-    for _, index in ipairs(indices) do
-        if current == nil or type(current) ~= "table" or current[index] == nil then
-            return fallback
-        end
-        current = current[index]
-    end
-    return current
-end
-
--- Helper function to safely access keyboard MIDI note events
-function safe_keyboard_midi_access(lane, bar, step, note, on_off, fallback)
-    fallback = fallback or { is_active = 0, velocity = 0, tick_count_since_step = 0, tick_count_since_start = 0 }
-
-    -- Validate all indices are within bounds
-    if lane == nil or lane < MIN_LANE or lane > MAX_LANE then
-        return fallback
-    end
-    if bar == nil or bar < MIN_BAR or bar > MAX_BAR then
-        return fallback
-    end
-    if step == nil or step < 1 or step > MAX_STEP then
-        return fallback
-    end
-    if note == nil or note < 0 or note > 127 then
-        return fallback
-    end
-    if on_off == nil or (on_off ~= 0 and on_off ~= 1) then
-        return fallback
-    end
-
-    -- Check if keyboard_midi_note_events exists and is properly initialized
-    if keyboard_midi_note_events == nil or
-       keyboard_midi_note_events[lane] == nil or
-       keyboard_midi_note_events[lane][bar] == nil or
-       keyboard_midi_note_events[lane][bar][step] == nil or
-       keyboard_midi_note_events[lane][bar][step][note] == nil or
-       keyboard_midi_note_events[lane][bar][step][note][on_off] == nil then
-        return fallback
-    end
-
-    return keyboard_midi_note_events[lane][bar][step][note][on_off]
-end
-
--- Helper functions for safe MIDI device operations
-function safe_midi_note_on(device, note, velocity, channel)
-    if device == nil then
-        debug_print(2, "WARNING: MIDI device is nil, cannot send note_on")
-        return false
-    end
-
-    if type(device) ~= "table" then
-        debug_print(2, "WARNING: MIDI device is not a table, cannot send note_on")
-        return false
-    end
-
-    local success, err = pcall(function()
-        -- Validate MIDI parameters
-        if not note or type(note) ~= "number" or note < 0 or note > 127 then
-            debug_print(2, "WARNING: Invalid MIDI note: " .. tostring(note))
-            return false
-        end
-        if not velocity or type(velocity) ~= "number" or velocity < 0 or velocity > 127 then
-            debug_print(2, "WARNING: Invalid MIDI velocity: " .. tostring(velocity))
-            return false
-        end
-        if not channel or type(channel) ~= "number" or channel < 1 or channel > 16 then
-            debug_print(2, "WARNING: Invalid MIDI channel: " .. tostring(channel))
-            return false
-        end
-
-        if device.note_on and type(device.note_on) == "function" then
-            debug_print(3, "safe_midi_note_on: Calling device:note_on(" .. note .. ", " .. velocity .. ", " .. channel .. ")")
-            device:note_on(note, velocity, channel)
-        else
-            debug_print(2, "WARNING: MIDI device does not have note_on function")
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: MIDI note_on failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_midi_start(device)
-    if device == nil then
-        debug_print(2, "WARNING: MIDI device is nil, cannot start")
-        return false
-    end
-
-    if type(device) ~= "table" then
-        debug_print(2, "WARNING: MIDI device is not a table, cannot start")
-        return false
-    end
-
-    local success, err = pcall(function()
-        if device.start and type(device.start) == "function" then
-            device:start()
-        else
-            debug_print(2, "WARNING: MIDI device does not have start function")
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: MIDI start failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_midi_stop(device)
-    if device == nil then
-        debug_print(2, "WARNING: MIDI device is nil, cannot stop")
-        return false
-    end
-
-    if type(device) ~= "table" then
-        debug_print(2, "WARNING: MIDI device is not a table, cannot stop")
-        return false
-    end
-
-    local success, err = pcall(function()
-        if device.stop and type(device.stop) == "function" then
-            device:stop()
-        else
-            debug_print(2, "WARNING: MIDI device does not have stop function")
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: MIDI stop failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_midi_set_event(device, event_function)
-    if device == nil then
-        debug_print(2, "WARNING: MIDI device is nil, cannot set event")
-        return false
-    end
-
-    if type(device) ~= "table" then
-        debug_print(2, "WARNING: MIDI device is not a table, cannot set event")
-        return false
-    end
-
-    local success, err = pcall(function()
-        if type(event_function) ~= "function" then
-            debug_print(2, "WARNING: set_event requires a function parameter")
-            return false
-        end
-        device.event = event_function
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: MIDI set_event failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_midi_clear_event(device)
-    if device == nil then
-        debug_print(2, "WARNING: MIDI device is nil, cannot clear event")
-        return false
-    end
-
-    if type(device) ~= "table" then
-        debug_print(2, "WARNING: MIDI device is not a table, cannot clear event")
-        return false
-    end
-
-    local success, err = pcall(function()
-        device.event = nil
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: MIDI clear_event failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
--- Helper function for safe grid operations
-function safe_grid_led(grid, x, y, brightness)
-    if grid == nil then
-        return false
-    end
-
-    if type(grid) ~= "table" then
-        debug_print(2, "WARNING: Grid is not a table, cannot set LED")
-        return false
-    end
-
-    local success, err = pcall(function()
-        -- Enhanced coordinate validation
-        if not x or not y then
-            debug_print(2, "WARNING: LED operation missing coordinates")
-            return false
-        end
-        if type(x) ~= "number" or type(y) ~= "number" then
-            debug_print(2, "WARNING: LED coordinates must be numbers")
-            return false
-        end
-        if x < 1 or x > 16 or y < 1 or y <= 0 then
-            debug_print(2, "WARNING: Invalid grid LED coordinates: x=" .. tostring(x) .. " y=" .. tostring(y))
-            return false
-        end
-
-        brightness = brightness or 0
-        if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
-            brightness = math.max(0, math.min(15, brightness or 0))
-        end
-
-        if grid.led and type(grid.led) == "function" then
-            grid:led(x, y, brightness)
-        else
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: Grid LED operation failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_grid_all(grid, brightness)
-    if grid == nil then
-        return false
-    end
-
-    if type(grid) ~= "table" then
-        debug_print(2, "WARNING: Grid is not a table, cannot set all LEDs")
-        return false
-    end
-
-    local success, err = pcall(function()
-        brightness = brightness or 0
-        if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
-            brightness = math.max(0, math.min(15, brightness or 0))
-        end
-
-        if grid.all and type(grid.all) == "function" then
-            grid:all(brightness)
-        else
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: Grid all operation failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_grid_refresh(grid)
-    if grid == nil then
-        return false
-    end
-
-    if type(grid) ~= "table" then
-        debug_print(2, "WARNING: Grid is not a table, cannot refresh")
-        return false
-    end
-
-    local success, err = pcall(function()
-        if grid.refresh and type(grid.refresh) == "function" then
-            grid:refresh()
-        else
-            return false
-        end
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: Grid refresh operation failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
-function safe_grid_set_key(grid, key_function)
-    if grid == nil then
-        return false
-    end
-
-    if type(grid) ~= "table" then
-        debug_print(2, "WARNING: Grid is not a table, cannot set key function")
-        return false
-    end
-
-    local success, err = pcall(function()
-        if type(key_function) ~= "function" then
-            debug_print(2, "WARNING: Key handler must be a function")
-            return false
-        end
-        grid.key = key_function
-    end)
-
-    if not success then
-        debug_print(1, "ERROR: Grid set key operation failed: " .. tostring(err))
-        return false
-    end
-
-    return true
-end
-
--- Helper function for safe grid property access
-function safe_grid_property(grid, property, fallback)
-    if grid == nil then
-        return fallback or "UNKNOWN"
-    end
-
-    local success, value = pcall(function()
-        return grid[property]
-    end)
-
-    if success and value ~= nil then
-        return value
-    else
-        return fallback or "UNKNOWN"
-    end
-end
-
--- Read CO2 data file safely with proper error handling
-local co2_file_content = read_file(_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv")
-local co2_ppm_daily_latest_value = nil
-
-if co2_file_content then
-    co2_ppm_daily_latest_value = validate_co2_value(co2_file_content)
-end
-
-if co2_ppm_daily_latest_value then
+if (co2_ppm_daily_latest_value) then
     print("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
     we_have_last_daily_co2_ppm_value = true
 else
-    print("We do NOT have a daily co2 ppm - file missing, unreadable, or contains invalid data");
+    print("We do NOT have a daily co2 ppm ");
     we_have_last_daily_co2_ppm_value = false
-    co2_ppm_daily_latest_value = 0  -- Set safe default value for later string concatenation
 end
 
 
@@ -605,19 +216,12 @@ ROW_SETTINGS_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-set
 function get_row_settings_tally(row_settings)
     -- A helper debug function to show the state the row_settings table
     -- We use this to get an error if the expected keys are not there.
-    if not row_settings then
-        return "row_settings is nil"
-    end
-
-    local tally = "id:" .. (row_settings["id"] or "UNKNOWN") .. " "
+    local tally = "id:" .. row_settings["id"] .. " "
     for row = 1, ROWS do
-        if row_settings[row] then
-            local first_step = row_settings[row]["first_step"] or "UNKNOWN"
-            local last_step = row_settings[row]["last_step"] or "UNKNOWN"
-            tally = tally .. " Row: " .. row .. " first_step is: " .. first_step .. " last_step is: " .. last_step
-        else
-            tally = tally .. " Row: " .. row .. " (NOT INITIALIZED)"
-        end
+        tally = tally ..
+        " Row: " ..
+        row ..
+        " first_step is: " .. row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
     end
     return tally
 end
@@ -759,9 +363,6 @@ enable_audio_clock_out = 0
 need_to_start_midi = true -- Check gate clock situation.
 run_conditional_clocks = false
 
--- Gate duration for analog sequencer compatibility
-gate_duration_sync = 1 / 32 -- Default: 1/32 note (better for analog sequencers)
-
 SCREEN_INFO_X = 40
 SCREEN_INFO_Y = 49
 
@@ -865,67 +466,46 @@ table.insert(BUTTONS, { name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8 })
 
 
 function reset_all_sequence_counters()
-    -- Safety checks to prevent crashes during startup
-    debug_print(3, "reset_all_sequence_counters: Starting")
-
     init_midi_step_count()
     init_midi_bar_count()
 
-    -- Initialize critical variables if they don't exist
-    if current_midi_lane == nil then
-        current_midi_lane = 1
-        debug_print(3, "reset_all_sequence_counters: Initialized current_midi_lane")
-    end
-
-    if transport_is_active == nil then
-        transport_is_active = false
-        debug_print(3, "reset_all_sequence_counters: Initialized transport_is_active")
-    end
 
     -- Initialize CO2 counters safely based on available data
-    if no_of_co2_ppm_records and no_of_co2_ppm_records > 0 then
+    if no_of_co2_ppm_records > 0 then
         total_step_co2_count = 1 -- This will loop around the co2 ppm rows
         total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
     else
         total_step_co2_count = 0 -- No CO2 data available
         total_tick_co2_count = 0 -- No CO2 data available
+        print("WARNING: No CO2 data available, CO2 counters set to 0")
     end
 
-    -- Initialize ratchet counting rows based on the number of sequence rows
+    -- Safety check: ensure row_settings is properly initialized before accessing it
     if row_settings == nil then
-        debug_print(2, "WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
+        print("WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
         row_settings = create_row_settings()
-    end
-
-    -- Safety check for TOTAL_SEQUENCE_ROWS
-    if TOTAL_SEQUENCE_ROWS == nil then
-        TOTAL_SEQUENCE_ROWS = 6 -- Default value
-        debug_print(2, "WARNING: TOTAL_SEQUENCE_ROWS was nil, set to default")
     end
 
     for row = 1, TOTAL_SEQUENCE_ROWS do
         -- Additional safety check for each row
         if row_settings[row] == nil then
-            debug_print(2, "WARNING: row_settings[" .. row .. "] is nil, creating default")
+            print("WARNING: row_settings[" .. row .. "] is nil, creating default row settings")
             row_settings[row] = {}
             row_settings[row]["first_step"] = 1
             row_settings[row]["last_step"] = 16
             row_settings[row]["current_step"] = 1
         end
 
-        row_settings[row]["first_step"] = first_step or 1
-        row_settings[row]["last_step"] = last_step or 16
+        row_settings[row]["first_step"] = first_step
+        row_settings[row]["last_step"] = last_step
         row_settings[row]["current_step"] = row_settings[row]["first_step"]
     end
-
-    need_to_start_midi = true
-    run_conditional_clocks = false -- at reset we want to wait for midi to start conditional clocks
-
-    debug_print(3, "reset_all_sequence_counters: Completed successfully")
-    if row_settings then
-        print(get_row_settings_tally(row_settings))
-    end
 end
+
+tick_text = "."
+
+tick_count = 0
+
 
 
 
@@ -986,20 +566,18 @@ SequenceNote.__index = SequenceNote
 -- [on-or-off] will store either 1 for MIDI_NOTE_ON or 0 for MIDI_NOTE_OFF
 -- SequenceNote keyboard_midi_note_events[MAX_STEP+1][128][2];
 
--- Simple SequenceNote creation for maximum live performance predictability
--- No object pooling or complex patterns - just fast, predictable allocation
-function create_sequence_note()
-    return {
+
+function SequenceNote:new()
+    return setmetatable({
         velocity = 0,
         tick_count_since_step = 0,
         is_active = 0,
         tick_count_since_start = 0
-    }
+    }, SequenceNote)
 end
 
 function init_keyboard_midi_note_events()
-    -- Pre-allocate all arrays for predictable live performance timing
-    -- This uses more memory but ensures no pauses during performance
+    -- this is a global
     keyboard_midi_note_events = {}
 
     for lane = MIN_LANE, MAX_LANE do
@@ -1011,7 +589,7 @@ function init_keyboard_midi_note_events()
                 for note = 0, 127 do
                     keyboard_midi_note_events[lane][bar][step][note] = {}
                     for index = 0, 1 do
-                        keyboard_midi_note_events[lane][bar][step][note][index] = create_sequence_note()
+                        keyboard_midi_note_events[lane][bar][step][note][index] = SequenceNote:new()
                     end
                 end
             end
@@ -1049,29 +627,15 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
             for note = 0, 127 do
                 -- From the perspective of active on notes:
 
-                local note_on_event = safe_keyboard_midi_access(current_midi_lane, bc, sc, note, 1)
-                local note_off_event = safe_keyboard_midi_access(current_midi_lane, bc, sc, note, 0)
-
-                if note_on_event.is_active == 1 then --and note_on_event.velocity > 0 then
+                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 then --and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
                     if count_active_on_disabled % skip == 0 then
                         -- Hmm we should be disabling the note across all steps not just the step where we find it.
                         -- or, how do we disable the corresponding off note?
 
-                        -- Safely disable notes with bounds checking
-                        if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and
-                           keyboard_midi_note_events[current_midi_lane][bc] and
-                           keyboard_midi_note_events[current_midi_lane][bc][sc] and
-                           keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
-
-                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
-                            end
-                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
-                            end
-                        end
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
 
                         SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
                     end
@@ -1081,23 +645,12 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
 
                 -- From the perspective of active off notes: (see note above)
 
-                if note_off_event.is_active == 1 then
+                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active == 1 then
                     if count_active_off_disabled % skip == 0 then
-                        -- Safely disable notes with bounds checking
-                        if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and
-                           keyboard_midi_note_events[current_midi_lane][bc] and
-                           keyboard_midi_note_events[current_midi_lane][bc][sc] and
-                           keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
-
-                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
-                            end
-                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
-                            end
-                        end
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
 
                         SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
                     end
@@ -1116,21 +669,10 @@ function DisableKeyboardMidiNotes(note)
     -- Disable that note for all steps
     for bc = MIN_BAR, MAX_BAR do
         for sc = midi_first_step, midi_last_step do
-            -- Safely disable notes with bounds checking
-            if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and
-               keyboard_midi_note_events[current_midi_lane][bc] and
-               keyboard_midi_note_events[current_midi_lane][bc][sc] and
-               keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
-
-                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
-                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
-                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
-                end
-                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
-                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
-                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
-                end
-            end
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
+            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
         end
     end
 
@@ -1146,7 +688,7 @@ function midiNoteToName(midiNote)
     end
 
     local noteIndex = (midiNote % 12) + 1      -- Lua indices start at 1
-    local octave = math.floor(midiNote / 12) - 1 -- MIDI note 0 is in octave -1 (division by 12 is safe)
+    local octave = math.floor(midiNote / 12) - 1 -- MIDI note 0 is in octave -1
 
     return noteNames[noteIndex] .. octave
 end
@@ -1161,8 +703,11 @@ function SendMidiKeyboardNoteOn(note, velocity, channel)
     -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
     -- Safety check: ensure MIDI device is initialized before use
-    debug_print(3, "SendMidiKeyboardNoteOn: Sending note " .. note .. " velocity " .. velocity .. " channel " .. channel)
-    safe_midi_note_on(midi_keyboard_usb_device_port, note, velocity, channel)
+    if midi_keyboard_usb_device_port then
+        midi_keyboard_usb_device_port:note_on(note, velocity, channel)
+    else
+        print("WARNING: midi_keyboard_usb_device_port is nil, cannot send MIDI note")
+    end
 
 
     -- for display
@@ -1212,21 +757,11 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
                     -- print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
 
-                    -- Safely set MIDI note ON with bounds checking
-                    if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and
-                       keyboard_midi_note_events[current_midi_lane][midi_bar_count] and
-                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count] and
-                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note] and
-                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1] then
-
-                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step =
-                        the_current_tick_count_since_step
-                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity =
-                        velocity
-                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
-                    else
-                        print("WARNING: Failed to set MIDI note ON - array not properly initialized")
-                    end
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step =
+                    the_current_tick_count_since_step
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity =
+                    velocity
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
 
                     -- Pass through the note
                     -- NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.
@@ -1244,21 +779,11 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                 -- print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
 
-                -- Safely set MIDI note OFF with bounds checking
-                if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and
-                   keyboard_midi_note_events[current_midi_lane][midi_bar_count] and
-                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count] and
-                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note] and
-                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0] then
-
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step =
-                    the_current_tick_count_since_step
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity =
-                    velocity
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
-                else
-                    print("WARNING: Failed to set MIDI note OFF - array not properly initialized")
-                end
+                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step =
+                the_current_tick_count_since_step
+                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity =
+                velocity
+                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
 
                 -- Echo the midi note through norns to the synth.
                 -- TODO this should be configurable via the grid easily turn on / off midi echo for different keyboard / synth setups.
@@ -1283,24 +808,10 @@ end
 
 
 
--- Initialize grid connections with error handling
-local grid_one_success, grid_one_device = pcall(grid.connect, 1)
-if grid_one_success and grid_one_device and grid_one_device.device then
-    my_grid_one = grid_one_device
-    print("Successfully connected to grid one: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN"))
-else
-    my_grid_one = nil
-    print("WARNING: Failed to connect to grid one")
-end
-
-local grid_two_success, grid_two_device = pcall(grid.connect, 2)
-if grid_two_success and grid_two_device and grid_two_device.device then
-    my_grid_two = grid_two_device
-    print("Successfully connected to grid two: " .. safe_grid_property(my_grid_two, "name", "UNKNOWN"))
-else
-    my_grid_two = nil
-    print("WARNING: Failed to connect to grid two")
-end
+my_grid_one = grid.connect(1)
+print(my_grid_one)
+my_grid_two = grid.connect(2)
+print(my_grid_two)
 
 
 
@@ -1319,26 +830,8 @@ INITIAL_MIDI_KEYBOARD_PORT = 2
 
 -- Which USB midi ports we should use (defaults)
 
--- Initialize MIDI devices with error handling
-local gates_success, gates_device = pcall(midi.connect, INITIAL_MIDI_GATES_PORT)
-if gates_success and gates_device then
-    midi_gates_usb_device_port = gates_device
-    print("Successfully connected to MIDI gates port " .. INITIAL_MIDI_GATES_PORT)
-else
-    midi_gates_usb_device_port = nil
-    print("WARNING: Failed to connect to MIDI gates port " .. INITIAL_MIDI_GATES_PORT)
-end
-
-local keyboard_success, keyboard_device = pcall(midi.connect, INITIAL_MIDI_KEYBOARD_PORT)
-if keyboard_success and keyboard_device then
-    midi_keyboard_usb_device_port = keyboard_device
-    print("Successfully connected to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
-    print("MIDI keyboard device: " .. tostring(keyboard_device))
-    print("MIDI keyboard device name: " .. (keyboard_device.name or "UNKNOWN"))
-else
-    midi_keyboard_usb_device_port = nil
-    print("WARNING: Failed to connect to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
-end
+midi_gates_usb_device_port = midi.connect(INITIAL_MIDI_GATES_PORT)
+midi_keyboard_usb_device_port = midi.connect(INITIAL_MIDI_KEYBOARD_PORT)
 
 
 -- And we can change them and connect after changes.
@@ -1351,41 +844,14 @@ params:add { type = "number", id = "midi_gates_usb_device_port_id", name = "Gate
     print("i changed the midi_gates_usb_device_port parameter !")
 end }
 
--- Add parameter for gate duration
-params:add { type = "option", id = "gate_duration", name = "Gate Duration", options = {"1/64 (Short)", "1/32 (Medium)", "1/16 (Long)", "1/8 (Very Long)"}, default = 2, action = function(
-    value)
-    if value == 1 then
-        gate_duration_sync = 1 / 64
-        print("Gate duration: 1/64 note (Short)")
-    elseif value == 2 then
-        gate_duration_sync = 1 / 32
-        print("Gate duration: 1/32 note (Medium)")
-    elseif value == 3 then
-        gate_duration_sync = 1 / 16
-        print("Gate duration: 1/16 note (Long)")
-    elseif value == 4 then
-        gate_duration_sync = 1 / 8
-        print("Gate duration: 1/8 note (Very Long)")
-    end
-end }
 
 params:add { type = "number", id = "midi_keyboard_usb_device_port_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = INITIAL_MIDI_KEYBOARD_PORT, action = function(
     value)
-    -- Safely clear existing event handler
-    if midi_keyboard_usb_device_port then
-        safe_midi_clear_event(midi_keyboard_usb_device_port)
-    end
+    midi_keyboard_usb_device_port.event = nil
+    midi_keyboard_usb_device_port = midi.connect(value)
+    midi_keyboard_usb_device_port.event = midi_event
 
-    -- Attempt to connect to new MIDI device
-    local success, new_device = pcall(midi.connect, value)
-    if success and new_device then
-        midi_keyboard_usb_device_port = new_device
-        safe_midi_set_event(midi_keyboard_usb_device_port, midi_event)
-        print("Successfully changed MIDI keyboard parameter to port " .. value)
-    else
-        print("ERROR: Failed to connect to MIDI keyboard port " .. value)
-        midi_keyboard_usb_device_port = nil
-    end
+    print("i changed the midi keyboard parameter !")
 end }
 
 
@@ -1499,110 +965,72 @@ g_count_of_active_midi_off = 0 -- effectively gives a count of active note OFF e
 
 
 
--- Cache for active notes to avoid repeated lookups
-local active_notes_cache = {}
-local last_cached_step = -1
-local last_cached_lane = -1
-local last_cached_bar = -1
-
-function rebuild_active_notes_cache()
-    active_notes_cache = {}
-
-    -- Safety checks to prevent crashes during startup
-    if not keyboard_midi_note_events then
-        return
-    end
-    if not current_midi_lane or current_midi_lane < MIN_LANE or current_midi_lane > MAX_LANE then
-        return
-    end
-    if not midi_bar_count or midi_bar_count < MIN_BAR or midi_bar_count > MAX_BAR then
-        return
-    end
-    if not midi_step_count or midi_step_count < 1 or midi_step_count > MAX_STEP then
-        return
-    end
-
-    -- Only cache notes that are actually active
-    local current_step_events = keyboard_midi_note_events[current_midi_lane] and
-                               keyboard_midi_note_events[current_midi_lane][midi_bar_count] and
-                               keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
-
-    if current_step_events then
-        for n = 0, 127 do
-            local note_events = current_step_events[n]
-            if note_events then
-                local note_on_event = note_events[1]
-                local note_off_event = note_events[0]
-
-                if (note_on_event and note_on_event.is_active == 1) or
-                   (note_off_event and note_off_event.is_active == 1) then
-                    active_notes_cache[n] = {
-                        note_on = note_on_event,
-                        note_off = note_off_event
-                    }
-                end
-            end
-        end
-    end
-end
-
 function PlayMidi()
     -- This function, which gets called every tick,
-    -- loops through all 127 midi notes (temporarily reverted from cache optimization)
+    -- loops through all 127 midi notes,
+    -- and GETS the note on event that matches the current midi lane, bar and step.
+    -- (which we WILL becuase we init a table with all possible lane,bar,step,note combinations.)
+    -- Then we check if the note is active.
+    -- Then we check if the note should be played on this particular tick.
+    -- This means we can have only ONE note name (e.g. C4) per step, but it can be on any tick within the step which is kind of nice.
 
     last_function = 364892
 
-    -- Safety check: ensure all required globals are initialized
-    if not keyboard_midi_note_events or not current_midi_lane or not midi_bar_count or not midi_step_count then
-        debug_print(3, "PlayMidi: Missing required globals, skipping")
-        return
-    end
-
     local count_of_active_midi_on = 0
     local count_of_active_midi_off = 0
-    local grid_refresh_needed = false
 
-    -- Revert to original loop through all notes to isolate crash
+    -- print ("hello from PlayMidi midi_step_count is " .. midi_step_count)
+
     for n = 0, 127 do
-        local note_on_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 1)
+        -- print ("PlayMidi says current_midi_lane is " .. current_midi_lane .. " midi_bar_count is " .. midi_bar_count .. " midi_step_count is " .. midi_step_count .. " n is " .. n)
 
-        if note_on_event and note_on_event.is_active == 1 then
+        local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
+
+        if note_on_event.is_active == 1 then
             -- Turn an led on on grid_two to show there is an active note here
+            -- we are interested in the first 6 notes on one step.
+
+            -- Add bounds checking to prevent negative or out-of-bounds LED access
             local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
             if my_grid_two then
-                safe_grid_led(my_grid_two, midi_step_count, led_row, note_on_event.velocity)
-                grid_refresh_needed = true
+                my_grid_two:led(midi_step_count, led_row, note_on_event.velocity)
+                my_grid_two:refresh()
             end
 
             count_of_active_midi_on = count_of_active_midi_on + 1
 
+
             if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
+                -- Can we flash the screen here or flash the new grids?
+
                 -- Send MIDI Note ON
-                debug_print(3, "PlayMidi: Playing note " .. n .. " velocity " .. note_on_event.velocity .. " at step " .. midi_step_count)
                 SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
+                -- print ("I sent Midi note " .. n .. " on step " .. midi_step_count)
+            else
+                -- print("note_on_event.tick_count_since_step did not equal the_current_tick_count_since_step " .. note_on_event.tick_count_since_step .. " vs " .. the_current_tick_count_since_step)
             end
+        else
+            -- print ("note " .. n .. " is not active ")
         end
 
         -- Read MIDI sequence (Note OFFs)
-        local note_off_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 0)
+        local note_off_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0]
 
-        if note_off_event and note_off_event.is_active == 1 then
+        if note_off_event.is_active == 1 then
             count_of_active_midi_off = count_of_active_midi_off + 1
             if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
                 -- Send MIDI Note OFF
-                debug_print(3, "PlayMidi: Sending note OFF for note " .. n .. " at step " .. midi_step_count)
+                --print("before SendMidiKeyboardNoteOn for note off current_midi_lane is "  .. current_midi_lane .. " midi_bar_count " .. midi_bar_count .. " midi_step_count " .. midi_step_count .. " n " .. n)
                 SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
             end
         end
     end
 
-    -- Only refresh grid if we made changes
-    if grid_refresh_needed and my_grid_two then
-        safe_grid_refresh(my_grid_two)
-    end
-
+    -- so we can track active on / off notes per step or however often we call play midi
     g_count_of_active_midi_on = count_of_active_midi_on
     g_count_of_active_midi_off = count_of_active_midi_off
+
+    -- print ("Bye from PlayMidi count_of_active_midi_on is " .. count_of_active_midi_on .. " count_of_active_midi_off is " .. count_of_active_midi_off)
 end
 
 ------------- ON TICK ontick FUNCTION - THIS IS THE MAIN TIMING LOOP - The Main Loop!---------------------------
@@ -1613,16 +1041,6 @@ function tick()
     while true do
         -- quick question. why is this never zero?
         -- print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
-
-        -- Safety check to prevent crash on startup
-        if not the_current_tick_count_since_step then
-            debug_print(3, "tick: the_current_tick_count_since_step not initialized, initializing")
-            the_current_tick_count_since_step = 0
-        end
-        if not the_current_tick_count_since_start then
-            debug_print(3, "tick: the_current_tick_count_since_start not initialized, initializing")
-            the_current_tick_count_since_start = 0
-        end
 
         PlayMidi() -- play on every tick because we record notes to tick accuracy
 
@@ -1675,42 +1093,31 @@ function tick()
             tempo_flutter_is_good = 1
         end
 
-        -- Only update tempo strings when tempo stability changes or on display refresh
         if (tempo_wow_is_good == 0 or tempo_flutter_is_good == 0) then
-            if tempo_is_stable ~= 0 then -- Only update if state changed
-                tempo_status_string_1 = "Current Tempo (UNSTABLE): " .. string.format("%.2f", current_tempo)
-                tempo_is_stable = 0
-            end
+            tempo_status_string_1 = "Current Tempo (UNSTABLE): " .. string.format("%.2f", current_tempo)
+            tempo_is_stable = 0
         else
-            if tempo_is_stable ~= 1 then -- Only update if state changed
-                tempo_status_string_1 = "Current Tempo: " .. string.format("%.2f", current_tempo)
-                tempo_is_stable = 1
-            end
-        end
-
-        -- Only update tempo strings every 48 ticks (once per step) instead of every tick
-        -- Skip in performance mode to reduce CPU load
-        if not PERFORMANCE_MODE and tick_count % 48 == 0 then
-            tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f", wow_average_tempo)
-            tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f", flutter_average_tempo)
-            tempo_status_string_4 = "Wow Epsds: " .. wow_tempo_episodes .. " Ticks: " .. total_wow_tempo_ticks
-            tempo_status_string_5 = "Flutter Epsds: " .. flutter_tempo_episodes .. " Ticks: " .. total_flutter_tempo_ticks
-        end
-
-
-        -- Skip CO2 status updates in performance mode
-        if not PERFORMANCE_MODE then
-            if (we_have_last_daily_co2_ppm_value) then
-                co2_ppm_status_string = "CO2 PPM: " .. tostring(co2_ppm_daily_latest_value)
-            else
-                co2_ppm_status_string = "CO2 PPM: UNKNOWN"
-            end
+            tempo_status_string_1 = "Current Tempo: " .. string.format("%.2f", current_tempo)
+            tempo_is_stable = 1
         end
 
 
 
-        -- Skip debug output in performance mode
-        if not PERFORMANCE_MODE and (tempo_is_stable == 0) then
+        tempo_status_string_2 = "Wow Av Tempo: " .. string.format("%.2f", wow_average_tempo)
+        tempo_status_string_3 = "Flutter Av Tempo: " .. string.format("%.2f", flutter_average_tempo)
+        tempo_status_string_4 = "Wow Epsds: " .. wow_tempo_episodes .. " Ticks: " .. total_wow_tempo_ticks
+        tempo_status_string_5 = "Flutter Epsds: " .. flutter_tempo_episodes .. " Ticks: " .. total_flutter_tempo_ticks
+
+
+        if (we_have_last_daily_co2_ppm_value) then
+            co2_ppm_status_string = "CO2 PPM: " .. co2_ppm_daily_latest_value
+        else
+            co2_ppm_status_string = "CO2 PPM: UNKOWN"
+        end
+
+
+
+        if (tempo_is_stable == 0) then
             -- print (tempo_status_string_1)
             -- print (tempo_status_string_2)
             -- print (tempo_status_string_3)
@@ -1722,8 +1129,7 @@ function tick()
             swing_amount = 0
         else
             -- some kind of swing amount between zero and nearly 1/192
-            -- Add protection against swing_mode being zero or invalid
-            swing_amount = safe_divide(swing_mode, 18, 0) * (1 / 480)
+            swing_amount = (swing_mode / 18) * (1 / 480)
         end
 
 
@@ -1758,8 +1164,16 @@ function tick()
                 --print("tick_count is: " .. tick_count .. " GATE_9 ")
             end
 
-            -- GATE_8 and GATE_7 removed from long-interval triggers
-            -- They now only trigger on every step (see step processing section)
+            if tick_count % (192 * 16) == 0 then
+                clock.run(process_clock_gate, GATE_8)
+                --print("tick_count is: " .. tick_count .. " GATE_8 ")
+            end
+
+            -- Note: make sure reset of tick_count is at least this otherwise we won't go in here
+            if tick_count % (192 * 32) == 0 then
+                clock.run(process_clock_gate, GATE_7)
+                --print("tick_count is: " .. tick_count .. " GATE_7 ")
+            end
 
 
             -- Safety check: only increment CO2 counter if we have valid data
@@ -1772,8 +1186,6 @@ function tick()
 
                 --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
-                -- Send gate on every step
-                clock.run(process_clock_gate, GATE_8)
 
                 process_step()
 
@@ -1789,12 +1201,15 @@ function tick()
                 -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
                 for i = 1, 8 do
                     collected_note_ons[i] = {} -- create a table for each col
-                    safe_grid_led(my_grid_two, midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
+                    if my_grid_two then
+                        my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
+                    end
                 end
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
                 for n = 0, 127 do
-                    local note_on_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 1)
+                    local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
+                    [n][1]
 
                     -- For each proper note on event we find,
                     if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
@@ -1803,21 +1218,14 @@ function tick()
                         -- our index on the table will start at 1 and go up.
                         -- The lowest midi notes will be earlier in the table.
 
-                        -- Bounds check: limit the number of collected notes to prevent overflow
-                        if count_of_active_midi_on <= 128 then  -- Reasonable upper limit
-                            -- Initialize table entry if it doesn't exist
-                            if not collected_note_ons[count_of_active_midi_on] then
-                                collected_note_ons[count_of_active_midi_on] = {}
-                            end
-
-                            -- hmm
-                            collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
-                            collected_note_ons[count_of_active_midi_on].midi_note_number = n
-                        else
-                            -- Stop collecting if we exceed reasonable limits
-                            print("WARNING: Too many active MIDI notes, limiting to 128")
-                            break
+                        -- Initialize table entry if it doesn't exist
+                        if not collected_note_ons[count_of_active_midi_on] then
+                            collected_note_ons[count_of_active_midi_on] = {}
                         end
+
+                        -- hmm
+                        collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
+                        collected_note_ons[count_of_active_midi_on].midi_note_number = n
                     end
                 end
 
@@ -1835,26 +1243,20 @@ function tick()
                             -- Add bounds checking for grid LED access
                             local led_row = math.max(1, math.min(8, y))
 
-                            -- Bounds check collected_note_ons access
-                            local collected_note = safe_array_access(collected_note_ons, c, { velocity = 0, midi_note_number = 0 })
-
-                            if midi_step_count >= 1 and midi_step_count <= 16 and led_row >= 1 and led_row <= 8 then
-                                safe_grid_led(my_grid_two, midi_step_count, led_row, collected_note.velocity)
+                            if my_grid_two then
+                                my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
                             end
 
 
                             -- This table stores the relationship between the grid x,y and the mozart note it represents.
                             -- so we can later press the button and turn off a note in the mozart table.
 
-                            -- Bounds check scroll_state access before assignment
-                            if scroll_state and scroll_state[midi_step_count] and y >= 1 and y <= 8 then
-                                scroll_state[midi_step_count][y] = MozartPointer:new()
-                                scroll_state[midi_step_count][y].is_active = true
-                                scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
-                                scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
-                                scroll_state[midi_step_count][y].midi_step_count = midi_step_count
-                                scroll_state[midi_step_count][y].midi_note_number = collected_note.midi_note_number
-                            end
+                            scroll_state[midi_step_count][y] = MozartPointer:new()
+                            scroll_state[midi_step_count][y].is_active = true
+                            scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
+                            scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
+                            scroll_state[midi_step_count][y].midi_step_count = midi_step_count
+                            scroll_state[midi_step_count][y].midi_note_number = collected_note_ons[c].midi_note_number
 
                             --print ("midi_note_number is: ")
                             --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
@@ -1867,7 +1269,7 @@ function tick()
                 end
 
 
-                safe_grid_refresh(my_grid_two)
+                if my_grid_two then my_grid_two:refresh() end
 
 
 
@@ -1898,18 +1300,9 @@ function tick()
 
                 -- Advance the step for each row each_row_step
                 for row = 1, TOTAL_SEQUENCE_ROWS do
-                    -- Safely advance step with bounds checking
-                    if row_settings and row_settings[row] and
-                       row_settings[row]["current_step"] and
-                       row_settings[row]["first_step"] and
-                       row_settings[row]["last_step"] then
-
-                        row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
-                            row_settings[row]["first_step"], row_settings[row]["last_step"])
-                        --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
-                    else
-                        print("WARNING: row_settings[" .. row .. "] not properly initialized")
-                    end
+                    row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
+                        row_settings[row]["first_step"], row_settings[row]["last_step"])
+                    --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
                 end
 
 
@@ -1953,8 +1346,12 @@ function tick()
             screen.move(1, 10)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            -- Use safe division with current tempo as fallback
-            wow_average_tempo = safe_divide(wow_tempo_sum, wow_window_tick_position, current_tempo)
+            if wow_window_tick_position > 0 then
+                wow_average_tempo = wow_tempo_sum / wow_window_tick_position
+            else
+                -- Fallback: use current tempo if we can't calculate average
+                wow_average_tempo = current_tempo
+            end
 
             screen.text("Average Wow Tempo" .. wow_average_tempo)
 
@@ -1969,8 +1366,12 @@ function tick()
             screen.move(1, 20)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            -- Use safe division with current tempo as fallback
-            flutter_average_tempo = safe_divide(flutter_tempo_sum, flutter_window_tick_position, current_tempo)
+            if flutter_window_tick_position > 0 then
+                flutter_average_tempo = flutter_tempo_sum / flutter_window_tick_position
+            else
+                -- Fallback: use current tempo if we can't calculate average
+                flutter_average_tempo = current_tempo
+            end
 
             screen.text("Average Flutter Tempo" .. flutter_average_tempo)
 
@@ -2024,16 +1425,14 @@ function greetings()
     if (not my_grid_one) then
         grid_text = "Grid NOT CONNECTED"
     else
-        grid_text = "Grid: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN")
+        grid_text = "Grid: " .. tostring(my_grid_one.name)
     end
 
     screen.text(grid_text)
 
     screen.move(1, 30)
     if my_grid_one then
-        local cols = safe_grid_property(my_grid_one, "cols", "?")
-        local rows = safe_grid_property(my_grid_one, "rows", "?")
-        screen.text(cols .. " X " .. rows)
+        screen.text(my_grid_one.cols .. " X " .. my_grid_one.rows)
     else
         screen.text("No Grid One Connected")
     end
@@ -2106,8 +1505,16 @@ function process_step()
 
             if (enable_midi_clock_out == 1) then
                 print("Send MIDI Start midi_step_count is: " .. midi_step_count)
-                safe_midi_start(midi_gates_usb_device_port)
-                safe_midi_start(midi_keyboard_usb_device_port)
+                if midi_gates_usb_device_port then
+                    midi_gates_usb_device_port:start()
+                else
+                    print("WARNING: midi_gates_usb_device_port is nil, cannot start MIDI gates")
+                end
+                if midi_keyboard_usb_device_port then
+                    midi_keyboard_usb_device_port:start()
+                else
+                    print("WARNING: midi_keyboard_usb_device_port is nil, cannot start MIDI keyboard")
+                end
             else
                 print("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
             end
@@ -2126,7 +1533,7 @@ function process_step()
 
     --for second_grid_row = 1, 6 do
 
-    --safe_grid_led(my_grid_two, midi_step_count, second_grid_row, 24)
+    --my_grid_two:led(midi_step_count,second_grid_row,24)
 
 
     -- keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
@@ -2140,9 +1547,7 @@ function process_step()
         -- Prior to POLYR
         --ratchet_mode = grid_one_state[current_step][sequence_row]
 
-        -- Safely access grid_one_state with bounds checking
-        local current_step_for_row = safe_multi_array_access(row_settings, {sequence_row, "current_step"}, 1)
-        ratchet_mode = safe_multi_array_access(grid_one_state, {current_step_for_row, sequence_row}, 0)
+        ratchet_mode = grid_one_state[row_settings[sequence_row]["current_step"]][sequence_row]
 
         -- process step should run independently
         clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -2159,8 +1564,7 @@ function process_step()
         if sequence_row >= 3 and sequence_row <= 6 then
             -- conditional_change_crow_output(current_step, sequence_row)
 
-            local current_step_for_row = safe_multi_array_access(row_settings, {sequence_row, "current_step"}, 1)
-            conditional_change_crow_output(current_step_for_row, sequence_row)
+            conditional_change_crow_output(row_settings[sequence_row]["current_step"], sequence_row)
         end
     end -- end for
 end -- end function
@@ -2171,10 +1575,8 @@ function conditional_change_crow_output(current_step, sequence_row)
 
 
     -- only change slew and voltage if the sequence step is active
-    local grid_value = safe_multi_array_access(grid_one_state, {current_step, sequence_row}, 0)
-    if grid_value ~= 0 then
-        local slide_value = safe_multi_array_access(slide_state, {current_step, sequence_row}, 0)
-        if slide_value == 1 then
+    if grid_one_state[current_step][sequence_row] ~= 0 then
+        if slide_state[current_step][sequence_row] == 1 then
             crow.output[crow_output].slew = 0.1
         else
             crow.output[crow_output].slew = 0
@@ -2192,27 +1594,17 @@ function conditional_change_crow_output(current_step, sequence_row)
                 local co2_value = validate_co2_value(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
-                    co2_ppm_step_offset = safe_divide(co2_value, 50, 0)
+                    co2_ppm_step_offset = co2_value / 50
                     --print (co2_ppm_step_offset)
-                    -- Protect against potential nil mozart_state values
-                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                    local volt_value = safe_divide(mozart_value, 12, 0)
-                    crow.output[crow_output].volts = co2_ppm_step_offset + volt_value
+                    crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
                 else
-                    -- Safely access CO2 data with bounds checking
-                    local raw_value = "UNKNOWN"
-                    if co2_ppm_list and total_step_co2_count and total_step_co2_count >= 1 and
-                       total_step_co2_count <= #co2_ppm_list and co2_ppm_list[total_step_co2_count] then
-                        raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value or "UNKNOWN"
-                    end
+                    local raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
                     print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
-                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                    crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
+                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
                 end
             else
                 print("WARNING: CO2 data not available for sequence_row 3, using fallback")
-                local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
+                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
             end
         elseif (sequence_row == 4) then
             -- Safety check: ensure CO2 data is available and bounds are valid
@@ -2223,33 +1615,21 @@ function conditional_change_crow_output(current_step, sequence_row)
                 local co2_value = validate_co2_value(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
-                    co2_ppm_tick_offset = safe_divide(co2_value, 50, 0)
+                    co2_ppm_tick_offset = co2_value / 50
                     --print (co2_ppm_tick_offset)
-                    -- Protect against potential nil mozart_state values
-                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                    local volt_value = safe_divide(mozart_value, 12, 0)
-                    crow.output[crow_output].volts = co2_ppm_tick_offset + volt_value
+                    crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
                 else
-                    -- Safely access CO2 data with bounds checking
-                    local raw_value = "UNKNOWN"
-                    if co2_ppm_list and total_tick_co2_count and total_tick_co2_count >= 1 and
-                       total_tick_co2_count <= #co2_ppm_list and co2_ppm_list[total_tick_co2_count] then
-                        raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value or "UNKNOWN"
-                    end
+                    local raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
                     print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
-                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                    crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
+                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
                 end
             else
                 print("WARNING: CO2 data not available for sequence_row 4, using fallback")
-                local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-                crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
+                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
             end
         else
             -- use the notes from the grid
-            -- Protect against potential nil mozart_state values in normal mode
-            local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
-            crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- no offset
+            crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
         end
     end
 
@@ -2265,27 +1645,27 @@ function process_ratchet(output, ratchet_mode)
         -- direct relation between value on grid at count of send_gates we will get
 
         gate_on(output)
-        clock.sync(gate_duration_sync)
+        clock.sync(1 / 64)
         gate_off(output)
     elseif ratchet_mode == 2 then
         gate_on(output)
-        clock.sync(gate_duration_sync)
+        clock.sync(1 / 64)
         gate_off(output)
 
         clock.sync(1 / 8)
 
         gate_on(output)
-        clock.sync(gate_duration_sync)
+        clock.sync(1 / 64)
         gate_off(output)
     elseif ratchet_mode == 3 then
         gate_on(output)
-        clock.sync(gate_duration_sync)
+        clock.sync(1 / 64)
         gate_off(output)
 
         clock.sync(1 / 12)
 
         gate_on(output)
-        clock.sync(gate_duration_sync)
+        clock.sync(1 / 64)
         gate_off(output)
 
         clock.sync(1 / 12)
@@ -2373,7 +1753,7 @@ end
 function process_clock_gate(output)
     -- if (enable_analog_clock_out == 1) then
     gate_on(output)
-    clock.sync(gate_duration_sync)
+    clock.sync(1 / 64)
     gate_off(output)
     -- end
 end
@@ -2476,8 +1856,12 @@ function request_midi_stop()
     -- can stop the midi clock at any time.
 
     if (enable_midi_clock_out == 1) then
-        safe_midi_stop(midi_gates_usb_device_port)
-        safe_midi_stop(midi_keyboard_usb_device_port)
+        if midi_gates_usb_device_port then
+            midi_gates_usb_device_port:stop()
+        end
+        if midi_keyboard_usb_device_port then
+            midi_keyboard_usb_device_port:stop()
+        end
     end
 
 
@@ -2583,42 +1967,9 @@ function grid_button_function_name(x, y)
     return ret
 end -- end function definition
 
--- Test function to verify MIDI output is working
-function test_midi_output()
-    print("Testing MIDI output...")
-    if midi_keyboard_usb_device_port then
-        print("Sending test MIDI note C4 (60) velocity 100")
-        SendMidiKeyboardNoteOn(60, 100, 1)
-        clock.sleep(1)
-        print("Sending test MIDI note OFF")
-        SendMidiKeyboardNoteOn(60, 0, 1)
-    else
-        print("ERROR: No MIDI keyboard device connected for test")
-    end
-end
-
 function init()
     print("Hello from init. Version is " .. version)
 
-    -- Initialize critical variables first to prevent crashes
-    current_midi_lane = 1
-    midi_bar_count = 1
-    midi_step_count = 1
-    the_current_tick_count_since_step = 0
-    the_current_tick_count_since_start = 0
-    transport_is_active = false
-    tick_count = 0
-    need_to_start_midi = true
-    run_conditional_clocks = false
-    gate_duration_sync = 1 / 32 -- Initialize gate duration
-    
-    -- Initialize tempo status strings to prevent nil screen.text calls
-    tempo_status_string_1 = "Current Tempo: 0.00"
-    tempo_status_string_2 = "Wow Av Tempo: 0.00"
-    tempo_status_string_3 = "Flutter Av Tempo: 0.00"
-    tempo_status_string_4 = "Wow Epsds: 0 Ticks: 0"
-    tempo_status_string_5 = "Flutter Epsds: 0 Ticks: 0"
-    co2_ppm_status_string = "CO2 PPM: UNKNOWN"
 
     print("#### Here are the grids ####")
 
@@ -2682,28 +2033,18 @@ function init()
     print("before init_keyboard_midi_note_events")
     init_keyboard_midi_note_events()
 
-    print("before initializing timing variables")
-    -- Initialize critical timing variables before starting tick
-    the_current_tick_count_since_step = 0
-    the_current_tick_count_since_start = 0
-    transport_is_active = false
-
     print("hello")
     -- my_grid_one:all(2)
-    if my_grid_one then
-        safe_grid_refresh(my_grid_one) -- refresh the LEDs
-    end
-    if my_grid_two then
-        safe_grid_refresh(my_grid_two)
-    end
+    if my_grid_one then my_grid_one:refresh() end -- refresh the LEDs
+    if my_grid_two then my_grid_two:refresh() end
 
 
     print("my_grid_one follows: ")
     print(my_grid_one)
     if my_grid_one then
-        print("my_grid_one.name is: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN"))
-        print("my_grid_one.cols is: " .. safe_grid_property(my_grid_one, "cols", "UNKNOWN"))
-        print("my_grid_one.rows is: " .. safe_grid_property(my_grid_one, "rows", "UNKNOWN"))
+        print("my_grid_one.name is: " .. my_grid_one.name)
+        print("my_grid_one.cols is: " .. my_grid_one.cols)
+        print("my_grid_one.rows is: " .. my_grid_one.rows)
     else
         print("my_grid_one is nil - no grid connected")
     end
@@ -2745,12 +2086,6 @@ function init()
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
     the_current_tick_count_since_step)
     clock.run(tick) -- start the sequencer
-    
-    -- Test MIDI output after 3 seconds
-    clock.run(function()
-        clock.sleep(3)
-        test_midi_output()
-    end)
 end   -- end init
 
 -- Periodically check if we need to save the grid state to file.
@@ -3269,9 +2604,8 @@ captured_midi_note_in = -1
 
 
 -- On MIDI note receive -  on midi note input - on midi in
--- Capture MIDI IN - safely assign event handler
-if midi_keyboard_usb_device_port then
-    midi_keyboard_usb_device_port.event = function(data)
+-- Capture MIDI IN
+midi_keyboard_usb_device_port.event = function(data)
     --  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " data[2] is: " .. data[2] .. " data[3]: is " .. data[3])
 
     -- print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
@@ -3352,8 +2686,6 @@ if midi_keyboard_usb_device_port then
     --end
 end -- end test for 254
 
-end -- end if midi_keyboard_usb_device_port then
-
 
 
 
@@ -3379,13 +2711,7 @@ function random_dense_grid(x, y)
 
     print("Hello from random_dense_grid: x: " .. x .. " y: " .. y)
 
-    -- Protect against invalid x values and division by zero
-    if not x or x < 1 or x > 16 then
-        print("WARNING: Invalid x value in random_dense_grid: " .. tostring(x))
-        on_bias = 0
-    else
-        on_bias = safe_divide(x, 16, 0) -- more bias towards an on note with a higher x button pressed
-    end
+    on_bias = x / 16 -- more bias towards an on note with a higher x button pressed
 
 
     print("on_bias: " .. on_bias)
@@ -3841,9 +3167,7 @@ end
 -- We capture monome grid key presses - Grid Key Presses
 -- Main Grid button loop
 
--- Safely assign grid one key handler
-if my_grid_one then
-    my_grid_one.key = function(x, y, z)
+my_grid_one.key = function(x, y, z)
     -- x is the column
     -- y is the row
     -- z == 1 means key down, z == 0 means key up
@@ -3870,11 +3194,11 @@ if my_grid_one then
         elseif y == 7 then
             print("Row7 On")
             arm_row7 = grid_button_function_name(x, y)
-            safe_grid_led(my_grid_one, x, y, 12) -- just show that the button is pressed
+            if my_grid_one then my_grid_one:led(x, y, 12) end -- just show that the button is pressed
         elseif y == 8 then
             print("Control On")
             arm_control = grid_button_function_name(x, y)
-            safe_grid_led(my_grid_one, x, y, 12)
+            if my_grid_one then my_grid_one:led(x, y, 12) end
         else
             print("Error")
         end
@@ -3887,11 +3211,11 @@ if my_grid_one then
         elseif y == 7 then
             print("Row7 Reset")
             arm_row7 = NO_FEATURE
-            safe_grid_led(my_grid_one, x, y, 0)
+            if my_grid_one then my_grid_one:led(x, y, 0) end
         elseif y == 8 then
             print("Control Reset")
             arm_control = NO_FEATURE
-            safe_grid_led(my_grid_one, x, y, 0)
+            if my_grid_one then my_grid_one:led(x, y, 0) end
         else
             print("Error")
         end
@@ -4004,18 +3328,13 @@ if my_grid_one then
 
     -- Always do this else results are not shown to user.
     refresh_grid_and_screen()
-    end -- End of my_grid_one.key function definition
-else
-    print("WARNING: Cannot assign grid one key handler - my_grid_one is nil")
-end
+end -- End of my_grid_one.key function definition
 -- /////////////////////////////////////////////////
 
 
 
 -- Main loop for the second grid. This gets called every time a grid button is pressed.
--- Safely assign grid two key handler
-if my_grid_two then
-    my_grid_two.key = function(x, y, z)
+my_grid_two.key = function(x, y, z)
     -- x is the column
     -- y is the row
     -- z == 1 means key down, z == 0 means key up
@@ -4026,10 +3345,10 @@ if my_grid_two then
 
 
     if z == 1 then
-        safe_grid_led(my_grid_two, x, y, 12)
+        if my_grid_two then my_grid_two:led(x, y, 12) end
     else
         -- 1) Turn the LED off to give feedback to the user
-        safe_grid_led(my_grid_two, x, y, 0)
+        if my_grid_two then my_grid_two:led(x, y, 0) end
 
         -- 2) Get the mozart_pointer for the button we just pressed off
         local mozart_pointer = scroll_state[x][y]
@@ -4057,11 +3376,8 @@ if my_grid_two then
     end
 
 
-    safe_grid_refresh(my_grid_two)
-    end -- End of function for my_grid_two
-else
-    print("WARNING: Cannot assign grid two key handler - my_grid_two is nil")
-end
+    if my_grid_two then my_grid_two:refresh() end
+end -- End of function for my_grid_two
 -- //////////////////////////////////////////////
 
 
@@ -4154,29 +3470,32 @@ function display_tempo_status()
     screen.update()
 
     screen.move(1, 7)
-    screen.text(tempo_status_string_1 or "Current Tempo: --")
+    screen.text(tempo_status_string_1)
 
     screen.move(1, 14)
-    screen.text(tempo_status_string_2 or "Wow Av Tempo: --")
+    screen.text(tempo_status_string_2)
 
 
     screen.move(1, 21)
-    screen.text(tempo_status_string_3 or "Flutter Av Tempo: --")
+    screen.text(tempo_status_string_3)
 
     screen.move(1, 28)
-    screen.text(tempo_status_string_4 or "Wow Epsds: --")
+    screen.text(tempo_status_string_4)
 
     screen.move(1, 35)
-    screen.text(tempo_status_string_5 or "Flutter Epsds: --")
+    screen.text(tempo_status_string_5)
 
     screen.move(1, 42)
-    screen.text(co2_ppm_status_string or "CO2 PPM: --")
+    screen.text(co2_ppm_status_string)
+
 
     screen.move(1, 49)
+    screen.text(version_string)
 
+    --screen.font_size(10)
     screen.move(1, 56)
 
-    screen.text(string.format("%.4f", current_tempo or 0))
+    screen.text(string.format("%.4f", current_tempo))
     screen.update()
 end
 
@@ -4260,23 +3579,23 @@ function refresh_grid_and_screen()
 
                     if (grid_one_state[col][row] >= 2) then -- ratchet
                         -- If current step and key is on, highlight it.
-                        safe_grid_led(my_grid_one, col, row, 12)
+                        if my_grid_one then my_grid_one:led(col, row, 12) end
                     elseif (grid_one_state[col][row] == 1) then
                         -- If current step and key is on, highlight it.
-                        safe_grid_led(my_grid_one, col, row, 9)
+                        if my_grid_one then my_grid_one:led(col, row, 9) end
                     else
                         -- Else use scrolling brightness
-                        safe_grid_led(my_grid_one, col, row, 4)
+                        if my_grid_one then my_grid_one:led(col, row, 4) end
                     end
                 else
                     if (grid_one_state[col][row] >= 2) then
-                        safe_grid_led(my_grid_one, col, row, 8) -- ratchet
+                        if my_grid_one then my_grid_one:led(col, row, 8) end -- ratchet
                     elseif (grid_one_state[col][row] == 1) then
                         -- Not current step but Grid square is On
-                        safe_grid_led(my_grid_one, col, row, 5)
+                        if my_grid_one then my_grid_one:led(col, row, 5) end
                     else
                         -- Not current step and key is off
-                        safe_grid_led(my_grid_one, col, row, 0)
+                        if my_grid_one then my_grid_one:led(col, row, 0) end
                     end
                     -- Show the stored value on screen
                     screen.text(grid_one_state[col][row])
@@ -4349,8 +3668,8 @@ function refresh_grid_and_screen()
 
     screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
-    safe_grid_refresh(my_grid_one)
-    safe_grid_refresh(my_grid_two)
+    if my_grid_one then my_grid_one:refresh() end
+    if my_grid_two then my_grid_two:refresh() end
     -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
 
     return tally
