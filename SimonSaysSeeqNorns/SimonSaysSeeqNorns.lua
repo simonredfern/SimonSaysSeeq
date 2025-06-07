@@ -42,7 +42,7 @@ end
 
 
 local co2_ppm_daily_latest_value = tonumber(read_file(
-"/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
+_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
 
 if (co2_ppm_daily_latest_value) then
     print("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
@@ -55,7 +55,7 @@ end
 
 
 local all_days_path =
-"/home/we/dust/data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"
+_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"
 
 if (file_exists(all_days_path)) then
     print("Yes all days path file exists");
@@ -175,15 +175,15 @@ swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 7 -- was 6
 
-GRID_ONE_STATE_FILE = "/home/we/SimonSaysSeeq-grid-v2.tbl"
+GRID_ONE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-grid-v2.tbl"
 
-MOZART_STATE_FILE = "/home/we/SimonSaysSeeq-mozart-v2.tbl"
+MOZART_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-mozart-v2.tbl"
 
-SCROLL_STATE_FILE = "/home/we/SimonSaysSeeq-scroll-v5.tbl"
+SCROLL_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-scroll-v5.tbl"
 
-SLIDE_STATE_FILE = "/home/we/SimonSaysSeeq-slide-v2.tbl"
+SLIDE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-slide-v2.tbl"
 
-ROW_SETTINGS_FILE = "/home/we/SimonSaysSeeq-row-settings-v2.tbl"
+ROW_SETTINGS_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-settings-v2.tbl"
 
 function get_row_settings_tally(row_settings)
     -- A helper debug function to show the state the row_settings table
