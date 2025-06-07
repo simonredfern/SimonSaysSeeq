@@ -1276,7 +1276,12 @@ function tick()
             screen.move(1, 10)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            wow_average_tempo = wow_tempo_sum / wow_window_tick_position
+            if wow_window_tick_position > 0 then
+                wow_average_tempo = wow_tempo_sum / wow_window_tick_position
+            else
+                -- Fallback: use current tempo if we can't calculate average
+                wow_average_tempo = current_tempo
+            end
 
             screen.text("Average Wow Tempo" .. wow_average_tempo)
 
@@ -1291,7 +1296,12 @@ function tick()
             screen.move(1, 20)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            flutter_average_tempo = flutter_tempo_sum / flutter_window_tick_position
+            if flutter_window_tick_position > 0 then
+                flutter_average_tempo = flutter_tempo_sum / flutter_window_tick_position
+            else
+                -- Fallback: use current tempo if we can't calculate average
+                flutter_average_tempo = current_tempo
+            end
 
             screen.text("Average Flutter Tempo" .. flutter_average_tempo)
 
@@ -1918,6 +1928,7 @@ function init()
 
     current_tempo = clock.get_tempo()
     flutter_average_tempo = clock.get_tempo() -- just for initial value
+    wow_average_tempo = clock.get_tempo() -- initialize with current tempo to avoid false instability detection
 
     init_wow_and_flutter_counters()
     init_wow_window()
