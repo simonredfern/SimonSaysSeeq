@@ -1386,8 +1386,8 @@ function greetings()
                     midi_text = midi_text .. "GTES"
                 end
 
-                if sub_value == NORMAL_MIDI_PORT then
-                    midi_text = midi_text .. "MZRT"
+                if sub_value == INITIAL_MIDI_KEYBOARD_PORT then
+                    midi_text = midi_text .. "KYBD"
                 end
             end
 
