@@ -286,88 +286,131 @@ function safe_midi_clear_event(device)
 end
 
 -- Helper function for safe grid operations
-function safe_grid_operation(grid, operation, ...)
+function safe_grid_led(grid, x, y, brightness)
     if grid == nil then
-        -- Silently fail for grid operations when no grid is connected
         return false
     end
-
-    -- Additional validation: check if grid has expected methods
+    
     if type(grid) ~= "table" then
-        debug_print(2, "WARNING: Grid is not a table, cannot perform operation: " .. tostring(operation))
+        debug_print(2, "WARNING: Grid is not a table, cannot set LED")
         return false
     end
-
+    
     local success, err = pcall(function()
-        if operation == "led" then
-            local x, y, brightness = ...
-            -- Enhanced coordinate validation
-            if not x or not y then
-                print("WARNING: LED operation missing coordinates")
-                return false
-            end
-            if type(x) ~= "number" or type(y) ~= "number" then
-                print("WARNING: LED coordinates must be numbers")
-                return false
-            end
-            if x < 1 or x > 16 or y < 1 or y <= 0 then
-                debug_print(2, "WARNING: Invalid grid LED coordinates: x=" .. tostring(x) .. " y=" .. tostring(y))
-                return false
-            end
-
-            brightness = brightness or 0
-            if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
-                brightness = math.max(0, math.min(15, brightness or 0))
-            end
-
-            if grid.led and type(grid.led) == "function" then
-                grid:led(x, y, brightness)
-            else
-                print("WARNING: Grid does not have LED function")
-                return false
-            end
-
-        elseif operation == "refresh" then
-            if grid.refresh and type(grid.refresh) == "function" then
-                grid:refresh()
-            else
-                print("WARNING: Grid does not have refresh function")
-                return false
-            end
-
-        elseif operation == "all" then
-            local brightness = ...
-            brightness = brightness or 0
-            if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
-                brightness = math.max(0, math.min(15, brightness or 0))
-            end
-
-            if grid.all and type(grid.all) == "function" then
-                grid:all(brightness)
-            else
-                print("WARNING: Grid does not have all function")
-                return false
-            end
-
-        elseif operation == "set_key" then
-            local key_function = ...
-            if type(key_function) ~= "function" then
-                print("WARNING: set_key requires a function parameter")
-                return false
-            end
-            grid.key = key_function
-
+        -- Enhanced coordinate validation
+        if not x or not y then
+            debug_print(2, "WARNING: LED operation missing coordinates")
+            return false
+        end
+        if type(x) ~= "number" or type(y) ~= "number" then
+            debug_print(2, "WARNING: LED coordinates must be numbers")
+            return false
+        end
+        if x < 1 or x > 16 or y < 1 or y <= 0 then
+            debug_print(2, "WARNING: Invalid grid LED coordinates: x=" .. tostring(x) .. " y=" .. tostring(y))
+            return false
+        end
+        
+        brightness = brightness or 0
+        if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
+            brightness = math.max(0, math.min(15, brightness or 0))
+        end
+        
+        if grid.led and type(grid.led) == "function" then
+            grid:led(x, y, brightness)
         else
-            debug_print(2, "WARNING: Unknown grid operation: " .. tostring(operation))
             return false
         end
     end)
-
+    
     if not success then
-        debug_print(1, "ERROR: Grid operation failed: " .. tostring(err))
+        debug_print(1, "ERROR: Grid LED operation failed: " .. tostring(err))
         return false
     end
+    
+    return true
+end
 
+function safe_grid_all(grid, brightness)
+    if grid == nil then
+        return false
+    end
+    
+    if type(grid) ~= "table" then
+        debug_print(2, "WARNING: Grid is not a table, cannot set all LEDs")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        brightness = brightness or 0
+        if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
+            brightness = math.max(0, math.min(15, brightness or 0))
+        end
+        
+        if grid.all and type(grid.all) == "function" then
+            grid:all(brightness)
+        else
+            return false
+        end
+    end)
+    
+    if not success then
+        debug_print(1, "ERROR: Grid all operation failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_grid_refresh(grid)
+    if grid == nil then
+        return false
+    end
+    
+    if type(grid) ~= "table" then
+        debug_print(2, "WARNING: Grid is not a table, cannot refresh")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if grid.refresh and type(grid.refresh) == "function" then
+            grid:refresh()
+        else
+            return false
+        end
+    end)
+    
+    if not success then
+        debug_print(1, "ERROR: Grid refresh operation failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_grid_set_key(grid, key_function)
+    if grid == nil then
+        return false
+    end
+    
+    if type(grid) ~= "table" then
+        debug_print(2, "WARNING: Grid is not a table, cannot set key function")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if type(key_function) ~= "function" then
+            debug_print(2, "WARNING: Key handler must be a function")
+            return false
+        end
+        grid.key = key_function
+    end)
+    
+    if not success then
+        debug_print(1, "ERROR: Grid set key operation failed: " .. tostring(err))
+        return false
+    end
+    
     return true
 end
 
@@ -1472,7 +1515,7 @@ function PlayMidi()
         if note_on_event and note_on_event.is_active == 1 then
             -- Turn an led on on grid_two to show there is an active note here
             local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
-            safe_grid_operation(my_grid_two, "led", midi_step_count, led_row, note_on_event.velocity)
+            safe_grid_led(my_grid_two, midi_step_count, led_row, note_on_event.velocity)
             grid_refresh_needed = true
 
             count_of_active_midi_on = count_of_active_midi_on + 1
@@ -1495,7 +1538,7 @@ function PlayMidi()
 
     -- Only refresh grid if we made changes
     if grid_refresh_needed then
-        safe_grid_operation(my_grid_two, "refresh")
+        safe_grid_refresh(my_grid_two)
     end
 
     g_count_of_active_midi_on = count_of_active_midi_on
@@ -1682,7 +1725,7 @@ function tick()
                 -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
                 for i = 1, 8 do
                     collected_note_ons[i] = {} -- create a table for each col
-                    safe_grid_operation(my_grid_two, "led", midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
+                    safe_grid_led(my_grid_two, midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
                 end
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
@@ -1732,7 +1775,7 @@ function tick()
                             local collected_note = safe_array_access(collected_note_ons, c, { velocity = 0, midi_note_number = 0 })
 
                             if midi_step_count >= 1 and midi_step_count <= 16 and led_row >= 1 and led_row <= 8 then
-                                safe_grid_operation(my_grid_two, "led", midi_step_count, led_row, collected_note.velocity)
+                                safe_grid_led(my_grid_two, midi_step_count, led_row, collected_note.velocity)
                             end
 
 
@@ -1760,7 +1803,7 @@ function tick()
                 end
 
 
-                safe_grid_operation(my_grid_two, "refresh")
+                safe_grid_refresh(my_grid_two)
 
 
 
@@ -2019,7 +2062,7 @@ function process_step()
 
     --for second_grid_row = 1, 6 do
 
-    --safe_grid_operation(my_grid_two, "led", midi_step_count, second_grid_row, 24)
+    --safe_grid_led(my_grid_two, midi_step_count, second_grid_row, 24)
 
 
     -- keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
@@ -2544,8 +2587,8 @@ function init()
 
     print("hello")
     -- my_grid_one:all(2)
-    safe_grid_operation(my_grid_one, "refresh") -- refresh the LEDs
-    safe_grid_operation(my_grid_two, "refresh")
+    safe_grid_refresh(my_grid_one) -- refresh the LEDs
+    safe_grid_refresh(my_grid_two)
 
 
     print("my_grid_one follows: ")
@@ -3712,11 +3755,11 @@ if my_grid_one then
         elseif y == 7 then
             print("Row7 On")
             arm_row7 = grid_button_function_name(x, y)
-            safe_grid_operation(my_grid_one, "led", x, y, 12) -- just show that the button is pressed
+            safe_grid_led(my_grid_one, x, y, 12) -- just show that the button is pressed
         elseif y == 8 then
             print("Control On")
             arm_control = grid_button_function_name(x, y)
-            safe_grid_operation(my_grid_one, "led", x, y, 12)
+            safe_grid_led(my_grid_one, x, y, 12)
         else
             print("Error")
         end
@@ -3729,11 +3772,11 @@ if my_grid_one then
         elseif y == 7 then
             print("Row7 Reset")
             arm_row7 = NO_FEATURE
-            safe_grid_operation(my_grid_one, "led", x, y, 0)
+            safe_grid_led(my_grid_one, x, y, 0)
         elseif y == 8 then
             print("Control Reset")
             arm_control = NO_FEATURE
-            safe_grid_operation(my_grid_one, "led", x, y, 0)
+            safe_grid_led(my_grid_one, x, y, 0)
         else
             print("Error")
         end
@@ -3868,10 +3911,10 @@ if my_grid_two then
 
 
     if z == 1 then
-        safe_grid_operation(my_grid_two, "led", x, y, 12)
+        safe_grid_led(my_grid_two, x, y, 12)
     else
         -- 1) Turn the LED off to give feedback to the user
-        safe_grid_operation(my_grid_two, "led", x, y, 0)
+        safe_grid_led(my_grid_two, x, y, 0)
 
         -- 2) Get the mozart_pointer for the button we just pressed off
         local mozart_pointer = scroll_state[x][y]
@@ -3899,7 +3942,7 @@ if my_grid_two then
     end
 
 
-    safe_grid_operation(my_grid_two, "refresh")
+    safe_grid_refresh(my_grid_two)
     end -- End of function for my_grid_two
 else
     print("WARNING: Cannot assign grid two key handler - my_grid_two is nil")
@@ -4105,23 +4148,23 @@ function refresh_grid_and_screen()
 
                     if (grid_one_state[col][row] >= 2) then -- ratchet
                         -- If current step and key is on, highlight it.
-                        safe_grid_operation(my_grid_one, "led", col, row, 12)
+                        safe_grid_led(my_grid_one, col, row, 12)
                     elseif (grid_one_state[col][row] == 1) then
                         -- If current step and key is on, highlight it.
-                        safe_grid_operation(my_grid_one, "led", col, row, 9)
+                        safe_grid_led(my_grid_one, col, row, 9)
                     else
                         -- Else use scrolling brightness
-                        safe_grid_operation(my_grid_one, "led", col, row, 4)
+                        safe_grid_led(my_grid_one, col, row, 4)
                     end
                 else
                     if (grid_one_state[col][row] >= 2) then
-                        safe_grid_operation(my_grid_one, "led", col, row, 8) -- ratchet
+                        safe_grid_led(my_grid_one, col, row, 8) -- ratchet
                     elseif (grid_one_state[col][row] == 1) then
                         -- Not current step but Grid square is On
-                        safe_grid_operation(my_grid_one, "led", col, row, 5)
+                        safe_grid_led(my_grid_one, col, row, 5)
                     else
                         -- Not current step and key is off
-                        safe_grid_operation(my_grid_one, "led", col, row, 0)
+                        safe_grid_led(my_grid_one, col, row, 0)
                     end
                     -- Show the stored value on screen
                     screen.text(grid_one_state[col][row])
@@ -4194,8 +4237,8 @@ function refresh_grid_and_screen()
 
     screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
-    safe_grid_operation(my_grid_one, "refresh")
-    safe_grid_operation(my_grid_two, "refresh")
+    safe_grid_refresh(my_grid_one)
+    safe_grid_refresh(my_grid_two)
     -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
 
     return tally
