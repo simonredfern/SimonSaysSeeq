@@ -124,6 +124,78 @@ function safe_keyboard_midi_access(lane, bar, step, note, on_off, fallback)
     return keyboard_midi_note_events[lane][bar][step][note][on_off]
 end
 
+-- Helper function for safe MIDI device operations
+function safe_midi_operation(device, operation, ...)
+    if device == nil then
+        print("WARNING: MIDI device is nil, cannot perform operation: " .. tostring(operation))
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if operation == "note_on" then
+            local note, velocity, channel = ...
+            device:note_on(note, velocity, channel)
+        elseif operation == "start" then
+            device:start()
+        elseif operation == "stop" then
+            device:stop()
+        elseif operation == "set_event" then
+            local event_function = ...
+            device.event = event_function
+        elseif operation == "clear_event" then
+            device.event = nil
+        else
+            print("WARNING: Unknown MIDI operation: " .. tostring(operation))
+            return false
+        end
+    end)
+    
+    if not success then
+        print("ERROR: MIDI operation failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+-- Helper function for safe grid operations
+function safe_grid_operation(grid, operation, ...)
+    if grid == nil then
+        -- Silently fail for grid operations when no grid is connected
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if operation == "led" then
+            local x, y, brightness = ...
+            -- Validate coordinates before setting LED
+            if x and y and x >= 1 and x <= 16 and y >= 1 and y <= 8 then
+                grid:led(x, y, brightness or 0)
+            else
+                print("WARNING: Invalid grid LED coordinates: " .. tostring(x) .. ", " .. tostring(y))
+            end
+        elseif operation == "refresh" then
+            grid:refresh()
+        elseif operation == "all" then
+            local brightness = ...
+            grid:all(brightness or 0)
+        elseif operation == "set_key" then
+            local key_function = ...
+            grid.key = key_function
+        else
+            print("WARNING: Unknown grid operation: " .. tostring(operation))
+            return false
+        end
+    end)
+    
+    if not success then
+        print("ERROR: Grid operation failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
 -- Read CO2 data file safely with proper error handling
 local co2_file_content = read_file(_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv")
 local co2_ppm_daily_latest_value = nil
@@ -825,11 +897,7 @@ function SendMidiKeyboardNoteOn(note, velocity, channel)
     -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
     -- Safety check: ensure MIDI device is initialized before use
-    if midi_keyboard_usb_device_port then
-        midi_keyboard_usb_device_port:note_on(note, velocity, channel)
-    else
-        print("WARNING: midi_keyboard_usb_device_port is nil, cannot send MIDI note")
-    end
+    safe_midi_operation(midi_keyboard_usb_device_port, "note_on", note, velocity, channel)
 
 
     -- for display
@@ -950,10 +1018,24 @@ end
 
 
 
-my_grid_one = grid.connect(1)
-print(my_grid_one)
-my_grid_two = grid.connect(2)
-print(my_grid_two)
+-- Initialize grid connections with error handling
+local grid_one_success, grid_one_device = pcall(grid.connect, 1)
+if grid_one_success and grid_one_device and grid_one_device.device then
+    my_grid_one = grid_one_device
+    print("Successfully connected to grid one: " .. tostring(my_grid_one.name))
+else
+    my_grid_one = nil
+    print("WARNING: Failed to connect to grid one")
+end
+
+local grid_two_success, grid_two_device = pcall(grid.connect, 2)
+if grid_two_success and grid_two_device and grid_two_device.device then
+    my_grid_two = grid_two_device
+    print("Successfully connected to grid two: " .. tostring(my_grid_two.name))
+else
+    my_grid_two = nil
+    print("WARNING: Failed to connect to grid two")
+end
 
 
 
@@ -972,8 +1054,24 @@ INITIAL_MIDI_KEYBOARD_PORT = 2
 
 -- Which USB midi ports we should use (defaults)
 
-midi_gates_usb_device_port = midi.connect(INITIAL_MIDI_GATES_PORT)
-midi_keyboard_usb_device_port = midi.connect(INITIAL_MIDI_KEYBOARD_PORT)
+-- Initialize MIDI devices with error handling
+local gates_success, gates_device = pcall(midi.connect, INITIAL_MIDI_GATES_PORT)
+if gates_success and gates_device then
+    midi_gates_usb_device_port = gates_device
+    print("Successfully connected to MIDI gates port " .. INITIAL_MIDI_GATES_PORT)
+else
+    midi_gates_usb_device_port = nil
+    print("WARNING: Failed to connect to MIDI gates port " .. INITIAL_MIDI_GATES_PORT)
+end
+
+local keyboard_success, keyboard_device = pcall(midi.connect, INITIAL_MIDI_KEYBOARD_PORT)
+if keyboard_success and keyboard_device then
+    midi_keyboard_usb_device_port = keyboard_device
+    print("Successfully connected to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
+else
+    midi_keyboard_usb_device_port = nil
+    print("WARNING: Failed to connect to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
+end
 
 
 -- And we can change them and connect after changes.
@@ -989,11 +1087,21 @@ end }
 
 params:add { type = "number", id = "midi_keyboard_usb_device_port_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = INITIAL_MIDI_KEYBOARD_PORT, action = function(
     value)
-    midi_keyboard_usb_device_port.event = nil
-    midi_keyboard_usb_device_port = midi.connect(value)
-    midi_keyboard_usb_device_port.event = midi_event
-
-    print("i changed the midi keyboard parameter !")
+    -- Safely clear existing event handler
+    if midi_keyboard_usb_device_port then
+        safe_midi_operation(midi_keyboard_usb_device_port, "clear_event")
+    end
+    
+    -- Attempt to connect to new MIDI device
+    local success, new_device = pcall(midi.connect, value)
+    if success and new_device then
+        midi_keyboard_usb_device_port = new_device
+        safe_midi_operation(midi_keyboard_usb_device_port, "set_event", midi_event)
+        print("Successfully changed MIDI keyboard parameter to port " .. value)
+    else
+        print("ERROR: Failed to connect to MIDI keyboard port " .. value)
+        midi_keyboard_usb_device_port = nil
+    end
 end }
 
 
@@ -1134,10 +1242,8 @@ function PlayMidi()
 
             -- Add bounds checking to prevent negative or out-of-bounds LED access
             local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
-            if my_grid_two then
-                my_grid_two:led(midi_step_count, led_row, note_on_event.velocity)
-                my_grid_two:refresh()
-            end
+            safe_grid_operation(my_grid_two, "led", midi_step_count, led_row, note_on_event.velocity)
+            safe_grid_operation(my_grid_two, "refresh")
 
             count_of_active_midi_on = count_of_active_midi_on + 1
 
@@ -1344,9 +1450,7 @@ function tick()
                 -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
                 for i = 1, 8 do
                     collected_note_ons[i] = {} -- create a table for each col
-                    if my_grid_two then
-                        my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
-                    end
+                    safe_grid_operation(my_grid_two, "led", midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
                 end
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
@@ -1395,8 +1499,8 @@ function tick()
                             -- Bounds check collected_note_ons access
                             local collected_note = safe_array_access(collected_note_ons, c, { velocity = 0, midi_note_number = 0 })
                             
-                            if my_grid_two and midi_step_count >= 1 and midi_step_count <= 16 and led_row >= 1 and led_row <= 8 then
-                                my_grid_two:led(midi_step_count, led_row, collected_note.velocity)
+                            if midi_step_count >= 1 and midi_step_count <= 16 and led_row >= 1 and led_row <= 8 then
+                                safe_grid_operation(my_grid_two, "led", midi_step_count, led_row, collected_note.velocity)
                             end
 
 
@@ -1661,16 +1765,8 @@ function process_step()
 
             if (enable_midi_clock_out == 1) then
                 print("Send MIDI Start midi_step_count is: " .. midi_step_count)
-                if midi_gates_usb_device_port then
-                    midi_gates_usb_device_port:start()
-                else
-                    print("WARNING: midi_gates_usb_device_port is nil, cannot start MIDI gates")
-                end
-                if midi_keyboard_usb_device_port then
-                    midi_keyboard_usb_device_port:start()
-                else
-                    print("WARNING: midi_keyboard_usb_device_port is nil, cannot start MIDI keyboard")
-                end
+                safe_midi_operation(midi_gates_usb_device_port, "start")
+                safe_midi_operation(midi_keyboard_usb_device_port, "start")
             else
                 print("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
             end
@@ -2039,12 +2135,8 @@ function request_midi_stop()
     -- can stop the midi clock at any time.
 
     if (enable_midi_clock_out == 1) then
-        if midi_gates_usb_device_port then
-            midi_gates_usb_device_port:stop()
-        end
-        if midi_keyboard_usb_device_port then
-            midi_keyboard_usb_device_port:stop()
-        end
+        safe_midi_operation(midi_gates_usb_device_port, "stop")
+        safe_midi_operation(midi_keyboard_usb_device_port, "stop")
     end
 
 
@@ -2218,8 +2310,8 @@ function init()
 
     print("hello")
     -- my_grid_one:all(2)
-    if my_grid_one then my_grid_one:refresh() end -- refresh the LEDs
-    if my_grid_two then my_grid_two:refresh() end
+    safe_grid_operation(my_grid_one, "refresh") -- refresh the LEDs
+    safe_grid_operation(my_grid_two, "refresh")
 
 
     print("my_grid_one follows: ")
@@ -2787,8 +2879,9 @@ captured_midi_note_in = -1
 
 
 -- On MIDI note receive -  on midi note input - on midi in
--- Capture MIDI IN
-midi_keyboard_usb_device_port.event = function(data)
+-- Capture MIDI IN - safely assign event handler
+if midi_keyboard_usb_device_port then
+    midi_keyboard_usb_device_port.event = function(data)
     --  print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " data[2] is: " .. data[2] .. " data[3]: is " .. data[3])
 
     -- print("Got a midi_keyboard_usb_device_port.event. The data[1] is: " .. data[1] .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
@@ -3356,7 +3449,9 @@ end
 -- We capture monome grid key presses - Grid Key Presses
 -- Main Grid button loop
 
-my_grid_one.key = function(x, y, z)
+-- Safely assign grid one key handler
+if my_grid_one then
+    my_grid_one.key = function(x, y, z)
     -- x is the column
     -- y is the row
     -- z == 1 means key down, z == 0 means key up
@@ -3383,11 +3478,11 @@ my_grid_one.key = function(x, y, z)
         elseif y == 7 then
             print("Row7 On")
             arm_row7 = grid_button_function_name(x, y)
-            if my_grid_one then my_grid_one:led(x, y, 12) end -- just show that the button is pressed
+            safe_grid_operation(my_grid_one, "led", x, y, 12) -- just show that the button is pressed
         elseif y == 8 then
             print("Control On")
             arm_control = grid_button_function_name(x, y)
-            if my_grid_one then my_grid_one:led(x, y, 12) end
+            safe_grid_operation(my_grid_one, "led", x, y, 12)
         else
             print("Error")
         end
@@ -3400,11 +3495,11 @@ my_grid_one.key = function(x, y, z)
         elseif y == 7 then
             print("Row7 Reset")
             arm_row7 = NO_FEATURE
-            if my_grid_one then my_grid_one:led(x, y, 0) end
+            safe_grid_operation(my_grid_one, "led", x, y, 0)
         elseif y == 8 then
             print("Control Reset")
             arm_control = NO_FEATURE
-            if my_grid_one then my_grid_one:led(x, y, 0) end
+            safe_grid_operation(my_grid_one, "led", x, y, 0)
         else
             print("Error")
         end
@@ -3517,13 +3612,18 @@ my_grid_one.key = function(x, y, z)
 
     -- Always do this else results are not shown to user.
     refresh_grid_and_screen()
-end -- End of my_grid_one.key function definition
+    end -- End of my_grid_one.key function definition
+else
+    print("WARNING: Cannot assign grid one key handler - my_grid_one is nil")
+end
 -- /////////////////////////////////////////////////
 
 
 
 -- Main loop for the second grid. This gets called every time a grid button is pressed.
-my_grid_two.key = function(x, y, z)
+-- Safely assign grid two key handler
+if my_grid_two then
+    my_grid_two.key = function(x, y, z)
     -- x is the column
     -- y is the row
     -- z == 1 means key down, z == 0 means key up
@@ -3534,10 +3634,10 @@ my_grid_two.key = function(x, y, z)
 
 
     if z == 1 then
-        if my_grid_two then my_grid_two:led(x, y, 12) end
+        safe_grid_operation(my_grid_two, "led", x, y, 12)
     else
         -- 1) Turn the LED off to give feedback to the user
-        if my_grid_two then my_grid_two:led(x, y, 0) end
+        safe_grid_operation(my_grid_two, "led", x, y, 0)
 
         -- 2) Get the mozart_pointer for the button we just pressed off
         local mozart_pointer = scroll_state[x][y]
@@ -3565,8 +3665,11 @@ my_grid_two.key = function(x, y, z)
     end
 
 
-    if my_grid_two then my_grid_two:refresh() end
-end -- End of function for my_grid_two
+    safe_grid_operation(my_grid_two, "refresh")
+    end -- End of function for my_grid_two
+else
+    print("WARNING: Cannot assign grid two key handler - my_grid_two is nil")
+end
 -- //////////////////////////////////////////////
 
 
@@ -3768,23 +3871,23 @@ function refresh_grid_and_screen()
 
                     if (grid_one_state[col][row] >= 2) then -- ratchet
                         -- If current step and key is on, highlight it.
-                        if my_grid_one then my_grid_one:led(col, row, 12) end
+                        safe_grid_operation(my_grid_one, "led", col, row, 12)
                     elseif (grid_one_state[col][row] == 1) then
                         -- If current step and key is on, highlight it.
-                        if my_grid_one then my_grid_one:led(col, row, 9) end
+                        safe_grid_operation(my_grid_one, "led", col, row, 9)
                     else
                         -- Else use scrolling brightness
-                        if my_grid_one then my_grid_one:led(col, row, 4) end
+                        safe_grid_operation(my_grid_one, "led", col, row, 4)
                     end
                 else
                     if (grid_one_state[col][row] >= 2) then
-                        if my_grid_one then my_grid_one:led(col, row, 8) end -- ratchet
+                        safe_grid_operation(my_grid_one, "led", col, row, 8) -- ratchet
                     elseif (grid_one_state[col][row] == 1) then
                         -- Not current step but Grid square is On
-                        if my_grid_one then my_grid_one:led(col, row, 5) end
+                        safe_grid_operation(my_grid_one, "led", col, row, 5)
                     else
                         -- Not current step and key is off
-                        if my_grid_one then my_grid_one:led(col, row, 0) end
+                        safe_grid_operation(my_grid_one, "led", col, row, 0)
                     end
                     -- Show the stored value on screen
                     screen.text(grid_one_state[col][row])
@@ -3857,8 +3960,8 @@ function refresh_grid_and_screen()
 
     screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
-    if my_grid_one then my_grid_one:refresh() end
-    if my_grid_two then my_grid_two:refresh() end
+    safe_grid_operation(my_grid_one, "refresh")
+    safe_grid_operation(my_grid_two, "refresh")
     -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
 
     return tally
