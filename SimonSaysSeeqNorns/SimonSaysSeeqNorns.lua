@@ -40,6 +40,16 @@ end
 
 -- See gml.noaa.gov/ccgg/trends/ for additional details.
 
+-- Helper function to validate CO2 values consistently
+function validate_co2_value(raw_value)
+    local co2_numeric = tonumber(raw_value)
+    -- Check if value is numeric, positive, within reasonable range (0-10000 ppm), and not NaN
+    if co2_numeric and co2_numeric > 0 and co2_numeric < 10000 and co2_numeric == co2_numeric then
+        return co2_numeric
+    else
+        return nil
+    end
+end
 
 local co2_ppm_daily_latest_value = tonumber(read_file(
 _path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
@@ -65,9 +75,16 @@ if (file_exists(all_days_path)) then
     no_of_co2_ppm_records = 0
     for line in io.lines(all_days_path) do
         local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
-        co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value =
-        the_co2_ppm_value }
-        no_of_co2_ppm_records = no_of_co2_ppm_records + 1
+        
+        -- Validate CO2 value during parsing to catch invalid data early
+        local co2_numeric = validate_co2_value(the_co2_ppm_value)
+        if co2_numeric then
+            co2_ppm_list[#co2_ppm_list + 1] = { year = year, month = month, day = day, something = something, the_co2_ppm_value =
+            the_co2_ppm_value }
+            no_of_co2_ppm_records = no_of_co2_ppm_records + 1
+        else
+            print("WARNING: Skipping invalid CO2 record - raw value: " .. tostring(the_co2_ppm_value) .. ", parsed: " .. tostring(co2_numeric))
+        end
     end
 
     -- for i,v in ipairs(co2_ppm_list) do
@@ -76,7 +93,15 @@ if (file_exists(all_days_path)) then
     --   print(i, v.the_co2_ppm_value)
 
     -- end
-    we_have_all_daily_co2_ppm_values = true
+    
+    -- Final validation: ensure we have at least some valid CO2 records
+    if no_of_co2_ppm_records > 0 then
+        we_have_all_daily_co2_ppm_values = true
+        print("Successfully loaded " .. no_of_co2_ppm_records .. " valid CO2 records")
+    else
+        we_have_all_daily_co2_ppm_values = false
+        print("WARNING: No valid CO2 records found in file, CO2 features disabled")
+    end
 else
     print("We do NOT have ALL daily co2 ppm ");
     we_have_all_daily_co2_ppm_values = false
@@ -1565,13 +1590,15 @@ function conditional_change_crow_output(current_step, sequence_row)
                total_step_co2_count >= 1 and total_step_co2_count <= no_of_co2_ppm_records and
                co2_ppm_list[total_step_co2_count] and co2_ppm_list[total_step_co2_count].the_co2_ppm_value then
                 
-                local co2_value = tonumber(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
+                local co2_value = validate_co2_value(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
+                -- Comprehensive validation using helper function
                 if co2_value then
                     co2_ppm_step_offset = co2_value / 50
                     --print (co2_ppm_step_offset)
                     crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
                 else
-                    print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count)
+                    local raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
+                    print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
                     crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
                 end
             else
@@ -1584,13 +1611,15 @@ function conditional_change_crow_output(current_step, sequence_row)
                total_tick_co2_count >= 1 and total_tick_co2_count <= no_of_co2_ppm_records and
                co2_ppm_list[total_tick_co2_count] and co2_ppm_list[total_tick_co2_count].the_co2_ppm_value then
                 
-                local co2_value = tonumber(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
+                local co2_value = validate_co2_value(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
+                -- Comprehensive validation using helper function
                 if co2_value then
                     co2_ppm_tick_offset = co2_value / 50
                     --print (co2_ppm_tick_offset)
                     crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
                 else
-                    print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count)
+                    local raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
+                    print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
                     crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
                 end
             else
