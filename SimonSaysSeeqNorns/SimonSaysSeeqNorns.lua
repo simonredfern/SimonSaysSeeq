@@ -934,7 +934,9 @@ function PlayMidi()
             -- Turn an led on on grid_two to show there is an active note here
             -- we are interested in the first 6 notes on one step.
 
-            my_grid_two:led(midi_step_count, 6 - count_of_active_midi_on, note_on_event.velocity)
+            -- Add bounds checking to prevent negative or out-of-bounds LED access
+            local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
+            my_grid_two:led(midi_step_count, led_row, note_on_event.velocity)
 
             my_grid_two:refresh()
 
@@ -1176,9 +1178,10 @@ function tick()
 
                             -- We want the lowest note to be at the bottom of the grid
                             local y = 1 + math.abs(c - 8)
+                            -- Add bounds checking for grid LED access
+                            local led_row = math.max(1, math.min(8, y))
 
-
-                            my_grid_two:led(midi_step_count, y, collected_note_ons[c].velocity)
+                            my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
 
 
                             -- This table stores the relationship between the grid x,y and the mozart note it represents.
