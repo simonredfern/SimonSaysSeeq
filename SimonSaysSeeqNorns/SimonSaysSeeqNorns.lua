@@ -730,6 +730,20 @@ function AllMidiNotesOff()
     end
 end
 
+function test_midi_output()
+    print("Testing MIDI output...")
+
+    if midi_keyboard_usb_device_port then
+        print("Sending test MIDI note C4 (60) velocity 100")
+        SendMidiKeyboardNoteOn(60, 100, 1)
+        clock.sleep(1)
+        print("Sending test MIDI note OFF")
+        SendMidiKeyboardNoteOn(60, 0, 1)
+    else
+        print("ERROR: No MIDI keyboard device connected for test")
+    end
+end
+
 -- Function to process incoming MIDI note events
 function OnMidiNoteInEvent(on_off, note, velocity, channel)
     last_function = 466942
@@ -2085,6 +2099,10 @@ function init()
 
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
     the_current_tick_count_since_step)
+    
+    -- Test MIDI output on startup
+    clock.run(test_midi_output)
+    
     clock.run(tick) -- start the sequencer
 end   -- end init
 
