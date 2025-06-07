@@ -1,14 +1,14 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.7.0"
+version = "1.8.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
 NO_FEATURE = "NO_FEATURE"
 
 -- Debug levels: 0=NONE, 1=ERROR, 2=WARNING, 3=INFO, 4=DEBUG
-DEBUG_LEVEL = 1  -- Set to 1 for production (errors only)
+DEBUG_LEVEL = 1  -- Production setting: errors only
 
 -- Performance mode for live use - disables non-essential operations
 PERFORMANCE_MODE = true  -- Default true for optimal live performance
@@ -20,6 +20,8 @@ function debug_print(level, message)
 end
 
 the_current_tick_count_since_start = 0
+
+tick_count = 0
 
 function get_script_path()
     local info = debug.getinfo(1, 'S');
@@ -859,46 +861,67 @@ table.insert(BUTTONS, { name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8 })
 
 
 function reset_all_sequence_counters()
+    -- Safety checks to prevent crashes during startup
+    debug_print(3, "reset_all_sequence_counters: Starting")
+
     init_midi_step_count()
     init_midi_bar_count()
 
+    -- Initialize critical variables if they don't exist
+    if current_midi_lane == nil then
+        current_midi_lane = 1
+        debug_print(3, "reset_all_sequence_counters: Initialized current_midi_lane")
+    end
+
+    if transport_is_active == nil then
+        transport_is_active = false
+        debug_print(3, "reset_all_sequence_counters: Initialized transport_is_active")
+    end
 
     -- Initialize CO2 counters safely based on available data
-    if no_of_co2_ppm_records > 0 then
+    if no_of_co2_ppm_records and no_of_co2_ppm_records > 0 then
         total_step_co2_count = 1 -- This will loop around the co2 ppm rows
         total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
     else
         total_step_co2_count = 0 -- No CO2 data available
         total_tick_co2_count = 0 -- No CO2 data available
-        print("WARNING: No CO2 data available, CO2 counters set to 0")
     end
 
-    -- Safety check: ensure row_settings is properly initialized before accessing it
+    -- Initialize ratchet counting rows based on the number of sequence rows
     if row_settings == nil then
-        print("WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
+        debug_print(2, "WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
         row_settings = create_row_settings()
+    end
+
+    -- Safety check for TOTAL_SEQUENCE_ROWS
+    if TOTAL_SEQUENCE_ROWS == nil then
+        TOTAL_SEQUENCE_ROWS = 6 -- Default value
+        debug_print(2, "WARNING: TOTAL_SEQUENCE_ROWS was nil, set to default")
     end
 
     for row = 1, TOTAL_SEQUENCE_ROWS do
         -- Additional safety check for each row
         if row_settings[row] == nil then
-            print("WARNING: row_settings[" .. row .. "] is nil, creating default row settings")
+            debug_print(2, "WARNING: row_settings[" .. row .. "] is nil, creating default")
             row_settings[row] = {}
             row_settings[row]["first_step"] = 1
             row_settings[row]["last_step"] = 16
             row_settings[row]["current_step"] = 1
         end
 
-        row_settings[row]["first_step"] = first_step
-        row_settings[row]["last_step"] = last_step
+        row_settings[row]["first_step"] = first_step or 1
+        row_settings[row]["last_step"] = last_step or 16
         row_settings[row]["current_step"] = row_settings[row]["first_step"]
     end
+
+    need_to_start_midi = true
+    run_conditional_clocks = false -- at reset we want to wait for midi to start conditional clocks
+
+    debug_print(3, "reset_all_sequence_counters: Completed successfully")
+    if row_settings then
+        print(get_row_settings_tally(row_settings))
+    end
 end
-
-tick_text = "."
-
-tick_count = 0
-
 
 
 
@@ -1461,6 +1484,20 @@ local last_cached_bar = -1
 function rebuild_active_notes_cache()
     active_notes_cache = {}
 
+    -- Safety checks to prevent crashes during startup
+    if not keyboard_midi_note_events then
+        return
+    end
+    if not current_midi_lane or current_midi_lane < MIN_LANE or current_midi_lane > MAX_LANE then
+        return
+    end
+    if not midi_bar_count or midi_bar_count < MIN_BAR or midi_bar_count > MAX_BAR then
+        return
+    end
+    if not midi_step_count or midi_step_count < 1 or midi_step_count > MAX_STEP then
+        return
+    end
+
     -- Only cache notes that are actually active
     local current_step_events = keyboard_midi_note_events[current_midi_lane] and
                                keyboard_midi_note_events[current_midi_lane][midi_bar_count] and
@@ -1487,36 +1524,31 @@ end
 
 function PlayMidi()
     -- This function, which gets called every tick,
-    -- processes only active MIDI notes for better performance.
-    -- Cache is rebuilt only when step/lane/bar changes.
+    -- loops through all 127 midi notes (temporarily reverted from cache optimization)
 
     last_function = 364892
 
-    -- Rebuild cache if step/lane/bar changed
-    if midi_step_count ~= last_cached_step or
-       current_midi_lane ~= last_cached_lane or
-       midi_bar_count ~= last_cached_bar then
-        rebuild_active_notes_cache()
-        last_cached_step = midi_step_count
-        last_cached_lane = current_midi_lane
-        last_cached_bar = midi_bar_count
+    -- Safety check: ensure all required globals are initialized
+    if not keyboard_midi_note_events or not current_midi_lane or not midi_bar_count or not midi_step_count then
+        debug_print(3, "PlayMidi: Missing required globals, skipping")
+        return
     end
 
     local count_of_active_midi_on = 0
     local count_of_active_midi_off = 0
     local grid_refresh_needed = false
 
-    -- Process only cached active notes
-    for n, events in pairs(active_notes_cache) do
-        local note_on_event = events.note_on
-        local note_off_event = events.note_off
+    -- Revert to original loop through all notes to isolate crash
+    for n = 0, 127 do
+        local note_on_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 1)
 
-        -- Process note ON events
         if note_on_event and note_on_event.is_active == 1 then
             -- Turn an led on on grid_two to show there is an active note here
             local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
-            safe_grid_led(my_grid_two, midi_step_count, led_row, note_on_event.velocity)
-            grid_refresh_needed = true
+            if my_grid_two then
+                safe_grid_led(my_grid_two, midi_step_count, led_row, note_on_event.velocity)
+                grid_refresh_needed = true
+            end
 
             count_of_active_midi_on = count_of_active_midi_on + 1
 
@@ -1526,7 +1558,9 @@ function PlayMidi()
             end
         end
 
-        -- Process note OFF events
+        -- Read MIDI sequence (Note OFFs)
+        local note_off_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 0)
+
         if note_off_event and note_off_event.is_active == 1 then
             count_of_active_midi_off = count_of_active_midi_off + 1
             if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
@@ -1537,7 +1571,7 @@ function PlayMidi()
     end
 
     -- Only refresh grid if we made changes
-    if grid_refresh_needed then
+    if grid_refresh_needed and my_grid_two then
         safe_grid_refresh(my_grid_two)
     end
 
@@ -1553,6 +1587,16 @@ function tick()
     while true do
         -- quick question. why is this never zero?
         -- print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
+
+        -- Safety check to prevent crash on startup
+        if not the_current_tick_count_since_step then
+            debug_print(3, "tick: the_current_tick_count_since_step not initialized, initializing")
+            the_current_tick_count_since_step = 0
+        end
+        if not the_current_tick_count_since_start then
+            debug_print(3, "tick: the_current_tick_count_since_start not initialized, initializing")
+            the_current_tick_count_since_start = 0
+        end
 
         PlayMidi() -- play on every tick because we record notes to tick accuracy
 
@@ -2522,6 +2566,24 @@ end -- end function definition
 function init()
     print("Hello from init. Version is " .. version)
 
+    -- Initialize critical variables first to prevent crashes
+    current_midi_lane = 1
+    midi_bar_count = 1
+    midi_step_count = 1
+    the_current_tick_count_since_step = 0
+    the_current_tick_count_since_start = 0
+    transport_is_active = false
+    tick_count = 0
+    need_to_start_midi = true
+    run_conditional_clocks = false
+    
+    -- Initialize tempo status strings to prevent nil screen.text calls
+    tempo_status_string_1 = "Current Tempo: 0.00"
+    tempo_status_string_2 = "Wow Av Tempo: 0.00"
+    tempo_status_string_3 = "Flutter Av Tempo: 0.00"
+    tempo_status_string_4 = "Wow Epsds: 0 Ticks: 0"
+    tempo_status_string_5 = "Flutter Epsds: 0 Ticks: 0"
+    co2_ppm_status_string = "CO2 PPM: UNKNOWN"
 
     print("#### Here are the grids ####")
 
@@ -2585,10 +2647,20 @@ function init()
     print("before init_keyboard_midi_note_events")
     init_keyboard_midi_note_events()
 
+    print("before initializing timing variables")
+    -- Initialize critical timing variables before starting tick
+    the_current_tick_count_since_step = 0
+    the_current_tick_count_since_start = 0
+    transport_is_active = false
+
     print("hello")
     -- my_grid_one:all(2)
-    safe_grid_refresh(my_grid_one) -- refresh the LEDs
-    safe_grid_refresh(my_grid_two)
+    if my_grid_one then
+        safe_grid_refresh(my_grid_one) -- refresh the LEDs
+    end
+    if my_grid_two then
+        safe_grid_refresh(my_grid_two)
+    end
 
 
     print("my_grid_one follows: ")
@@ -4041,32 +4113,29 @@ function display_tempo_status()
     screen.update()
 
     screen.move(1, 7)
-    screen.text(tempo_status_string_1)
+    screen.text(tempo_status_string_1 or "Current Tempo: --")
 
     screen.move(1, 14)
-    screen.text(tempo_status_string_2)
+    screen.text(tempo_status_string_2 or "Wow Av Tempo: --")
 
 
     screen.move(1, 21)
-    screen.text(tempo_status_string_3)
+    screen.text(tempo_status_string_3 or "Flutter Av Tempo: --")
 
     screen.move(1, 28)
-    screen.text(tempo_status_string_4)
+    screen.text(tempo_status_string_4 or "Wow Epsds: --")
 
     screen.move(1, 35)
-    screen.text(tempo_status_string_5)
+    screen.text(tempo_status_string_5 or "Flutter Epsds: --")
 
     screen.move(1, 42)
-    screen.text(co2_ppm_status_string)
-
+    screen.text(co2_ppm_status_string or "CO2 PPM: --")
 
     screen.move(1, 49)
-    screen.text(version_string)
 
-    --screen.font_size(10)
     screen.move(1, 56)
 
-    screen.text(string.format("%.4f", current_tempo))
+    screen.text(string.format("%.4f", current_tempo or 0))
     screen.update()
 end
 
