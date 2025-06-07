@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.6.0"
+version = "1.7.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -2099,10 +2099,10 @@ function init()
 
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
     the_current_tick_count_since_step)
-    
+
     -- Test MIDI output on startup
     clock.run(test_midi_output)
-    
+
     clock.run(tick) -- start the sequencer
 end   -- end init
 
