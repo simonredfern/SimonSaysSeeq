@@ -936,9 +936,10 @@ function PlayMidi()
 
             -- Add bounds checking to prevent negative or out-of-bounds LED access
             local led_row = math.max(1, math.min(8, 6 - count_of_active_midi_on))
-            my_grid_two:led(midi_step_count, led_row, note_on_event.velocity)
-
-            my_grid_two:refresh()
+            if my_grid_two then
+                my_grid_two:led(midi_step_count, led_row, note_on_event.velocity)
+                my_grid_two:refresh()
+            end
 
             count_of_active_midi_on = count_of_active_midi_on + 1
 
@@ -1141,7 +1142,9 @@ function tick()
                 -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
                 for i = 1, 8 do
                     collected_note_ons[i] = {} -- create a table for each col
-                    my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
+                    if my_grid_two then
+                        my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
+                    end
                 end
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
@@ -1181,7 +1184,9 @@ function tick()
                             -- Add bounds checking for grid LED access
                             local led_row = math.max(1, math.min(8, y))
 
-                            my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
+                            if my_grid_two then
+                                my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
+                            end
 
 
                             -- This table stores the relationship between the grid x,y and the mozart note it represents.
@@ -1205,7 +1210,7 @@ function tick()
                 end
 
 
-                my_grid_two:refresh()
+                if my_grid_two then my_grid_two:refresh() end
 
 
 
@@ -1364,7 +1369,11 @@ function greetings()
     screen.text(grid_text)
 
     screen.move(1, 30)
-    screen.text(my_grid_one.cols .. " X " .. my_grid_one.rows)
+    if my_grid_one then
+        screen.text(my_grid_one.cols .. " X " .. my_grid_one.rows)
+    else
+        screen.text("No Grid One Connected")
+    end
 
     local y_position = 40
 
@@ -1895,15 +1904,19 @@ function init()
 
     print("hello")
     -- my_grid_one:all(2)
-    my_grid_one:refresh() -- refresh the LEDs
-    my_grid_two:refresh()
+    if my_grid_one then my_grid_one:refresh() end -- refresh the LEDs
+    if my_grid_two then my_grid_two:refresh() end
 
 
     print("my_grid_one follows: ")
     print(my_grid_one)
-    print("my_grid_one.name is: " .. my_grid_one.name)
-    print("my_grid_one.cols is: " .. my_grid_one.cols)
-    print("my_grid_one.rows is: " .. my_grid_one.rows)
+    if my_grid_one then
+        print("my_grid_one.name is: " .. my_grid_one.name)
+        print("my_grid_one.cols is: " .. my_grid_one.cols)
+        print("my_grid_one.rows is: " .. my_grid_one.rows)
+    else
+        print("my_grid_one is nil - no grid connected")
+    end
 
 
     --print ("midi.devices are:")
@@ -3050,11 +3063,11 @@ my_grid_one.key = function(x, y, z)
         elseif y == 7 then
             print("Row7 On")
             arm_row7 = grid_button_function_name(x, y)
-            my_grid_one:led(x, y, 12) -- just show that the button is pressed
+            if my_grid_one then my_grid_one:led(x, y, 12) end -- just show that the button is pressed
         elseif y == 8 then
             print("Control On")
             arm_control = grid_button_function_name(x, y)
-            my_grid_one:led(x, y, 12)
+            if my_grid_one then my_grid_one:led(x, y, 12) end
         else
             print("Error")
         end
@@ -3067,11 +3080,11 @@ my_grid_one.key = function(x, y, z)
         elseif y == 7 then
             print("Row7 Reset")
             arm_row7 = NO_FEATURE
-            my_grid_one:led(x, y, 0)
+            if my_grid_one then my_grid_one:led(x, y, 0) end
         elseif y == 8 then
             print("Control Reset")
             arm_control = NO_FEATURE
-            my_grid_one:led(x, y, 0)
+            if my_grid_one then my_grid_one:led(x, y, 0) end
         else
             print("Error")
         end
@@ -3201,10 +3214,10 @@ my_grid_two.key = function(x, y, z)
 
 
     if z == 1 then
-        my_grid_two:led(x, y, 12)
+        if my_grid_two then my_grid_two:led(x, y, 12) end
     else
         -- 1) Turn the LED off to give feedback to the user
-        my_grid_two:led(x, y, 0)
+        if my_grid_two then my_grid_two:led(x, y, 0) end
 
         -- 2) Get the mozart_pointer for the button we just pressed off
         local mozart_pointer = scroll_state[x][y]
@@ -3232,7 +3245,7 @@ my_grid_two.key = function(x, y, z)
     end
 
 
-    my_grid_two:refresh()
+    if my_grid_two then my_grid_two:refresh() end
 end -- End of function for my_grid_two
 -- //////////////////////////////////////////////
 
@@ -3435,23 +3448,23 @@ function refresh_grid_and_screen()
 
                     if (grid_one_state[col][row] >= 2) then -- ratchet
                         -- If current step and key is on, highlight it.
-                        my_grid_one:led(col, row, 12)
+                        if my_grid_one then my_grid_one:led(col, row, 12) end
                     elseif (grid_one_state[col][row] == 1) then
                         -- If current step and key is on, highlight it.
-                        my_grid_one:led(col, row, 9)
+                        if my_grid_one then my_grid_one:led(col, row, 9) end
                     else
                         -- Else use scrolling brightness
-                        my_grid_one:led(col, row, 4)
+                        if my_grid_one then my_grid_one:led(col, row, 4) end
                     end
                 else
                     if (grid_one_state[col][row] >= 2) then
-                        my_grid_one:led(col, row, 8) -- ratchet
+                        if my_grid_one then my_grid_one:led(col, row, 8) end -- ratchet
                     elseif (grid_one_state[col][row] == 1) then
                         -- Not current step but Grid square is On
-                        my_grid_one:led(col, row, 5)
+                        if my_grid_one then my_grid_one:led(col, row, 5) end
                     else
                         -- Not current step and key is off
-                        my_grid_one:led(col, row, 0)
+                        if my_grid_one then my_grid_one:led(col, row, 0) end
                     end
                     -- Show the stored value on screen
                     screen.text(grid_one_state[col][row])
@@ -3524,8 +3537,8 @@ function refresh_grid_and_screen()
 
     screen.update() -- better to have this here than in the loop above because otherwise we get screen flickering
 
-    my_grid_one:refresh()
-    my_grid_two:refresh()
+    if my_grid_one then my_grid_one:refresh() end
+    if my_grid_two then my_grid_two:refresh() end
     -- print ("Bye from refresh_grid_and_screen tally is:" .. tally)
 
     return tally
