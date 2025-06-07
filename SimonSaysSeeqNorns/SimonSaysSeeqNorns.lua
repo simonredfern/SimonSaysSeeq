@@ -51,15 +51,21 @@ function validate_co2_value(raw_value)
     end
 end
 
-local co2_ppm_daily_latest_value = tonumber(read_file(
-_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"));
+-- Read CO2 data file safely with proper error handling
+local co2_file_content = read_file(_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv")
+local co2_ppm_daily_latest_value = nil
 
-if (co2_ppm_daily_latest_value) then
+if co2_file_content then
+    co2_ppm_daily_latest_value = validate_co2_value(co2_file_content)
+end
+
+if co2_ppm_daily_latest_value then
     print("here is the co2_ppm_daily_latest_value we got from the file: " .. co2_ppm_daily_latest_value);
     we_have_last_daily_co2_ppm_value = true
 else
-    print("We do NOT have a daily co2 ppm ");
+    print("We do NOT have a daily co2 ppm - file missing, unreadable, or contains invalid data");
     we_have_last_daily_co2_ppm_value = false
+    co2_ppm_daily_latest_value = 0  -- Set safe default value for later string concatenation
 end
 
 
@@ -1110,9 +1116,9 @@ function tick()
 
 
         if (we_have_last_daily_co2_ppm_value) then
-            co2_ppm_status_string = "CO2 PPM: " .. co2_ppm_daily_latest_value
+            co2_ppm_status_string = "CO2 PPM: " .. tostring(co2_ppm_daily_latest_value)
         else
-            co2_ppm_status_string = "CO2 PPM: UNKOWN"
+            co2_ppm_status_string = "CO2 PPM: UNKNOWN"
         end
 
 
