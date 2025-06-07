@@ -80,6 +80,9 @@ if (file_exists(all_days_path)) then
 else
     print("We do NOT have ALL daily co2 ppm ");
     we_have_all_daily_co2_ppm_values = false
+    -- Initialize CO2 variables safely when no data is available
+    co2_ppm_list = {}
+    no_of_co2_ppm_records = 0
 end
 
 
@@ -442,8 +445,15 @@ function reset_all_sequence_counters()
     init_midi_bar_count()
 
 
-    total_step_co2_count = 1 -- This will loop around the co2 ppm rows
-    total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
+    -- Initialize CO2 counters safely based on available data
+    if no_of_co2_ppm_records > 0 then
+        total_step_co2_count = 1 -- This will loop around the co2 ppm rows
+        total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
+    else
+        total_step_co2_count = 0 -- No CO2 data available
+        total_tick_co2_count = 0 -- No CO2 data available
+        print("WARNING: No CO2 data available, CO2 counters set to 0")
+    end
 
     -- Safety check: ensure row_settings is properly initialized before accessing it
     if row_settings == nil then
@@ -1140,7 +1150,10 @@ function tick()
             end
 
 
-            total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records)
+            -- Safety check: only increment CO2 counter if we have valid data
+            if no_of_co2_ppm_records > 0 then
+                total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records)
+            end
 
             if tick_count % 12 == 0 then
                 InitStepCountSinceStep()
@@ -1269,7 +1282,10 @@ function tick()
 
                 -- total_step_co2_count = total_step_co2_count + 1
 
-                total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records) --- total_step_co2_count + 1
+                -- Safety check: only increment CO2 counter if we have valid data
+                if no_of_co2_ppm_records > 0 then
+                    total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)
+                end
 
                 -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step. Huh??
                 -- if midi_step_count == 3 then
@@ -1544,16 +1560,43 @@ function conditional_change_crow_output(current_step, sequence_row)
         if (sequence_row == 3) then
             --print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
-            co2_ppm_step_offset = co2_ppm_list[total_step_co2_count].the_co2_ppm_value / 50
-
-            --print (co2_ppm_step_offset)
-
-            crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
+            -- Safety check: ensure CO2 data is available and bounds are valid
+            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and 
+               total_step_co2_count >= 1 and total_step_co2_count <= no_of_co2_ppm_records and
+               co2_ppm_list[total_step_co2_count] and co2_ppm_list[total_step_co2_count].the_co2_ppm_value then
+                
+                local co2_value = tonumber(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
+                if co2_value then
+                    co2_ppm_step_offset = co2_value / 50
+                    --print (co2_ppm_step_offset)
+                    crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
+                else
+                    print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count)
+                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                end
+            else
+                print("WARNING: CO2 data not available for sequence_row 3, using fallback")
+                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+            end
         elseif (sequence_row == 4) then
-            co2_ppm_tick_offset = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value / 50
-
-            --print (co2_ppm_tick_offset)
-            crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
+            -- Safety check: ensure CO2 data is available and bounds are valid
+            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and 
+               total_tick_co2_count >= 1 and total_tick_co2_count <= no_of_co2_ppm_records and
+               co2_ppm_list[total_tick_co2_count] and co2_ppm_list[total_tick_co2_count].the_co2_ppm_value then
+                
+                local co2_value = tonumber(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
+                if co2_value then
+                    co2_ppm_tick_offset = co2_value / 50
+                    --print (co2_ppm_tick_offset)
+                    crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
+                else
+                    print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count)
+                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                end
+            else
+                print("WARNING: CO2 data not available for sequence_row 4, using fallback")
+                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+            end
         else
             -- use the notes from the grid
             crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
