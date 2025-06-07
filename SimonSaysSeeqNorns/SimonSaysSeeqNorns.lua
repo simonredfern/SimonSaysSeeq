@@ -51,6 +51,18 @@ function validate_co2_value(raw_value)
     end
 end
 
+-- Helper function for safe division operations
+function safe_divide(numerator, denominator, fallback)
+    fallback = fallback or 0
+    if denominator == nil or denominator == 0 then
+        return fallback
+    end
+    if numerator == nil then
+        return fallback
+    end
+    return numerator / denominator
+end
+
 -- Read CO2 data file safely with proper error handling
 local co2_file_content = read_file(_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv")
 local co2_ppm_daily_latest_value = nil
@@ -694,7 +706,7 @@ function midiNoteToName(midiNote)
     end
 
     local noteIndex = (midiNote % 12) + 1      -- Lua indices start at 1
-    local octave = math.floor(midiNote / 12) - 1 -- MIDI note 0 is in octave -1
+    local octave = math.floor(midiNote / 12) - 1 -- MIDI note 0 is in octave -1 (division by 12 is safe)
 
     return noteNames[noteIndex] .. octave
 end
@@ -1135,7 +1147,8 @@ function tick()
             swing_amount = 0
         else
             -- some kind of swing amount between zero and nearly 1/192
-            swing_amount = (swing_mode / 18) * (1 / 480)
+            -- Add protection against swing_mode being zero or invalid
+            swing_amount = safe_divide(swing_mode, 18, 0) * (1 / 480)
         end
 
 
@@ -1352,12 +1365,8 @@ function tick()
             screen.move(1, 10)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            if wow_window_tick_position > 0 then
-                wow_average_tempo = wow_tempo_sum / wow_window_tick_position
-            else
-                -- Fallback: use current tempo if we can't calculate average
-                wow_average_tempo = current_tempo
-            end
+            -- Use safe division with current tempo as fallback
+            wow_average_tempo = safe_divide(wow_tempo_sum, wow_window_tick_position, current_tempo)
 
             screen.text("Average Wow Tempo" .. wow_average_tempo)
 
@@ -1372,12 +1381,8 @@ function tick()
             screen.move(1, 20)
 
             -- Don't floor because we don't want to go down one bpm if we're just under
-            if flutter_window_tick_position > 0 then
-                flutter_average_tempo = flutter_tempo_sum / flutter_window_tick_position
-            else
-                -- Fallback: use current tempo if we can't calculate average
-                flutter_average_tempo = current_tempo
-            end
+            -- Use safe division with current tempo as fallback
+            flutter_average_tempo = safe_divide(flutter_tempo_sum, flutter_window_tick_position, current_tempo)
 
             screen.text("Average Flutter Tempo" .. flutter_average_tempo)
 
@@ -1600,17 +1605,22 @@ function conditional_change_crow_output(current_step, sequence_row)
                 local co2_value = validate_co2_value(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
-                    co2_ppm_step_offset = co2_value / 50
+                    co2_ppm_step_offset = safe_divide(co2_value, 50, 0)
                     --print (co2_ppm_step_offset)
-                    crow.output[crow_output].volts = co2_ppm_step_offset + (mozart_state[current_step][sequence_row] / 12)
+                    -- Protect against potential nil mozart_state values
+                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                    local volt_value = safe_divide(mozart_value, 12, 0)
+                    crow.output[crow_output].volts = co2_ppm_step_offset + volt_value
                 else
                     local raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
                     print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
-                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                    crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
                 end
             else
                 print("WARNING: CO2 data not available for sequence_row 3, using fallback")
-                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
             end
         elseif (sequence_row == 4) then
             -- Safety check: ensure CO2 data is available and bounds are valid
@@ -1621,21 +1631,28 @@ function conditional_change_crow_output(current_step, sequence_row)
                 local co2_value = validate_co2_value(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
-                    co2_ppm_tick_offset = co2_value / 50
+                    co2_ppm_tick_offset = safe_divide(co2_value, 50, 0)
                     --print (co2_ppm_tick_offset)
-                    crow.output[crow_output].volts = co2_ppm_tick_offset + (mozart_state[current_step][sequence_row] / 12)
+                    -- Protect against potential nil mozart_state values
+                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                    local volt_value = safe_divide(mozart_value, 12, 0)
+                    crow.output[crow_output].volts = co2_ppm_tick_offset + volt_value
                 else
                     local raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
                     print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
-                    crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                    local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                    crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
                 end
             else
                 print("WARNING: CO2 data not available for sequence_row 4, using fallback")
-                crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- fallback to normal mode
+                local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+                crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
             end
         else
             -- use the notes from the grid
-            crow.output[crow_output].volts = mozart_state[current_step][sequence_row] / 12 -- no offset
+            -- Protect against potential nil mozart_state values in normal mode
+            local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
+            crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- no offset
         end
     end
 
@@ -2717,7 +2734,8 @@ function random_dense_grid(x, y)
 
     print("Hello from random_dense_grid: x: " .. x .. " y: " .. y)
 
-    on_bias = x / 16 -- more bias towards an on note with a higher x button pressed
+    -- Protect against division by zero (though x should never be 0 in grid context)
+    on_bias = safe_divide(x, 16, 0) -- more bias towards an on note with a higher x button pressed
 
 
     print("on_bias: " .. on_bias)
