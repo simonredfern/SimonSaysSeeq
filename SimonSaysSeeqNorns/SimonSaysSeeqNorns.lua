@@ -8,10 +8,10 @@ version_string = "SimonSaysSeeq Norns v" .. version
 NO_FEATURE = "NO_FEATURE"
 
 -- Debug levels: 0=NONE, 1=ERROR, 2=WARNING, 3=INFO, 4=DEBUG
-DEBUG_LEVEL = 1  -- Production setting: errors only
+DEBUG_LEVEL = 3  -- Temporarily set to 3 to debug MIDI issues
 
 -- Performance mode for live use - disables non-essential operations
-PERFORMANCE_MODE = true  -- Default true for optimal live performance
+PERFORMANCE_MODE = false  -- Default true for optimal live performance
 
 function debug_print(level, message)
     if level <= DEBUG_LEVEL then
@@ -166,6 +166,7 @@ function safe_midi_note_on(device, note, velocity, channel)
         end
 
         if device.note_on and type(device.note_on) == "function" then
+            debug_print(3, "safe_midi_note_on: Calling device:note_on(" .. note .. ", " .. velocity .. ", " .. channel .. ")")
             device:note_on(note, velocity, channel)
         else
             debug_print(2, "WARNING: MIDI device does not have note_on function")
@@ -758,6 +759,9 @@ enable_audio_clock_out = 0
 need_to_start_midi = true -- Check gate clock situation.
 run_conditional_clocks = false
 
+-- Gate duration for analog sequencer compatibility
+gate_duration_sync = 1 / 32 -- Default: 1/32 note (better for analog sequencers)
+
 SCREEN_INFO_X = 40
 SCREEN_INFO_Y = 49
 
@@ -1157,6 +1161,7 @@ function SendMidiKeyboardNoteOn(note, velocity, channel)
     -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
     -- Safety check: ensure MIDI device is initialized before use
+    debug_print(3, "SendMidiKeyboardNoteOn: Sending note " .. note .. " velocity " .. velocity .. " channel " .. channel)
     safe_midi_note_on(midi_keyboard_usb_device_port, note, velocity, channel)
 
 
@@ -1328,6 +1333,8 @@ local keyboard_success, keyboard_device = pcall(midi.connect, INITIAL_MIDI_KEYBO
 if keyboard_success and keyboard_device then
     midi_keyboard_usb_device_port = keyboard_device
     print("Successfully connected to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
+    print("MIDI keyboard device: " .. tostring(keyboard_device))
+    print("MIDI keyboard device name: " .. (keyboard_device.name or "UNKNOWN"))
 else
     midi_keyboard_usb_device_port = nil
     print("WARNING: Failed to connect to MIDI keyboard port " .. INITIAL_MIDI_KEYBOARD_PORT)
@@ -1344,6 +1351,23 @@ params:add { type = "number", id = "midi_gates_usb_device_port_id", name = "Gate
     print("i changed the midi_gates_usb_device_port parameter !")
 end }
 
+-- Add parameter for gate duration
+params:add { type = "option", id = "gate_duration", name = "Gate Duration", options = {"1/64 (Short)", "1/32 (Medium)", "1/16 (Long)", "1/8 (Very Long)"}, default = 2, action = function(
+    value)
+    if value == 1 then
+        gate_duration_sync = 1 / 64
+        print("Gate duration: 1/64 note (Short)")
+    elseif value == 2 then
+        gate_duration_sync = 1 / 32
+        print("Gate duration: 1/32 note (Medium)")
+    elseif value == 3 then
+        gate_duration_sync = 1 / 16
+        print("Gate duration: 1/16 note (Long)")
+    elseif value == 4 then
+        gate_duration_sync = 1 / 8
+        print("Gate duration: 1/8 note (Very Long)")
+    end
+end }
 
 params:add { type = "number", id = "midi_keyboard_usb_device_port_id", name = "Keyboard MIDI Device", min = 1, max = 4, default = INITIAL_MIDI_KEYBOARD_PORT, action = function(
     value)
@@ -1554,6 +1578,7 @@ function PlayMidi()
 
             if note_on_event.tick_count_since_step == the_current_tick_count_since_step then
                 -- Send MIDI Note ON
+                debug_print(3, "PlayMidi: Playing note " .. n .. " velocity " .. note_on_event.velocity .. " at step " .. midi_step_count)
                 SendMidiKeyboardNoteOn(n, note_on_event.velocity, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
             end
         end
@@ -1565,6 +1590,7 @@ function PlayMidi()
             count_of_active_midi_off = count_of_active_midi_off + 1
             if note_off_event.tick_count_since_step == the_current_tick_count_since_step then
                 -- Send MIDI Note OFF
+                debug_print(3, "PlayMidi: Sending note OFF for note " .. n .. " at step " .. midi_step_count)
                 SendMidiKeyboardNoteOn(n, 0, SanityCheckMidiChannel(MIDI_KEYBOARD_CHANNEL))
             end
         end
@@ -1732,16 +1758,8 @@ function tick()
                 --print("tick_count is: " .. tick_count .. " GATE_9 ")
             end
 
-            if tick_count % (192 * 16) == 0 then
-                clock.run(process_clock_gate, GATE_8)
-                --print("tick_count is: " .. tick_count .. " GATE_8 ")
-            end
-
-            -- Note: make sure reset of tick_count is at least this otherwise we won't go in here
-            if tick_count % (192 * 32) == 0 then
-                clock.run(process_clock_gate, GATE_7)
-                --print("tick_count is: " .. tick_count .. " GATE_7 ")
-            end
+            -- GATE_8 and GATE_7 removed from long-interval triggers
+            -- They now only trigger on every step (see step processing section)
 
 
             -- Safety check: only increment CO2 counter if we have valid data
@@ -1754,6 +1772,9 @@ function tick()
 
                 --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
+                -- Send gates on every step
+                clock.run(process_clock_gate, GATE_7)
+                clock.run(process_clock_gate, GATE_8)
 
                 process_step()
 
@@ -2353,7 +2374,7 @@ end
 function process_clock_gate(output)
     -- if (enable_analog_clock_out == 1) then
     gate_on(output)
-    clock.sync(1 / 64)
+    clock.sync(gate_duration_sync)
     gate_off(output)
     -- end
 end
@@ -2563,6 +2584,20 @@ function grid_button_function_name(x, y)
     return ret
 end -- end function definition
 
+-- Test function to verify MIDI output is working
+function test_midi_output()
+    print("Testing MIDI output...")
+    if midi_keyboard_usb_device_port then
+        print("Sending test MIDI note C4 (60) velocity 100")
+        SendMidiKeyboardNoteOn(60, 100, 1)
+        clock.sleep(1)
+        print("Sending test MIDI note OFF")
+        SendMidiKeyboardNoteOn(60, 0, 1)
+    else
+        print("ERROR: No MIDI keyboard device connected for test")
+    end
+end
+
 function init()
     print("Hello from init. Version is " .. version)
 
@@ -2576,6 +2611,7 @@ function init()
     tick_count = 0
     need_to_start_midi = true
     run_conditional_clocks = false
+    gate_duration_sync = 1 / 32 -- Initialize gate duration
     
     -- Initialize tempo status strings to prevent nil screen.text calls
     tempo_status_string_1 = "Current Tempo: 0.00"
@@ -2710,6 +2746,12 @@ function init()
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
     the_current_tick_count_since_step)
     clock.run(tick) -- start the sequencer
+    
+    -- Test MIDI output after 3 seconds
+    clock.run(function()
+        clock.sleep(3)
+        test_midi_output()
+    end)
 end   -- end init
 
 -- Periodically check if we need to save the grid state to file.
