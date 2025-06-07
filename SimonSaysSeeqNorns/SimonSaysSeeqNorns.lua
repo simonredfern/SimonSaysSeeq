@@ -124,34 +124,149 @@ function safe_keyboard_midi_access(lane, bar, step, note, on_off, fallback)
     return keyboard_midi_note_events[lane][bar][step][note][on_off]
 end
 
--- Helper function for safe MIDI device operations
-function safe_midi_operation(device, operation, ...)
+-- Helper functions for safe MIDI device operations
+function safe_midi_note_on(device, note, velocity, channel)
     if device == nil then
-        print("WARNING: MIDI device is nil, cannot perform operation: " .. tostring(operation))
+        print("WARNING: MIDI device is nil, cannot send note_on")
+        return false
+    end
+    
+    if type(device) ~= "table" then
+        print("WARNING: MIDI device is not a table, cannot send note_on")
         return false
     end
     
     local success, err = pcall(function()
-        if operation == "note_on" then
-            local note, velocity, channel = ...
+        -- Validate MIDI parameters
+        if not note or type(note) ~= "number" or note < 0 or note > 127 then
+            print("WARNING: Invalid MIDI note: " .. tostring(note))
+            return false
+        end
+        if not velocity or type(velocity) ~= "number" or velocity < 0 or velocity > 127 then
+            print("WARNING: Invalid MIDI velocity: " .. tostring(velocity))
+            return false
+        end
+        if not channel or type(channel) ~= "number" or channel < 1 or channel > 16 then
+            print("WARNING: Invalid MIDI channel: " .. tostring(channel))
+            return false
+        end
+        
+        if device.note_on and type(device.note_on) == "function" then
             device:note_on(note, velocity, channel)
-        elseif operation == "start" then
-            device:start()
-        elseif operation == "stop" then
-            device:stop()
-        elseif operation == "set_event" then
-            local event_function = ...
-            device.event = event_function
-        elseif operation == "clear_event" then
-            device.event = nil
         else
-            print("WARNING: Unknown MIDI operation: " .. tostring(operation))
+            print("WARNING: MIDI device does not have note_on function")
             return false
         end
     end)
     
     if not success then
-        print("ERROR: MIDI operation failed: " .. tostring(err))
+        print("ERROR: MIDI note_on failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_midi_start(device)
+    if device == nil then
+        print("WARNING: MIDI device is nil, cannot start")
+        return false
+    end
+    
+    if type(device) ~= "table" then
+        print("WARNING: MIDI device is not a table, cannot start")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if device.start and type(device.start) == "function" then
+            device:start()
+        else
+            print("WARNING: MIDI device does not have start function")
+            return false
+        end
+    end)
+    
+    if not success then
+        print("ERROR: MIDI start failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_midi_stop(device)
+    if device == nil then
+        print("WARNING: MIDI device is nil, cannot stop")
+        return false
+    end
+    
+    if type(device) ~= "table" then
+        print("WARNING: MIDI device is not a table, cannot stop")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if device.stop and type(device.stop) == "function" then
+            device:stop()
+        else
+            print("WARNING: MIDI device does not have stop function")
+            return false
+        end
+    end)
+    
+    if not success then
+        print("ERROR: MIDI stop failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_midi_set_event(device, event_function)
+    if device == nil then
+        print("WARNING: MIDI device is nil, cannot set event")
+        return false
+    end
+    
+    if type(device) ~= "table" then
+        print("WARNING: MIDI device is not a table, cannot set event")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        if type(event_function) ~= "function" then
+            print("WARNING: set_event requires a function parameter")
+            return false
+        end
+        device.event = event_function
+    end)
+    
+    if not success then
+        print("ERROR: MIDI set_event failed: " .. tostring(err))
+        return false
+    end
+    
+    return true
+end
+
+function safe_midi_clear_event(device)
+    if device == nil then
+        print("WARNING: MIDI device is nil, cannot clear event")
+        return false
+    end
+    
+    if type(device) ~= "table" then
+        print("WARNING: MIDI device is not a table, cannot clear event")
+        return false
+    end
+    
+    local success, err = pcall(function()
+        device.event = nil
+    end)
+    
+    if not success then
+        print("ERROR: MIDI clear_event failed: " .. tostring(err))
         return false
     end
     
@@ -165,23 +280,71 @@ function safe_grid_operation(grid, operation, ...)
         return false
     end
     
+    -- Additional validation: check if grid has expected methods
+    if type(grid) ~= "table" then
+        print("WARNING: Grid is not a table, cannot perform operation: " .. tostring(operation))
+        return false
+    end
+    
     local success, err = pcall(function()
         if operation == "led" then
             local x, y, brightness = ...
-            -- Validate coordinates before setting LED
-            if x and y and x >= 1 and x <= 16 and y >= 1 and y <= 8 then
-                grid:led(x, y, brightness or 0)
-            else
-                print("WARNING: Invalid grid LED coordinates: " .. tostring(x) .. ", " .. tostring(y))
+            -- Enhanced coordinate validation
+            if not x or not y then
+                print("WARNING: LED operation missing coordinates")
+                return false
             end
+            if type(x) ~= "number" or type(y) ~= "number" then
+                print("WARNING: LED coordinates must be numbers")
+                return false
+            end
+            if x < 1 or x > 16 or y < 1 or y <= 0 then
+                print("WARNING: Invalid grid LED coordinates: " .. tostring(x) .. ", " .. tostring(y))
+                return false
+            end
+            
+            brightness = brightness or 0
+            if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
+                brightness = math.max(0, math.min(15, brightness or 0))
+            end
+            
+            if grid.led and type(grid.led) == "function" then
+                grid:led(x, y, brightness)
+            else
+                print("WARNING: Grid does not have LED function")
+                return false
+            end
+            
         elseif operation == "refresh" then
-            grid:refresh()
+            if grid.refresh and type(grid.refresh) == "function" then
+                grid:refresh()
+            else
+                print("WARNING: Grid does not have refresh function")
+                return false
+            end
+            
         elseif operation == "all" then
             local brightness = ...
-            grid:all(brightness or 0)
+            brightness = brightness or 0
+            if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
+                brightness = math.max(0, math.min(15, brightness or 0))
+            end
+            
+            if grid.all and type(grid.all) == "function" then
+                grid:all(brightness)
+            else
+                print("WARNING: Grid does not have all function")
+                return false
+            end
+            
         elseif operation == "set_key" then
             local key_function = ...
+            if type(key_function) ~= "function" then
+                print("WARNING: set_key requires a function parameter")
+                return false
+            end
             grid.key = key_function
+            
         else
             print("WARNING: Unknown grid operation: " .. tostring(operation))
             return false
@@ -194,6 +357,23 @@ function safe_grid_operation(grid, operation, ...)
     end
     
     return true
+end
+
+-- Helper function for safe grid property access
+function safe_grid_property(grid, property, fallback)
+    if grid == nil then
+        return fallback or "UNKNOWN"
+    end
+    
+    local success, value = pcall(function()
+        return grid[property]
+    end)
+    
+    if success and value ~= nil then
+        return value
+    else
+        return fallback or "UNKNOWN"
+    end
 end
 
 -- Read CO2 data file safely with proper error handling
@@ -897,7 +1077,7 @@ function SendMidiKeyboardNoteOn(note, velocity, channel)
     -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
     -- Safety check: ensure MIDI device is initialized before use
-    safe_midi_operation(midi_keyboard_usb_device_port, "note_on", note, velocity, channel)
+    safe_midi_note_on(midi_keyboard_usb_device_port, note, velocity, channel)
 
 
     -- for display
@@ -1022,7 +1202,7 @@ end
 local grid_one_success, grid_one_device = pcall(grid.connect, 1)
 if grid_one_success and grid_one_device and grid_one_device.device then
     my_grid_one = grid_one_device
-    print("Successfully connected to grid one: " .. tostring(my_grid_one.name))
+    print("Successfully connected to grid one: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN"))
 else
     my_grid_one = nil
     print("WARNING: Failed to connect to grid one")
@@ -1031,7 +1211,7 @@ end
 local grid_two_success, grid_two_device = pcall(grid.connect, 2)
 if grid_two_success and grid_two_device and grid_two_device.device then
     my_grid_two = grid_two_device
-    print("Successfully connected to grid two: " .. tostring(my_grid_two.name))
+    print("Successfully connected to grid two: " .. safe_grid_property(my_grid_two, "name", "UNKNOWN"))
 else
     my_grid_two = nil
     print("WARNING: Failed to connect to grid two")
@@ -1089,14 +1269,14 @@ params:add { type = "number", id = "midi_keyboard_usb_device_port_id", name = "K
     value)
     -- Safely clear existing event handler
     if midi_keyboard_usb_device_port then
-        safe_midi_operation(midi_keyboard_usb_device_port, "clear_event")
+        safe_midi_clear_event(midi_keyboard_usb_device_port)
     end
     
     -- Attempt to connect to new MIDI device
     local success, new_device = pcall(midi.connect, value)
     if success and new_device then
         midi_keyboard_usb_device_port = new_device
-        safe_midi_operation(midi_keyboard_usb_device_port, "set_event", midi_event)
+        safe_midi_set_event(midi_keyboard_usb_device_port, midi_event)
         print("Successfully changed MIDI keyboard parameter to port " .. value)
     else
         print("ERROR: Failed to connect to MIDI keyboard port " .. value)
@@ -1528,7 +1708,7 @@ function tick()
                 end
 
 
-                if my_grid_two then my_grid_two:refresh() end
+                safe_grid_operation(my_grid_two, "refresh")
 
 
 
@@ -1685,14 +1865,16 @@ function greetings()
     if (not my_grid_one) then
         grid_text = "Grid NOT CONNECTED"
     else
-        grid_text = "Grid: " .. tostring(my_grid_one.name)
+        grid_text = "Grid: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN")
     end
 
     screen.text(grid_text)
 
     screen.move(1, 30)
     if my_grid_one then
-        screen.text(my_grid_one.cols .. " X " .. my_grid_one.rows)
+        local cols = safe_grid_property(my_grid_one, "cols", "?")
+        local rows = safe_grid_property(my_grid_one, "rows", "?")
+        screen.text(cols .. " X " .. rows)
     else
         screen.text("No Grid One Connected")
     end
@@ -1765,8 +1947,8 @@ function process_step()
 
             if (enable_midi_clock_out == 1) then
                 print("Send MIDI Start midi_step_count is: " .. midi_step_count)
-                safe_midi_operation(midi_gates_usb_device_port, "start")
-                safe_midi_operation(midi_keyboard_usb_device_port, "start")
+                safe_midi_start(midi_gates_usb_device_port)
+                safe_midi_start(midi_keyboard_usb_device_port)
             else
                 print("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
             end
@@ -1785,7 +1967,7 @@ function process_step()
 
     --for second_grid_row = 1, 6 do
 
-    --my_grid_two:led(midi_step_count,second_grid_row,24)
+    --safe_grid_operation(my_grid_two, "led", midi_step_count, second_grid_row, 24)
 
 
     -- keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
@@ -2135,8 +2317,8 @@ function request_midi_stop()
     -- can stop the midi clock at any time.
 
     if (enable_midi_clock_out == 1) then
-        safe_midi_operation(midi_gates_usb_device_port, "stop")
-        safe_midi_operation(midi_keyboard_usb_device_port, "stop")
+        safe_midi_stop(midi_gates_usb_device_port)
+        safe_midi_stop(midi_keyboard_usb_device_port)
     end
 
 
@@ -2317,9 +2499,9 @@ function init()
     print("my_grid_one follows: ")
     print(my_grid_one)
     if my_grid_one then
-        print("my_grid_one.name is: " .. my_grid_one.name)
-        print("my_grid_one.cols is: " .. my_grid_one.cols)
-        print("my_grid_one.rows is: " .. my_grid_one.rows)
+        print("my_grid_one.name is: " .. safe_grid_property(my_grid_one, "name", "UNKNOWN"))
+        print("my_grid_one.cols is: " .. safe_grid_property(my_grid_one, "cols", "UNKNOWN"))
+        print("my_grid_one.rows is: " .. safe_grid_property(my_grid_one, "rows", "UNKNOWN"))
     else
         print("my_grid_one is nil - no grid connected")
     end
