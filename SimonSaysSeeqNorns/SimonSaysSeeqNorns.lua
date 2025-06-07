@@ -1772,8 +1772,7 @@ function tick()
 
                 --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
-                -- Send gates on every step
-                clock.run(process_clock_gate, GATE_7)
+                -- Send gate on every step
                 clock.run(process_clock_gate, GATE_8)
 
                 process_step()
