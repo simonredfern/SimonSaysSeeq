@@ -75,7 +75,7 @@ if (file_exists(all_days_path)) then
     no_of_co2_ppm_records = 0
     for line in io.lines(all_days_path) do
         local year, month, day, something, the_co2_ppm_value = line:match("%s*(.-),%s*(.-),%s*(.-),%s*(.-),%s*(.*)")
-        
+
         -- Validate CO2 value during parsing to catch invalid data early
         local co2_numeric = validate_co2_value(the_co2_ppm_value)
         if co2_numeric then
@@ -93,7 +93,7 @@ if (file_exists(all_days_path)) then
     --   print(i, v.the_co2_ppm_value)
 
     -- end
-    
+
     -- Final validation: ensure we have at least some valid CO2 records
     if no_of_co2_ppm_records > 0 then
         we_have_all_daily_co2_ppm_values = true
@@ -495,7 +495,7 @@ function reset_all_sequence_counters()
             row_settings[row]["last_step"] = 16
             row_settings[row]["current_step"] = 1
         end
-        
+
         row_settings[row]["first_step"] = first_step
         row_settings[row]["last_step"] = last_step
         row_settings[row]["current_step"] = row_settings[row]["first_step"]
@@ -767,7 +767,8 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                     -- NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.
                     -- Echo the midi note through norns to the synth.
                     -- TODO this should be configurable via the grid easily turn on / off midi echo for different keyboard / synth setups.
-                    PlayMidi(note, velocity, channel)
+                    -- Note this was probably not doing anything
+                    SendMidiKeyboardNoteOn(note, velocity, channel)
                 end
 
                 -- last_note_on = note
@@ -1586,10 +1587,10 @@ function conditional_change_crow_output(current_step, sequence_row)
             --print("hello from row 6 total_step_co2_count is " .. total_step_co2_count)
 
             -- Safety check: ensure CO2 data is available and bounds are valid
-            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and 
+            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and
                total_step_co2_count >= 1 and total_step_co2_count <= no_of_co2_ppm_records and
                co2_ppm_list[total_step_co2_count] and co2_ppm_list[total_step_co2_count].the_co2_ppm_value then
-                
+
                 local co2_value = validate_co2_value(co2_ppm_list[total_step_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
@@ -1607,10 +1608,10 @@ function conditional_change_crow_output(current_step, sequence_row)
             end
         elseif (sequence_row == 4) then
             -- Safety check: ensure CO2 data is available and bounds are valid
-            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and 
+            if we_have_all_daily_co2_ppm_values and co2_ppm_list and no_of_co2_ppm_records > 0 and
                total_tick_co2_count >= 1 and total_tick_co2_count <= no_of_co2_ppm_records and
                co2_ppm_list[total_tick_co2_count] and co2_ppm_list[total_tick_co2_count].the_co2_ppm_value then
-                
+
                 local co2_value = validate_co2_value(co2_ppm_list[total_tick_co2_count].the_co2_ppm_value)
                 -- Comprehensive validation using helper function
                 if co2_value then
@@ -2014,15 +2015,15 @@ function init()
         row_settings = create_row_settings()
         print("Created emergency row_settings")
     end
-    
+
     if grid_one_state == nil then
         print("ERROR: grid_one_state is still nil after table initialization!")
     end
-    
+
     if mozart_state == nil then
         print("ERROR: mozart_state is still nil after table initialization!")
     end
-    
+
     print("Initialization verification complete")
 
     reset_all_sequence_counters()
