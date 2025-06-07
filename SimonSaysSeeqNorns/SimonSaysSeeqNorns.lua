@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.5.8"
+version = "1.6.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
