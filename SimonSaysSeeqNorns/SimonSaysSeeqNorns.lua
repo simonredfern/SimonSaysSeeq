@@ -2265,27 +2265,27 @@ function process_ratchet(output, ratchet_mode)
         -- direct relation between value on grid at count of send_gates we will get
 
         gate_on(output)
-        clock.sync(1 / 64)
+        clock.sync(gate_duration_sync)
         gate_off(output)
     elseif ratchet_mode == 2 then
         gate_on(output)
-        clock.sync(1 / 64)
+        clock.sync(gate_duration_sync)
         gate_off(output)
 
         clock.sync(1 / 8)
 
         gate_on(output)
-        clock.sync(1 / 64)
+        clock.sync(gate_duration_sync)
         gate_off(output)
     elseif ratchet_mode == 3 then
         gate_on(output)
-        clock.sync(1 / 64)
+        clock.sync(gate_duration_sync)
         gate_off(output)
 
         clock.sync(1 / 12)
 
         gate_on(output)
-        clock.sync(1 / 64)
+        clock.sync(gate_duration_sync)
         gate_off(output)
 
         clock.sync(1 / 12)
