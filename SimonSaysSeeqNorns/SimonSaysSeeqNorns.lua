@@ -445,7 +445,22 @@ function reset_all_sequence_counters()
     total_step_co2_count = 1 -- This will loop around the co2 ppm rows
     total_tick_co2_count = 1 -- This will also loop around the co2 ppm rows but faster (on each tick)
 
+    -- Safety check: ensure row_settings is properly initialized before accessing it
+    if row_settings == nil then
+        print("WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
+        row_settings = create_row_settings()
+    end
+
     for row = 1, TOTAL_SEQUENCE_ROWS do
+        -- Additional safety check for each row
+        if row_settings[row] == nil then
+            print("WARNING: row_settings[" .. row .. "] is nil, creating default row settings")
+            row_settings[row] = {}
+            row_settings[row]["first_step"] = 1
+            row_settings[row]["last_step"] = 16
+            row_settings[row]["current_step"] = 1
+        end
+        
         row_settings[row]["first_step"] = first_step
         row_settings[row]["last_step"] = last_step
         row_settings[row]["current_step"] = row_settings[row]["first_step"]
@@ -652,7 +667,12 @@ function SendMidiKeyboardNoteOn(note, velocity, channel)
 
     -- print("SendMidiKeyboardNoteOn note: " .. tostring(note) .. " velocity: " .. tostring(velocity) .. " channel: " .. tostring(channel))
 
-    midi_keyboard_usb_device_port:note_on(note, velocity, channel)
+    -- Safety check: ensure MIDI device is initialized before use
+    if midi_keyboard_usb_device_port then
+        midi_keyboard_usb_device_port:note_on(note, velocity, channel)
+    else
+        print("WARNING: midi_keyboard_usb_device_port is nil, cannot send MIDI note")
+    end
 
 
     -- for display
@@ -1443,8 +1463,16 @@ function process_step()
 
             if (enable_midi_clock_out == 1) then
                 print("Send MIDI Start midi_step_count is: " .. midi_step_count)
-                midi_gates_usb_device_port:start()
-                midi_keyboard_usb_device_port:start()
+                if midi_gates_usb_device_port then
+                    midi_gates_usb_device_port:start()
+                else
+                    print("WARNING: midi_gates_usb_device_port is nil, cannot start MIDI gates")
+                end
+                if midi_keyboard_usb_device_port then
+                    midi_keyboard_usb_device_port:start()
+                else
+                    print("WARNING: midi_keyboard_usb_device_port is nil, cannot start MIDI keyboard")
+                end
             else
                 print("NOT Send MIDI Start (disabled) midi_step_count is: " .. midi_step_count)
             end
@@ -1659,14 +1687,22 @@ end
 
 function gate_on(output)
     --print ("A ON LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_ON_VELOCITY " .. MIDI_NOTE_ON_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-    midi_gates_usb_device_port:note_on(LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY,
-        MIDI_CHANNEL_GATES)
+    if midi_gates_usb_device_port then
+        midi_gates_usb_device_port:note_on(LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_ON_VELOCITY,
+            MIDI_CHANNEL_GATES)
+    else
+        print("WARNING: midi_gates_usb_device_port is nil, cannot send gate on")
+    end
 end
 
 function gate_off(output)
     --print ("A OFF LOWEST_MIDI_NOTE_NUMBER_FOR_GATE" .. LOWEST_MIDI_NOTE_NUMBER_FOR_GATE .. " MIDI_NOTE_OFF_VELOCITY " .. MIDI_NOTE_OFF_VELOCITY .. " sequence_row + MIDI_CHANNEL_GATES " .. sequence_row + MIDI_CHANNEL_GATES)
-    midi_gates_usb_device_port:note_off(LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY,
-        MIDI_CHANNEL_GATES)
+    if midi_gates_usb_device_port then
+        midi_gates_usb_device_port:note_off(LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + output, MIDI_NOTE_OFF_VELOCITY,
+            MIDI_CHANNEL_GATES)
+    else
+        print("WARNING: midi_gates_usb_device_port is nil, cannot send gate off")
+    end
 end
 
 function clock.transport.start() -- transport start
@@ -1747,8 +1783,12 @@ function request_midi_stop()
     -- can stop the midi clock at any time.
 
     if (enable_midi_clock_out == 1) then
-        midi_gates_usb_device_port:stop()
-        midi_keyboard_usb_device_port:stop()
+        if midi_gates_usb_device_port then
+            midi_gates_usb_device_port:stop()
+        end
+        if midi_keyboard_usb_device_port then
+            midi_keyboard_usb_device_port:stop()
+        end
     end
 
 
@@ -1894,6 +1934,24 @@ function init()
 
     print("before init_held_state_table")
     init_held_state_table()
+
+    -- Verify critical variables are initialized before proceeding
+    print("Verifying initialization state...")
+    if row_settings == nil then
+        print("ERROR: row_settings is still nil after table initialization!")
+        row_settings = create_row_settings()
+        print("Created emergency row_settings")
+    end
+    
+    if grid_one_state == nil then
+        print("ERROR: grid_one_state is still nil after table initialization!")
+    end
+    
+    if mozart_state == nil then
+        print("ERROR: mozart_state is still nil after table initialization!")
+    end
+    
+    print("Initialization verification complete")
 
     reset_all_sequence_counters()
 
