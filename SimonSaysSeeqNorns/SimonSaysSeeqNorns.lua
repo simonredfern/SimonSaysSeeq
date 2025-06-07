@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.6.0"
+version = "1.7.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -290,12 +290,12 @@ function safe_grid_led(grid, x, y, brightness)
     if grid == nil then
         return false
     end
-    
+
     if type(grid) ~= "table" then
         debug_print(2, "WARNING: Grid is not a table, cannot set LED")
         return false
     end
-    
+
     local success, err = pcall(function()
         -- Enhanced coordinate validation
         if not x or not y then
@@ -310,24 +310,24 @@ function safe_grid_led(grid, x, y, brightness)
             debug_print(2, "WARNING: Invalid grid LED coordinates: x=" .. tostring(x) .. " y=" .. tostring(y))
             return false
         end
-        
+
         brightness = brightness or 0
         if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
             brightness = math.max(0, math.min(15, brightness or 0))
         end
-        
+
         if grid.led and type(grid.led) == "function" then
             grid:led(x, y, brightness)
         else
             return false
         end
     end)
-    
+
     if not success then
         debug_print(1, "ERROR: Grid LED operation failed: " .. tostring(err))
         return false
     end
-    
+
     return true
 end
 
@@ -335,30 +335,30 @@ function safe_grid_all(grid, brightness)
     if grid == nil then
         return false
     end
-    
+
     if type(grid) ~= "table" then
         debug_print(2, "WARNING: Grid is not a table, cannot set all LEDs")
         return false
     end
-    
+
     local success, err = pcall(function()
         brightness = brightness or 0
         if type(brightness) ~= "number" or brightness < 0 or brightness > 15 then
             brightness = math.max(0, math.min(15, brightness or 0))
         end
-        
+
         if grid.all and type(grid.all) == "function" then
             grid:all(brightness)
         else
             return false
         end
     end)
-    
+
     if not success then
         debug_print(1, "ERROR: Grid all operation failed: " .. tostring(err))
         return false
     end
-    
+
     return true
 end
 
@@ -366,12 +366,12 @@ function safe_grid_refresh(grid)
     if grid == nil then
         return false
     end
-    
+
     if type(grid) ~= "table" then
         debug_print(2, "WARNING: Grid is not a table, cannot refresh")
         return false
     end
-    
+
     local success, err = pcall(function()
         if grid.refresh and type(grid.refresh) == "function" then
             grid:refresh()
@@ -379,12 +379,12 @@ function safe_grid_refresh(grid)
             return false
         end
     end)
-    
+
     if not success then
         debug_print(1, "ERROR: Grid refresh operation failed: " .. tostring(err))
         return false
     end
-    
+
     return true
 end
 
@@ -392,12 +392,12 @@ function safe_grid_set_key(grid, key_function)
     if grid == nil then
         return false
     end
-    
+
     if type(grid) ~= "table" then
         debug_print(2, "WARNING: Grid is not a table, cannot set key function")
         return false
     end
-    
+
     local success, err = pcall(function()
         if type(key_function) ~= "function" then
             debug_print(2, "WARNING: Key handler must be a function")
@@ -405,12 +405,12 @@ function safe_grid_set_key(grid, key_function)
         end
         grid.key = key_function
     end)
-    
+
     if not success then
         debug_print(1, "ERROR: Grid set key operation failed: " .. tostring(err))
         return false
     end
-    
+
     return true
 end
 
@@ -3238,6 +3238,8 @@ if midi_keyboard_usb_device_port then
     --  print ("NOTE OFF: " .. normal_midi_note_in)
     --end
 end -- end test for 254
+
+end -- end if midi_keyboard_usb_device_port then
 
 
 
