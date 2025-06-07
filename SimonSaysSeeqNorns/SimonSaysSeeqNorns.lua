@@ -63,6 +63,67 @@ function safe_divide(numerator, denominator, fallback)
     return numerator / denominator
 end
 
+-- Helper function for safe array access with bounds checking
+function safe_array_access(array, index, fallback)
+    if array == nil or index == nil then
+        return fallback
+    end
+    if type(array) ~= "table" then
+        return fallback
+    end
+    return array[index] or fallback
+end
+
+-- Helper function for safe multi-dimensional array access
+function safe_multi_array_access(array, indices, fallback)
+    if array == nil or indices == nil or type(indices) ~= "table" then
+        return fallback
+    end
+    
+    local current = array
+    for _, index in ipairs(indices) do
+        if current == nil or type(current) ~= "table" or current[index] == nil then
+            return fallback
+        end
+        current = current[index]
+    end
+    return current
+end
+
+-- Helper function to safely access keyboard MIDI note events
+function safe_keyboard_midi_access(lane, bar, step, note, on_off, fallback)
+    fallback = fallback or { is_active = 0, velocity = 0, tick_count_since_step = 0, tick_count_since_start = 0 }
+    
+    -- Validate all indices are within bounds
+    if lane == nil or lane < MIN_LANE or lane > MAX_LANE then
+        return fallback
+    end
+    if bar == nil or bar < MIN_BAR or bar > MAX_BAR then
+        return fallback
+    end
+    if step == nil or step < 1 or step > MAX_STEP then
+        return fallback
+    end
+    if note == nil or note < 0 or note > 127 then
+        return fallback
+    end
+    if on_off == nil or (on_off ~= 0 and on_off ~= 1) then
+        return fallback
+    end
+    
+    -- Check if keyboard_midi_note_events exists and is properly initialized
+    if keyboard_midi_note_events == nil or 
+       keyboard_midi_note_events[lane] == nil or
+       keyboard_midi_note_events[lane][bar] == nil or
+       keyboard_midi_note_events[lane][bar][step] == nil or
+       keyboard_midi_note_events[lane][bar][step][note] == nil or
+       keyboard_midi_note_events[lane][bar][step][note][on_off] == nil then
+        return fallback
+    end
+    
+    return keyboard_midi_note_events[lane][bar][step][note][on_off]
+end
+
 -- Read CO2 data file safely with proper error handling
 local co2_file_content = read_file(_path.dust .. "data/SimonSaysSeeqNorns/simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv")
 local co2_ppm_daily_latest_value = nil
@@ -234,12 +295,19 @@ ROW_SETTINGS_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-set
 function get_row_settings_tally(row_settings)
     -- A helper debug function to show the state the row_settings table
     -- We use this to get an error if the expected keys are not there.
-    local tally = "id:" .. row_settings["id"] .. " "
+    if not row_settings then
+        return "row_settings is nil"
+    end
+    
+    local tally = "id:" .. (row_settings["id"] or "UNKNOWN") .. " "
     for row = 1, ROWS do
-        tally = tally ..
-        " Row: " ..
-        row ..
-        " first_step is: " .. row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
+        if row_settings[row] then
+            local first_step = row_settings[row]["first_step"] or "UNKNOWN"
+            local last_step = row_settings[row]["last_step"] or "UNKNOWN"
+            tally = tally .. " Row: " .. row .. " first_step is: " .. first_step .. " last_step is: " .. last_step
+        else
+            tally = tally .. " Row: " .. row .. " (NOT INITIALIZED)"
+        end
     end
     return tally
 end
@@ -645,15 +713,29 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
             for note = 0, 127 do
                 -- From the perspective of active on notes:
 
-                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active == 1 then --and keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity > 0 then
+                local note_on_event = safe_keyboard_midi_access(current_midi_lane, bc, sc, note, 1)
+                local note_off_event = safe_keyboard_midi_access(current_midi_lane, bc, sc, note, 0)
+                
+                if note_on_event.is_active == 1 then --and note_on_event.velocity > 0 then
                     if count_active_on_disabled % skip == 0 then
                         -- Hmm we should be disabling the note across all steps not just the step where we find it.
                         -- or, how do we disable the corresponding off note?
 
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                        -- Safely disable notes with bounds checking
+                        if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and 
+                           keyboard_midi_note_events[current_midi_lane][bc] and 
+                           keyboard_midi_note_events[current_midi_lane][bc][sc] and
+                           keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
+                            
+                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                            end
+                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                            end
+                        end
 
                         SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
                     end
@@ -663,12 +745,23 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
 
                 -- From the perspective of active off notes: (see note above)
 
-                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active == 1 then
+                if note_off_event.is_active == 1 then
                     if count_active_off_disabled % skip == 0 then
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
-                        keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                        -- Safely disable notes with bounds checking
+                        if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and 
+                           keyboard_midi_note_events[current_midi_lane][bc] and 
+                           keyboard_midi_note_events[current_midi_lane][bc][sc] and
+                           keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
+                            
+                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0 -- make the note on inactive.
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0 -- make the note velocity zero
+                            end
+                            if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0 -- disable any note off at that position.
+                                keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0 -- make any note off zero velocity.
+                            end
+                        end
 
                         SendMidiKeyboardNoteOn(note, 0, 1)                                -- send midi off for that one note
                     end
@@ -687,10 +780,21 @@ function DisableKeyboardMidiNotes(note)
     -- Disable that note for all steps
     for bc = MIN_BAR, MAX_BAR do
         for sc = midi_first_step, midi_last_step do
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
-            keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
+            -- Safely disable notes with bounds checking
+            if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and 
+               keyboard_midi_note_events[current_midi_lane][bc] and 
+               keyboard_midi_note_events[current_midi_lane][bc][sc] and
+               keyboard_midi_note_events[current_midi_lane][bc][sc][note] then
+                
+                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][1] then
+                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
+                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
+                end
+                if keyboard_midi_note_events[current_midi_lane][bc][sc][note][0] then
+                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
+                    keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].is_active = 0
+                end
+            end
         end
     end
 
@@ -775,11 +879,21 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
 
                     -- print(string.format("************* Setting MIDI note ON for note %d When step is %d velocity is %d", note, midi_step_count, velocity))
 
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step =
-                    the_current_tick_count_since_step
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity =
-                    velocity
-                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
+                    -- Safely set MIDI note ON with bounds checking
+                    if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and 
+                       keyboard_midi_note_events[current_midi_lane][midi_bar_count] and 
+                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count] and
+                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note] and
+                       keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1] then
+                        
+                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].tick_count_since_step =
+                        the_current_tick_count_since_step
+                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].velocity =
+                        velocity
+                        keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][1].is_active = 1
+                    else
+                        print("WARNING: Failed to set MIDI note ON - array not properly initialized")
+                    end
 
                     -- Pass through the note
                     -- NOTE this might cause double ON if our keyboard has both MIDI IN and MIDI OUT connected.
@@ -797,11 +911,21 @@ function OnMidiNoteInEvent(on_off, note, velocity, channel)
                 -- print(string.format("Set MIDI note OFF for note %d when bar is %d and step is %d", note, midi_bar_count, midi_step_count))
 
 
-                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step =
-                the_current_tick_count_since_step
-                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity =
-                velocity
-                keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
+                -- Safely set MIDI note OFF with bounds checking
+                if keyboard_midi_note_events and keyboard_midi_note_events[current_midi_lane] and 
+                   keyboard_midi_note_events[current_midi_lane][midi_bar_count] and 
+                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count] and
+                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note] and
+                   keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0] then
+                    
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].tick_count_since_step =
+                    the_current_tick_count_since_step
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].velocity =
+                    velocity
+                    keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][note][0].is_active = 1
+                else
+                    print("WARNING: Failed to set MIDI note OFF - array not properly initialized")
+                end
 
                 -- Echo the midi note through norns to the synth.
                 -- TODO this should be configurable via the grid easily turn on / off midi echo for different keyboard / synth setups.
@@ -1002,7 +1126,7 @@ function PlayMidi()
     for n = 0, 127 do
         -- print ("PlayMidi says current_midi_lane is " .. current_midi_lane .. " midi_bar_count is " .. midi_bar_count .. " midi_step_count is " .. midi_step_count .. " n is " .. n)
 
-        local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
+        local note_on_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 1)
 
         if note_on_event.is_active == 1 then
             -- Turn an led on on grid_two to show there is an active note here
@@ -1032,7 +1156,7 @@ function PlayMidi()
         end
 
         -- Read MIDI sequence (Note OFFs)
-        local note_off_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][0]
+        local note_off_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 0)
 
         if note_off_event.is_active == 1 then
             count_of_active_midi_off = count_of_active_midi_off + 1
@@ -1227,8 +1351,7 @@ function tick()
 
                 -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
                 for n = 0, 127 do
-                    local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
-                    [n][1]
+                    local note_on_event = safe_keyboard_midi_access(current_midi_lane, midi_bar_count, midi_step_count, n, 1)
 
                     -- For each proper note on event we find,
                     if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
@@ -1237,14 +1360,21 @@ function tick()
                         -- our index on the table will start at 1 and go up.
                         -- The lowest midi notes will be earlier in the table.
 
-                        -- Initialize table entry if it doesn't exist
-                        if not collected_note_ons[count_of_active_midi_on] then
-                            collected_note_ons[count_of_active_midi_on] = {}
-                        end
+                        -- Bounds check: limit the number of collected notes to prevent overflow
+                        if count_of_active_midi_on <= 128 then  -- Reasonable upper limit
+                            -- Initialize table entry if it doesn't exist
+                            if not collected_note_ons[count_of_active_midi_on] then
+                                collected_note_ons[count_of_active_midi_on] = {}
+                            end
 
-                        -- hmm
-                        collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
-                        collected_note_ons[count_of_active_midi_on].midi_note_number = n
+                            -- hmm
+                            collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
+                            collected_note_ons[count_of_active_midi_on].midi_note_number = n
+                        else
+                            -- Stop collecting if we exceed reasonable limits
+                            print("WARNING: Too many active MIDI notes, limiting to 128")
+                            break
+                        end
                     end
                 end
 
@@ -1262,20 +1392,26 @@ function tick()
                             -- Add bounds checking for grid LED access
                             local led_row = math.max(1, math.min(8, y))
 
-                            if my_grid_two then
-                                my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
+                            -- Bounds check collected_note_ons access
+                            local collected_note = safe_array_access(collected_note_ons, c, { velocity = 0, midi_note_number = 0 })
+                            
+                            if my_grid_two and midi_step_count >= 1 and midi_step_count <= 16 and led_row >= 1 and led_row <= 8 then
+                                my_grid_two:led(midi_step_count, led_row, collected_note.velocity)
                             end
 
 
                             -- This table stores the relationship between the grid x,y and the mozart note it represents.
                             -- so we can later press the button and turn off a note in the mozart table.
 
-                            scroll_state[midi_step_count][y] = MozartPointer:new()
-                            scroll_state[midi_step_count][y].is_active = true
-                            scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
-                            scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
-                            scroll_state[midi_step_count][y].midi_step_count = midi_step_count
-                            scroll_state[midi_step_count][y].midi_note_number = collected_note_ons[c].midi_note_number
+                            -- Bounds check scroll_state access before assignment
+                            if scroll_state and scroll_state[midi_step_count] and y >= 1 and y <= 8 then
+                                scroll_state[midi_step_count][y] = MozartPointer:new()
+                                scroll_state[midi_step_count][y].is_active = true
+                                scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
+                                scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
+                                scroll_state[midi_step_count][y].midi_step_count = midi_step_count
+                                scroll_state[midi_step_count][y].midi_note_number = collected_note.midi_note_number
+                            end
 
                             --print ("midi_note_number is: ")
                             --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
@@ -1319,9 +1455,18 @@ function tick()
 
                 -- Advance the step for each row each_row_step
                 for row = 1, TOTAL_SEQUENCE_ROWS do
-                    row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
-                        row_settings[row]["first_step"], row_settings[row]["last_step"])
-                    --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+                    -- Safely advance step with bounds checking
+                    if row_settings and row_settings[row] and 
+                       row_settings[row]["current_step"] and 
+                       row_settings[row]["first_step"] and 
+                       row_settings[row]["last_step"] then
+                        
+                        row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
+                            row_settings[row]["first_step"], row_settings[row]["last_step"])
+                        --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+                    else
+                        print("WARNING: row_settings[" .. row .. "] not properly initialized")
+                    end
                 end
 
 
@@ -1558,7 +1703,9 @@ function process_step()
         -- Prior to POLYR
         --ratchet_mode = grid_one_state[current_step][sequence_row]
 
-        ratchet_mode = grid_one_state[row_settings[sequence_row]["current_step"]][sequence_row]
+        -- Safely access grid_one_state with bounds checking
+        local current_step_for_row = safe_multi_array_access(row_settings, {sequence_row, "current_step"}, 1)
+        ratchet_mode = safe_multi_array_access(grid_one_state, {current_step_for_row, sequence_row}, 0)
 
         -- process step should run independently
         clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -1575,7 +1722,8 @@ function process_step()
         if sequence_row >= 3 and sequence_row <= 6 then
             -- conditional_change_crow_output(current_step, sequence_row)
 
-            conditional_change_crow_output(row_settings[sequence_row]["current_step"], sequence_row)
+            local current_step_for_row = safe_multi_array_access(row_settings, {sequence_row, "current_step"}, 1)
+            conditional_change_crow_output(current_step_for_row, sequence_row)
         end
     end -- end for
 end -- end function
@@ -1586,8 +1734,10 @@ function conditional_change_crow_output(current_step, sequence_row)
 
 
     -- only change slew and voltage if the sequence step is active
-    if grid_one_state[current_step][sequence_row] ~= 0 then
-        if slide_state[current_step][sequence_row] == 1 then
+    local grid_value = safe_multi_array_access(grid_one_state, {current_step, sequence_row}, 0)
+    if grid_value ~= 0 then
+        local slide_value = safe_multi_array_access(slide_state, {current_step, sequence_row}, 0)
+        if slide_value == 1 then
             crow.output[crow_output].slew = 0.1
         else
             crow.output[crow_output].slew = 0
@@ -1612,7 +1762,12 @@ function conditional_change_crow_output(current_step, sequence_row)
                     local volt_value = safe_divide(mozart_value, 12, 0)
                     crow.output[crow_output].volts = co2_ppm_step_offset + volt_value
                 else
-                    local raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value
+                    -- Safely access CO2 data with bounds checking
+                    local raw_value = "UNKNOWN"
+                    if co2_ppm_list and total_step_co2_count and total_step_co2_count >= 1 and 
+                       total_step_co2_count <= #co2_ppm_list and co2_ppm_list[total_step_co2_count] then
+                        raw_value = co2_ppm_list[total_step_co2_count].the_co2_ppm_value or "UNKNOWN"
+                    end
                     print("WARNING: Invalid CO2 value at step index " .. total_step_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
                     local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
                     crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
@@ -1638,7 +1793,12 @@ function conditional_change_crow_output(current_step, sequence_row)
                     local volt_value = safe_divide(mozart_value, 12, 0)
                     crow.output[crow_output].volts = co2_ppm_tick_offset + volt_value
                 else
-                    local raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value
+                    -- Safely access CO2 data with bounds checking
+                    local raw_value = "UNKNOWN"
+                    if co2_ppm_list and total_tick_co2_count and total_tick_co2_count >= 1 and 
+                       total_tick_co2_count <= #co2_ppm_list and co2_ppm_list[total_tick_co2_count] then
+                        raw_value = co2_ppm_list[total_tick_co2_count].the_co2_ppm_value or "UNKNOWN"
+                    end
                     print("WARNING: Invalid CO2 value at tick index " .. total_tick_co2_count .. " (raw: " .. tostring(raw_value) .. ", parsed: " .. tostring(co2_value) .. ")")
                     local mozart_value = mozart_state[current_step] and mozart_state[current_step][sequence_row] or 0
                     crow.output[crow_output].volts = safe_divide(mozart_value, 12, 0) -- fallback to normal mode
@@ -2734,8 +2894,13 @@ function random_dense_grid(x, y)
 
     print("Hello from random_dense_grid: x: " .. x .. " y: " .. y)
 
-    -- Protect against division by zero (though x should never be 0 in grid context)
-    on_bias = safe_divide(x, 16, 0) -- more bias towards an on note with a higher x button pressed
+    -- Protect against invalid x values and division by zero
+    if not x or x < 1 or x > 16 then
+        print("WARNING: Invalid x value in random_dense_grid: " .. tostring(x))
+        on_bias = 0
+    else
+        on_bias = safe_divide(x, 16, 0) -- more bias towards an on note with a higher x button pressed
+    end
 
 
     print("on_bias: " .. on_bias)
