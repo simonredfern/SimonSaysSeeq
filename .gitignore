@@ -1,1 +1,24 @@
 .DS_Store
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Compiled libraries
+*.so
+*.dylib
+*.dll
+
+# Generated test and install files
+test_rust_core.lua
+INSTALL.md
+
+# VSCode user settings (ignore personal settings, keep project-specific ones)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.log
+
+# But keep project-specific VSCode files (if any)
+!.vscode/extensions.json
+!.vscode/c_cpp_properties.json

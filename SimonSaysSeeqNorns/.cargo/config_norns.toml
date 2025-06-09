@@ -1,0 +1,26 @@
+# Cargo configuration for native compilation on Norns
+# This config is optimized for building directly on the Norns device
+
+[build]
+# Don't force any specific target - let Rust detect the native target
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = true
+
+[profile.dev]
+opt-level = 1
+
+# Environment variables for native compilation
+[env]
+# Ensure we use the system's pkg-config
+PKG_CONFIG_ALLOW_CROSS = "0"
+
+# Target-specific settings for when building natively on ARM
+[target.armv7-unknown-linux-gnueabihf]
+# These settings only apply if Rust detects this as the native target
+# No cross-compilation linker needed for native builds
+
+[target.aarch64-unknown-linux-gnu]
+# For newer ARM64 Norns devices (if any)

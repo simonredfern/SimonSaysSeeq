@@ -1,0 +1,34 @@
+# Cargo configuration for SimonSaysSeeq cross-compilation
+# This file configures cross-compilation targets for ARM devices like Norns
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=-static-libgcc"
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+# Default target for Norns (ARM Cortex-A7)
+[build]
+# Uncomment the line below to default to ARM builds
+# target = "armv7-unknown-linux-gnueabihf"
+
+# Environment variables for cross-compilation
+[env]
+# Set C compiler for ARM target
+CC_armv7_unknown_linux_gnueabihf = "arm-linux-gnueabihf-gcc"
+CXX_armv7_unknown_linux_gnueabihf = "arm-linux-gnueabihf-g++"
+AR_armv7_unknown_linux_gnueabihf = "arm-linux-gnueabihf-ar"
+
+# Set C compiler for AArch64 target
+CC_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-g++"
+AR_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-ar"
+
+# PKG_CONFIG settings for cross-compilation
+PKG_CONFIG_ALLOW_CROSS = "1"
+PKG_CONFIG_PATH_armv7_unknown_linux_gnueabihf = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
+PKG_CONFIG_PATH_aarch64_unknown_linux_gnu = "/usr/lib/aarch64-linux-gnu/pkgconfig"
