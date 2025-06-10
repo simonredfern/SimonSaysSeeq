@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # Configuration
 NORNS_IP="${NORNS_IP:-norns.local}"
 NORNS_USER="${NORNS_USER:-we}"
-NORNS_LIB_PATH="/home/we/.local/lib/lua/5.3"
+NORNS_LIB_PATH="/usr/local/lib/lua/5.3"
 DOCKER_IMAGE="simon-says-seeq-builder"
 CONTAINER_NAME="simon-says-seeq-build"
 
@@ -26,6 +26,7 @@ echo "  Norns IP: $NORNS_IP"
 echo "  Norns User: $NORNS_USER"
 echo "  Norns Library Path: $NORNS_LIB_PATH"
 echo "  Docker Image: $DOCKER_IMAGE"
+echo "  Lua Version: 5.3 (for Norns compatibility)"
 echo
 
 # Check if we're in the right directory
@@ -51,9 +52,9 @@ fi
 echo -e "${YELLOW}Cleaning up previous builds...${NC}"
 docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
-# Build Docker image
+# Build Docker image with no cache to ensure clean build
 echo -e "${YELLOW}Building Docker image for cross-compilation...${NC}"
-if docker build -t "$DOCKER_IMAGE" .; then
+if docker build --no-cache -t "$DOCKER_IMAGE" .; then
     echo -e "${GREEN}Docker image built successfully!${NC}"
 else
     echo -e "${RED}Failed to build Docker image!${NC}"

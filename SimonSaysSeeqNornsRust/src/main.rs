@@ -252,7 +252,7 @@ impl SimonSaysSeeq {
                 
                 // Update grid display
                 #[cfg(feature = "hardware")]
-                self.grid.update_step_cursor(step, bar)?;
+                self.update_grid_display()?;
             }
             
             SequencerEvent::Beat { beat } => {
@@ -261,6 +261,32 @@ impl SimonSaysSeeq {
                 self.screen.set_beat_indicator(beat);
                 #[cfg(not(feature = "hardware"))]
                 debug!("Beat indicator: {}", beat);
+            }
+            
+            SequencerEvent::MidiEvent(midi_event) => {
+                // Handle MIDI events from sequencer
+                #[cfg(feature = "midi")]
+                {
+                    if midi_event.note_on {
+                        self.midi.note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
+                        info!("MIDI Note ON: {} vel:{} ch:{} step:{}", 
+                              midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                    } else {
+                        self.midi.note_off(midi_event.note, midi_event.channel)?;
+                        info!("MIDI Note OFF: {} ch:{} step:{}", 
+                              midi_event.note, midi_event.channel, midi_event.step);
+                    }
+                }
+                #[cfg(not(feature = "midi"))]
+                {
+                    if midi_event.note_on {
+                        info!("MIDI Note ON: {} vel:{} ch:{} step:{}", 
+                              midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                    } else {
+                        info!("MIDI Note OFF: {} ch:{} step:{}", 
+                              midi_event.note, midi_event.channel, midi_event.step);
+                    }
+                }
             }
         }
         
@@ -508,7 +534,7 @@ impl SimonSaysSeeq {
         }
         false
     }
-    
+
     fn get_held_rows(&self) -> Vec<usize> {
         let mut held_rows = Vec::new();
         for y in 1..=8 {
@@ -531,33 +557,60 @@ impl SimonSaysSeeq {
         }
         None
     }
-    
+
     fn handle_advanced_grid_operation(&mut self, x: usize, y: usize) -> Result<()> {
-        // Advanced operations when positions are held
-        info!("Advanced grid operation at ({}, {}) with held positions", x, y);
+        let held_rows = self.get_held_rows();
         
-        // Example: Copy from held position to current position
-        for held_x in 1..=16 {
-            for held_y in 1..=8 {
-                if self.sequencer.is_held(held_x, held_y) {
-                    let held_value = self.sequencer.get_grid_value(held_x, held_y);
-                    self.sequencer.set_grid_value(x, y, held_value);
-                    
-                    // Also copy Mozart values
-                    let mozart_value = self.sequencer.get_mozart_value(held_x, held_y);
-                    self.sequencer.set_mozart_value(x, y, mozart_value);
-                    
-                    info!("Copied from held position ({}, {}) to ({}, {})", held_x, held_y, x, y);
-                    break;
+        if held_rows.len() == 1 {
+            let held_row = held_rows[0];
+            
+            match held_row {
+                8 => {
+                    // Control row held - special functions
+                    if x <= 8 {
+                        // Randomize column
+                        for row in 1..=7 {
+                            self.sequencer.randomize_section(x, row);
+                        }
+                        info!("Randomized column {}", x);
+                    } else {
+                        // Clear column
+                        for row in 1..=7 {
+                            self.sequencer.set_grid_value(x, row, 0);
+                        }
+                        info!("Cleared column {}", x);
+                    }
+                }
+                _ => {
+                    // Sequence row held - copy/paste operations
+                    if y == held_row {
+                        // Same row - randomize this position
+                        self.sequencer.randomize_section(x, y);
+                        info!("Randomized position [{}, {}]", x, y);
+                    } else {
+                        // Different row - copy from held row to this row
+                        self.sequencer.copy_grid_section(x, held_row, x, y, 1, 1);
+                        info!("Copied from [{}, {}] to [{}, {}]", x, held_row, x, y);
+                    }
                 }
             }
+        } else if held_rows.len() > 1 {
+            // Multiple rows held - advanced operations
+            let first_row = self.get_first_held_row().unwrap_or(1);
+            
+            // Copy pattern from first held row to current position
+            self.sequencer.copy_grid_section(1, first_row, 1, y, 16, 1);
+            info!("Copied pattern from row {} to row {}", first_row, y);
         }
         
+        // Update grid display
         #[cfg(feature = "hardware")]
         self.update_grid_display()?;
         
         Ok(())
     }
+
+
     
     /// Handle CO2-influenced CV output
     fn handle_co2_cv_output(&mut self, step: usize, row: usize, co2_value: f32) -> Result<()> {

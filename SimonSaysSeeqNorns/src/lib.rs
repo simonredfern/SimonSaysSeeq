@@ -410,7 +410,7 @@ impl LuaUserData for SequencerCore {
 }
 
 /// Lua module exports
-#[mlua::lua_module]
+#[mlua::lua_module(name = "simon_says_seeq_core")]
 fn simon_says_seeq_core(lua: &Lua) -> LuaResult<LuaTable> {
     let exports = lua.create_table()?;
 
@@ -422,6 +422,8 @@ fn simon_says_seeq_core(lua: &Lua) -> LuaResult<LuaTable> {
 
     Ok(exports)
 }
+
+
 
 #[cfg(test)]
 mod tests {

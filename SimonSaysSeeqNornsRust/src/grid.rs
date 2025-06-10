@@ -225,6 +225,11 @@ impl GridManager {
         Ok(())
     }
     
+    /// Get LED brightness at specific coordinates
+    pub fn get_led(&self, grid_id: usize, x: usize, y: usize) -> Option<u8> {
+        self.led_states.get(&(grid_id, x, y)).copied()
+    }
+    
     /// Set multiple LEDs efficiently
     pub fn set_led_map(&mut self, grid_id: usize, led_map: &[u8]) -> Result<()> {
         #[cfg(feature = "hardware")]

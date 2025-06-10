@@ -1,15 +1,21 @@
 # Dockerfile for cross-compiling SimonSaysSeeq Rust core for Norns
 # This provides a consistent build environment for ARM cross-compilation
 
-FROM rust:1.75-slim
+FROM debian:11-slim
 
-# Install system dependencies for cross-compilation
+# Install system dependencies for cross-compilation and Rust
 RUN apt-get update && apt-get install -y \
     gcc-arm-linux-gnueabihf \
     libc6-dev-armhf-cross \
     pkg-config \
     build-essential \
+    file \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.80
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Set up Rust for cross-compilation
 RUN rustup target add armv7-unknown-linux-gnueabihf
@@ -26,15 +32,10 @@ WORKDIR /app
 # Copy Cargo files first for better layer caching
 COPY Cargo.toml Cargo.lock ./
 
-# Create dummy source to build dependencies
-RUN mkdir src && echo "fn main() {}" > src/lib.rs
-RUN cargo build --release --target armv7-unknown-linux-gnueabihf
-RUN rm -rf src
-
-# Copy actual source code
+# Copy actual source code first
 COPY src/ ./src/
 
-# Build the project
+# Build the project (this will download and compile all dependencies)
 RUN cargo build --release --target armv7-unknown-linux-gnueabihf
 
 # Create output directory

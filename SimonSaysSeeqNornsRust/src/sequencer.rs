@@ -12,6 +12,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+/// MIDI event for hardware output
+#[derive(Debug, Clone)]
+pub struct MidiEvent {
+    pub note: u8,
+    pub velocity: u8,
+    pub channel: u8,
+    pub note_on: bool,
+    pub step: usize,
+    pub bar: usize,
+}
+
 /// Events that the sequencer can send to the main application
 #[derive(Debug, Clone)]
 pub enum SequencerEvent {
@@ -19,6 +30,8 @@ pub enum SequencerEvent {
     Step { step: usize, bar: usize },
     /// A beat has been reached (for visual indicators)
     Beat { beat: usize },
+    /// MIDI event to be sent to hardware
+    MidiEvent(MidiEvent),
 }
 
 /// A MIDI note event at a specific timing
@@ -160,6 +173,8 @@ pub struct SequencerState {
     pub grid: Vec<Vec<u8>>,
     /// Mozart state (second grid/performance controls) - MIDI note values
     pub mozart: Vec<Vec<u8>>,
+    /// Mozart grid for MIDI note assignments
+    pub mozart_grid: Vec<Vec<u8>>,
     /// Slide state for parameter transitions
     pub slide: SlideState,
     /// Held state for grid button combinations
@@ -179,6 +194,7 @@ pub struct SequencerState {
     pub is_running: bool,
     /// Core timing variables
     pub tempo: f32,
+    pub swing_amount: f32,
     pub ticks_per_step: u32,
     pub steps_per_bar: usize,
     pub tick_count: u64,
@@ -195,7 +211,6 @@ pub struct SequencerState {
     /// Tempo analysis
     pub tempo_analysis: TempoAnalysis,
     /// Advanced features
-    pub swing_amount: f32, // 0.0 = straight, 0.5 = maximum swing
     pub swing_mode: u8,
     pub global_transpose: i8,
     pub global_velocity_scale: f32,
@@ -258,9 +273,13 @@ impl Default for SequencerState {
             keyboard_midi_note_events.push(bars);
         }
         
+        // Initialize mozart_grid with default MIDI note values (60 = middle C)
+        let mozart_grid = vec![vec![60; ROWS]; COLS];
+
         Self {
             grid,
             mozart,
+            mozart_grid,
             slide,
             held,
             row_settings,
@@ -273,20 +292,20 @@ impl Default for SequencerState {
             current_lane: 1,
             is_running: false,
             tempo: 120.0,
+            swing_amount: 0.0,
             ticks_per_step: 12,
+            first_step: 1,
+            last_step: 16,
             steps_per_bar: 16,
             tick_count: 0,
             the_current_tick_count_since_step: 0,
             the_current_tick_count_since_start: 0,
             midi_step_count: 1,
             midi_bar_count: 1,
-            first_step: 1,
-            last_step: COLS,
             midi_first_step: 1,
             midi_last_step: 16,
             keyboard_midi_note_events,
             tempo_analysis: TempoAnalysis::default(),
-            swing_amount: 0.0,
             swing_mode: 1,
             global_transpose: 0,
             global_velocity_scale: 1.0,
@@ -417,10 +436,127 @@ impl Sequencer {
     pub fn get_mozart_value(&self, x: usize, y: usize) -> u8 {
         let state = self.state.lock().unwrap();
         if x > 0 && x <= 16 && y > 0 && y <= 8 {
-            state.mozart[x - 1][y - 1]
+            state.mozart_grid[x - 1][y - 1]
         } else {
             60 // Default to middle C
         }
+    }
+
+    /// Get swing amount
+    pub fn get_swing_amount(&self) -> f32 {
+        let state = self.state.lock().unwrap();
+        state.swing_amount
+    }
+
+    /// Set swing amount
+    pub fn set_swing(&self, amount: f32) {
+        let mut state = self.state.lock().unwrap();
+        state.swing_amount = amount.clamp(0.0, 0.5);
+    }
+
+    /// Get current tempo
+    pub fn get_tempo(&self) -> f32 {
+        let state = self.state.lock().unwrap();
+        state.tempo
+    }
+
+    /// Get current step and bar
+    pub fn get_current_position(&self) -> (usize, usize) {
+        let state = self.state.lock().unwrap();
+        (state.midi_step_count, state.midi_bar_count)
+    }
+
+    /// Randomize a specific section of the grid
+    pub fn randomize_section(&self, x: usize, y: usize) {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let mut state = self.state.lock().unwrap();
+        
+        if y <= 7 && x <= 16 {
+            // Randomize based on position - left side creates denser patterns
+            let density = (x as f32) / 16.0;
+            let new_value = if rng.gen::<f32>() < density {
+                rng.gen_range(1..=4) // Random ratchet value
+            } else {
+                0
+            };
+            state.grid[x - 1][y - 1] = new_value;
+        }
+    }
+
+    /// Clear a specific section of the grid
+    pub fn clear_section(&self, start_x: usize, start_y: usize, width: usize, height: usize) {
+        let mut state = self.state.lock().unwrap();
+        
+        for x in start_x..=(start_x + width - 1).min(16) {
+            for y in start_y..=(start_y + height - 1).min(8) {
+                if x > 0 && y > 0 && x <= 16 && y <= 8 {
+                    state.grid[x - 1][y - 1] = 0;
+                }
+            }
+        }
+    }
+
+    /// Copy a section of the grid
+    pub fn copy_grid_section(&self, src_x: usize, src_y: usize, dst_x: usize, dst_y: usize, width: usize, height: usize) {
+        let mut state = self.state.lock().unwrap();
+        let mut copy_buffer = Vec::new();
+        
+        // First copy the source section
+        for y in 0..height {
+            let mut row = Vec::new();
+            for x in 0..width {
+                let sx = src_x + x;
+                let sy = src_y + y;
+                if sx > 0 && sy > 0 && sx <= 16 && sy <= 8 {
+                    row.push(state.grid[sx - 1][sy - 1]);
+                } else {
+                    row.push(0);
+                }
+            }
+            copy_buffer.push(row);
+        }
+        
+        // Then paste to destination
+        for y in 0..height {
+            for x in 0..width {
+                let dx = dst_x + x;
+                let dy = dst_y + y;
+                if dx > 0 && dy > 0 && dx <= 16 && dy <= 8 {
+                    state.grid[dx - 1][dy - 1] = copy_buffer[y][x];
+                }
+            }
+        }
+    }
+
+    /// Set first step for sequencer
+    pub fn set_first_step(&self, step: usize) {
+        let mut state = self.state.lock().unwrap();
+        state.first_step = step.clamp(1, 16);
+    }
+
+    /// Set last step for sequencer
+    pub fn set_last_step(&self, step: usize) {
+        let mut state = self.state.lock().unwrap();
+        state.last_step = step.clamp(1, 16);
+    }
+
+    /// Get row data for display
+    pub fn get_row_data(&self, row: usize) -> Vec<u8> {
+        let state = self.state.lock().unwrap();
+        if row > 0 && row <= 8 {
+            (0..16).map(|x| state.grid[x][row - 1]).collect()
+        } else {
+            vec![0; 16]
+        }
+    }
+
+    /// Set pattern change mode
+    pub fn set_pattern_change_mode(&self, mode: bool) {
+        let mut state = self.state.lock().unwrap();
+        // Store pattern change mode in a custom field if needed
+        // For now, just log it
+        info!("Pattern change mode set to: {}", mode);
     }
     
     /// Set held state for button combinations
@@ -627,7 +763,7 @@ impl Sequencer {
     }
     
     /// Play MIDI events for current tick
-    fn play_midi(&self, state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
+    fn play_midi(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         let current_lane = state.current_lane;
         let midi_bar_count = state.midi_bar_count;
         let midi_step_count = state.midi_step_count;
@@ -648,14 +784,40 @@ impl Sequencer {
                     let note_on_event = &state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][1];
                     if note_on_event.is_active && note_on_event.tick_count_since_step == tick_since_step {
                         debug!("MIDI Note ON: note={}, velocity={}, step={}", note, note_on_event.velocity, midi_step_count);
-                        // Send MIDI note on event - this would be handled by the main loop
+                        
+                        // Create and send MIDI event
+                        let midi_event = MidiEvent {
+                            note: note as u8,
+                            velocity: note_on_event.velocity,
+                            channel: (lane_idx + 1) as u8,
+                            note_on: true,
+                            step: midi_step_count,
+                            bar: midi_bar_count,
+                        };
+                        
+                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                            warn!("Failed to send MIDI note ON event: {}", e);
+                        }
                     }
                     
                     // Check note OFF events  
                     let note_off_event = &state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][0];
                     if note_off_event.is_active && note_off_event.tick_count_since_step == tick_since_step {
                         debug!("MIDI Note OFF: note={}, step={}", note, midi_step_count);
-                        // Send MIDI note off event - this would be handled by the main loop
+                        
+                        // Create and send MIDI event
+                        let midi_event = MidiEvent {
+                            note: note as u8,
+                            velocity: 0,
+                            channel: (lane_idx + 1) as u8,
+                            note_on: false,
+                            step: midi_step_count,
+                            bar: midi_bar_count,
+                        };
+                        
+                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                            warn!("Failed to send MIDI note OFF event: {}", e);
+                        }
                     }
                 }
             }
@@ -1049,13 +1211,6 @@ impl Sequencer {
     
     /// Advanced Sequencing Features
     
-    /// Set swing amount (0.0 = straight, 0.5 = maximum swing)
-    pub fn set_swing(&self, amount: f32) {
-        let mut state = self.state.lock().unwrap();
-        state.swing_amount = amount.clamp(0.0, 0.5);
-        debug!("Set swing amount: {:.2}", state.swing_amount);
-    }
-    
     /// Set global transpose
     pub fn set_global_transpose(&self, semitones: i8) {
         let mut state = self.state.lock().unwrap();
@@ -1385,12 +1540,6 @@ impl Sequencer {
         } else {
             None
         }
-    }
-    
-    /// Get current swing amount
-    pub fn get_swing_amount(&self) -> f32 {
-        let state = self.state.lock().unwrap();
-        state.swing_amount
     }
     
     /// Get current global transpose
