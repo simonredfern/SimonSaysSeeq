@@ -134,6 +134,8 @@ pub struct ScreenManager {
     width: usize,
     height: usize,
     buffer: Vec<u8>,
+    #[cfg(feature = "hardware")]
+    fb_buffer: Vec<u8>,
     cursor_x: usize,
     cursor_y: usize,
     beat_indicator: usize,
@@ -148,6 +150,8 @@ impl ScreenManager {
             width: 128,
             height: 64,
             buffer: vec![0u8; 128 * 64 / 8], // 1 bit per pixel, packed
+            #[cfg(feature = "hardware")]
+            fb_buffer: vec![0u8; 128 * 64 * 2], // 16 bits per pixel for framebuffer
             cursor_x: 0,
             cursor_y: 0,
             beat_indicator: 0,
@@ -172,11 +176,15 @@ impl ScreenManager {
                 self.width = fb.var_screen_info.xres as usize;
                 self.height = fb.var_screen_info.yres as usize;
                 
-                // Reallocate buffer if needed
+                // Reallocate buffers if needed
                 let buffer_size = (self.width * self.height) / 8;
                 if self.buffer.len() != buffer_size {
                     self.buffer = vec![0u8; buffer_size];
                 }
+                
+                // Reallocate framebuffer buffer to match expected format
+                let fb_buffer_size = self.width * self.height * 2; // 16 bits per pixel
+                self.fb_buffer = vec![0u8; fb_buffer_size];
                 
                 self.framebuffer = Some(fb);
                 info!("Screen initialized: {}x{}", self.width, self.height);
@@ -409,15 +417,18 @@ impl ScreenManager {
         
         #[cfg(feature = "hardware")]
         {
+            // Convert 1-bit buffer to 16-bit framebuffer format first
+            self.convert_buffer_to_framebuffer();
+            
             if let Some(ref mut fb) = self.framebuffer {
-                // Copy our buffer to the framebuffer
+                // Copy converted buffer to the framebuffer
                 let fb_length = fb.frame.len();
-                let copy_length = std::cmp::min(self.buffer.len(), fb_length);
+                let copy_length = std::cmp::min(self.fb_buffer.len(), fb_length);
                 
-                fb.frame[..copy_length].copy_from_slice(&self.buffer[..copy_length]);
+                fb.frame[..copy_length].copy_from_slice(&self.fb_buffer[..copy_length]);
                 
-                // Some framebuffers require explicit sync
-                fb.write_frame(&self.buffer);
+                // Write the converted buffer to framebuffer
+                fb.write_frame(&self.fb_buffer[..copy_length]);
             } else {
                 debug!("Screen update (no framebuffer available)");
             }
@@ -429,6 +440,30 @@ impl ScreenManager {
         }
         
         Ok(())
+    }
+    
+    #[cfg(feature = "hardware")]
+    fn convert_buffer_to_framebuffer(&mut self) {
+        // Convert 1-bit packed buffer to 16-bit RGB565 format
+        // RGB565: RRRRRGGGGGGBBBBB (16 bits total)
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let pixel_on = self.get_pixel(x, y);
+                let fb_index = (y * self.width + x) * 2;
+                
+                if fb_index + 1 < self.fb_buffer.len() {
+                    let pixel_value: u16 = if pixel_on {
+                        0xFFFF  // White: all bits set
+                    } else {
+                        0x0000  // Black: all bits clear
+                    };
+                    
+                    // Convert to little-endian bytes
+                    self.fb_buffer[fb_index] = (pixel_value & 0xFF) as u8;
+                    self.fb_buffer[fb_index + 1] = (pixel_value >> 8) as u8;
+                }
+            }
+        }
     }
     
     /// Get screen dimensions
@@ -469,10 +504,16 @@ impl ScreenManager {
 
 impl Drop for ScreenManager {
     fn drop(&mut self) {
-        // Clear screen on exit
-        self.clear();
-        let _ = self.update();
-        info!("Screen manager dropped");
+        // Clear screen on exit - catch any panics to prevent issues during cleanup
+        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.clear();
+            let _ = self.update();
+        })).is_err() {
+            // If clearing fails, just log and continue
+            info!("Screen manager dropped (cleanup failed)");
+        } else {
+            info!("Screen manager dropped");
+        }
     }
 }
 
