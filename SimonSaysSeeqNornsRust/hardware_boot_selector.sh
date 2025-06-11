@@ -164,71 +164,15 @@ monitor_input_device() {
     return 2
 }
 
-# Check for buttons using /proc/interrupts monitoring
+# Simplified interrupt check (no longer used but kept for compatibility)
 check_interrupt_based() {
-    local timeout=$1
-    local start_time=$(date +%s)
-    local end_time=$((start_time + timeout))
-    
-    # Get initial interrupt counts for GPIO interrupts
-    local initial_interrupts=""
-    if [ -f "/proc/interrupts" ]; then
-        initial_interrupts=$(grep -E "gpio|button" /proc/interrupts 2>/dev/null || true)
-    fi
-    
-    if [ -z "$initial_interrupts" ]; then
-        log_message "No GPIO interrupts found in /proc/interrupts"
-        return 2
-    fi
-    
-    log_message "Monitoring GPIO interrupts for button activity"
-    
-    while [ $(date +%s) -lt $end_time ]; do
-        if [ -f "/proc/interrupts" ]; then
-            local current_interrupts=$(grep -E "gpio|button" /proc/interrupts 2>/dev/null || true)
-            
-            # Simple comparison - if interrupt counts changed, button activity detected
-            if [ "$current_interrupts" != "$initial_interrupts" ]; then
-                log_message "GPIO interrupt activity detected"
-                # Return K2 selection for any detected activity (can be enhanced)
-                return 0
-            fi
-        fi
-        sleep $CHECK_INTERVAL
-    done
-    
+    log_message "Interrupt monitoring skipped for reliability"
     return 2
 }
 
-# Check for button presses using /dev/input devices (fallback method)
+# Simplified fallback check (no longer used but kept for compatibility)
 check_input_devices_fallback() {
-    local timeout=$1
-    local start_time=$(date +%s)
-    local end_time=$((start_time + timeout))
-    
-    # Find other input devices as fallback
-    local input_files=$(find /dev/input -name "event*" 2>/dev/null | grep -v "$INPUT_DEVICE" | head -3)
-    
-    if [ -z "$input_files" ]; then
-        log_message "No fallback input devices found"
-        return 2
-    fi
-    
-    log_message "Checking fallback input devices: $input_files"
-    
-    while [ $(date +%s) -lt $end_time ]; do
-        for input_file in $input_files; do
-            if [ -r "$input_file" ]; then
-                # Simple detection - just check if device is readable (minimal approach)
-                if [ -c "$input_file" ]; then
-                    log_message "Alternative input device $input_file is available"
-                    # For now, just continue to next detection method
-                fi
-            fi
-        done
-        sleep $CHECK_INTERVAL
-    done
-    
+    log_message "Fallback detection skipped for reliability"
     return 2
 }
 
@@ -352,13 +296,8 @@ main() {
     if [ $selection_result -ne 2 ]; then
         detection_method="input-device"
     else
-        # Method 2: Quick fallback check (simplified)
-        log_message "Primary input device timed out, checking for alternative devices..."
-        check_input_devices_fallback $TIMEOUT_SECONDS
-        log_message "Fallback device check completed"
-        
-        # Skip interrupt monitoring for reliability - go straight to timeout handling
-        log_message "All detection methods completed, proceeding with saved configuration"
+        # Skip all fallback methods for reliability
+        log_message "Primary input device timed out, proceeding with saved configuration"
         detection_method="timeout"
     fi
     
