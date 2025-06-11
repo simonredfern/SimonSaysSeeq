@@ -7,6 +7,39 @@ set -e  # Exit on any error
 
 echo "hello from deploy_to_norns.sh"
 
+# Parse arguments
+NATIVE_COMPILE=false
+for arg in "$@"; do
+    case $arg in
+        --native)
+            NATIVE_COMPILE=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [options]"
+            echo ""
+            echo "Options:"
+            echo "  --native    Run native compilation on Norns after deployment"
+            echo "              This enables real MIDI/hardware features (takes 20-30 min)"
+            echo "  --help, -h  Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                # Deploy with simulation mode (fast)"
+            echo "  $0 --native      # Deploy and compile with hardware features (slow)"
+            echo ""
+            echo "Environment variables:"
+            echo "  NORNS_IP         Norns IP address (default: norns.local)"
+            echo "  NORNS_USER       Norns username (default: we)"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 # Configuration
 NORNS_IP="${NORNS_IP:-norns.local}"
 NORNS_USER="${NORNS_USER:-we}"
@@ -310,40 +343,59 @@ rm -rf "$TEMP_DIR"
 
 # Final instructions
 print_success "Deployment completed successfully!"
-echo ""
-echo "🎵 SimonSaysSeeq Rust is now installed on your Norns!"
+
+# Trigger native compilation if requested
+if [ "$NATIVE_COMPILE" = "true" ]; then
+    echo ""
+    print_status "Starting native compilation on Norns..."
+    print_warning "This will take 20-30 minutes to complete"
+    
+    ssh -t "$NORNS_USER@$NORNS_IP" "cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
+    
+    if [ $? -eq 0 ]; then
+        print_success "Native compilation completed! Hardware features now enabled"
+        echo ""
+        echo "🎵 SimonSaysSeeq Rust with FULL HARDWARE SUPPORT is ready!"
+    else
+        print_error "Native compilation failed"
+        echo "You can try again manually: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
+    fi
+else
+    echo ""
+    echo "🎵 SimonSaysSeeq Rust is now installed on your Norns!"
+    echo ""
+    echo "Native Hardware Compilation:"
+    echo "  Current build: Simulation mode (cross-compiled)"
+    echo "  For real MIDI/hardware: ./deploy_to_norns.sh --native"
+    echo "  Or manually: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
+fi
+
 echo ""
 echo "Next steps:"
 echo "  1. Boot selector controls the mode automatically"
 echo "  2. Use ./norns_control.sh to switch between Rust and menu modes"
-echo "  3. Hardware features available after native compilation"
+echo "  3. Hardware features $([ "$NATIVE_COMPILE" = "true" ] && echo "now enabled!" || echo "available after native compilation")"
 echo ""
-echo "Hardware Boot Selector (NEW!):"
-echo "  - Hold K2 during startup: Direct Rust app boot"
-echo "  - Hold K3 during startup: Normal Norns menu"
-echo "  - No input: Use saved preference"
-echo "  - Control: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./toggle_startup_mode.sh"
-echo ""
-echo "Native Hardware Compilation:"
-echo "  Current build: Simulation mode (cross-compiled)"
-echo "  For real MIDI/hardware: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
-echo "  This will compile with full hardware features directly on Norns"
+echo "Hardware Boot Selector:"
+echo "  - Control: ./norns_control.sh rust-reboot or ./norns_control.sh menu-reboot"
+echo "  - SSH control: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./toggle_startup_mode.sh"
 echo ""
 echo "Monitoring:"
 echo "  SSH to Norns: ssh $NORNS_USER@$NORNS_IP"
 echo "  View logs: journalctl -u simonsaysseeq-rust -f"
 echo "  Boot selector logs: tail -f /tmp/simonsaysseeq_boot_selector.log"
 echo "  Manual start: cd $NORNS_TARGET_DIR && ./simon_says_seeq"
-echo "  Switch modes: ./norns_control.sh rust-reboot or ./norns_control.sh menu-reboot"
 echo ""
 echo "If you encounter issues, check the README.md on Norns for troubleshooting."
 
-# Optional: Connect and show status
-read -p "Would you like to connect to Norns and check the status? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_status "Connecting to Norns..."
-    ssh -t "$NORNS_USER@$NORNS_IP" "cd $NORNS_TARGET_DIR && echo 'Files installed:' && ls -la && echo '' && echo 'Testing binary:' && ./simon_says_seeq --help 2>/dev/null || echo 'Binary ready (use boot selector to run)'"
+# Optional: Connect and show status (skip if native compilation was run)
+if [ "$NATIVE_COMPILE" != "true" ]; then
+    read -p "Would you like to connect to Norns and check the status? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_status "Connecting to Norns..."
+        ssh -t "$NORNS_USER@$NORNS_IP" "cd $NORNS_TARGET_DIR && echo 'Files installed:' && ls -la && echo '' && echo 'Testing binary:' && ./simon_says_seeq --help 2>/dev/null || echo 'Binary ready (use boot selector to run)'"
+    fi
 fi
 
 print_success "Deployment script completed! 🚀"

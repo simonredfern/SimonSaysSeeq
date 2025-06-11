@@ -68,6 +68,7 @@ midi = ["midir"]
 simulation = []
 norns = ["hardware", "hardware-audio", "midi"]
 cross-compile = ["midi"]  # Safe features for cross-compilation
+desktop = ["midi", "hidapi"]  # Development on laptop with grid
 
 [profile.release]
 opt-level = 3
