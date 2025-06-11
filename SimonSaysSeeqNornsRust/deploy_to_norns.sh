@@ -83,8 +83,25 @@ print_status "Cross-compiling for ARM Linux (Norns)..."
 export PKG_CONFIG_ALLOW_CROSS=1
 export PKG_CONFIG_PATH=""
 
-# Build with hardware features enabled for Norns
-cargo build --release --target=$LOCAL_TARGET --features="hardware,midi"
+# Set up cross-compilation environment
+export CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc
+export CXX_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-g++
+export AR_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar
+export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+
+# Create cargo config for cross-compilation if it doesn't exist
+mkdir -p .cargo
+cat > .cargo/config.toml << 'CARGO_CONFIG'
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+ar = "arm-linux-gnueabihf-ar"
+
+[build]
+target = "armv7-unknown-linux-gnueabihf"
+CARGO_CONFIG
+
+# Build with minimal features that work with cross-compilation
+cross build --release --target=$LOCAL_TARGET --no-default-features
 
 if [ $? -ne 0 ]; then
     print_error "Cross-compilation failed"
@@ -114,6 +131,11 @@ mkdir -p "$DEPLOY_DIR"
 
 # Copy binary
 cp "$BINARY_PATH" "$DEPLOY_DIR/"
+
+# Copy boot selector files
+cp "fixed_boot_selector.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector not found, skipping"
+cp "simonsaysseeq-boot-selector.service" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector service not found, skipping"
+cp "boot_toggle.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot toggle script not found, skipping"
 
 # Create Norns script wrapper
 cat > "$DEPLOY_DIR/SimonSaysSeeqRust.lua" << 'EOF'
@@ -225,6 +247,31 @@ echo "Installing SimonSaysSeeq Rust on Norns..."
 # Make binary executable
 chmod +x ./simon_says_seeq
 
+# Install boot selector if available
+if [ -f "fixed_boot_selector.sh" ]; then
+    echo "Installing boot selector..."
+    chmod +x ./fixed_boot_selector.sh
+    
+    if [ -f "simonsaysseeq-boot-selector.service" ]; then
+        # Update service file with correct path
+        sed "s|ExecStart=.*|ExecStart=$PWD/fixed_boot_selector.sh|" simonsaysseeq-boot-selector.service > /tmp/boot-selector.service
+        sudo cp /tmp/boot-selector.service /etc/systemd/system/simonsaysseeq-boot-selector.service
+        sudo systemctl daemon-reload
+        sudo systemctl enable simonsaysseeq-boot-selector.service
+        echo "Boot selector installed and enabled"
+        echo "  - Hold any button during startup for Rust app mode"
+        echo "  - No input = use saved preference (default: menu mode)"
+        rm -f /tmp/boot-selector.service
+    fi
+fi
+
+# Install boot toggle script if available
+if [ -f "boot_toggle.sh" ]; then
+    echo "Installing boot toggle script..."
+    chmod +x ./boot_toggle.sh
+    echo "Use ./boot_toggle.sh to manually control boot mode"
+fi
+
 # Create systemd service for auto-start (optional)
 if [ -d "/etc/systemd/system" ]; then
     echo "Creating systemd service..."
@@ -258,8 +305,18 @@ echo ""
 echo "To run SimonSaysSeeq Rust:"
 echo "  1. From Norns menu: SELECT > SimonSaysSeeqRust"
 echo "  2. Or directly: ./simon_says_seeq"
+echo "  3. Boot selector: Hold any button during startup for direct Rust mode"
 echo ""
-echo "Logs can be viewed with: journalctl -u simonsaysseeq-rust -f"
+echo "Boot selector control:"
+echo "  ./boot_toggle.sh                 # Interactive boot mode control"
+echo "  ./boot_toggle.sh rust            # Set to Rust app mode"
+echo "  ./boot_toggle.sh menu            # Set to normal menu mode"
+echo "  ./fixed_boot_selector.sh         # Manual test"
+echo "  sudo systemctl status simonsaysseeq-boot-selector"
+echo ""
+echo "Logs can be viewed with:"
+echo "  journalctl -u simonsaysseeq-rust -f"
+echo "  cat /tmp/simonsaysseeq_boot_selector.log"
 EOF
 
 chmod +x "$DEPLOY_DIR/install.sh"
@@ -294,6 +351,17 @@ This is the Rust implementation of SimonSaysSeeq running on Norns hardware.
 - CO2 environmental integration
 - Multi-lane patterns
 - Advanced editing with hold operations
+- Boot selector for direct startup
+
+## Boot Selector
+
+The boot selector allows you to choose startup mode:
+- **Hold any button during boot**: Start directly in Rust app mode
+- **No input**: Use saved preference (default: normal Norns menu)
+
+Control the boot selector:
+- `./fixed_boot_selector.sh` - Test manually
+- Boot selector logs: `/tmp/simonsaysseeq_boot_selector.log`
 
 ## Logs
 

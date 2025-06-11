@@ -16,7 +16,7 @@ midir = { version = "0.9", optional = true }
 
 # Audio/timing (optional for development)
 cpal = { version = "0.15", optional = true }
-alsa = { version = "0.9", optional = true }
+# alsa = { version = "0.9", optional = true }  # Temporarily disabled for cross-compilation
 
 # Input handling (encoders, buttons) (optional for development)
 evdev = { version = "0.12", optional = true }
@@ -63,7 +63,7 @@ tempfile = "3.8"
 [features]
 default = ["hardware", "midi"]
 hardware = ["evdev", "framebuffer", "hidapi"]
-hardware-audio = ["cpal", "alsa"]
+hardware-audio = ["cpal"]
 midi = ["midir"]
 simulation = []
 norns = ["hardware", "hardware-audio", "midi"]
