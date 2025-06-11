@@ -1,10 +1,9 @@
 # SimonSaysSeeq Startup Control System
 
-This document explains how to control the startup behavior of your Norns device with several options:
+This document explains how to control the startup behavior of your Norns device with these options:
 1. **Normal Mode**: Boot to standard Norns menu, then manually select `SimonSaysSeeqNorns.lua`
 2. **Direct Mode**: Boot directly into the `SimonSaysSeeqRust` application, bypassing the menu
-3. **Boot-Time Interactive Menu**: Show a visual selection screen during startup
-4. **Boot-Time Hardware Selection**: Use Norns buttons during boot to choose mode
+3. **Boot-Time Hardware Selection**: Use Norns buttons during boot to choose mode
 
 ## Quick Start
 
@@ -38,10 +37,7 @@ cd /home/we/dust/code/SimonSaysSeeqRust
 # View logs
 ./toggle_startup_mode.sh logs
 
-# Enable boot-time menu
-./toggle_startup_mode.sh boot-menu
-
-# Enable hardware selection
+# Enable hardware selection during boot
 ./toggle_startup_mode.sh hardware-select
 ```
 
@@ -63,15 +59,6 @@ cd /home/we/dust/code/SimonSaysSeeqRust
   - Dedicated SimonSaysSeeq installations
   - Minimal boot time requirements
 
-### Boot-Time Interactive Menu
-- **What happens**: Shows a visual menu on Norns screen during boot
-- **Controls**: Use encoders to select, K3 to confirm
-- **Timeout**: Auto-selects saved preference after 10 seconds
-- **Best for**:
-  - Flexible setups where mode changes frequently
-  - Situations where you want visual confirmation
-  - Users who prefer GUI selection
-
 ### Boot-Time Hardware Selection
 - **What happens**: Hold K2 or K3 during boot to choose mode
 - **Controls**: K2 = Rust app, K3 = Normal menu
@@ -80,6 +67,7 @@ cd /home/we/dust/code/SimonSaysSeeqRust
   - Quick selection without looking at screen
   - Performance situations with muscle memory
   - Minimal visual distraction during boot
+  - Maximum reliability with minimal dependencies
 
 ## Technical Implementation
 
@@ -95,24 +83,17 @@ The direct mode uses a systemd service (`simonsaysseeq-rust.service`) that:
 - Contains either `menu` or `rust`
 - Created automatically by the toggle script
 
-### Boot-Time Menu Integration
-To enable boot-time selection, you need to integrate one of the boot selector scripts into your Norns startup process:
+### Boot-Time Hardware Selection Integration
+To enable boot-time hardware selection:
 
-#### Option A: Interactive Visual Menu
 ```bash
-# Copy the boot selector to your Norns script directory
-cp boot_time_selector.lua /home/we/dust/code/SimonSaysSeeqBootMenu.lua
+# Install the hardware boot selector
+sudo ./install_boot_selector.sh
 
-# Set it to run on startup (requires Norns integration)
-# This would typically be added to a custom startup script
-```
-
-#### Option B: Hardware Button Selection
-```bash
-# Copy the hardware selector
-cp hardware_boot_selector.lua /home/we/dust/code/SimonSaysSeeqHardwareSelect.lua
-
-# Integrate into boot process (see Advanced Integration section)
+# This automatically:
+# - Sets up GPIO permissions
+# - Installs systemd service
+# - Configures boot-time activation
 ```
 
 ### Service Management
@@ -174,61 +155,23 @@ sudo reboot
 
 ### System Files
 - Service definition: `/etc/systemd/system/simonsaysseeq-rust.service`
-- Boot selector (basic): `/home/we/dust/code/SimonSaysSeeqRust/boot_selector.lua`
-- Interactive menu: `/home/we/dust/code/SimonSaysSeeqRust/boot_time_selector.lua`
-- Hardware selector: `/home/we/dust/code/SimonSaysSeeqRust/hardware_boot_selector.lua`
+- Boot selector service: `/etc/systemd/system/simonsaysseeq-boot-selector.service`
+- Hardware selector: `/home/we/dust/code/SimonSaysSeeqRust/hardware_boot_selector.sh`
 
 ## Advanced Usage
 
-### Boot-Time Menu Integration
+### Hardware Boot Selector Integration
 
-#### Method 1: Replace Norns Startup Script
+The hardware boot selector uses a systemd service that runs during early boot:
+
 ```bash
-# Backup original startup
-sudo cp /home/we/norns/lua/core/startup.lua /home/we/norns/lua/core/startup.lua.backup
+# The service is automatically installed with:
+sudo ./install_boot_selector.sh
 
-# Modify startup.lua to include boot selector
-# Add this line before other script loading:
-# dofile("/home/we/dust/code/SimonSaysSeeqRust/boot_time_selector.lua")
-```
-
-#### Method 2: Custom Init Script
-```bash
-# Create a custom init script that runs the boot selector
-cat > /home/we/dust/code/SimonSaysSeeqInit.lua << 'EOF'
--- SimonSaysSeeq Custom Init
-local function run_boot_selector()
-    dofile("/home/we/dust/code/SimonSaysSeeqRust/boot_time_selector.lua")
-end
-
--- Run selector on startup
-run_boot_selector()
-EOF
-
-# Then manually select this script as your startup script
-```
-
-#### Method 3: systemd Integration
-```bash
-# Create a systemd service that runs before Norns
-sudo tee /etc/systemd/system/simonsaysseeq-boot-selector.service << 'EOF'
-[Unit]
-Description=SimonSaysSeeq Boot Selector
-Before=norns.service
-After=multi-user.target
-
-[Service]
-Type=oneshot
-User=we
-ExecStart=/usr/bin/lua /home/we/dust/code/SimonSaysSeeqRust/hardware_boot_selector.lua
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Enable the service
-sudo systemctl enable simonsaysseeq-boot-selector.service
+# Manual service management:
+sudo systemctl enable simonsaysseeq-boot-selector.service   # Enable boot selection
+sudo systemctl disable simonsaysseeq-boot-selector.service  # Disable boot selection
+sudo systemctl status simonsaysseeq-boot-selector.service   # Check status
 ```
 
 ### Automatic Mode Detection
@@ -273,24 +216,18 @@ sudo reboot                      # Test auto-start
 # ... test direct boot ...
 ```
 
-## Boot-Time Menu Controls
-
-### Interactive Menu Controls
-- **Encoder 2/3**: Navigate between options
-- **Key 3**: Select highlighted option
-- **Key 1**: Cancel (defaults to normal menu)
-- **Timeout**: Auto-selects after 10 seconds
+## Boot-Time Hardware Controls
 
 ### Hardware Selection Controls
 - **Hold K2 during boot**: Select Rust app mode
 - **Hold K3 during boot**: Select normal menu mode
 - **No buttons**: Uses saved preference after 5 seconds
-- **Both buttons**: Defaults to menu mode
 
-### Menu Options Explained
-1. **Normal Norns Menu**: Standard Norns behavior
-2. **Direct Rust App**: Immediate launch of SimonSaysSeeqRust
-3. **Use Saved Setting**: Continue with previously configured mode
+### How It Works
+1. **Boot Detection**: System monitors GPIO pins during 5-second window
+2. **Button Response**: Immediate selection when button held
+3. **Fallback**: Uses previously saved preference if no input
+4. **Configuration**: Choice is saved for future boots
 
 ## Safety Features
 
@@ -298,8 +235,8 @@ sudo reboot                      # Test auto-start
 - **Override**: Emergency override possible via SSH
 - **Logging**: All operations are logged for debugging
 - **Validation**: Config files are validated before use
-- **Skip mechanism**: Boot menus can be bypassed if needed
-- **Button debouncing**: Hardware selection includes proper input handling
+- **Skip mechanism**: Boot selector can be bypassed if needed
+- **Button debouncing**: Hardware selection includes proper GPIO input handling
 
 ## Support
 
@@ -309,29 +246,30 @@ If you encounter issues:
 3. Try manual control: `./toggle_startup_mode.sh menu`
 4. Reboot and test: `sudo reboot`
 
-### Boot Menu Troubleshooting
-
-#### Menu Not Appearing
-1. Check if boot selector is properly integrated
-2. Verify file permissions: `chmod +x boot_time_selector.lua`
-3. Check for syntax errors: `lua -c boot_time_selector.lua`
-4. Look for boot logs: `/tmp/simonsaysseeq_boot.log`
+### Hardware Boot Selector Troubleshooting
 
 #### Hardware Selection Not Working
-1. Test button functionality with other Norns scripts
-2. Check timing - buttons must be held during boot, not just pressed
-3. Verify hardware_boot_selector.lua is executable
-4. Check for conflicts with other boot scripts
+1. Check service status: `systemctl status simonsaysseeq-boot-selector`
+2. Verify GPIO permissions: `groups we` (should include 'gpio')
+3. Test button functionality: manually read GPIO values
+4. Check timing - buttons must be held during boot, not just pressed
+5. Verify hardware_boot_selector.sh is executable
 
-#### Menu Appears But Selection Doesn't Work
+#### Service Won't Start
+1. Check script syntax: `bash -n hardware_boot_selector.sh`
+2. Verify dependencies: `which bc` (calculator should be available)
+3. Test GPIO access: `ls -la /sys/class/gpio/`
+4. Check logs: `journalctl -u simonsaysseeq-boot-selector -f`
+
+#### Selection Doesn't Work
 1. Verify systemd service is properly installed
 2. Check file permissions on Rust binary
 3. Test selection manually: `./toggle_startup_mode.sh rust`
-4. Check logs during boot process
+4. Check GPIO pin mappings in script match your hardware
 
 For persistent issues, collect the following information:
 - Output of `./toggle_startup_mode.sh status`
 - Contents of `journalctl -u simonsaysseeq-rust --since "1 hour ago"`
-- Contents of `/tmp/simonsaysseeq_boot.log`
-- Boot selector logs from `/tmp/`
-- Description of which boot method you're trying to use
+- Contents of `journalctl -u simonsaysseeq-boot-selector --since "1 hour ago"`
+- Contents of `/tmp/simonsaysseeq_boot_selector.log`
+- Your Norns model and any hardware modifications

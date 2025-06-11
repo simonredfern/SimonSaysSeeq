@@ -1,0 +1,48 @@
+[Unit]
+Description=SimonSaysSeeq Boot Selector
+Documentation=https://github.com/your-repo/SimonSaysSeeq
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=multi-user.target norns.service
+Conflicts=shutdown.target
+RequiresMountsFor=/home/we
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Group=root
+ExecStart=/home/we/dust/code/SimonSaysSeeqRust/hardware_boot_selector.sh
+ExecStartPre=/bin/mkdir -p /home/we/.config/simonsaysseeq
+ExecStartPre=/bin/chown -R we:we /home/we/.config/simonsaysseeq
+TimeoutStartSec=15
+TimeoutStopSec=5
+StandardOutput=journal
+StandardError=journal
+Environment=HOME=/home/we
+Environment=USER=we
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/we/.config/simonsaysseeq /tmp /var/tmp /sys/class/gpio
+PrivateTmp=false
+ProtectKernelTunables=false
+ProtectKernelModules=false
+ProtectControlGroups=false
+RestrictRealtime=false
+RestrictSUIDSGID=false
+MemoryDenyWriteExecute=false
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# GPIO and hardware access
+SupplementaryGroups=gpio dialout input
+
+# Restart policy
+Restart=no
+RestartSec=0
+
+[Install]
+WantedBy=multi-user.target
