@@ -5,6 +5,8 @@
 
 set -e  # Exit on any error
 
+echo "hello from deploy_to_norns.sh"
+
 # Configuration
 NORNS_IP="${NORNS_IP:-norns.local}"
 NORNS_USER="${NORNS_USER:-we}"
@@ -133,9 +135,10 @@ mkdir -p "$DEPLOY_DIR"
 cp "$BINARY_PATH" "$DEPLOY_DIR/"
 
 # Copy boot selector files
-cp "fixed_boot_selector.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector not found, skipping"
+cp "hardware_boot_selector.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Hardware boot selector not found, skipping"
+cp "install_boot_selector.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector installer not found, skipping"
+cp "toggle_startup_mode.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Startup mode toggle not found, skipping"
 cp "simonsaysseeq-boot-selector.service" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector service not found, skipping"
-cp "boot_toggle.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot toggle script not found, skipping"
 
 # Create Norns script wrapper
 cat > "$DEPLOY_DIR/SimonSaysSeeqRust.lua" << 'EOF'
@@ -146,7 +149,7 @@ local rust_process = nil
 
 function init()
     print("SimonSaysSeeq Rust - Starting...")
-    
+
     -- Set up screen
     screen.clear()
     screen.move(64, 20)
@@ -154,29 +157,29 @@ function init()
     screen.move(64, 35)
     screen.text_center("Starting...")
     screen.update()
-    
+
     -- Start the Rust process
     start_rust_process()
-    
+
     -- Set up cleanup
     cleanup.register(stop_rust_process)
 end
 
 function start_rust_process()
     local rust_binary = _path.code .. "SimonSaysSeeqRust/simon_says_seeq"
-    
+
     -- Check if binary exists
     local file = io.open(rust_binary, "r")
     if file then
         file:close()
         print("Starting Rust process: " .. rust_binary)
-        
+
         -- Make sure binary is executable
         os.execute("chmod +x " .. rust_binary)
-        
+
         -- Start the process in background
         rust_process = os.execute(rust_binary .. " &")
-        
+
         screen.clear()
         screen.move(64, 20)
         screen.text_center("SimonSaysSeeq Rust")
@@ -248,28 +251,35 @@ echo "Installing SimonSaysSeeq Rust on Norns..."
 chmod +x ./simon_says_seeq
 
 # Install boot selector if available
-if [ -f "fixed_boot_selector.sh" ]; then
-    echo "Installing boot selector..."
-    chmod +x ./fixed_boot_selector.sh
+if [ -f "hardware_boot_selector.sh" ] && [ -f "install_boot_selector.sh" ]; then
+    echo "Installing hardware boot selector..."
+    chmod +x ./hardware_boot_selector.sh
+    chmod +x ./install_boot_selector.sh
     
+    # Update service file with correct path
     if [ -f "simonsaysseeq-boot-selector.service" ]; then
-        # Update service file with correct path
-        sed "s|ExecStart=.*|ExecStart=$PWD/fixed_boot_selector.sh|" simonsaysseeq-boot-selector.service > /tmp/boot-selector.service
+        sed "s|ExecStart=.*|ExecStart=$PWD/hardware_boot_selector.sh|" simonsaysseeq-boot-selector.service > /tmp/boot-selector.service
         sudo cp /tmp/boot-selector.service /etc/systemd/system/simonsaysseeq-boot-selector.service
-        sudo systemctl daemon-reload
-        sudo systemctl enable simonsaysseeq-boot-selector.service
-        echo "Boot selector installed and enabled"
-        echo "  - Hold any button during startup for Rust app mode"
-        echo "  - No input = use saved preference (default: menu mode)"
         rm -f /tmp/boot-selector.service
     fi
+    
+    # Run the full boot selector installer
+    sudo ./install_boot_selector.sh
+    echo "Hardware boot selector installed and configured"
+    echo "  - Hold K2 during startup for direct Rust app mode"
+    echo "  - Hold K3 during startup for normal Norns menu"
+    echo "  - No input = use saved preference (default: menu mode)"
+elif [ -f "hardware_boot_selector.sh" ]; then
+    echo "Hardware boot selector found but installer missing"
+    chmod +x ./hardware_boot_selector.sh
+    echo "Manual installation may be required"
 fi
 
-# Install boot toggle script if available
-if [ -f "boot_toggle.sh" ]; then
-    echo "Installing boot toggle script..."
-    chmod +x ./boot_toggle.sh
-    echo "Use ./boot_toggle.sh to manually control boot mode"
+# Install startup mode toggle script if available
+if [ -f "toggle_startup_mode.sh" ]; then
+    echo "Installing startup mode toggle script..."
+    chmod +x ./toggle_startup_mode.sh
+    echo "Use ./toggle_startup_mode.sh to manually control boot mode"
 fi
 
 # Create systemd service for auto-start (optional)
@@ -308,10 +318,10 @@ echo "  2. Or directly: ./simon_says_seeq"
 echo "  3. Boot selector: Hold any button during startup for direct Rust mode"
 echo ""
 echo "Boot selector control:"
-echo "  ./boot_toggle.sh                 # Interactive boot mode control"
-echo "  ./boot_toggle.sh rust            # Set to Rust app mode"
-echo "  ./boot_toggle.sh menu            # Set to normal menu mode"
-echo "  ./fixed_boot_selector.sh         # Manual test"
+echo "  ./toggle_startup_mode.sh         # Interactive boot mode control"
+echo "  ./toggle_startup_mode.sh rust    # Set to Rust app mode"
+echo "  ./toggle_startup_mode.sh menu    # Set to normal menu mode"
+echo "  sudo ./hardware_boot_selector.sh # Manual test"
 echo "  sudo systemctl status simonsaysseeq-boot-selector"
 echo ""
 echo "Logs can be viewed with:"
@@ -356,11 +366,13 @@ This is the Rust implementation of SimonSaysSeeq running on Norns hardware.
 ## Boot Selector
 
 The boot selector allows you to choose startup mode:
-- **Hold any button during boot**: Start directly in Rust app mode
+- **Hold K2 during boot**: Start directly in Rust app mode
+- **Hold K3 during boot**: Start in normal Norns menu mode  
 - **No input**: Use saved preference (default: normal Norns menu)
 
 Control the boot selector:
-- `./fixed_boot_selector.sh` - Test manually
+- `./toggle_startup_mode.sh` - Interactive boot mode control
+- `sudo ./hardware_boot_selector.sh` - Test manually
 - Boot selector logs: `/tmp/simonsaysseeq_boot_selector.log`
 
 ## Logs
@@ -405,9 +417,16 @@ echo "  1. On Norns: SELECT > SimonSaysSeeqRust"
 echo "  2. Use Key 1 to restart, Key 3 to stop/start"
 echo "  3. Grid and encoders should work immediately"
 echo ""
+echo "Hardware Boot Selector (NEW!):"
+echo "  - Hold K2 during startup: Direct Rust app boot"
+echo "  - Hold K3 during startup: Normal Norns menu"
+echo "  - No input: Use saved preference"
+echo "  - Control: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./toggle_startup_mode.sh"
+echo ""
 echo "Monitoring:"
 echo "  SSH to Norns: ssh $NORNS_USER@$NORNS_IP"
 echo "  View logs: journalctl -u simonsaysseeq-rust -f"
+echo "  Boot selector logs: tail -f /tmp/simonsaysseeq_boot_selector.log"
 echo "  Manual start: cd $NORNS_TARGET_DIR && ./simon_says_seeq"
 echo ""
 echo "If you encounter issues, check the README.md on Norns for troubleshooting."
