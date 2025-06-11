@@ -7,7 +7,7 @@
 set -e
 
 # Version for deployment tracking
-BOOT_SELECTOR_VERSION="v2.1-simplified-$(date +%Y%m%d-%H%M)"
+BOOT_SELECTOR_VERSION="v2.2-syntax-fix-$(date +%Y%m%d-%H%M)"
 
 # Configuration
 CONFIG_FILE="/home/we/.config/simonsaysseeq/startup_mode"
