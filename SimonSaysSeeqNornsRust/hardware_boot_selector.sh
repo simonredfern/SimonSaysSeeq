@@ -4,10 +4,10 @@
 # Detects Norns hardware buttons during boot to determine startup mode
 # K2 = Direct Rust App, K3 = Normal Menu, No input = Use saved setting
 
-set -e
+# Removed 'set -e' to allow handling of non-zero return codes from detection functions
 
 # Version for deployment tracking
-BOOT_SELECTOR_VERSION="v2.2-syntax-fix-$(date +%Y%m%d-%H%M)"
+BOOT_SELECTOR_VERSION="v2.3-fixed-exit-handling-$(date +%Y%m%d-%H%M)"
 
 # Configuration
 CONFIG_FILE="/home/we/.config/simonsaysseeq/startup_mode"
