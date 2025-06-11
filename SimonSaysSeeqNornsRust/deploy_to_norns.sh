@@ -140,107 +140,8 @@ cp "install_boot_selector.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector 
 cp "toggle_startup_mode.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Startup mode toggle not found, skipping"
 cp "simonsaysseeq-boot-selector.service" "$DEPLOY_DIR/" 2>/dev/null || echo "Boot selector service not found, skipping"
 
-# Create Norns script wrapper
-cat > "$DEPLOY_DIR/SimonSaysSeeqRust.lua" << 'EOF'
--- SimonSaysSeeq Rust Bridge
--- Norns script wrapper for the Rust implementation
-
-local rust_process = nil
-
-function init()
-    print("SimonSaysSeeq Rust - Starting...")
-
-    -- Set up screen
-    screen.clear()
-    screen.move(64, 20)
-    screen.text_center("SimonSaysSeeq Rust")
-    screen.move(64, 35)
-    screen.text_center("Starting...")
-    screen.update()
-
-    -- Start the Rust process
-    start_rust_process()
-
-    -- Set up cleanup
-    cleanup.register(stop_rust_process)
-end
-
-function start_rust_process()
-    local rust_binary = _path.code .. "SimonSaysSeeqRust/simon_says_seeq"
-
-    -- Check if binary exists
-    local file = io.open(rust_binary, "r")
-    if file then
-        file:close()
-        print("Starting Rust process: " .. rust_binary)
-
-        -- Make sure binary is executable
-        os.execute("chmod +x " .. rust_binary)
-
-        -- Start the process in background
-        rust_process = os.execute(rust_binary .. " &")
-
-        screen.clear()
-        screen.move(64, 20)
-        screen.text_center("SimonSaysSeeq Rust")
-        screen.move(64, 35)
-        screen.text_center("Running")
-        screen.update()
-    else
-        print("ERROR: Rust binary not found at " .. rust_binary)
-        screen.clear()
-        screen.move(64, 20)
-        screen.text_center("ERROR")
-        screen.move(64, 35)
-        screen.text_center("Binary not found")
-        screen.update()
-    end
-end
-
-function stop_rust_process()
-    if rust_process then
-        print("Stopping Rust process...")
-        -- Kill any running simon_says_seeq processes
-        os.execute("pkill -f simon_says_seeq")
-        rust_process = nil
-    end
-end
-
-function cleanup()
-    stop_rust_process()
-end
-
-function key(n, z)
-    if n == 1 and z == 1 then
-        -- Key 1: Restart
-        print("Restarting Rust process...")
-        stop_rust_process()
-        clock.sleep(0.5)
-        start_rust_process()
-    elseif n == 3 and z == 1 then
-        -- Key 3: Stop/Start toggle
-        if rust_process then
-            stop_rust_process()
-            screen.clear()
-            screen.move(64, 20)
-            screen.text_center("SimonSaysSeeq Rust")
-            screen.move(64, 35)
-            screen.text_center("Stopped")
-            screen.update()
-        else
-            start_rust_process()
-        end
-    end
-end
-
-function enc(n, d)
-    -- Encoders are handled by the Rust process
-end
-
-function redraw()
-    -- Screen is handled by the Rust process
-end
-EOF
+# Copy native compilation script
+cp "compile_native_on_norns.sh" "$DEPLOY_DIR/" 2>/dev/null || echo "Native compilation script not found, skipping"
 
 # Create install script for Norns
 cat > "$DEPLOY_DIR/install.sh" << 'EOF'
@@ -313,9 +214,9 @@ fi
 echo "Installation complete!"
 echo ""
 echo "To run SimonSaysSeeq Rust:"
-echo "  1. From Norns menu: SELECT > SimonSaysSeeqRust"
-echo "  2. Or directly: ./simon_says_seeq"
-echo "  3. Boot selector: Hold any button during startup for direct Rust mode"
+echo "  1. Direct systemd service: sudo systemctl start simonsaysseeq-rust"
+echo "  2. Or manually: ./simon_says_seeq"
+echo "  3. Boot selector: Use norns_control.sh to switch modes"
 echo ""
 echo "Boot selector control:"
 echo "  ./toggle_startup_mode.sh         # Interactive boot mode control"
@@ -413,9 +314,9 @@ echo ""
 echo "🎵 SimonSaysSeeq Rust is now installed on your Norns!"
 echo ""
 echo "Next steps:"
-echo "  1. On Norns: SELECT > SimonSaysSeeqRust"
-echo "  2. Use Key 1 to restart, Key 3 to stop/start"
-echo "  3. Grid and encoders should work immediately"
+echo "  1. Boot selector controls the mode automatically"
+echo "  2. Use ./norns_control.sh to switch between Rust and menu modes"
+echo "  3. Hardware features available after native compilation"
 echo ""
 echo "Hardware Boot Selector (NEW!):"
 echo "  - Hold K2 during startup: Direct Rust app boot"
@@ -423,11 +324,17 @@ echo "  - Hold K3 during startup: Normal Norns menu"
 echo "  - No input: Use saved preference"
 echo "  - Control: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./toggle_startup_mode.sh"
 echo ""
+echo "Native Hardware Compilation:"
+echo "  Current build: Simulation mode (cross-compiled)"
+echo "  For real MIDI/hardware: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
+echo "  This will compile with full hardware features directly on Norns"
+echo ""
 echo "Monitoring:"
 echo "  SSH to Norns: ssh $NORNS_USER@$NORNS_IP"
 echo "  View logs: journalctl -u simonsaysseeq-rust -f"
 echo "  Boot selector logs: tail -f /tmp/simonsaysseeq_boot_selector.log"
 echo "  Manual start: cd $NORNS_TARGET_DIR && ./simon_says_seeq"
+echo "  Switch modes: ./norns_control.sh rust-reboot or ./norns_control.sh menu-reboot"
 echo ""
 echo "If you encounter issues, check the README.md on Norns for troubleshooting."
 
@@ -436,7 +343,7 @@ read -p "Would you like to connect to Norns and check the status? (y/N): " -n 1 
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_status "Connecting to Norns..."
-    ssh -t "$NORNS_USER@$NORNS_IP" "cd $NORNS_TARGET_DIR && echo 'Files installed:' && ls -la && echo '' && echo 'Testing binary:' && ./simon_says_seeq --help 2>/dev/null || echo 'Binary ready (use SELECT > SimonSaysSeeqRust to run)'"
+    ssh -t "$NORNS_USER@$NORNS_IP" "cd $NORNS_TARGET_DIR && echo 'Files installed:' && ls -la && echo '' && echo 'Testing binary:' && ./simon_says_seeq --help 2>/dev/null || echo 'Binary ready (use boot selector to run)'"
 fi
 
 print_success "Deployment script completed! 🚀"
