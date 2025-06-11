@@ -63,20 +63,28 @@ check_input_device() {
 
 # Parse input event data
 parse_input_event() {
-    local hex_data="$1"
+    local hex_line="$1"
     
-    # Input event structure: timestamp(8) + type(2) + code(2) + value(4)
-    # We need bytes 8-9 (type), 10-11 (code), 12-15 (value)
-    # Extract type (should be 01 for EV_KEY)
+    # Extract just the hex bytes from hexdump output (remove address and ASCII)
+    local hex_data=$(echo "$hex_line" | sed 's/^[0-9a-f]*\s*//' | sed 's/\s*|.*$//' | tr -d ' ')
+    
+    # Skip lines that don't have enough data (need at least 32 hex chars = 16 bytes)
+    if [ ${#hex_data} -lt 32 ]; then
+        echo ""
+        return
+    fi
+    
+    # Input event structure in hex: timestamp(16) + type(4) + code(4) + value(8)
+    # Extract type (bytes 16-17, should be "01" for EV_KEY)
     local type=$(echo "$hex_data" | cut -c17-18)
     
-    # Extract code (02 for K2, 03 for K3)
+    # Extract code (bytes 20-21, "02" for K2, "03" for K3)  
     local code=$(echo "$hex_data" | cut -c21-22)
     
-    # Extract value (01 for press, 00 for release)
+    # Extract value (bytes 24-25, "01" for press, "00" for release)
     local value=$(echo "$hex_data" | cut -c25-26)
     
-    # Return button press events only (type=01, value=01)
+    # Return button code only for key press events (type=01, value=01)
     if [ "$type" = "01" ] && [ "$value" = "01" ]; then
         echo "$code"
     else
@@ -99,16 +107,8 @@ monitor_input_device() {
     # Start background monitoring
     (
         timeout $timeout hexdump -C "$INPUT_DEVICE" 2>/dev/null | while read line; do
-            # Extract hex data from hexdump output
-            local hex_data=$(echo "$line" | cut -d'|' -f1 | tr -d ' ')
-            
-            # Skip lines that don't have enough data
-            if [ ${#hex_data} -lt 32 ]; then
-                continue
-            fi
-            
-            # Parse the input event
-            local button_code=$(parse_input_event "$hex_data")
+            # Parse the input event from the hexdump line
+            local button_code=$(parse_input_event "$line")
             
             if [ -n "$button_code" ]; then
                 case "$button_code" in
