@@ -238,13 +238,23 @@ setup_rust_mode() {
     fi
     
     # Stop conflicting Norns services to allow Rust app exclusive control
-    log_message "Stopping conflicting Norns services..."
+    log_message "Stopping all Norns services..."
     run_command "systemctl stop norns-matron" "Stop norns-matron service" || true
     run_command "systemctl stop norns-crone" "Stop norns-crone service" || true
     run_command "systemctl stop norns-maiden" "Stop norns-maiden service" || true
+    run_command "systemctl stop norns-sclang" "Stop norns-sclang service" || true
+    run_command "systemctl stop norns" "Stop main norns service" || true
     run_command "systemctl disable norns-matron" "Disable norns-matron service" || true
     run_command "systemctl disable norns-crone" "Disable norns-crone service" || true
     run_command "systemctl disable norns-maiden" "Disable norns-maiden service" || true
+    run_command "systemctl disable norns-sclang" "Disable norns-sclang service" || true
+    run_command "systemctl disable norns" "Disable main norns service" || true
+    
+    # Kill any remaining ws-wrapper and sclang processes
+    log_message "Killing remaining Norns processes..."
+    run_command "pkill -f ws-wrapper" "Kill ws-wrapper processes" || true
+    run_command "pkill -f sclang" "Kill sclang processes" || true
+    run_command "pkill -f watcher" "Kill watcher processes" || true
     
     # Enable service for auto-start
     if run_command "systemctl enable $SERVICE_NAME" "Enable systemd service"; then
@@ -278,9 +288,13 @@ setup_menu_mode() {
     run_command "systemctl enable norns-matron" "Enable norns-matron service" || true
     run_command "systemctl enable norns-crone" "Enable norns-crone service" || true
     run_command "systemctl enable norns-maiden" "Enable norns-maiden service" || true
+    run_command "systemctl enable norns-sclang" "Enable norns-sclang service" || true
+    run_command "systemctl enable norns" "Enable main norns service" || true
     run_command "systemctl start norns-matron" "Start norns-matron service" || true
     run_command "systemctl start norns-crone" "Start norns-crone service" || true
     run_command "systemctl start norns-maiden" "Start norns-maiden service" || true
+    run_command "systemctl start norns-sclang" "Start norns-sclang service" || true
+    run_command "systemctl start norns" "Start main norns service" || true
     
     write_config "menu"
     log_message "✓ Normal menu mode configured successfully"
