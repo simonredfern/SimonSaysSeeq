@@ -34,7 +34,16 @@ During Norns startup (within 5 seconds):
 - `install_boot_selector.sh` - One-command installer
 - `toggle_startup_mode.sh` - Manual control via SSH
 
-## Manual Control
+## Remote Control (From Your Computer)
+
+```bash
+# Quick commands from your local machine
+./norns_control.sh rust-reboot   # Switch to Rust app and reboot
+./norns_control.sh menu-reboot   # Switch to normal menu and reboot
+./norns_control.sh status        # Check current status
+```
+
+## Manual Control (On Norns via SSH)
 
 ```bash
 # Check current status
