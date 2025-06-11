@@ -102,8 +102,8 @@ ar = "arm-linux-gnueabihf-ar"
 target = "armv7-unknown-linux-gnueabihf"
 CARGO_CONFIG
 
-# Build with minimal features that work with cross-compilation
-cross build --release --target=$LOCAL_TARGET --no-default-features
+# Build with hardware features enabled for Norns
+cross build --release --target=$LOCAL_TARGET --features norns
 
 if [ $? -ne 0 ]; then
     print_error "Cross-compilation failed"
