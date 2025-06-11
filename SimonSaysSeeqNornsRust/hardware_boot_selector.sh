@@ -237,6 +237,15 @@ setup_rust_mode() {
         return 1
     fi
     
+    # Stop conflicting Norns services to allow Rust app exclusive control
+    log_message "Stopping conflicting Norns services..."
+    run_command "systemctl stop norns-matron" "Stop norns-matron service" || true
+    run_command "systemctl stop norns-crone" "Stop norns-crone service" || true
+    run_command "systemctl stop norns-maiden" "Stop norns-maiden service" || true
+    run_command "systemctl disable norns-matron" "Disable norns-matron service" || true
+    run_command "systemctl disable norns-crone" "Disable norns-crone service" || true
+    run_command "systemctl disable norns-maiden" "Disable norns-maiden service" || true
+    
     # Enable service for auto-start
     if run_command "systemctl enable $SERVICE_NAME" "Enable systemd service"; then
         write_config "rust"
@@ -258,11 +267,20 @@ setup_rust_mode() {
 setup_menu_mode() {
     log_message "Configuring Normal Menu mode..."
     
-    # Disable and stop service if it exists
+    # Disable and stop Rust service if it exists
     if service_exists; then
         run_command "systemctl disable $SERVICE_NAME" "Disable systemd service" || true
         run_command "systemctl stop $SERVICE_NAME" "Stop systemd service" || true
     fi
+    
+    # Re-enable normal Norns services
+    log_message "Re-enabling normal Norns services..."
+    run_command "systemctl enable norns-matron" "Enable norns-matron service" || true
+    run_command "systemctl enable norns-crone" "Enable norns-crone service" || true
+    run_command "systemctl enable norns-maiden" "Enable norns-maiden service" || true
+    run_command "systemctl start norns-matron" "Start norns-matron service" || true
+    run_command "systemctl start norns-crone" "Start norns-crone service" || true
+    run_command "systemctl start norns-maiden" "Start norns-maiden service" || true
     
     write_config "menu"
     log_message "✓ Normal menu mode configured successfully"
