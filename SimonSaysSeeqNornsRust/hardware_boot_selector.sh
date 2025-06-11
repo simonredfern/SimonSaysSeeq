@@ -14,9 +14,10 @@ CHECK_INTERVAL=0.1
 SERVICE_NAME="simonsaysseeq-rust"
 LOG_FILE="/tmp/simonsaysseeq_boot_selector.log"
 
-# Norns GPIO pin mappings (standard Norns hardware)
-K2_GPIO=27  # Key 2 - Select Rust app
-K3_GPIO=22  # Key 3 - Select Normal menu
+# Norns input device configuration (norns-buttons-encoders overlay)
+INPUT_DEVICE="/dev/input/event0"  # Button input device
+K2_CODE="02"  # Key 2 code - Select Rust app
+K3_CODE="03"  # Key 3 code - Select Normal menu
 
 # Colors for output
 RED='\033[0;31m'
@@ -25,8 +26,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Cleanup flag for GPIO
-GPIO_EXPORTED=""
+# Background monitoring process PID
+MONITOR_PID=""
 
 # Logging function with timestamp
 log_message() {
@@ -36,85 +37,130 @@ log_message() {
     echo "$timestamp - $message" >> "$LOG_FILE" 2>/dev/null || true
 }
 
-# Clean up GPIO exports on exit
-cleanup_gpio() {
-    if [ -n "$GPIO_EXPORTED" ]; then
-        for pin in $GPIO_EXPORTED; do
-            if [ -d "/sys/class/gpio/gpio$pin" ]; then
-                echo $pin > /sys/class/gpio/unexport 2>/dev/null || true
-            fi
-        done
-        GPIO_EXPORTED=""
+# Clean up background processes on exit
+cleanup_processes() {
+    if [ -n "$MONITOR_PID" ]; then
+        kill $MONITOR_PID 2>/dev/null || true
+        wait $MONITOR_PID 2>/dev/null || true
+        MONITOR_PID=""
     fi
 }
 
-# Setup GPIO pin for input
-setup_gpio_pin() {
-    local pin=$1
-    
-    # Check if already exported
-    if [ -d "/sys/class/gpio/gpio$pin" ]; then
-        return 0
-    fi
-    
-    # Export the pin
-    if echo $pin > /sys/class/gpio/export 2>/dev/null; then
-        GPIO_EXPORTED="$GPIO_EXPORTED $pin"
-        sleep 0.1
-        
-        # Set as input with pull-up
-        echo "in" > /sys/class/gpio/gpio$pin/direction 2>/dev/null || return 1
-        
-        # Wait for pin to stabilize
-        sleep 0.1
-        return 0
-    else
+# Check if input device is available
+check_input_device() {
+    if [ ! -c "$INPUT_DEVICE" ]; then
+        log_message "Input device $INPUT_DEVICE not available"
         return 1
     fi
+    
+    if [ ! -r "$INPUT_DEVICE" ]; then
+        log_message "Cannot read from input device $INPUT_DEVICE"
+        return 1
+    fi
+    
+    return 0
 }
 
-# Read GPIO pin state (0 = pressed, 1 = released on Norns)
-read_gpio_pin() {
-    local pin=$1
-    if [ -f "/sys/class/gpio/gpio$pin/value" ]; then
-        cat "/sys/class/gpio/gpio$pin/value" 2>/dev/null || echo "1"
+# Parse input event data
+parse_input_event() {
+    local hex_data="$1"
+    
+    # Input event structure: timestamp(8) + type(2) + code(2) + value(4)
+    # We need bytes 8-9 (type), 10-11 (code), 12-15 (value)
+    # Extract type (should be 01 for EV_KEY)
+    local type=$(echo "$hex_data" | cut -c17-18)
+    
+    # Extract code (02 for K2, 03 for K3)
+    local code=$(echo "$hex_data" | cut -c21-22)
+    
+    # Extract value (01 for press, 00 for release)
+    local value=$(echo "$hex_data" | cut -c25-26)
+    
+    # Return button press events only (type=01, value=01)
+    if [ "$type" = "01" ] && [ "$value" = "01" ]; then
+        echo "$code"
     else
-        echo "1"
+        echo ""
     fi
 }
 
-# Check for button presses using /dev/input devices
-check_input_devices() {
+# Monitor input device for button presses
+monitor_input_device() {
     local timeout=$1
-    local start_time=$(date +%s)
-    local end_time=$((start_time + timeout))
+    local result_file="/tmp/button_result_$$"
     
-    # Find input devices
-    local input_files=$(find /dev/input -name "event*" 2>/dev/null | head -5)
-    
-    if [ -z "$input_files" ]; then
-        log_message "No input devices found in /dev/input"
+    # Check if input device is available
+    if ! check_input_device; then
         return 2
     fi
     
-    log_message "Checking input devices: $input_files"
+    log_message "Monitoring input device $INPUT_DEVICE for button presses..."
     
-    while [ $(date +%s) -lt $end_time ]; do
-        for input_file in $input_files; do
-            if [ -r "$input_file" ]; then
-                # Use hexdump to read raw input events with timeout
-                if timeout 0.1 hexdump -C "$input_file" 2>/dev/null | grep -q "00 01"; then
-                    # Basic key press detection - this is a simplified approach
-                    # In a real implementation, you'd parse the event structure properly
-                    log_message "Key press detected on $input_file"
-                    # For simplicity, assume any key press is K2 (can be enhanced)
-                    return 0
-                fi
+    # Start background monitoring
+    (
+        timeout $timeout hexdump -C "$INPUT_DEVICE" 2>/dev/null | while read line; do
+            # Extract hex data from hexdump output
+            local hex_data=$(echo "$line" | cut -d'|' -f1 | tr -d ' ')
+            
+            # Skip lines that don't have enough data
+            if [ ${#hex_data} -lt 32 ]; then
+                continue
+            fi
+            
+            # Parse the input event
+            local button_code=$(parse_input_event "$hex_data")
+            
+            if [ -n "$button_code" ]; then
+                case "$button_code" in
+                    "$K2_CODE")
+                        echo "0" > "$result_file"
+                        break
+                        ;;
+                    "$K3_CODE")
+                        echo "1" > "$result_file"
+                        break
+                        ;;
+                esac
             fi
         done
+    ) &
+    
+    MONITOR_PID=$!
+    
+    # Wait for result or timeout
+    local start_time=$(date +%s)
+    local end_time=$((start_time + timeout))
+    
+    while [ $(date +%s) -lt $end_time ]; do
+        if [ -f "$result_file" ]; then
+            local result=$(cat "$result_file" 2>/dev/null)
+            rm -f "$result_file" 2>/dev/null || true
+            
+            # Clean up background process
+            kill $MONITOR_PID 2>/dev/null || true
+            wait $MONITOR_PID 2>/dev/null || true
+            MONITOR_PID=""
+            
+            if [ "$result" = "0" ]; then
+                log_message "K2 button press detected"
+                return 0
+            elif [ "$result" = "1" ]; then
+                log_message "K3 button press detected"  
+                return 1
+            fi
+        fi
         sleep $CHECK_INTERVAL
     done
     
+    # Cleanup on timeout
+    if [ -n "$MONITOR_PID" ]; then
+        kill $MONITOR_PID 2>/dev/null || true
+        wait $MONITOR_PID 2>/dev/null || true
+        MONITOR_PID=""
+    fi
+    rm -f "$result_file" 2>/dev/null || true
+    
+    log_message "Input device monitoring timeout - no buttons pressed"
     return 2
 }
 
@@ -154,75 +200,36 @@ check_interrupt_based() {
     return 2
 }
 
-# Check buttons using GPIO polling
-check_buttons_gpio() {
+# Check for button presses using /dev/input devices (fallback method)
+check_input_devices_fallback() {
     local timeout=$1
     local start_time=$(date +%s)
     local end_time=$((start_time + timeout))
     
-    log_message "Setting up GPIO pins for button detection..."
+    # Find other input devices as fallback
+    local input_files=$(find /dev/input -name "event*" 2>/dev/null | grep -v "$INPUT_DEVICE" | head -3)
     
-    # Setup GPIO pins
-    local gpio_k2_ok=false
-    local gpio_k3_ok=false
-    
-    if setup_gpio_pin $K2_GPIO; then
-        gpio_k2_ok=true
-        log_message "K2 GPIO pin $K2_GPIO configured"
-    else
-        log_message "Failed to configure K2 GPIO pin $K2_GPIO"
-    fi
-    
-    if setup_gpio_pin $K3_GPIO; then
-        gpio_k3_ok=true
-        log_message "K3 GPIO pin $K3_GPIO configured"
-    else
-        log_message "Failed to configure K3 GPIO pin $K3_GPIO"
-    fi
-    
-    if [ "$gpio_k2_ok" = false ] && [ "$gpio_k3_ok" = false ]; then
-        log_message "Failed to configure any GPIO pins"
+    if [ -z "$input_files" ]; then
+        log_message "No fallback input devices found"
         return 2
     fi
     
-    log_message "Monitoring buttons for $timeout seconds..."
+    log_message "Checking fallback input devices: $input_files"
     
-    # Monitor buttons
     while [ $(date +%s) -lt $end_time ]; do
-        local k2_pressed=false
-        local k3_pressed=false
-        
-        # Check K2 if available
-        if [ "$gpio_k2_ok" = true ]; then
-            local k2_state=$(read_gpio_pin $K2_GPIO)
-            if [ "$k2_state" = "0" ]; then
-                k2_pressed=true
+        for input_file in $input_files; do
+            if [ -r "$input_file" ]; then
+                # Simple detection - look for any input activity
+                if timeout 0.1 hexdump -C "$input_file" 2>/dev/null | head -1 | grep -q "00000000"; then
+                    log_message "Input activity detected on $input_file"
+                    # Return K2 selection as default for any detected activity
+                    return 0
+                fi
             fi
-        fi
-        
-        # Check K3 if available
-        if [ "$gpio_k3_ok" = true ]; then
-            local k3_state=$(read_gpio_pin $K3_GPIO)
-            if [ "$k3_state" = "0" ]; then
-                k3_pressed=true
-            fi
-        fi
-        
-        # Process button states
-        if [ "$k2_pressed" = true ]; then
-            log_message "K2 button pressed - selecting Rust app mode"
-            return 0
-        fi
-        
-        if [ "$k3_pressed" = true ]; then
-            log_message "K3 button pressed - selecting menu mode"
-            return 1
-        fi
-        
+        done
         sleep $CHECK_INTERVAL
     done
     
-    log_message "GPIO monitoring timeout - no buttons pressed"
     return 2
 }
 
@@ -338,22 +345,22 @@ main() {
     local selection_result=2
     local detection_method="none"
     
-    # Method 1: GPIO polling (most reliable for Norns)
-    log_message "Attempting GPIO button detection..."
-    check_buttons_gpio $TIMEOUT_SECONDS
+    # Method 1: Input device monitoring (primary method for norns-buttons-encoders overlay)
+    log_message "Attempting input device button detection..."
+    monitor_input_device $TIMEOUT_SECONDS
     selection_result=$?
     
     if [ $selection_result -ne 2 ]; then
-        detection_method="GPIO"
+        detection_method="input-device"
     else
-        # Method 2: Input device monitoring
-        log_message "GPIO detection timed out, trying input devices..."
-        check_input_devices $TIMEOUT_SECONDS
-        local input_result=$?
+        # Method 2: Fallback input device monitoring
+        log_message "Primary input device timed out, trying fallback devices..."
+        check_input_devices_fallback $TIMEOUT_SECONDS
+        local fallback_result=$?
         
-        if [ $input_result -ne 2 ]; then
-            selection_result=$input_result
-            detection_method="input-device"
+        if [ $fallback_result -ne 2 ]; then
+            selection_result=$fallback_result
+            detection_method="fallback-input"
         else
             # Method 3: Interrupt monitoring
             log_message "Input device detection timed out, trying interrupt monitoring..."
@@ -412,18 +419,18 @@ main() {
 cleanup_and_exit() {
     local exit_code=${1:-0}
     log_message "Cleaning up and exiting with code $exit_code"
-    cleanup_gpio
+    cleanup_processes
     exit $exit_code
 }
 
 # Set up signal traps
 trap 'cleanup_and_exit 130' INT
 trap 'cleanup_and_exit 143' TERM
-trap 'cleanup_gpio' EXIT
+trap 'cleanup_processes' EXIT
 
 # Validate environment before starting
-if [ ! -d "/sys/class/gpio" ]; then
-    log_message "WARNING: GPIO sysfs interface not available"
+if [ ! -c "$INPUT_DEVICE" ]; then
+    log_message "WARNING: Input device $INPUT_DEVICE not available"
 fi
 
 if ! command -v bc >/dev/null 2>&1; then
@@ -438,5 +445,5 @@ main "$@"
 exit_code=$?
 
 # Clean up and exit
-cleanup_gpio
+cleanup_processes
 exit $exit_code
