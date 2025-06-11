@@ -102,8 +102,8 @@ ar = "arm-linux-gnueabihf-ar"
 target = "armv7-unknown-linux-gnueabihf"
 CARGO_CONFIG
 
-# Build with absolute minimal features - MIDI only, no hardware dependencies
-cross build --release --target=$LOCAL_TARGET --no-default-features --features "midi"
+# Build with simulation mode to avoid cross-compilation issues
+cross build --release --target=$LOCAL_TARGET --no-default-features --features "simulation"
 
 if [ $? -ne 0 ]; then
     print_error "Cross-compilation failed"
