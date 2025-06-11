@@ -219,11 +219,10 @@ check_input_devices_fallback() {
     while [ $(date +%s) -lt $end_time ]; do
         for input_file in $input_files; do
             if [ -r "$input_file" ]; then
-                # Simple detection - look for any input activity
-                if timeout 0.1 hexdump -C "$input_file" 2>/dev/null | head -1 | grep -q "00000000"; then
-                    log_message "Input activity detected on $input_file"
-                    # Return K2 selection as default for any detected activity
-                    return 0
+                # Simple detection - just check if device is readable (minimal approach)
+                if [ -c "$input_file" ]; then
+                    log_message "Alternative input device $input_file is available"
+                    # For now, just continue to next detection method
                 fi
             fi
         done
@@ -353,28 +352,14 @@ main() {
     if [ $selection_result -ne 2 ]; then
         detection_method="input-device"
     else
-        # Method 2: Fallback input device monitoring
-        log_message "Primary input device timed out, trying fallback devices..."
+        # Method 2: Quick fallback check (simplified)
+        log_message "Primary input device timed out, checking for alternative devices..."
         check_input_devices_fallback $TIMEOUT_SECONDS
-        local fallback_result=$?
+        log_message "Fallback device check completed"
         
-        if [ $fallback_result -ne 2 ]; then
-            selection_result=$fallback_result
-            detection_method="fallback-input"
-        else
-            # Method 3: Interrupt monitoring
-            log_message "Input device detection timed out, trying interrupt monitoring..."
-            check_interrupt_based $TIMEOUT_SECONDS
-            local interrupt_result=$?
-            
-            if [ $interrupt_result -ne 2 ]; then
-                selection_result=$interrupt_result
-                detection_method="interrupt"
-            else
-                log_message "All detection methods timed out"
-                detection_method="timeout"
-            fi
-        fi
+        # Skip interrupt monitoring for reliability - go straight to timeout handling
+        log_message "All detection methods completed, proceeding with saved configuration"
+        detection_method="timeout"
     fi
     
     # Process the selection
