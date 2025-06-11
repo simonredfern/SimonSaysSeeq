@@ -67,6 +67,7 @@ hardware-audio = ["cpal"]
 midi = ["midir"]
 simulation = []
 norns = ["hardware", "hardware-audio", "midi"]
+cross-compile = ["midi"]  # Safe features for cross-compilation
 
 [profile.release]
 opt-level = 3
