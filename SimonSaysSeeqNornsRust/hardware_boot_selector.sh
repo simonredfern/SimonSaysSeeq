@@ -6,6 +6,9 @@
 
 set -e
 
+# Version for deployment tracking
+BOOT_SELECTOR_VERSION="v2.1-simplified-$(date +%Y%m%d-%H%M)"
+
 # Configuration
 CONFIG_FILE="/home/we/.config/simonsaysseeq/startup_mode"
 CONFIG_DIR="$(dirname "$CONFIG_FILE")"
@@ -269,7 +272,7 @@ setup_menu_mode() {
 # Main execution function
 main() {
     log_message "SimonSaysSeeq Hardware Boot Selector starting..."
-    log_message "Version: Production Ready Shell Script"
+    log_message "Version: $BOOT_SELECTOR_VERSION"
     
     # Check for skip file (testing/debugging)
     if [ -f "/tmp/simonsaysseeq_skip_boot_selector" ]; then
