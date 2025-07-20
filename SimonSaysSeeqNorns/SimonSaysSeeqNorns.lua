@@ -2564,6 +2564,135 @@ function randomize_mozart(x, y)
     end
 end
 
+-- Euclidean rhythm generator using Bresenham's line algorithm
+-- events: number of beats/events in the pattern
+-- length: total number of steps in the pattern
+-- rotation: rotate the pattern by this many steps (optional, default 0)
+function generate_euclidean_rhythm(events, length, rotation)
+    rotation = rotation or 0
+    
+    -- Sanity checks
+    if events < 0 then events = 0 end
+    if events > length then events = length end
+    if length <= 0 then return {} end
+    
+    local pattern = {}
+    
+    -- Initialize pattern with all zeros
+    for i = 1, length do
+        pattern[i] = 0
+    end
+    
+    -- If no events requested, return empty pattern
+    if events == 0 then
+        return pattern
+    end
+    
+    -- Use Bresenham's line algorithm to distribute events evenly
+    local slope = events / length
+    local bucket = 0
+    
+    for i = 1, length do
+        bucket = bucket + slope
+        if bucket >= 1 then
+            pattern[i] = 1
+            bucket = bucket - 1
+        end
+    end
+    
+    -- Apply rotation if specified
+    if rotation ~= 0 then
+        local rotated_pattern = {}
+        for i = 1, length do
+            local new_index = ((i - 1 + rotation) % length) + 1
+            rotated_pattern[new_index] = pattern[i]
+        end
+        pattern = rotated_pattern
+    end
+    
+    return pattern
+end
+
+-- Apply Euclidean rhythm to a grid row
+-- row: which row to apply the pattern to (1-8)
+-- events: number of beats in the pattern
+-- length: total steps (defaults to 16)
+-- rotation: rotate pattern by this many steps
+function apply_euclidean_to_row(row, events, length, rotation)
+    length = length or 16
+    rotation = rotation or 0
+    
+    -- Generate the Euclidean rhythm
+    local pattern = generate_euclidean_rhythm(events, length, rotation)
+    
+    -- Apply the pattern to the grid row
+    for step = 1, math.min(length, 16) do -- Limit to 16 steps max
+        if pattern[step] then
+            unconditional_set_grid(step, row, pattern[step])
+        end
+    end
+    
+    print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
+end
+
+-- Create common Euclidean rhythm presets
+function euclidean_preset(preset_number, row)
+    if preset_number == 1 then
+        -- Classic 3/8 tresillo pattern
+        apply_euclidean_to_row(row, 3, 8, 0)
+    elseif preset_number == 2 then
+        -- 5/8 pattern
+        apply_euclidean_to_row(row, 5, 8, 0)
+    elseif preset_number == 3 then
+        -- 3/4 waltz-like pattern extended to 16 steps
+        apply_euclidean_to_row(row, 6, 16, 0)
+    elseif preset_number == 4 then
+        -- 5/12 pattern
+        apply_euclidean_to_row(row, 5, 12, 0)
+    elseif preset_number == 5 then
+        -- 7/16 complex pattern
+        apply_euclidean_to_row(row, 7, 16, 0)
+    elseif preset_number == 6 then
+        -- 9/16 dense pattern
+        apply_euclidean_to_row(row, 9, 16, 0)
+    elseif preset_number == 7 then
+        -- 2/5 sparse pattern extended to 15 steps
+        apply_euclidean_to_row(row, 6, 15, 0)
+    elseif preset_number == 8 then
+        -- 4/7 pattern extended to 14 steps
+        apply_euclidean_to_row(row, 8, 14, 0)
+    else
+        -- Default: simple 4/4 pattern
+        apply_euclidean_to_row(row, 4, 16, 0)
+    end
+end
+
+-- Generate Euclidean rhythm for a row using its last_step setting
+-- row: which row to apply the pattern to (1-8)
+-- events: number of beats/events in the pattern
+-- rotation: rotate pattern by this many steps (optional, default 0)
+function apply_euclidean_to_row_with_length(row, events, rotation)
+    rotation = rotation or 0
+    local length = row_settings[row]["last_step"]
+    
+    -- Generate the Euclidean rhythm using the row's length
+    local pattern = generate_euclidean_rhythm(events, length, rotation)
+    
+    -- Clear the row first
+    for step = 1, 16 do
+        unconditional_set_grid(step, row, 0)
+    end
+    
+    -- Apply the pattern to the grid row
+    for step = 1, math.min(length, 16) do -- Limit to 16 steps max
+        if pattern[step] then
+            unconditional_set_grid(step, row, pattern[step])
+        end
+    end
+    
+    print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
+end
+
 -- probably not used (but does get called becuase lots of prints)
 midi_gates_usb_device_port.event = function(data)
     -- print("---------------------- midi_gates_usb_device_port IN ---------------------------------------")
@@ -2791,8 +2920,10 @@ function preset_grid(x, y)
             grid_one_state[14][y] = 0
             grid_one_state[15][y] = 1
             grid_one_state[16][y] = 0
-        else
-            random_dense_grid(x, y)
+        elseif x == 9 then
+            -- Euclidean 3/8 tresillo pattern
+            euclidean_preset(1, y)
+        elseifom_dense_grid(x, y)
         end
     elseif y == 3 then
         print("Setting preset for row: " .. x)
@@ -3392,6 +3523,22 @@ function set_last_step(x, y)
     if x >= row_settings[y]["first_step"] then
         print("Setting last_step of row" .. y .. " to: " .. x)
         row_settings[y]["last_step"] = x
+        
+        -- Auto-generate Euclidean rhythm based on column pressed
+        -- Different columns generate different event densities
+        if x <= 4 then
+            -- Sparse patterns for early columns
+            apply_euclidean_to_row_with_length(y, 1, 0)  -- Very sparse
+        elseif x <= 8 then
+            -- Light patterns
+            apply_euclidean_to_row_with_length(y, math.ceil(x / 4), 0)  -- 2-3 events
+        elseif x <= 12 then
+            -- Medium patterns  
+            apply_euclidean_to_row_with_length(y, math.ceil(x / 3), 0)  -- 3-4 events
+        else
+            -- Dense patterns for later columns
+            apply_euclidean_to_row_with_length(y, math.ceil(x / 2), 0)  -- 6-8 events
+        end
     else
         print("No can do. Last step of row " .. y .. " would be before first step. " .. x)
     end
