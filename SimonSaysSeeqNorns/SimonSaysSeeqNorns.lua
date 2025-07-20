@@ -2752,6 +2752,9 @@ euclidean_events_count = 4  -- Default to 4 events
 
 -- Function to set Euclidean event count for specific row (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
 function set_euclidean_events(events, row)
+    -- Save state for undo before making changes
+    push_grid_undo()
+    
     -- Clamp events between 1 and 16
     events = math.max(1, math.min(16, events))
     euclidean_events_count = events
@@ -2761,6 +2764,9 @@ function set_euclidean_events(events, row)
     local sequence_length = row_settings[row]["last_step"]
     apply_euclidean_to_row_with_length(row, events, 0)
     print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern for row " .. row)
+    
+    -- Mark grids as dirty so they get saved
+    grids_are_dirty = true
     
     -- Visual feedback: briefly flash the event count on row 8
     flash_event_count_on_grid(events)
@@ -3744,11 +3750,17 @@ function set_euclidian_rotation(x, y)
 
     -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
     if x <= row_settings[y]["last_step"] then
+        -- Save state for undo before making changes
+        push_grid_undo()
+        
         print("Setting first_step of row " .. y .. " to: " .. x)
         row_settings[y]["first_step"] = x
         
         -- Use advanced Euclidean generation with current event count
         generate_euclidean_with_rotation(y, x)
+        
+        -- Mark grids as dirty so they get saved
+        grids_are_dirty = true
         
         -- Show comprehensive info for user feedback
         local events = get_euclidean_events()
@@ -3762,6 +3774,9 @@ end
 
 function set_euclidian_length(x, y)
     if x >= row_settings[y]["first_step"] then
+        -- Save state for undo before making changes
+        push_grid_undo()
+        
         print("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
         row_settings[y]["last_step"] = x
         
@@ -3769,6 +3784,9 @@ function set_euclidian_length(x, y)
         local events = get_euclidean_events()
         apply_euclidean_to_row_with_length(y, events, 0)
         print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern for row " .. y)
+        
+        -- Mark grids as dirty so they get saved
+        grids_are_dirty = true
     else
         print("No can do. Euclidian length of row " .. y .. " would be before first step. " .. x)
     end

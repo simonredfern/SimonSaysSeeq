@@ -80,6 +80,7 @@ The sequencer includes a complete Euclidean rhythm generation system using three
 - **Order recommended**: Length → Events → Rotation for best results  
 - **Visual feedback**: Event count setting briefly shows on row 8
 - **Rotation is 0-based**: column 1 = rotation 0, column 4 = rotation 3, etc.
+- **All Euclidean operations are undoable** - use buttons 1 and 2 (UndoGridButton/RedoGridButton) to undo/redo any Euclidean pattern changes
 
 See the source code for more info / up to date information.
 

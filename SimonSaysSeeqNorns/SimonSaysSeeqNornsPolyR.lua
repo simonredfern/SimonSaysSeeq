@@ -1585,8 +1585,13 @@ function set_euclidian_rotation(x, y)
 
   -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
   if x <= row_settings[y]["last_step"] then
+    -- Save state for undo before making changes
+    push_grid_undo()
     print ("Setting first_step of row " .. y .. " to: " .. x)
     row_settings[y]["first_step"] = x
+    
+    -- Mark grid as dirty so it gets saved
+    grid_state_dirty = true
   else 
     print ("No can do. Rotation step of row " .. y .. " would be after last step. " .. x)
   end
@@ -1596,8 +1601,13 @@ end
 function set_euclidian_length(x, y)
 
   if x >= row_settings[y]["first_step"] then
+    -- Save state for undo before making changes
+    push_grid_undo()
     print ("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
     row_settings[y]["last_step"]  = x
+    
+    -- Mark grid as dirty so it gets saved
+    grid_state_dirty = true
   else 
     print ("No can do. Euclidian length of row " .. y .. " would be before first step. " .. x) 
   end
