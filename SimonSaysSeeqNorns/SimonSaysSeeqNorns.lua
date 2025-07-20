@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.7.0"
+version = "1.8.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -905,28 +905,28 @@ SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 -- Show Euclidean instructions on startup
 function show_euclidean_instructions()
     screen.clear()
-    
+
     screen.move(1, 7)
     screen.text("Euclidean Sequencer Ready")
-    
+
     screen.move(1, 17)
     screen.text("Row 8 Controls:")
-    
+
     screen.move(1, 24)
     screen.text("5: ARM_EUCLIDIAN_ROTATION")
-    
+
     screen.move(1, 31)
     screen.text("6: ARM_EUCLIDIAN_LENGTH")
-    
+
     screen.move(1, 38)
     screen.text("7: ARM_EUCLIDIAN_EVENTS")
-    
+
     screen.move(1, 48)
     screen.text("All ops work on selected row")
-    
+
     screen.move(1, 55)
     screen.text("Use buttons 1&2 to undo/redo")
-    
+
     screen.update()
     clock.sleep(3)
 end
@@ -1502,10 +1502,10 @@ function greetings()
 
     screen.update()
     clock.sleep(4)
-    
+
     -- Show Euclidean instructions screen
     show_euclidean_instructions()
-    
+
     --print("now awake")
     greetings_done = true
 
@@ -2612,28 +2612,28 @@ end
 -- rotation: rotate the pattern by this many steps (optional, default 0)
 function generate_euclidean_rhythm(events, length, rotation)
     rotation = rotation or 0
-    
+
     -- Sanity checks
     if events < 0 then events = 0 end
     if events > length then events = length end
     if length <= 0 then return {} end
-    
+
     local pattern = {}
-    
+
     -- Initialize pattern with all zeros
     for i = 1, length do
         pattern[i] = 0
     end
-    
+
     -- If no events requested, return empty pattern
     if events == 0 then
         return pattern
     end
-    
+
     -- Use Bresenham's line algorithm to distribute events evenly
     local slope = events / length
     local bucket = 0
-    
+
     for i = 1, length do
         bucket = bucket + slope
         if bucket >= 1 then
@@ -2641,7 +2641,7 @@ function generate_euclidean_rhythm(events, length, rotation)
             bucket = bucket - 1
         end
     end
-    
+
     -- Apply rotation if specified
     if rotation ~= 0 then
         local rotated_pattern = {}
@@ -2651,7 +2651,7 @@ function generate_euclidean_rhythm(events, length, rotation)
         end
         pattern = rotated_pattern
     end
-    
+
     return pattern
 end
 
@@ -2663,17 +2663,17 @@ end
 function apply_euclidean_to_row(row, events, length, rotation)
     length = length or 16
     rotation = rotation or 0
-    
+
     -- Generate the Euclidean rhythm
     local pattern = generate_euclidean_rhythm(events, length, rotation)
-    
+
     -- Apply the pattern to the grid row
     for step = 1, math.min(length, 16) do -- Limit to 16 steps max
         if pattern[step] then
             unconditional_set_grid(step, row, pattern[step])
         end
     end
-    
+
     print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
 end
 
@@ -2716,22 +2716,22 @@ end
 function apply_euclidean_to_row_with_length(row, events, rotation)
     rotation = rotation or 0
     local length = row_settings[row]["last_step"]
-    
+
     -- Generate the Euclidean rhythm using the row's length
     local pattern = generate_euclidean_rhythm(events, length, rotation)
-    
+
     -- Clear the row first
     for step = 1, 16 do
         unconditional_set_grid(step, row, 0)
     end
-    
+
     -- Apply the pattern to the grid row
     for step = 1, math.min(length, 16) do -- Limit to 16 steps max
         if pattern[step] then
             unconditional_set_grid(step, row, pattern[step])
         end
     end
-    
+
     print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
 end
 
@@ -2740,7 +2740,7 @@ end
 -- This system provides full control over Euclidean rhythm generation using three dedicated buttons:
 --
 -- ARM_EUCLIDIAN_LENGTH_BUTTON (Position 6): Sets the sequence length (1-16 steps)
--- ARM_EUCLIDIAN_EVENTS_BUTTON (Position 7): Sets the number of events/beats (1-16 events) 
+-- ARM_EUCLIDIAN_EVENTS_BUTTON (Position 7): Sets the number of events/beats (1-16 events)
 -- ARM_EUCLIDIAN_ROTATION_BUTTON (Position 5): Sets rotation and generates the pattern
 --
 -- Complete Workflow:
@@ -2753,7 +2753,7 @@ end
 --
 -- Example: Create a 5/8 pattern rotated by 2 steps on row 3:
 -- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + column 8, row 3 (sets length to 8 for row 3)
--- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + column 5, row 3 (sets events to 5 for row 3) 
+-- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + column 5, row 3 (sets events to 5 for row 3)
 -- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates 5/8 pattern, rotated by 2 for row 3)
 --
 -- Benefits:
@@ -2767,16 +2767,16 @@ function generate_euclidean_with_rotation(row, rotation_step)
     local sequence_length = row_settings[row]["last_step"]
     local rotation = rotation_step - 1  -- Convert to 0-based rotation
     local events = euclidean_events_count  -- Use the globally set event count
-    
+
     -- Ensure events doesn't exceed sequence length
     events = math.min(events, sequence_length)
-    
+
     -- Generate and apply the Euclidean pattern
     apply_euclidean_to_row_with_length(row, events, rotation)
-    
-    print("ARM_EUCLIDIAN_ROTATION Euclidean: " .. events .. "/" .. sequence_length .. 
+
+    print("ARM_EUCLIDIAN_ROTATION Euclidean: " .. events .. "/" .. sequence_length ..
           " rotation:" .. rotation .. " row:" .. row)
-    
+
     return events, rotation
 end
 
@@ -2787,23 +2787,23 @@ euclidean_events_count = 4  -- Default to 4 events
 function set_euclidean_events(events, row)
     -- Save state for undo before making changes
     push_grid_undo()
-    
+
     -- Clamp events between 1 and 16
     events = math.max(1, math.min(16, events))
     euclidean_events_count = events
     print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
-    
+
     -- Auto-generate Euclidean pattern for the specific row with current settings
     local sequence_length = row_settings[row]["last_step"]
     apply_euclidean_to_row_with_length(row, events, 0)
     print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern for row " .. row)
-    
+
     -- Mark grids as dirty so they get saved
     grids_are_dirty = true
-    
+
     -- Visual feedback: briefly flash the event count on row 8
     flash_event_count_on_grid(events)
-    
+
     return events
 end
 
@@ -2822,20 +2822,20 @@ end
 -- Visual feedback function to show event count on the grid
 function flash_event_count_on_grid(events)
     if not my_grid_one then return end
-    
+
     -- Clear row 8 briefly
     for i = 1, 16 do
         my_grid_one:led(i, 8, 0)
     end
-    
+
     -- Light up LEDs from 1 to events count
     for i = 1, math.min(events, 16) do
         my_grid_one:led(i, 8, 15) -- Full brightness
     end
-    
+
     -- Send the grid update
     my_grid_one:refresh()
-    
+
     -- Schedule to restore normal row 8 display after a brief delay
     clock.run(function()
         clock.sleep(0.5) -- Flash for 0.5 seconds
@@ -2846,7 +2846,7 @@ end
 -- Function to restore normal row 8 button display
 function restore_row8_display()
     if not my_grid_one then return end
-    
+
     -- Restore all row 8 buttons to their normal state
     for _, button in ipairs(BUTTONS) do
         if button.y == 8 then
@@ -2860,7 +2860,7 @@ function restore_row8_display()
             my_grid_one:led(button.x, button.y, brightness)
         end
     end
-    
+
     my_grid_one:refresh()
 end
 
@@ -2871,42 +2871,42 @@ function apply_manual_euclidean(row, events, length, rotation, strategy_name)
         print("ERROR: Row must be 1-8, got: " .. tostring(row))
         return false
     end
-    
+
     length = length or row_settings[row]["last_step"]
     rotation = rotation or 0
     events = events or 1
     strategy_name = strategy_name or "manual"
-    
+
     -- Validate parameters
     if events > length then
         print("WARNING: Events (" .. events .. ") > length (" .. length .. "), capping events")
         events = length
     end
-    
+
     if events < 0 then events = 0 end
-    if length <= 0 then 
+    if length <= 0 then
         print("ERROR: Length must be positive, got: " .. tostring(length))
         return false
     end
-    
+
     -- Generate and apply the pattern
     local pattern = generate_euclidean_rhythm(events, length, rotation)
-    
+
     -- Clear the row first
     for step = 1, 16 do
         unconditional_set_grid(step, row, 0)
     end
-    
+
     -- Apply the pattern
     for step = 1, math.min(length, 16) do
         if pattern[step] then
             unconditional_set_grid(step, row, pattern[step])
         end
     end
-    
-    print("Manual Euclidean applied: " .. events .. "/" .. length .. 
+
+    print("Manual Euclidean applied: " .. events .. "/" .. length ..
           " rotation:" .. rotation .. " strategy:" .. strategy_name .. " row:" .. row)
-    
+
     return true
 end
 
@@ -2925,7 +2925,7 @@ function set_euclidean_sparse()
 end
 
 function set_euclidean_light()
-    return set_euclidean_events(4)  -- 4 events  
+    return set_euclidean_events(4)  -- 4 events
 end
 
 function set_euclidean_medium()
@@ -2947,7 +2947,7 @@ function apply_euclidean_kick(row)
 end
 
 function apply_euclidean_snare(row)
-    -- Backbeat snare pattern  
+    -- Backbeat snare pattern
     return apply_manual_euclidean(row, 2, 8, 2, "snare")
 end
 
@@ -3785,16 +3785,16 @@ function set_euclidian_rotation(x, y)
     if x <= row_settings[y]["last_step"] then
         -- Save state for undo before making changes
         push_grid_undo()
-        
+
         print("Setting first_step of row " .. y .. " to: " .. x)
         row_settings[y]["first_step"] = x
-        
+
         -- Use advanced Euclidean generation with current event count
         generate_euclidean_with_rotation(y, x)
-        
+
         -- Mark grids as dirty so they get saved
         grids_are_dirty = true
-        
+
         -- Show comprehensive info for user feedback
         local events = get_euclidean_events()
         local length = row_settings[y]["last_step"]
@@ -3809,15 +3809,15 @@ function set_euclidian_length(x, y)
     if x >= row_settings[y]["first_step"] then
         -- Save state for undo before making changes
         push_grid_undo()
-        
+
         print("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
         row_settings[y]["last_step"] = x
-        
+
         -- Auto-generate Euclidean rhythm with current event count and length
         local events = get_euclidean_events()
         apply_euclidean_to_row_with_length(y, events, 0)
         print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern for row " .. y)
-        
+
         -- Mark grids as dirty so they get saved
         grids_are_dirty = true
     else
