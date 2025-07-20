@@ -1194,7 +1194,7 @@ function tick()
             end
 
             if tick_count % (192 * 8) == 0 then
-                clock.runthe_current_tick_count_since_step(process_clock_gate, GATE_9)
+                clock.run(process_clock_gate, GATE_9)
                 --print("tick_count is: " .. tick_count .. " GATE_9 ")
             end
 
