@@ -1056,15 +1056,6 @@ function tick()
         -- quick question. why is this never zero?
         -- print(" the_current_tick_count_since_step is: " .. the_current_tick_count_since_step .. " the_current_tick_count_since_start is: " .. the_current_tick_count_since_start .. " transport_is_active:  " .. tostring(transport_is_active))
 
-        PlayMidi() -- play on every tick because we record notes to tick accuracy
-
-        -- In clock sync, 1 refers to a quarter note so if we clock.sync(1) we will count 4 beats per bar
-        -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
-        -- if we clock.sync(1/24) this is 24PPQN Pulses Per Quarter Note, I.e. standard MIDI clock
-
-
-        --swing_amount = 0
-
         -- This is for informational purposes
         current_tempo = clock.get_tempo()
 
@@ -1174,7 +1165,7 @@ function tick()
             end
 
             if tick_count % (192 * 8) == 0 then
-                clock.run(process_clock_gate, GATE_9)
+                clock.runthe_current_tick_count_since_step(process_clock_gate, GATE_9)
                 --print("tick_count is: " .. tick_count .. " GATE_9 ")
             end
 
@@ -1195,147 +1186,132 @@ function tick()
                 total_tick_co2_count = util.wrap(total_tick_co2_count + 1, 1, no_of_co2_ppm_records)
             end
 
-            if tick_count % 12 == 0 then
-                InitStepCountSinceStep()
+        -- Advance step counters FIRST (before PlayMidi) to sync visual with audio
+        if transport_is_active and tick_count % 12 == 0 then
+            InitStepCountSinceStep()
 
-                --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
+            --  print("tick_count is: " .. tick_count .. " blip_count is: " .. blip_count)
 
+            process_step()
 
-                process_step()
+            -- Advance the midi step based on tick_count mod 12.
+            midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
 
+            if (midi_step_count == 1) then
+                midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR)
+            end
 
-                ------------------------------------------------------------------------
+            -- print ("Advanced step to: " .. midi_step_count)
 
-                -- Collect and display the NOTE ON events for the current step. HEREHEREHERE
+            -- Advance the step for each row each_row_step
+            for row = 1, TOTAL_SEQUENCE_ROWS do
+                row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
+                    row_settings[row]["first_step"], row_settings[row]["last_step"])
+                --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+            end
 
-                local count_of_active_midi_on = 0
-                local collected_note_ons = {}
+            -- Safety check: only increment CO2 counter if we have valid data
+            if no_of_co2_ppm_records > 0 then
+                total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)
+            end
+        end
 
+        -- Now play MIDI based on the updated step positions
+        PlayMidi() -- play on every tick because we record notes to tick accuracy
 
-                -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
-                for i = 1, 8 do
-                    collected_note_ons[i] = {} -- create a table for each col
-                    if my_grid_two then
-                        my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
-                    end
+        -- In clock sync, 1 refers to a quarter note so if we clock.sync(1) we will count 4 beats per bar
+        -- if we clock.sync(1/4) we will count 16 beats per bar. (16 steps in the sequence)
+        -- if we clock.sync(1/24) this is 24PPQN Pulses Per Quarter Note, I.e. standard MIDI clock
+
+        -- Continue with the rest of the step processing for grid display
+        if transport_is_active and tick_count % 12 == 0 then
+            ------------------------------------------------------------------------
+
+            -- Collect and display the NOTE ON events for the current step. HEREHEREHERE
+
+            local count_of_active_midi_on = 0
+            local collected_note_ons = {}
+
+            -- Create a table and reset all the columns on the current step. TODO reset all the steps for a bar when bar changes?
+            for i = 1, 8 do
+                collected_note_ons[i] = {} -- create a table for each col
+                if my_grid_two then
+                    my_grid_two:led(midi_step_count, i, 0) -- turn off the led for the current column (we scroll left to right)
                 end
+            end
 
-                -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
-                for n = 0, 127 do
-                    local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
-                    [n][1]
+            -- loop through all midi note numbers note on events and if we have an active note on, collect it in our collection table
+            for n = 0, 127 do
+                local note_on_event = keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count]
+                [n][1]
 
-                    -- For each proper note on event we find,
-                    if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
-                        -- store it so we can come back to it once we've collected them.
-                        count_of_active_midi_on = count_of_active_midi_on + 1
-                        -- our index on the table will start at 1 and go up.
-                        -- The lowest midi notes will be earlier in the table.
+                -- For each proper note on event we find,
+                if note_on_event.is_active == 1 and note_on_event.velocity > 0 then
+                    -- store it so we can come back to it once we've collected them.
+                    count_of_active_midi_on = count_of_active_midi_on + 1
+                    -- our index on the table will start at 1 and go up.
+                    -- The lowest midi notes will be earlier in the table.
 
-                        -- Initialize table entry if it doesn't exist
-                        if not collected_note_ons[count_of_active_midi_on] then
-                            collected_note_ons[count_of_active_midi_on] = {}
+                    -- Initialize table entry if it doesn't exist
+                    if not collected_note_ons[count_of_active_midi_on] then
+                        collected_note_ons[count_of_active_midi_on] = {}
+                    end
+
+                    -- hmm
+                    collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
+                    collected_note_ons[count_of_active_midi_on].midi_note_number = n
+                end
+            end
+
+            -- Turn an led on on grid_two to show there is an active note here
+            -- we are interested in the first 6 notes on one step.
+
+            if count_of_active_midi_on > 0 then
+                for c = 1, count_of_active_midi_on do
+                    -- Grid x,y starts from top left
+                    if c <= 8 then -- show a max of 8 notes.
+                        -- we might want to spread these notes out over the 8 grid notes we have.
+
+                        -- We want the lowest note to be at the bottom of the grid
+                        local y = 1 + math.abs(c - 8)
+                        -- Add bounds checking for grid LED access
+                        local led_row = math.max(1, math.min(8, y))
+
+                        if my_grid_two then
+                            my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
                         end
 
-                        -- hmm
-                        collected_note_ons[count_of_active_midi_on].velocity = note_on_event.velocity
-                        collected_note_ons[count_of_active_midi_on].midi_note_number = n
+                        -- This table stores the relationship between the grid x,y and the mozart note it represents.
+                        -- so we can later press the button and turn off a note in the mozart table.
+
+                        scroll_state[midi_step_count][y] = MozartPointer:new()
+                        scroll_state[midi_step_count][y].is_active = true
+                        scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
+                        scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
+                        scroll_state[midi_step_count][y].midi_step_count = midi_step_count
+                        scroll_state[midi_step_count][y].midi_note_number = collected_note_ons[c].midi_note_number
+
+                        --print ("midi_note_number is: ")
+                        --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
+                        --print ("is_active: ")
+                        --print (scroll_state[midi_step_count][count_of_active_midi_on].is_active)
+                        --print ("midi_note_number: ")
+                        --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
                     end
                 end
+            end
 
-                -- Turn an led on on grid_two to show there is an active note here
-                -- we are interested in the first 6 notes on one step.
+            if my_grid_two then my_grid_two:refresh() end
 
-                if count_of_active_midi_on > 0 then
-                    for c = 1, count_of_active_midi_on do
-                        -- Grid x,y starts from top left
-                        if c <= 8 then -- show a max of 8 notes.
-                            -- we might want to spread these notes out over the 8 grid notes we have.
+            -- NEXT
+            ---We want to turn off a note when we click it on the grid - but the grid is scrolling.
+            --so for each grid button that is lit, we must have recorded the midi_bar, the midi_step and the note number
+            --then when we press it off we can use that tripple to disable the note in mozart_state
 
-                            -- We want the lowest note to be at the bottom of the grid
-                            local y = 1 + math.abs(c - 8)
-                            -- Add bounds checking for grid LED access
-                            local led_row = math.max(1, math.min(8, y))
+            ------------------------------------------------------
 
-                            if my_grid_two then
-                                my_grid_two:led(midi_step_count, led_row, collected_note_ons[c].velocity)
-                            end
-
-
-                            -- This table stores the relationship between the grid x,y and the mozart note it represents.
-                            -- so we can later press the button and turn off a note in the mozart table.
-
-                            scroll_state[midi_step_count][y] = MozartPointer:new()
-                            scroll_state[midi_step_count][y].is_active = true
-                            scroll_state[midi_step_count][y].current_midi_lane = current_midi_lane
-                            scroll_state[midi_step_count][y].midi_bar_count = midi_bar_count
-                            scroll_state[midi_step_count][y].midi_step_count = midi_step_count
-                            scroll_state[midi_step_count][y].midi_note_number = collected_note_ons[c].midi_note_number
-
-                            --print ("midi_note_number is: ")
-                            --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
-                            --print ("is_active: ")
-                            --print (scroll_state[midi_step_count][count_of_active_midi_on].is_active)
-                            --print ("midi_note_number: ")
-                            --print (scroll_state[midi_step_count][count_of_active_midi_on].midi_note_number)
-                        end
-                    end
-                end
-
-
-                if my_grid_two then my_grid_two:refresh() end
-
-
-
-                -- NEXT
-                ---We want to turn off a note when we click it on the grid - but the grid is scrolling.
-                --so for each grid button that is lit, we must have recorded the midi_bar, the midi_step and the note number
-                --then when we press it off we can use that tripple to disable the note in mozart_state
-
-
-                ------------------------------------------------------
-
-
-                -- Advance the midi step based on tick_count mod 12.
-                midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
-
-                if (midi_step_count == 1) then
-                    midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR)
-                end
-
-
-
-
-
-                -- do we need to calc tick_count_since_step = bla somewhere around here?
-
-                -- print ("Advanced step to: " .. midi_step_count)
-
-
-                -- Advance the step for each row each_row_step
-                for row = 1, TOTAL_SEQUENCE_ROWS do
-                    row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
-                        row_settings[row]["first_step"], row_settings[row]["last_step"])
-                    --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
-                end
-
-
-                -- total_step_co2_count = total_step_co2_count + 1
-
-                -- Safety check: only increment CO2 counter if we have valid data
-                if no_of_co2_ppm_records > 0 then
-                    total_step_co2_count = util.wrap(total_step_co2_count + 1, 1, no_of_co2_ppm_records)
-                end
-
-                -- by setting a differnt value per step, we can control when it will count down to zero and hense trigger the processing of the subsequent step. Huh??
-                -- if midi_step_count == 3 then
-                --   blip_count = 6
-                -- else
-                --   blip_count = 12
-                -- end
-
-                redraw()
-            end -- end mod 12
+            redraw()
+        end -- end step processing
 
             --blip_count = blip_count - 1
         end
