@@ -2080,9 +2080,10 @@ function init()
     print("Complete Euclidean Sequencer Integration Initialized")
     show_euclidean_events_info()
     print("Euclidean Controls: LENGTH (pos 6) → EVENTS (pos 7) → ROTATION (pos 5)")
-    print("Press ARM_EUCLIDIAN_LENGTH_BUTTON + position to set sequence length")
-    print("Press ARM_EUCLIDIAN_EVENTS_BUTTON + position to set event count")
-    print("Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid to generate rotated pattern")
+    print("All ARM_EUCLIDIAN operations work on the selected row")
+    print("Press ARM_EUCLIDIAN_LENGTH_BUTTON + column/row to set sequence length for that row")
+    print("Press ARM_EUCLIDIAN_EVENTS_BUTTON + column/row to set event count for that row")
+    print("Press ARM_EUCLIDIAN_ROTATION_BUTTON + column/row to generate rotated pattern for that row")
 
     -- Test MIDI output on startup
     clock.run(test_midi_output)
@@ -2710,16 +2711,17 @@ end
 -- ARM_EUCLIDIAN_ROTATION_BUTTON (Position 5): Sets rotation and generates the pattern
 --
 -- Complete Workflow:
--- 1. Press ARM_EUCLIDIAN_LENGTH_BUTTON + grid position (1-16) to set sequence length
--- 2. Press ARM_EUCLIDIAN_EVENTS_BUTTON + grid position (1-16) to set event count  
--- 3. Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid position to generate pattern with rotation
---    - Column (x) = rotation amount (0-15 steps)
---    - Row (y) = target sequence row (1-8)
+-- 1. Press ARM_EUCLIDIAN_LENGTH_BUTTON + grid position to set sequence length for that row
+--    - Column (x) = length (1-16), Row (y) = target sequence row (1-8)
+-- 2. Press ARM_EUCLIDIAN_EVENTS_BUTTON + grid position to set event count for that row
+--    - Column (x) = events (1-16), Row (y) = target sequence row (1-8)
+-- 3. Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid position to generate pattern with rotation for that row
+--    - Column (x) = rotation amount (0-15 steps), Row (y) = target sequence row (1-8)
 --
 -- Example: Create a 5/8 pattern rotated by 2 steps on row 3:
--- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + position 8 (sets length to 8)
--- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + position 5 (sets events to 5) 
--- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates 5/8 pattern, rotated by 2)
+-- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + column 8, row 3 (sets length to 8 for row 3)
+-- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + column 5, row 3 (sets events to 5 for row 3) 
+-- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates 5/8 pattern, rotated by 2 for row 3)
 --
 -- Benefits:
 -- - Direct control over all Euclidean parameters (length, events, rotation)
@@ -2748,12 +2750,17 @@ end
 -- Global variable to store Euclidean event count
 euclidean_events_count = 4  -- Default to 4 events
 
--- Function to set Euclidean event count (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
-function set_euclidean_events(events)
+-- Function to set Euclidean event count for specific row (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
+function set_euclidean_events(events, row)
     -- Clamp events between 1 and 16
     events = math.max(1, math.min(16, events))
     euclidean_events_count = events
-    print("Euclidean events count set to: " .. events .. "/16")
+    print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
+    
+    -- Auto-generate Euclidean pattern for the specific row with current settings
+    local sequence_length = row_settings[row]["last_step"]
+    apply_euclidean_to_row_with_length(row, events, 0)
+    print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern for row " .. row)
     
     -- Visual feedback: briefly flash the event count on row 8
     flash_event_count_on_grid(events)
@@ -3616,8 +3623,8 @@ my_grid_one.key = function(x, y, z)
     elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_LENGTH_BUTTON then
         set_euclidian_length(x, y)
     elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_EVENTS_BUTTON then
-        set_euclidean_events(x)
-        print("ARM_EUCLIDIAN_EVENTS_BUTTON: Set events to " .. x .. " for next ARM_EUCLIDIAN_ROTATION Euclidean generation")
+        set_euclidean_events(x, y)
+        print("ARM_EUCLIDIAN_EVENTS_BUTTON: Set events to " .. x .. " and generated pattern for row " .. y)
     elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
         print("button" .. 1)
         unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0), 1)

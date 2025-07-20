@@ -38,6 +38,49 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 The 7th Row of buttons is sometimes used as a modifier for a button on the 8th row. e.g. to add a swing, press ArmSwing (6) and a button on the 7th row.
 
+## Euclidean Sequencer Operations
+
+The sequencer includes a complete Euclidean rhythm generation system using three dedicated ARM buttons:
+
+- **5 ArmEuclidianRotation**: Sets rotation and generates the final pattern
+- **6 ArmEuclidianLength**: Sets the sequence length (1-16 steps)  
+- **7 ArmEuclidianEvents**: Sets the number of events/beats (1-16 events)
+
+### How to Create Euclidean Patterns
+
+**All ARM_EUCLIDIAN operations are row-specific** - you target the exact row you want to modify.
+
+**Example: Creating a 4/15 Euclidean Pattern with 3-Step Rotation on Row 2**
+
+**Step 1: Set the Length to 15 for Row 2**
+1. Press and hold `ArmEuclidianLength` (position 6 on row 8)
+2. While holding it, press **column 15, row 2**
+3. Release both buttons
+4. **Result**: Console shows "Setting euclidian_length (last_step) of row2 to: 15"
+
+**Step 2: Set the Event Count to 4 for Row 2**
+1. Press and hold `ArmEuclidianEvents` (position 7 on row 8)
+2. While holding it, press **column 4, row 2**
+3. Release both buttons
+4. **Result**: Console shows "ARM_EUCLIDIAN_EVENTS_BUTTON: Set events to 4 and generated pattern for row 2"
+   - Row 8 briefly lights up from position 1 to 4 showing the event count visually
+
+**Step 3: Generate Pattern with Rotation 3 on Row 2**
+1. Press and hold `ArmEuclidianRotation` (position 5 on row 8)
+2. While holding it, press **column 4, row 2** (column 4 = rotation of 3 steps, since rotation is 0-based)
+3. Release both buttons
+4. **Result**: Console shows "ARM_EUCLIDIAN_ROTATION: Generated 4/15 Euclidean pattern, rotation=3, row=2"
+
+**Final Result**: Row 2 now has a 4/15 Euclidean pattern (4 events distributed across 15 steps) rotated 3 steps to the right.
+
+### Key Points
+
+- **The sequencer keeps running** throughout this process - no stopping required
+- **All operations target specific rows** - column/row position matters for all three buttons
+- **Order recommended**: Length → Events → Rotation for best results  
+- **Visual feedback**: Event count setting briefly shows on row 8
+- **Rotation is 0-based**: column 1 = rotation 0, column 4 = rotation 3, etc.
+
 See the source code for more info / up to date information.
 
 
