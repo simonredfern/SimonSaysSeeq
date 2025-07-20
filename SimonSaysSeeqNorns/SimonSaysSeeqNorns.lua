@@ -902,6 +902,35 @@ end
 -- we are not doing swing in code
 SWING_STEPS = Set { 2, 4, 6, 8, 10, 12, 14, 16 }
 
+-- Show Euclidean instructions on startup
+function show_euclidean_instructions()
+    screen.clear()
+    
+    screen.move(1, 7)
+    screen.text("Euclidean Sequencer Ready")
+    
+    screen.move(1, 17)
+    screen.text("Row 8 Controls:")
+    
+    screen.move(1, 24)
+    screen.text("5: ARM_EUCLIDIAN_ROTATION")
+    
+    screen.move(1, 31)
+    screen.text("6: ARM_EUCLIDIAN_LENGTH")
+    
+    screen.move(1, 38)
+    screen.text("7: ARM_EUCLIDIAN_EVENTS")
+    
+    screen.move(1, 48)
+    screen.text("All ops work on selected row")
+    
+    screen.move(1, 55)
+    screen.text("Use buttons 1&2 to undo/redo")
+    
+    screen.update()
+    clock.sleep(3)
+end
+
 -- Fonts: Note, we can use the Foundry app to view all the fonts.
 -- Tried to find a fixed font (so strings don't jump around), but currently using the default font
 -- Best approach probably is not to have long strings and instead place short strings at specific locations on the screen.
@@ -1473,6 +1502,10 @@ function greetings()
 
     screen.update()
     clock.sleep(4)
+    
+    -- Show Euclidean instructions screen
+    show_euclidean_instructions()
+    
     --print("now awake")
     greetings_done = true
 
