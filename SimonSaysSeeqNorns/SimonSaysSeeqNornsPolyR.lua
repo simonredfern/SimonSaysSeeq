@@ -75,8 +75,8 @@ arm_clock_button = 0
 preset_mozart_button = 0
 
 
-arm_first_step_button = 0
-arm_last_step_button = 0
+arm_euclidian_rotation_button = 0
+arm_euclidian_length_button = 0
 
 
 arm_put_slide_on = 0
@@ -226,13 +226,13 @@ table.insert(BUTTONS, {name = REDO_MOZART_BUTTON, x = 4, y = 8})
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
 
-ARM_FIRST_STEP_BUTTON = "ArmFirstStep"
-ARM_LAST_STEP_BUTTON = "ArmLastStep"
-ARM_LAG_BUTTON = "ArmLag"
+ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
+ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
+ARM_EUCLIDIAN_EVENTS_BUTTON = "ArmEuclidianEvents"
 ARM_RATCHET_BUTTON = "ArmRatchet"
-table.insert(BUTTONS, {name = ARM_FIRST_STEP_BUTTON, x = 5, y = 8}) -- note Lag is processed through ratchet
-table.insert(BUTTONS, {name = ARM_LAST_STEP_BUTTON, x = 6, y = 8})
-table.insert(BUTTONS, {name = ARM_LAG_BUTTON, x = 7, y = 8})
+table.insert(BUTTONS, {name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 5, y = 8}) -- note Euclidian Events sets event count
+table.insert(BUTTONS, {name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8})
+table.insert(BUTTONS, {name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 7, y = 8})
 table.insert(BUTTONS, {name = ARM_RATCHET_BUTTON, x = 8, y = 8})
 
 ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
@@ -1579,8 +1579,8 @@ end
 
 
 
-function set_first_step(x, y)
-  -- x is the step
+function set_euclidian_rotation(x, y)
+  -- x is the rotation step
   -- y is the row 
 
   -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
@@ -1588,18 +1588,18 @@ function set_first_step(x, y)
     print ("Setting first_step of row " .. y .. " to: " .. x)
     row_settings[y]["first_step"] = x
   else 
-    print ("No can do. First step of row " .. y .. " would be after last step. " .. x)
+    print ("No can do. Rotation step of row " .. y .. " would be after last step. " .. x)
   end
 
-end   
+end
 
-function set_last_step(x, y)
+function set_euclidian_length(x, y)
 
   if x >= row_settings[y]["first_step"] then
-    print ("Setting last_step of row" .. y .. " to: " .. x)
+    print ("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
     row_settings[y]["last_step"]  = x
   else 
-    print ("No can do. Last step of row " .. y .. " would be before first step. " .. x) 
+    print ("No can do. Euclidian length of row " .. y .. " would be before first step. " .. x) 
   end
 
 end  
@@ -2783,10 +2783,10 @@ elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_con
   take_slide_off(x,y)  
 elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_ON_BUTTON then
   put_slide_on(x,y)  
-elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_FIRST_STEP_BUTTON then
-  set_first_step(x,y)
-elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_LAST_STEP_BUTTON then
-  set_last_step(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_ROTATION_BUTTON then
+  set_euclidian_rotation(x,y)
+elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_LENGTH_BUTTON then
+  set_euclidian_length(x,y)
 elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
   print("button" .. 1)
   unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0),1) 

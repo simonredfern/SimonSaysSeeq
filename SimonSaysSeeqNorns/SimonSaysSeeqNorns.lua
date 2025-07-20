@@ -189,8 +189,8 @@ arm_clock_button = 0
 preset_mozart_button = 0
 
 
-arm_first_step_button = 0
-arm_last_step_button = 0
+arm_euclidian_rotation_button = 0
+arm_euclidian_length_button = 0
 
 
 arm_put_slide_on = 0
@@ -437,13 +437,13 @@ table.insert(BUTTONS, { name = REDO_MOZART_BUTTON, x = 4, y = 8 })
 --table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
 
-ARM_FIRST_STEP_BUTTON = "ArmFirstStep"
-ARM_LAST_STEP_BUTTON = "ArmLastStep"
-ARM_LAG_BUTTON = "ArmLag"
+ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
+ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
+ARM_EUCLIDIAN_EVENTS_BUTTON = "ArmEuclidianEvents"
 ARM_RATCHET_BUTTON = "ArmRatchet"
-table.insert(BUTTONS, { name = ARM_FIRST_STEP_BUTTON, x = 5, y = 8 }) -- note Lag is processed through ratchet
-table.insert(BUTTONS, { name = ARM_LAST_STEP_BUTTON, x = 6, y = 8 })
-table.insert(BUTTONS, { name = ARM_LAG_BUTTON, x = 7, y = 8 })
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 5, y = 8 }) -- note Euclidian Events sets event count
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8 })
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 7, y = 8 })
 table.insert(BUTTONS, { name = ARM_RATCHET_BUTTON, x = 8, y = 8 })
 
 ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
@@ -2076,6 +2076,14 @@ function init()
     print("init says: Starting main sequencer timing called tick.  the_current_tick_count_since_step is: " ..
     the_current_tick_count_since_step)
 
+    -- Display current Euclidean system status on startup
+    print("Complete Euclidean Sequencer Integration Initialized")
+    show_euclidean_events_info()
+    print("Euclidean Controls: LENGTH (pos 6) → EVENTS (pos 7) → ROTATION (pos 5)")
+    print("Press ARM_EUCLIDIAN_LENGTH_BUTTON + position to set sequence length")
+    print("Press ARM_EUCLIDIAN_EVENTS_BUTTON + position to set event count")
+    print("Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid to generate rotated pattern")
+
     -- Test MIDI output on startup
     clock.run(test_midi_output)
 
@@ -2691,6 +2699,220 @@ function apply_euclidean_to_row_with_length(row, events, rotation)
     end
     
     print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
+end
+
+-- Complete Euclidean Sequencer Integration
+-- ========================================
+-- This system provides full control over Euclidean rhythm generation using three dedicated buttons:
+--
+-- ARM_EUCLIDIAN_LENGTH_BUTTON (Position 6): Sets the sequence length (1-16 steps)
+-- ARM_EUCLIDIAN_EVENTS_BUTTON (Position 7): Sets the number of events/beats (1-16 events) 
+-- ARM_EUCLIDIAN_ROTATION_BUTTON (Position 5): Sets rotation and generates the pattern
+--
+-- Complete Workflow:
+-- 1. Press ARM_EUCLIDIAN_LENGTH_BUTTON + grid position (1-16) to set sequence length
+-- 2. Press ARM_EUCLIDIAN_EVENTS_BUTTON + grid position (1-16) to set event count  
+-- 3. Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid position to generate pattern with rotation
+--    - Column (x) = rotation amount (0-15 steps)
+--    - Row (y) = target sequence row (1-8)
+--
+-- Example: Create a 5/8 pattern rotated by 2 steps on row 3:
+-- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + position 8 (sets length to 8)
+-- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + position 5 (sets events to 5) 
+-- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates 5/8 pattern, rotated by 2)
+--
+-- Benefits:
+-- - Direct control over all Euclidean parameters (length, events, rotation)
+-- - Visual feedback on event count changes
+-- - Automatic pattern generation and application
+-- - Maintains sequence first_step setting for playback
+--
+-- Advanced Euclidean generation with ARM_EUCLIDIAN_ROTATION integration
+function generate_euclidean_with_rotation(row, rotation_step)
+    local sequence_length = row_settings[row]["last_step"]
+    local rotation = rotation_step - 1  -- Convert to 0-based rotation
+    local events = euclidean_events_count  -- Use the globally set event count
+    
+    -- Ensure events doesn't exceed sequence length
+    events = math.min(events, sequence_length)
+    
+    -- Generate and apply the Euclidean pattern
+    apply_euclidean_to_row_with_length(row, events, rotation)
+    
+    print("ARM_EUCLIDIAN_ROTATION Euclidean: " .. events .. "/" .. sequence_length .. 
+          " rotation:" .. rotation .. " row:" .. row)
+    
+    return events, rotation
+end
+
+-- Global variable to store Euclidean event count
+euclidean_events_count = 4  -- Default to 4 events
+
+-- Function to set Euclidean event count (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
+function set_euclidean_events(events)
+    -- Clamp events between 1 and 16
+    events = math.max(1, math.min(16, events))
+    euclidean_events_count = events
+    print("Euclidean events count set to: " .. events .. "/16")
+    
+    -- Visual feedback: briefly flash the event count on row 8
+    flash_event_count_on_grid(events)
+    
+    return events
+end
+
+-- Function to get current Euclidean event count
+function get_euclidean_events()
+    return euclidean_events_count
+end
+
+-- Function to display current event count info
+function show_euclidean_events_info()
+    local info = "Euclidean events: " .. euclidean_events_count .. "/16"
+    print(info)
+    return info
+end
+
+-- Visual feedback function to show event count on the grid
+function flash_event_count_on_grid(events)
+    if not my_grid_one then return end
+    
+    -- Clear row 8 briefly
+    for i = 1, 16 do
+        my_grid_one:led(i, 8, 0)
+    end
+    
+    -- Light up LEDs from 1 to events count
+    for i = 1, math.min(events, 16) do
+        my_grid_one:led(i, 8, 15) -- Full brightness
+    end
+    
+    -- Send the grid update
+    my_grid_one:refresh()
+    
+    -- Schedule to restore normal row 8 display after a brief delay
+    clock.run(function()
+        clock.sleep(0.5) -- Flash for 0.5 seconds
+        restore_row8_display()
+    end)
+end
+
+-- Function to restore normal row 8 button display
+function restore_row8_display()
+    if not my_grid_one then return end
+    
+    -- Restore all row 8 buttons to their normal state
+    for _, button in ipairs(BUTTONS) do
+        if button.y == 8 then
+            local brightness = 0
+            -- Check if this button is currently armed
+            if (button.name == arm_control) then
+                brightness = 15
+            else
+                brightness = 4
+            end
+            my_grid_one:led(button.x, button.y, brightness)
+        end
+    end
+    
+    my_grid_one:refresh()
+end
+
+-- Manual Euclidean pattern application for advanced users
+-- Allows direct specification of all parameters
+function apply_manual_euclidean(row, events, length, rotation, strategy_name)
+    if row < 1 or row > 8 then
+        print("ERROR: Row must be 1-8, got: " .. tostring(row))
+        return false
+    end
+    
+    length = length or row_settings[row]["last_step"]
+    rotation = rotation or 0
+    events = events or 1
+    strategy_name = strategy_name or "manual"
+    
+    -- Validate parameters
+    if events > length then
+        print("WARNING: Events (" .. events .. ") > length (" .. length .. "), capping events")
+        events = length
+    end
+    
+    if events < 0 then events = 0 end
+    if length <= 0 then 
+        print("ERROR: Length must be positive, got: " .. tostring(length))
+        return false
+    end
+    
+    -- Generate and apply the pattern
+    local pattern = generate_euclidean_rhythm(events, length, rotation)
+    
+    -- Clear the row first
+    for step = 1, 16 do
+        unconditional_set_grid(step, row, 0)
+    end
+    
+    -- Apply the pattern
+    for step = 1, math.min(length, 16) do
+        if pattern[step] then
+            unconditional_set_grid(step, row, pattern[step])
+        end
+    end
+    
+    print("Manual Euclidean applied: " .. events .. "/" .. length .. 
+          " rotation:" .. rotation .. " strategy:" .. strategy_name .. " row:" .. row)
+    
+    return true
+end
+
+-- Convenience functions for common Euclidean patterns using current event count
+function apply_euclidean_with_current_events(row, rotation, name)
+    rotation = rotation or 0
+    name = name or "pattern"
+    local events = get_euclidean_events()
+    local length = row_settings[row]["last_step"]
+    return apply_manual_euclidean(row, events, length, rotation, name)
+end
+
+-- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
+function set_euclidean_sparse()
+    return set_euclidean_events(2)  -- 2 events
+end
+
+function set_euclidean_light()
+    return set_euclidean_events(4)  -- 4 events  
+end
+
+function set_euclidean_medium()
+    return set_euclidean_events(6)  -- 6 events
+end
+
+function set_euclidean_dense()
+    return set_euclidean_events(9)  -- 9 events
+end
+
+function set_euclidean_max()
+    return set_euclidean_events(16) -- 16 events
+end
+
+-- Classic pattern presets (maintain original event counts)
+function apply_euclidean_kick(row)
+    -- Classic 4-on-the-floor pattern
+    return apply_manual_euclidean(row, 4, 16, 0, "kick")
+end
+
+function apply_euclidean_snare(row)
+    -- Backbeat snare pattern  
+    return apply_manual_euclidean(row, 2, 8, 2, "snare")
+end
+
+function apply_euclidean_hihat(row)
+    -- Dense hi-hat pattern
+    return apply_manual_euclidean(row, 7, 16, 1, "hihat")
+end
+
+function apply_euclidean_tresillo(row)
+    -- Classic 3/8 tresillo pattern
+    return apply_manual_euclidean(row, 3, 8, 0, "tresillo")
 end
 
 -- probably not used (but does get called becuase lots of prints)
@@ -3389,10 +3611,13 @@ my_grid_one.key = function(x, y, z)
         take_slide_off(x, y)
     elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_SLIDE_ON_BUTTON then
         put_slide_on(x, y)
-    elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_FIRST_STEP_BUTTON then
-        set_first_step(x, y)
-    elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_LAST_STEP_BUTTON then
-        set_last_step(x, y)
+    elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_ROTATION_BUTTON then
+        set_euclidian_rotation(x, y)
+    elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_LENGTH_BUTTON then
+        set_euclidian_length(x, y)
+    elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_EVENTS_BUTTON then
+        set_euclidean_events(x)
+        print("ARM_EUCLIDIAN_EVENTS_BUTTON: Set events to " .. x .. " for next ARM_EUCLIDIAN_ROTATION Euclidean generation")
     elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
         print("button" .. 1)
         unconditional_set_mozart(x, y, MOZART_BASE_MIDI_NOTE + (MOZART_INTERVAL_PERFECT_FIFTH * 0), 1)
@@ -3506,43 +3731,43 @@ end -- End of function for my_grid_two
 -- //////////////////////////////////////////////
 
 
-function set_first_step(x, y)
-    -- x is the step
+function set_euclidian_rotation(x, y)
+    -- x is the rotation step
     -- y is the row
 
     -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
     if x <= row_settings[y]["last_step"] then
         print("Setting first_step of row " .. y .. " to: " .. x)
         row_settings[y]["first_step"] = x
+        
+        -- Use advanced Euclidean generation with current event count
+        generate_euclidean_with_rotation(y, x)
+        
+        -- Show comprehensive info for user feedback
+        local events = get_euclidean_events()
+        local length = row_settings[y]["last_step"]
+        local rotation = x - 1
+        print("ARM_EUCLIDIAN_ROTATION: Generated " .. events .. "/" .. length .. " Euclidean pattern, rotation=" .. rotation .. ", row=" .. y)
     else
-        print("No can do. First step of row " .. y .. " would be after last step. " .. x)
+        print("No can do. Rotation step of row " .. y .. " would be after last step. " .. x)
     end
 end
 
-function set_last_step(x, y)
+function set_euclidian_length(x, y)
     if x >= row_settings[y]["first_step"] then
-        print("Setting last_step of row" .. y .. " to: " .. x)
+        print("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
         row_settings[y]["last_step"] = x
         
-        -- Auto-generate Euclidean rhythm based on column pressed
-        -- Different columns generate different event densities
-        if x <= 4 then
-            -- Sparse patterns for early columns
-            apply_euclidean_to_row_with_length(y, 1, 0)  -- Very sparse
-        elseif x <= 8 then
-            -- Light patterns
-            apply_euclidean_to_row_with_length(y, math.ceil(x / 4), 0)  -- 2-3 events
-        elseif x <= 12 then
-            -- Medium patterns  
-            apply_euclidean_to_row_with_length(y, math.ceil(x / 3), 0)  -- 3-4 events
-        else
-            -- Dense patterns for later columns
-            apply_euclidean_to_row_with_length(y, math.ceil(x / 2), 0)  -- 6-8 events
-        end
+        -- Auto-generate Euclidean rhythm with current event count and length
+        local events = get_euclidean_events()
+        apply_euclidean_to_row_with_length(y, events, 0)
+        print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern for row " .. y)
     else
-        print("No can do. Last step of row " .. y .. " would be before first step. " .. x)
+        print("No can do. Euclidian length of row " .. y .. " would be before first step. " .. x)
     end
 end
+
+
 
 function get_tally(input_grid)
     -- A helper debug function to show the state of a grid

@@ -16,11 +16,11 @@ The bottom two rows of buttons are control buttons. You can use them to control 
 
 4 Redo Note pitches (AKA Redo Mozart)
 
-5 ArmFirstStep
+5 ArmEuclidianRotation
 
-6 ArmLastStep
+6 ArmEuclidianLength
 
-7 ArmLag
+7 ArmEuclidianEvents
 
 8 ArmRatchet
 
