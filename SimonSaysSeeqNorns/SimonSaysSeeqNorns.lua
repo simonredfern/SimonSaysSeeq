@@ -1,7 +1,7 @@
 -- SimonSaysSeeq on Norns
 -- Left Button Stop. Right Start
 -- Licenced under the AGPL.
-version = "1.8.0"
+version = "1.9.0"
 
 version_string = "SimonSaysSeeq Norns v" .. version
 
@@ -441,9 +441,9 @@ ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
 ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
 ARM_EUCLIDIAN_EVENTS_BUTTON = "ArmEuclidianEvents"
 ARM_RATCHET_BUTTON = "ArmRatchet"
-table.insert(BUTTONS, { name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 5, y = 8 }) -- note Euclidian Events sets event count
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 7, y = 8 }) -- note Euclidian Events sets event count
 table.insert(BUTTONS, { name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8 })
-table.insert(BUTTONS, { name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 7, y = 8 })
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 5, y = 8 })
 table.insert(BUTTONS, { name = ARM_RATCHET_BUTTON, x = 8, y = 8 })
 
 ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
@@ -2740,8 +2740,8 @@ end
 -- This system provides full control over Euclidean rhythm generation using three dedicated buttons:
 --
 -- ARM_EUCLIDIAN_LENGTH_BUTTON (Position 6): Sets the sequence length (1-16 steps)
--- ARM_EUCLIDIAN_EVENTS_BUTTON (Position 7): Sets the number of events/beats (1-16 events)
--- ARM_EUCLIDIAN_ROTATION_BUTTON (Position 5): Sets rotation and generates the pattern
+-- ARM_EUCLIDIAN_EVENTS_BUTTON (Position 5): Sets the number of events/beats (1-16 events)
+-- ARM_EUCLIDIAN_ROTATION_BUTTON (Position 7): Sets rotation and generates the pattern
 --
 -- Complete Workflow:
 -- 1. Press ARM_EUCLIDIAN_LENGTH_BUTTON + grid position to set sequence length for that row
