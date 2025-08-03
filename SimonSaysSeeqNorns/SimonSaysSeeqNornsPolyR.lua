@@ -230,9 +230,9 @@ ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
 ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
 ARM_EUCLIDIAN_EVENTS_BUTTON = "ArmEuclidianEvents"
 ARM_RATCHET_BUTTON = "ArmRatchet"
-table.insert(BUTTONS, {name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 5, y = 8}) -- note Euclidian Events sets event count
+table.insert(BUTTONS, {name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 7, y = 8}) -- note Euclidian Events sets event count
 table.insert(BUTTONS, {name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8})
-table.insert(BUTTONS, {name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 7, y = 8})
+table.insert(BUTTONS, {name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 5, y = 8})
 table.insert(BUTTONS, {name = ARM_RATCHET_BUTTON, x = 8, y = 8})
 
 ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
