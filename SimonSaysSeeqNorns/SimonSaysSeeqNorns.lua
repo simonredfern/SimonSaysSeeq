@@ -203,86 +203,86 @@ swing_mode = 1
 
 TOTAL_SEQUENCE_ROWS = 7 -- was 6
 
-GRID_ONE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-grid-v2.tbl"
+GRID_ONE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-grid-one-state-" .. version .. ".tbl"
 
-MOZART_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-mozart-v2.tbl"
+MOZART_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-mozart-state-"  .. version .. ".tbl"
 
-SCROLL_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-scroll-v5.tbl"
+SCROLL_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-scroll-state-" .. version .. ".tbl"
 
-SLIDE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-slide-v2.tbl"
+SLIDE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-slide-state-" .. version .. ".tbl"
 
-ROW_SETTINGS_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-settings-v2.tbl"
+ROW_STATES_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-states-".. version .. ".tbl"
 
-function get_row_settings_tally(row_settings)
-    -- A helper debug function to show the state the row_settings table
+function get_row_states_tally(row_states)
+    -- A helper debug function to show the state the row_states table
     -- We use this to get an error if the expected keys are not there.
-    local tally = "id:" .. row_settings["id"] .. " "
+    local tally = "id:" .. row_states["id"] .. " "
     for row = 1, ROWS do
         tally = tally ..
         " Row: " ..
         row ..
-        " first_step is: " .. row_settings[row]["first_step"] .. " last_step is: " .. row_settings[row]["last_step"]
+        " first_step is: " .. row_states[row]["first_step"] .. " last_step is: " .. row_states[row]["last_step"]
     end
     return tally
 end
 
-function create_row_settings()
-    -- This stores first_step and last_step for each sequence row.
+function create_row_states()
+    -- This table stores various settings and states for each  sequence row.
 
-    local row_settings = {}
-    for row = 1, ROWS do
-        row_settings[row] = {}   -- create a table for each row
-        row_settings[row]["first_step"] = 1
-        row_settings[row]["last_step"] = 16
-        row_settings[row]["current_step"] = 1
+    local row_states = {}
+    for row = 1, TOTAL_SEQUENCE_ROWS do
+        row_states[row] = {}   -- create a table for each row
+        row_states[row]["first_step"] = 1
+        row_states[row]["last_step"] = 16
+        row_states[row]["current_step"] = 1
     end
 
-    return row_settings
+    return row_states
 end
 
-function load_row_settings()
-    row_settings = Tab.load(ROW_SETTINGS_FILE)
+function load_row_states()
+    row_states = Tab.load(ROW_STATES_FILE)
 
     print("Result of table load is:")
-    print(row_settings)
+    print(row_states)
 
-    print(get_row_settings_tally(row_settings))
+    print(get_row_states_tally(row_states))
 
-    return row_settings
+    return row_states
 end
 
-function init_row_settings_table()
-    print("Hello from init_row_settings_table")
+function init_row_states_table()
+    print("Hello from init_row_states_table")
 
     -- Try to load the table
-    local status, err = pcall(load_row_settings)
+    local status, err = pcall(load_row_states)
 
     if status then
-        print("load row_settings state seems ok. row_settings is:")
-        print(row_settings)
+        print("load row_states state seems ok. row_states is:")
+        print(row_states)
     else
-        print("Seems we got an error - setting row_settings to nil so we will create it and save it: " .. err)
-        row_settings = nil
+        print("Seems we got an error - setting row_states to nil so we will create it and save it: " .. err)
+        row_states = nil
     end
 
     -- if it doesn't exist
-    if row_settings == nil then
-        print("No row_settings table, I will generate a structure and save that")
+    if row_states == nil then
+        print("No row_states table, I will generate a structure and save that")
 
-        row_settings = create_row_settings()
+        row_states = create_row_states()
 
-        Tab.save(row_settings, ROW_SETTINGS_FILE)
-        row_settings = Tab.load(ROW_SETTINGS_FILE)
+        Tab.save(row_states, ROW_STATES_FILE)
+        row_states = Tab.load(ROW_STATES_FILE)
     else
-        print("I already have a row_settings table, no need to generate one")
+        print("I already have a row_states table, no need to generate one")
     end
 
 
     -- Push Undo so we can get back to initial state
     --push_mozart_undo()
 
-    print("Bye from init_row_settings_table")
-end -- end init_sequence_row_settings_table
+    print("Bye from init_row_states_table")
+end -- end init_sequence_row_states_table
 
 last_action_method = ""
 last_x = 0
@@ -431,19 +431,15 @@ table.insert(BUTTONS, { name = REDO_GRID_BUTTON, x = 2, y = 8 })
 table.insert(BUTTONS, { name = UNDO_MOZART_BUTTON, x = 3, y = 8 })
 table.insert(BUTTONS, { name = REDO_MOZART_BUTTON, x = 4, y = 8 })
 
---table.insert(BUTTONS, {name = "ArmMidiCommand", x = 5, y = 8})
---table.insert(BUTTONS, {name = "ArmSwing", x = 6, y = 8})
---table.insert(BUTTONS, {name = "DoMidiStop", x = 7, y = 8})
---table.insert(BUTTONS, {name = "DoMidiStart", x = 8, y = 8})
 
-
-ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
-ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
 ARM_EUCLIDIAN_EVENTS_BUTTON = "ArmEuclidianEvents"
+ARM_EUCLIDIAN_LENGTH_BUTTON = "ArmEuclidianLength"
+ARM_EUCLIDIAN_ROTATION_BUTTON = "ArmEuclidianRotation"
 ARM_RATCHET_BUTTON = "ArmRatchet"
-table.insert(BUTTONS, { name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 7, y = 8 }) -- note Euclidian Events sets event count
-table.insert(BUTTONS, { name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8 })
+
 table.insert(BUTTONS, { name = ARM_EUCLIDIAN_EVENTS_BUTTON, x = 5, y = 8 })
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_LENGTH_BUTTON, x = 6, y = 8 })
+table.insert(BUTTONS, { name = ARM_EUCLIDIAN_ROTATION_BUTTON, x = 7, y = 8 })
 table.insert(BUTTONS, { name = ARM_RATCHET_BUTTON, x = 8, y = 8 })
 
 ARM_RANDOMISE_GRID_BUTTON = "RandomiseGrid"
@@ -480,26 +476,29 @@ function reset_all_sequence_counters()
         print("WARNING: No CO2 data available, CO2 counters set to 0")
     end
 
-    -- Safety check: ensure row_settings is properly initialized before accessing it
-    if row_settings == nil then
-        print("WARNING: row_settings is nil in reset_all_sequence_counters, creating default settings")
-        row_settings = create_row_settings()
+    -- Safety check: ensure row_states is properly initialized before accessing it
+    if row_states == nil then
+        print("WARNING: row_states is nil in reset_all_sequence_counters, creating default settings")
+        row_states = create_row_states()
     end
 
-    for row = 1, TOTAL_SEQUENCE_ROWS do
-        -- Additional safety check for each row
-        if row_settings[row] == nil then
-            print("WARNING: row_settings[" .. row .. "] is nil, creating default row settings")
-            row_settings[row] = {}
-            row_settings[row]["first_step"] = 1
-            row_settings[row]["last_step"] = 16
-            row_settings[row]["current_step"] = 1
-        end
 
-        row_settings[row]["first_step"] = first_step
-        row_settings[row]["last_step"] = last_step
-        row_settings[row]["current_step"] = row_settings[row]["first_step"]
-    end
+    -- why do we do this stuff here? (we just created above?)
+
+    --for row = 1, TOTAL_SEQUENCE_ROWS do
+    --    -- Additional safety check for each row
+    --    if row_states[row] == nil then
+    --        print("WARNING: row_states[" .. row .. "] is nil, creating default row settings")
+    --        row_states[row] = {}
+    --        row_states[row]["first_step"] = 1
+    --        row_states[row]["last_step"] = 16
+    --        row_states[row]["current_step"] = 1
+    --    end
+
+    --    row_states[row]["first_step"] = first_step
+    --    row_states[row]["last_step"] = last_step
+    --    row_states[row]["current_step"] = row_states[row]["first_step"]
+    --end
 end
 
 tick_text = "."
@@ -1234,9 +1233,8 @@ function tick()
 
             -- Advance the step for each row each_row_step
             for row = 1, TOTAL_SEQUENCE_ROWS do
-                row_settings[row]["current_step"] = util.wrap(row_settings[row]["current_step"] + 1,
-                    row_settings[row]["first_step"], row_settings[row]["last_step"])
-                --print ("Advanced step for Row: " .. row .. " to: " .. row_settings[row]["current_step"])
+                row_states[row]["current_step"] = util.wrap(row_states[row]["current_step"] + 1, 1, row_states[row]["last_step"])
+                --print ("Advanced step for Row: " .. row .. " to: " .. row_states[row]["current_step"])
             end
 
             -- Safety check: only increment CO2 counter if we have valid data
@@ -1513,7 +1511,7 @@ function greetings()
 end
 
 function process_step()
-    --print ("process_step midi_step_count is:  " .. midi_step_count)
+    print ("hello from process_step midi_step_count is:  " .. midi_step_count)
 
 
     local ratchet_mode = 1 -- default is 1 but it will be set
@@ -1552,25 +1550,19 @@ function process_step()
         end
     end -- End check midi start
 
-
-
-    --for second_grid_row = 1, 6 do
-
-    --my_grid_two:led(midi_step_count,second_grid_row,24)
-
-
-    -- keyboard_midi_note_events[current_midi_lane][midi_bar_count][midi_step_count][n][1]
-
-    --end
-
-
     -- For each sequence row...
     for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
+
+        print("sequence_row is: " .. sequence_row)
+
         -- on the current step...
         -- Prior to POLYR
         --ratchet_mode = grid_one_state[current_step][sequence_row]
 
-        ratchet_mode = grid_one_state[row_settings[sequence_row]["current_step"]][sequence_row]
+        ratchet_mode = grid_one_state[row_states[sequence_row]["current_step"]][sequence_row]
+
+
+        print("ratchet_mode for row and step is: " .. ratchet_mode)
 
         -- process step should run independently
         clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -1587,9 +1579,10 @@ function process_step()
         if sequence_row >= 3 and sequence_row <= 6 then
             -- conditional_change_crow_output(current_step, sequence_row)
 
-            conditional_change_crow_output(row_settings[sequence_row]["current_step"], sequence_row)
+            conditional_change_crow_output(row_states[sequence_row]["current_step"], sequence_row)
         end
     end -- end for
+    print ("bye from process_step midi_step_count is:  " .. midi_step_count)
 end -- end function
 
 function conditional_change_crow_output(current_step, sequence_row)
@@ -2010,8 +2003,8 @@ function init()
 
     print("!!! before init tables !!!")
 
-    print("before init_row_settings_table")
-    init_row_settings_table()
+    print("before init_row_states_table")
+    init_row_states_table()
 
 
     print("before init_grid_one_state_table")
@@ -2033,10 +2026,10 @@ function init()
 
     -- Verify critical variables are initialized before proceeding
     print("Verifying initialization state...")
-    if row_settings == nil then
-        print("ERROR: row_settings is still nil after table initialization!")
-        row_settings = create_row_settings()
-        print("Created emergency row_settings")
+    if row_states == nil then
+        print("ERROR: row_states is still nil after table initialization!")
+        row_states = create_row_states()
+        print("Created row_states")
     end
 
     if grid_one_state == nil then
@@ -2233,7 +2226,7 @@ function init_grid_one_state_table()
         print("I already have a grid_one_state table, no need to generate one")
     end
 
-    -- We want to make sure rown 8 are all off.
+    -- We want to make sure row 8 are all off.
     -- Note: row 7 may have kind of dual function but 8 is all control.
     for y = TOTAL_SEQUENCE_ROWS + 1, 8 do
         for x = 1, 16 do
@@ -2715,7 +2708,7 @@ end
 -- rotation: rotate pattern by this many steps (optional, default 0)
 function apply_euclidean_to_row_with_length(row, events, rotation)
     rotation = rotation or 0
-    local length = row_settings[row]["last_step"]
+    local length = row_states[row]["last_step"]
 
     -- Generate the Euclidean rhythm using the row's length
     local pattern = generate_euclidean_rhythm(events, length, rotation)
@@ -2764,7 +2757,7 @@ end
 --
 -- Advanced Euclidean generation with ARM_EUCLIDIAN_ROTATION integration
 function generate_euclidean_with_rotation(row, rotation_step)
-    local sequence_length = row_settings[row]["last_step"]
+    local sequence_length = row_states[row]["last_step"]
     local rotation = rotation_step - 1  -- Convert to 0-based rotation
     local events = euclidean_events_count  -- Use the globally set event count
 
@@ -2794,7 +2787,7 @@ function set_euclidean_events(events, row)
     print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
 
     -- Auto-generate Euclidean pattern for the specific row with current settings
-    local sequence_length = row_settings[row]["last_step"]
+    local sequence_length = row_states[row]["last_step"]
     apply_euclidean_to_row_with_length(row, events, 0)
     print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern for row " .. row)
 
@@ -2872,7 +2865,7 @@ function apply_manual_euclidean(row, events, length, rotation, strategy_name)
         return false
     end
 
-    length = length or row_settings[row]["last_step"]
+    length = length or row_states[row]["last_step"]
     rotation = rotation or 0
     events = events or 1
     strategy_name = strategy_name or "manual"
@@ -2915,7 +2908,7 @@ function apply_euclidean_with_current_events(row, rotation, name)
     rotation = rotation or 0
     name = name or "pattern"
     local events = get_euclidean_events()
-    local length = row_settings[row]["last_step"]
+    local length = row_states[row]["last_step"]
     return apply_manual_euclidean(row, events, length, rotation, name)
 end
 
@@ -3125,14 +3118,14 @@ function random_dense_grid(x, y)
     end
 end
 
-function reset_row_settings(row)
-    row_settings[row]["first_step"] = first_step
-    row_settings[row]["last_step"] = last_step
-    -- row_settings[row]["current_step"] = first_step
+function reset_row_states(row)
+    row_states[row]["first_step"] = first_step
+    row_states[row]["last_step"] = last_step
+    -- row_states[row]["current_step"] = first_step
 end
 
 function preset_grid(x, y)
-    reset_row_settings(y)
+    reset_row_states(y)
 
     -- Any button pressed on this row (1)
     if y == 1 then
@@ -3159,7 +3152,7 @@ function preset_grid(x, y)
             grid_one_state[15][y] = 0
             grid_one_state[16][y] = 0
         else
-            -- TODO if x==2 then just reset_row_settings not the pattern?
+            -- TODO if x==2 then just reset_row_states not the pattern?
             random_dense_grid(x, y)
         end
 
@@ -3191,7 +3184,6 @@ function preset_grid(x, y)
         elseif x == 9 then
             -- Euclidean 3/8 tresillo pattern
             euclidean_preset(1, y)
-        elseifom_dense_grid(x, y)
         end
     elseif y == 3 then
         print("Setting preset for row: " .. x)
@@ -3782,12 +3774,12 @@ function set_euclidian_rotation(x, y)
     -- y is the row
 
     -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
-    if x <= row_settings[y]["last_step"] then
+    if x <= row_states[y]["last_step"] then
         -- Save state for undo before making changes
         push_grid_undo()
 
         print("Setting first_step of row " .. y .. " to: " .. x)
-        row_settings[y]["first_step"] = x
+        row_states[y]["first_step"] = x
 
         -- Use advanced Euclidean generation with current event count
         generate_euclidean_with_rotation(y, x)
@@ -3797,7 +3789,7 @@ function set_euclidian_rotation(x, y)
 
         -- Show comprehensive info for user feedback
         local events = get_euclidean_events()
-        local length = row_settings[y]["last_step"]
+        local length = row_states[y]["last_step"]
         local rotation = x - 1
         print("ARM_EUCLIDIAN_ROTATION: Generated " .. events .. "/" .. length .. " Euclidean pattern, rotation=" .. rotation .. ", row=" .. y)
     else
@@ -3806,12 +3798,12 @@ function set_euclidian_rotation(x, y)
 end
 
 function set_euclidian_length(x, y)
-    if x >= row_settings[y]["first_step"] then
+    if x >= row_states[y]["first_step"] then
         -- Save state for undo before making changes
         push_grid_undo()
 
         print("Setting euclidian_length (last_step) of row" .. y .. " to: " .. x)
-        row_settings[y]["last_step"] = x
+        row_states[y]["last_step"] = x
 
         -- Auto-generate Euclidean rhythm with current event count and length
         local events = get_euclidean_events()
@@ -3997,7 +3989,7 @@ function refresh_grid_and_screen()
                 --if (current_step == col and row <= TOTAL_SEQUENCE_ROWS) then
 
                 -- POLYR
-                if (row_settings[row]["current_step"] == col and row <= TOTAL_SEQUENCE_ROWS) then
+                if (row_states[row]["current_step"] == col and row <= TOTAL_SEQUENCE_ROWS) then
                     -- This is the scrolling cursor
                     screen.text("*")
 
