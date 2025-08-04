@@ -2810,7 +2810,7 @@ end
 
 
 -- Function to set Euclidean event count for specific row (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
-function set_euclidean_events(events, row)
+function set_euclidean_events(row, events)
     -- Save state for undo before making changes
     push_grid_undo()
 
@@ -2886,24 +2886,24 @@ end
 
 
 -- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
-function set_euclidean_sparse()
-    return set_euclidean_events(2)  -- 2 events
+function set_euclidean_sparse(row)
+    return set_euclidean_events(row, 2)  -- 2 events
 end
 
-function set_euclidean_light()
-    return set_euclidean_events(4)  -- 4 events
+function set_euclidean_light(row)
+    return set_euclidean_events(row, 4)  -- 4 events
 end
 
-function set_euclidean_medium()
-    return set_euclidean_events(6)  -- 6 events
+function set_euclidean_medium(row)
+    return set_euclidean_events(row, 6)  -- 6 events
 end
 
-function set_euclidean_dense()
-    return set_euclidean_events(9)  -- 9 events
+function set_euclidean_dense(row)
+    return set_euclidean_events(row, 9)  -- 9 events
 end
 
-function set_euclidean_max()
-    return set_euclidean_events(16) -- 16 events
+function set_euclidean_max(row)
+    return set_euclidean_events(row, 16) -- 16 events
 end
 
 -- Classic pattern presets (maintain original event counts)
@@ -3629,7 +3629,7 @@ my_grid_one.key = function(x, y, z)
     elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_LENGTH_BUTTON then
         set_euclidian_length(x, y)
     elseif sequence_button_is_pressed == true and arm_row7 == NO_FEATURE and arm_control == ARM_EUCLIDIAN_EVENTS_BUTTON then
-        set_euclidean_events(x, y)
+        set_euclidean_events(y, x)
         print("ARM_EUCLIDIAN_EVENTS_BUTTON: Set events to " .. x .. " and generated pattern for row " .. y)
     elseif sequence_button_is_pressed == true and arm_row7 == ROW7_BUTTON_01 and arm_control == NO_FEATURE then
         print("button" .. 1)
