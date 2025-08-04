@@ -2872,56 +2872,9 @@ function set_euclidean_events(events, row)
     grids_are_dirty = true
 
     -- Visual feedback: briefly flash the event count on row 8
-    flash_event_count_on_grid(events)
+    --flash_event_count_on_grid(events)
 
     return events
-end
-
-
-
--- Visual feedback function to show event count on the grid
-function flash_event_count_on_grid(events)
-    if not my_grid_one then return end
-
-    -- Clear row 8 briefly
-    for i = 1, 16 do
-        my_grid_one:led(i, 8, 0)
-    end
-
-    -- Light up LEDs from 1 to events count
-    for i = 1, math.min(events, 16) do
-        my_grid_one:led(i, 8, 15) -- Full brightness
-    end
-
-    -- Send the grid update
-    my_grid_one:refresh()
-
-    -- Schedule to restore normal row 8 display after a brief delay
-    clock.run(function()
-        clock.sleep(0.5) -- Flash for 0.5 seconds
-        restore_row8_display()
-    end)
-end
-
--- Function to restore normal row 8 button display
-function restore_row8_display()
-    if not my_grid_one then return end
-
-    -- Restore all row 8 buttons to their normal state
-    for _, button in ipairs(BUTTONS) do
-        if button.y == 8 then
-            local brightness = 0
-            -- Check if this button is currently armed
-            if (button.name == arm_control) then
-                brightness = 15
-            else
-                brightness = 4
-            end
-            my_grid_one:led(button.x, button.y, brightness)
-        end
-    end
-
-    my_grid_one:refresh()
 end
 
 -- Manual Euclidean pattern application for advanced users
