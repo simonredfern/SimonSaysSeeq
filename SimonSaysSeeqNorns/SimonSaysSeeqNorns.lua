@@ -1549,7 +1549,7 @@ function greetings()
 end
 
 function process_step()
-    print ("hello from process_step midi_step_count is:  " .. midi_step_count)
+    -- print ("hello from process_step midi_step_count is:  " .. midi_step_count)
 
 
     local ratchet_mode = 1 -- default is 1 but it will be set
@@ -1594,7 +1594,7 @@ function process_step()
       -- print ("process_step says euc_events is:  " .. get_euclidean_events(sequence_row)
 
 
-      print(get_euclidean_events_info(sequence_row))
+    --  print(get_euclidean_events_info(sequence_row))
 
       ratchet_mode = grid_one_state[row_states[sequence_row]["current_step"]][sequence_row]
 
@@ -2664,13 +2664,30 @@ function generate_euclidean_rhythm(events, length, rotation)
     local slope = events / length
     local bucket = 1 - slope  -- Pre-load bucket so first iteration triggers event
 
+    print("DEBUG: generate_euclidean_rhythm called with events=" .. events .. ", length=" .. length .. ", rotation=" .. rotation)
+    print("DEBUG: slope=" .. slope .. ", initial bucket=" .. bucket)
+
     for i = 1, length do
         bucket = bucket + slope
         if bucket >= 1 then
             pattern[i] = 1
             bucket = bucket - 1
+            print("DEBUG: Event at position " .. i .. ", bucket reset to " .. bucket)
         end
     end
+
+    -- Print the pattern before rotation
+    local pattern_str = ""
+    for i = 1, length do
+        if pattern[i] == 1 then
+            if pattern_str == "" then
+                pattern_str = tostring(i)
+            else
+                pattern_str = pattern_str .. ", " .. tostring(i)
+            end
+        end
+    end
+    print("DEBUG: Pattern before rotation: " .. pattern_str)
 
     -- Apply rotation if specified
     if rotation ~= 0 then
