@@ -258,7 +258,6 @@ function get_row_states_tally(row_states)
         tally = tally ..
         " Row: " ..
         row .. get_euclidean_events_info(row)
-        --" first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0) .. " euc_events is: " .. (row_states[row]["euc_events"] or 4)
     end
     return tally
 end
@@ -281,22 +280,6 @@ end
 
 function load_row_states()
     row_states = Tab.load(ROW_STATES_FILE)
-
-    -- Migrate old save files that don't have euc_rotation or euc_events fields
-    if row_states then
-        for row = 1, 8 do
-            if row_states[row] then
-                if row_states[row]["euc_rotation"] == nil then
-                    row_states[row]["euc_rotation"] = 0
-                    print("Migrating row " .. row .. " - added euc_rotation field")
-                end
-                if row_states[row]["euc_events"] == nil then
-                    row_states[row]["euc_events"] = 4
-                    print("Migrating row " .. row .. " - added euc_events field")
-                end
-            end
-        end
-    end
 
     print("Result of table load is:")
     print(row_states)
