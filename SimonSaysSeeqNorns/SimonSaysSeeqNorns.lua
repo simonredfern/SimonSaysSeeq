@@ -3822,12 +3822,19 @@ end
 function get_tally(input_grid)
     -- A helper debug function to show the state of a grid
     -- A grid is a table with known dimensions
-    -- Used for debugging
+    -- Used for debugging and to prompt creation of tables if this gives an error.
     local tally = "id:" .. input_grid["id"] .. " colsXrows:"
     for col = 1, COLS do
         for row = 1, ROWS do
             -- This line throws an error if the table hasn't been dimensioned to col X row or is_active is missing.
-            tally = tally .. input_grid[col][row]
+            local cell_value = input_grid[col][row]
+            if type(cell_value) == "table" then
+                -- Handle MozartPointer objects - use is_active field
+                tally = tally .. (cell_value.is_active or 0)
+            else
+                -- Handle numeric values
+                tally = tally .. cell_value
+            end
         end
     end
     return tally
