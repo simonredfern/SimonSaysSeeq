@@ -2932,13 +2932,7 @@ function get_euclidean_rotation(row)
     return row_states[row]["euc_rotation"] or 0
 end
 
--- Helper function to get the current euclidean events for a row
-function get_euclidean_events_for_row(row)
-    if not row_states[row] then
-        return 4
-    end
-    return row_states[row]["euc_events"] or 4
-end
+
 
 -- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
 function set_euclidean_sparse()
