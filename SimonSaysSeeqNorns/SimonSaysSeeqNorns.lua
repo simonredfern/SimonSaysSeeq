@@ -177,9 +177,9 @@ first_midi_step = 1
 last_midi_step = 16
 
 ONE = 1
-first_step = 1
-midi_step_count = first_step
-last_step = COLS
+first_midi_step = 1
+midi_step_count = first_midi_step
+last_midi_step = COLS
 
 midi_bar_count = 1
 
@@ -1224,7 +1224,7 @@ function tick()
             process_step()
 
             -- Advance the midi step based on tick_count mod 12.
-            midi_step_count = util.wrap(midi_step_count + 1, first_step, last_step)
+            midi_step_count = util.wrap(midi_step_count + 1, first_midi_step, last_midi_step)
 
             if (midi_step_count == 1) then
                 midi_bar_count = util.wrap(midi_bar_count + 1, MIN_BAR, MAX_BAR)
@@ -1554,7 +1554,7 @@ function process_step()
     -- For each sequence row...
     for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
 
-        print("sequence_row is: " .. sequence_row)
+        -- print("sequence_row is: " .. sequence_row)
 
         -- on the current step...
         -- Prior to POLYR
@@ -1563,7 +1563,7 @@ function process_step()
         ratchet_mode = grid_one_state[row_states[sequence_row]["current_step"]][sequence_row]
 
 
-        print("ratchet_mode for row and step is: " .. ratchet_mode)
+        -- print("ratchet_mode for row and step is: " .. ratchet_mode)
 
         -- process step should run independently
         clock.run(process_ratchet, sequence_row, ratchet_mode)
@@ -1583,7 +1583,7 @@ function process_step()
             conditional_change_crow_output(row_states[sequence_row]["current_step"], sequence_row)
         end
     end -- end for
-    print ("bye from process_step midi_step_count is:  " .. midi_step_count)
+    -- print ("bye from process_step midi_step_count is:  " .. midi_step_count)
 end -- end function
 
 function conditional_change_crow_output(current_step, sequence_row)
@@ -3120,8 +3120,8 @@ function random_dense_grid(x, y)
 end
 
 function reset_row_states(row)
-    row_states[row]["first_step"] = first_step
-    row_states[row]["last_step"] = last_step
+    row_states[row]["first_step"] = 1
+    row_states[row]["last_step"] = 16
     -- row_states[row]["current_step"] = first_step
 end
 
