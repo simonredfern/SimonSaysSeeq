@@ -173,8 +173,8 @@ GATE_8 = 8
 GATE_7 = 7
 
 
-midi_first_step = 1
-midi_last_step = 16
+first_midi_step = 1
+last_midi_step = 16
 
 first_step = 1
 midi_step_count = first_step
@@ -623,7 +623,7 @@ function DisableAndTurnOffActiveKeyboardMidiNotes(skip)
 
     -- Disable that note for all steps
     for bc = MIN_BAR, MAX_BAR do
-        for sc = midi_first_step, midi_last_step do
+        for sc = first_midi_step, last_midi_step do
             for note = 0, 127 do
                 -- From the perspective of active on notes:
 
@@ -668,7 +668,7 @@ function DisableKeyboardMidiNotes(note)
 
     -- Disable that note for all steps
     for bc = MIN_BAR, MAX_BAR do
-        for sc = midi_first_step, midi_last_step do
+        for sc = first_midi_step, last_midi_step do
             keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].velocity = 0
             keyboard_midi_note_events[current_midi_lane][bc][sc][note][1].is_active = 0
             keyboard_midi_note_events[current_midi_lane][bc][sc][note][0].velocity = 0
