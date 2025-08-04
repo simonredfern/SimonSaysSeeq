@@ -222,7 +222,7 @@ function get_row_states_tally(row_states)
         tally = tally ..
         " Row: " ..
         row ..
-        " first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0)
+        " first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0) .. " euc_events is: " .. (row_states[row]["euc_events"] or 4)
     end
     return tally
 end
@@ -236,6 +236,7 @@ function create_row_states()
         row_states[row]["first_step"] = 1
         row_states[row]["euc_length"] = 16
         row_states[row]["euc_rotation"] = 0
+        row_states[row]["euc_events"] = 4
         row_states[row]["current_step"] = 1
     end
 
@@ -245,12 +246,18 @@ end
 function load_row_states()
     row_states = Tab.load(ROW_STATES_FILE)
 
-    -- Migrate old save files that don't have euc_rotation field
+    -- Migrate old save files that don't have euc_rotation or euc_events fields
     if row_states then
         for row = 1, 8 do
-            if row_states[row] and row_states[row]["euc_rotation"] == nil then
-                row_states[row]["euc_rotation"] = 0
-                print("Migrating row " .. row .. " - added euc_rotation field")
+            if row_states[row] then
+                if row_states[row]["euc_rotation"] == nil then
+                    row_states[row]["euc_rotation"] = 0
+                    print("Migrating row " .. row .. " - added euc_rotation field")
+                end
+                if row_states[row]["euc_events"] == nil then
+                    row_states[row]["euc_events"] = 4
+                    print("Migrating row " .. row .. " - added euc_events field")
+                end
             end
         end
     end
@@ -2794,7 +2801,7 @@ end
 function generate_euclidean_with_rotation(row, rotation_step)
     local sequence_length = row_states[row]["euc_length"]
     local rotation = rotation_step - 1  -- Convert to 0-based rotation
-    local events = euclidean_events_count  -- Use the globally set event count
+    local events = row_states[row]["euc_events"] or 4  -- Use stored event count for this row
 
     -- Ensure events doesn't exceed sequence length
     events = math.min(events, sequence_length)
@@ -2812,7 +2819,7 @@ end
 function generate_euclidean_with_stored_rotation(row)
     local sequence_length = row_states[row]["euc_length"]
     local rotation = row_states[row]["euc_rotation"] or 0  -- Use stored rotation
-    local events = euclidean_events_count  -- Use the globally set event count
+    local events = row_states[row]["euc_events"] or 4  -- Use stored event count for this row
 
     -- Ensure events doesn't exceed sequence length
     events = math.min(events, sequence_length)
@@ -2826,7 +2833,7 @@ function generate_euclidean_with_stored_rotation(row)
     return events, rotation
 end
 
--- Global variable to store Euclidean event count
+-- Legacy global variable for backward compatibility (now using per-row storage)
 euclidean_events_count = 4  -- Default to 4 events
 
 -- Function to set Euclidean event count for specific row (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
@@ -2836,7 +2843,7 @@ function set_euclidean_events(events, row)
 
     -- Clamp events between 1 and 16
     events = math.max(1, math.min(16, events))
-    euclidean_events_count = events
+    row_states[row]["euc_events"] = events
     print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
 
     -- Auto-generate Euclidean pattern for the specific row with current settings and stored rotation
@@ -2855,13 +2862,17 @@ function set_euclidean_events(events, row)
 end
 
 -- Function to get current Euclidean event count
-function get_euclidean_events()
-    return euclidean_events_count
+function get_euclidean_events(row)
+    if row and row_states[row] then
+        return row_states[row]["euc_events"] or 4
+    end
+    return 4  -- Default fallback
 end
 
 -- Function to display current event count info
-function show_euclidean_events_info()
-    local info = "Euclidean events: " .. euclidean_events_count .. "/16"
+function show_euclidean_events_info(row)
+    local events = get_euclidean_events(row)
+    local info = "Euclidean events for row " .. (row or "?") .. ": " .. events .. "/16"
     print(info)
     return info
 end
@@ -2972,6 +2983,14 @@ function get_euclidean_rotation(row)
         return 0
     end
     return row_states[row]["euc_rotation"] or 0
+end
+
+-- Helper function to get the current euclidean events for a row
+function get_euclidean_events_for_row(row)
+    if not row_states[row] then
+        return 4
+    end
+    return row_states[row]["euc_events"] or 4
 end
 
 -- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
@@ -3184,6 +3203,7 @@ function reset_row_states(row)
     row_states[row]["first_step"] = 1
     row_states[row]["euc_length"] = 16
     row_states[row]["euc_rotation"] = 0
+    row_states[row]["euc_events"] = 4
     -- row_states[row]["current_step"] = 1
 end
 
@@ -3854,7 +3874,7 @@ function set_euclidian_rotation(x, y)
         grids_are_dirty = true
 
         -- Show comprehensive info for user feedback
-        local events = get_euclidean_events()
+        local events = get_euclidean_events(y)
         local length = row_states[y]["euc_length"]
         print("ARM_EUCLIDIAN_ROTATION: Generated " .. events .. "/" .. length .. " Euclidean pattern, rotation=" .. rotation .. ", row=" .. y)
     else
@@ -3871,7 +3891,7 @@ function set_euclidian_length(x, y)
         row_states[y]["euc_length"] = x
 
         -- Auto-generate Euclidean rhythm with current event count, length, and stored rotation
-        local events = get_euclidean_events()
+        local events = get_euclidean_events(y)
         local rotation = row_states[y]["euc_rotation"] or 0
         apply_euclidean_to_row_with_euc_length(y, events, rotation)
         print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern with rotation " .. rotation .. " for row " .. y)
