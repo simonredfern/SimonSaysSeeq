@@ -214,6 +214,42 @@ SLIDE_STATE_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-slide-st
 
 ROW_STATES_FILE = _path.dust .. "data/SimonSaysSeeqNorns/SimonSaysSeeq-row-states-".. version .. ".tbl"
 
+
+-- Function to get current Euclidean event count
+function get_euclidean_events(row)
+    if row and row_states[row] then
+        return row_states[row]["euc_events"] or 4
+    end
+    return 4  -- Default fallback
+end
+
+function get_euclidean_length(row)
+    if row and row_states[row] then
+        return row_states[row]["euc_length"] or 16
+    end
+    return 16  -- Default fallback
+end
+
+function get_euclidean_rotation(row)
+    if row and row_states[row] then
+        return row_states[row]["euc_rotation"] or 0
+    end
+    return 0  -- Default fallback
+end
+
+-- Function to display current event count info
+function show_euclidean_events_info(row)
+    local events = get_euclidean_events(row)
+    local length = get_euclidean_length(row)
+    local rotation = get_euclidean_rotation(row)
+    local info = "Euclidean row " .. (row or "?") .. ": " .. events .. "/" .. length .. " R: " .. rotation
+    print(info)
+    return info
+end
+
+
+
+
 function get_row_states_tally(row_states)
     -- A helper debug function to show the state the row_states table
     -- We use this to get an error if the expected keys are not there.
@@ -1572,6 +1608,13 @@ function process_step()
     -- For each sequence row...
     for sequence_row = 1, TOTAL_SEQUENCE_ROWS do
 
+      -- print ("process_step says euc_events is:  " .. get_euclidean_events(sequence_row)
+
+
+      show_euclidean_events_info(sequence_row)
+      -- print ("process_step says euc_length is:  " .. grid_one_state[row_states[sequence_row]["euc_length"]])
+      --print ("process_step says euc_rotation is:  " .. grid_one_state[row_states[sequence_row]["euc_rotation"]])
+
         -- print("sequence_row is: " .. sequence_row)
 
         -- on the current step...
@@ -2861,21 +2904,7 @@ function set_euclidean_events(events, row)
     return events
 end
 
--- Function to get current Euclidean event count
-function get_euclidean_events(row)
-    if row and row_states[row] then
-        return row_states[row]["euc_events"] or 4
-    end
-    return 4  -- Default fallback
-end
 
--- Function to display current event count info
-function show_euclidean_events_info(row)
-    local events = get_euclidean_events(row)
-    local info = "Euclidean events for row " .. (row or "?") .. ": " .. events .. "/16"
-    print(info)
-    return info
-end
 
 -- Visual feedback function to show event count on the grid
 function flash_event_count_on_grid(events)
