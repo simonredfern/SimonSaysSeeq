@@ -176,7 +176,7 @@ GATE_7 = 7
 first_midi_step = 1
 last_midi_step = 16
 
-first_step = 1
+ONE = 1
 midi_step_count = first_step
 last_step = COLS
 
@@ -1521,7 +1521,7 @@ function process_step()
     --engine.hz(400) -- just to give some audible sign for debugging timing
 
     if need_to_start_midi == true then
-        if midi_step_count == first_step then
+        if midi_step_count == ONE then
             --engine.hz(800) -- just to give some audible sign for debugging timing
 
             -- we only want to start midi clock at the right time!
