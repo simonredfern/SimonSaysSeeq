@@ -2638,6 +2638,8 @@ end
 -- length: total number of steps in the pattern
 -- rotation: rotate the pattern by this many steps (optional, default 0)
 function generate_euclidean_rhythm(events, length, rotation)
+    -- Uses modified Bresenham's line algorithm starting from step 1
+    -- Example: 4 events in 16 steps → positions 1, 5, 9, 13
     rotation = rotation or 0
 
     -- Sanity checks
@@ -2657,9 +2659,10 @@ function generate_euclidean_rhythm(events, length, rotation)
         return pattern
     end
 
-    -- Use Bresenham's line algorithm to distribute events evenly
+    -- Use modified Bresenham's line algorithm starting from step 1
+    -- Initialize bucket to ensure first event occurs at step 1
     local slope = events / length
-    local bucket = 0
+    local bucket = 1 - slope  -- Pre-load bucket so first iteration triggers event
 
     for i = 1, length do
         bucket = bucket + slope
@@ -2758,10 +2761,10 @@ end
 -- 3. Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid position to generate pattern with rotation for that row
 --    - Column (x) = rotation step (1-16), becomes rotation (0-15), Row (y) = target sequence row (1-8)
 --
--- Example: Create a 5/8 pattern rotated by 2 steps on row 3:
--- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + column 8, row 3 (sets length to 8 for row 3)
--- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + column 5, row 3 (sets events to 5 for row 3)
--- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates 5/8 pattern, rotated by 2 for row 3)
+-- Example: Create a 4/16 Euclidean pattern (steps 1,5,9,13) rotated by 2 steps on row 3:
+-- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + column 16, row 3 (sets length to 16 for row 3)
+-- 2. ARM_EUCLIDIAN_EVENTS_BUTTON + column 4, row 3 (sets events to 4 for row 3)
+-- 3. ARM_EUCLIDIAN_ROTATION_BUTTON + column 3, row 3 (generates Euclidean pattern rotated by 2 for row 3)
 --
 -- Benefits:
 -- - Direct control over all Euclidean parameters (length, events, rotation)
