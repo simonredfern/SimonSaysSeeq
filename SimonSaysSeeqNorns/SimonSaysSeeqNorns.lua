@@ -1595,22 +1595,14 @@ function process_step()
 
 
       print(get_euclidean_events_info(sequence_row))
-      -- print ("process_step says euc_length is:  " .. grid_one_state[row_states[sequence_row]["euc_length"]])
-      --print ("process_step says euc_rotation is:  " .. grid_one_state[row_states[sequence_row]["euc_rotation"]])
 
-        -- print("sequence_row is: " .. sequence_row)
-
-        -- on the current step...
-        -- Prior to POLYR
-        --ratchet_mode = grid_one_state[current_step][sequence_row]
-
-        ratchet_mode = grid_one_state[row_states[sequence_row]["current_step"]][sequence_row]
+      ratchet_mode = grid_one_state[row_states[sequence_row]["current_step"]][sequence_row]
 
 
         -- print("ratchet_mode for row and step is: " .. ratchet_mode)
 
         -- process step should run independently
-        clock.run(process_ratchet, sequence_row, ratchet_mode)
+      clock.run(process_ratchet, sequence_row, ratchet_mode)
 
         -- Sent appropriate midi note out as cv
 
@@ -1632,9 +1624,6 @@ end -- end function
 
 function conditional_change_crow_output(current_step, sequence_row)
     crow_output = sequence_row - 2
-
-
-
     -- only change slew and voltage if the sequence step is active
     if grid_one_state[current_step][sequence_row] ~= 0 then
         if slide_state[current_step][sequence_row] == 1 then
@@ -2843,9 +2832,10 @@ end
 
 -- New function that uses stored rotation from row_states
 function generate_euclidean_with_stored_rotation(row)
-    local sequence_length = row_states[row]["euc_length"]
-    local rotation = row_states[row]["euc_rotation"] or 0  -- Use stored rotation
-    local events = row_states[row]["euc_events"] or 4  -- Use stored event count for this row
+    local events = get_euclidean_events(row)
+    local sequence_length =  get_euclidean_length(row)
+    local rotation = get_euclidean_rotation(row)
+
 
     -- Ensure events doesn't exceed sequence length
     events = math.min(events, sequence_length)
