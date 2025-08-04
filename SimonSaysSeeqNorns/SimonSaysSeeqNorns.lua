@@ -2819,18 +2819,13 @@ function set_euclidean_events(row, events)
     row_states[row]["euc_events"] = events
     print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
 
-    -- Auto-generate Euclidean pattern for the specific row with current settings and stored rotation
-    local sequence_length = row_states[row]["euc_length"]
     local rotation = get_euclidean_rotation(row)
-    local length = row_states[row]["euc_length"]
+    local length = get_euclidean_length(row)
     apply_euclidean_to_row(row, events, length, rotation)
-    print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern with rotation " .. rotation .. " for row " .. row)
+    print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. length .. " Euclidean pattern with rotation " .. rotation .. " for row " .. row)
 
     -- Mark grids as dirty so they get saved
     grids_are_dirty = true
-
-    -- Visual feedback: briefly flash the event count on row 8
-    --flash_event_count_on_grid(events)
 
     return events
 end
