@@ -2796,95 +2796,15 @@ end
 
 -- Manual Euclidean pattern application for advanced users
 -- Allows direct specification of all parameters
-function apply_manual_euclidean(row, events, length, rotation, strategy_name)
-    if row < 1 or row > 8 then
-        print("ERROR: Row must be 1-8, got: " .. tostring(row))
-        return false
-    end
-
-    length = length or row_states[row]["euc_length"]
-    rotation = rotation or 0
-    events = events or 1
-    strategy_name = strategy_name or "manual"
-
-    -- Validate parameters
-    if events > length then
-        print("WARNING: Events (" .. events .. ") > length (" .. length .. "), capping events")
-        events = length
-    end
-
-    if events < 0 then events = 0 end
-    if length <= 0 then
-        print("ERROR: Length must be positive, got: " .. tostring(length))
-        return false
-    end
-
-    -- Generate and apply the pattern
-    local pattern = generate_euclidean_rhythm(events, length, rotation)
-
-    -- Clear the row first
-    for step = 1, 16 do
-        unconditional_set_grid(step, row, 0)
-    end
-
-    -- Apply the pattern
-    for step = 1, math.min(length, 16) do
-        if pattern[step] then
-            unconditional_set_grid(step, row, pattern[step])
-        end
-    end
-
-    print("Manual Euclidean applied: " .. events .. "/" .. length ..
-          " rotation:" .. rotation .. " strategy:" .. strategy_name .. " row:" .. row)
-
-    return true
-end
 
 
 
 
 
--- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
-function set_euclidean_sparse(row)
-    return set_euclidean_events(row, 2)  -- 2 events
-end
 
-function set_euclidean_light(row)
-    return set_euclidean_events(row, 4)  -- 4 events
-end
 
-function set_euclidean_medium(row)
-    return set_euclidean_events(row, 6)  -- 6 events
-end
 
-function set_euclidean_dense(row)
-    return set_euclidean_events(row, 9)  -- 9 events
-end
 
-function set_euclidean_max(row)
-    return set_euclidean_events(row, 16) -- 16 events
-end
-
--- Classic pattern presets (maintain original event counts)
-function apply_euclidean_kick(row)
-    -- Classic 4-on-the-floor pattern
-    return apply_manual_euclidean(row, 4, 16, 0, "kick")
-end
-
-function apply_euclidean_snare(row)
-    -- Backbeat snare pattern
-    return apply_manual_euclidean(row, 2, 8, 2, "snare")
-end
-
-function apply_euclidean_hihat(row)
-    -- Dense hi-hat pattern
-    return apply_manual_euclidean(row, 7, 16, 1, "hihat")
-end
-
-function apply_euclidean_tresillo(row)
-    -- Classic 3/8 tresillo pattern
-    return apply_manual_euclidean(row, 3, 8, 0, "tresillo")
-end
 
 -- probably not used (but does get called becuase lots of prints)
 midi_gates_usb_device_port.event = function(data)
