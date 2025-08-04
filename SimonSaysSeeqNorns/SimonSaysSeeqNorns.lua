@@ -2756,7 +2756,7 @@ end
 -- 2. Press ARM_EUCLIDIAN_EVENTS_BUTTON + grid position to set event count for that row
 --    - Column (x) = events (1-16), Row (y) = target sequence row (1-8)
 -- 3. Press ARM_EUCLIDIAN_ROTATION_BUTTON + grid position to generate pattern with rotation for that row
---    - Column (x) = rotation amount (0-15 steps), Row (y) = target sequence row (1-8)
+--    - Column (x) = rotation step (1-16), becomes rotation (0-15), Row (y) = target sequence row (1-8)
 --
 -- Example: Create a 5/8 pattern rotated by 2 steps on row 3:
 -- 1. ARM_EUCLIDIAN_LENGTH_BUTTON + column 8, row 3 (sets length to 8 for row 3)
@@ -3624,11 +3624,11 @@ end -- End of function for my_grid_two
 
 
 function set_euclidian_rotation(x, y)
-    -- x is the rotation step (1-based)
+    -- x is the grid column (1-16), gets converted to 0-based rotation (0-15)
     -- y is the row
 
-    -- We can set the rotation as long as it is within the euclidean length
-    if x <= row_states[y]["euc_length"] then
+    -- Accept any valid grid column (1-16) for rotation
+    if x >= 1 and x <= 16 then
         -- Save state for undo before making changes
         push_grid_undo()
 
@@ -3648,11 +3648,9 @@ function set_euclidian_rotation(x, y)
         grids_are_dirty = true
 
         -- Show comprehensive info for user feedback
-        local events = get_euclidean_events(y)
-        local length = row_states[y]["euc_length"]
         print("ARM_EUCLIDIAN_ROTATION: Generated " .. events .. "/" .. length .. " Euclidean pattern, rotation=" .. rotation .. ", row=" .. y)
     else
-        print("No can do. Rotation step of row " .. y .. " would be after euclidean length. " .. x)
+        print("Invalid rotation column. Must be 1-16, got: " .. x)
     end
 end
 
