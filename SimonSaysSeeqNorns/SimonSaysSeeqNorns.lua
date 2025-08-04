@@ -2808,8 +2808,6 @@ function generate_euclidean_with_stored_rotation(row)
     return events, rotation
 end
 
--- Legacy global variable for backward compatibility (now using per-row storage)
-euclidean_events_count = 4  -- Default to 4 events
 
 -- Function to set Euclidean event count for specific row (called when ARM_EUCLIDIAN_EVENTS_BUTTON + grid position pressed)
 function set_euclidean_events(events, row)
