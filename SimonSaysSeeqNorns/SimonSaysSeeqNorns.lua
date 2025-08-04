@@ -2864,7 +2864,7 @@ function set_euclidean_events(events, row)
 
     -- Auto-generate Euclidean pattern for the specific row with current settings and stored rotation
     local sequence_length = row_states[row]["euc_length"]
-    local rotation = row_states[row]["euc_rotation"] or 0
+    local rotation = get_euclidean_rotation(row)
     apply_euclidean_to_row_with_euc_length(row, events, rotation)
     print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern with rotation " .. rotation .. " for row " .. row)
 
@@ -2924,13 +2924,6 @@ function apply_manual_euclidean(row, events, length, rotation, strategy_name)
 end
 
 
--- Helper function to get the current euclidean rotation for a row
-function get_euclidean_rotation(row)
-    if not row_states[row] then
-        return 0
-    end
-    return row_states[row]["euc_rotation"] or 0
-end
 
 
 
@@ -3833,7 +3826,7 @@ function set_euclidian_length(x, y)
 
         -- Auto-generate Euclidean rhythm with current event count, length, and stored rotation
         local events = get_euclidean_events(y)
-        local rotation = row_states[y]["euc_rotation"] or 0
+        local rotation = get_euclidean_rotation(y)
         apply_euclidean_to_row_with_euc_length(y, events, rotation)
         print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern with rotation " .. rotation .. " for row " .. y)
 
