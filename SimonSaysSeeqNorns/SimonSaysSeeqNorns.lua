@@ -2923,14 +2923,6 @@ function apply_manual_euclidean(row, events, length, rotation, strategy_name)
     return true
 end
 
--- Convenience functions for common Euclidean patterns using current event count
-function apply_euclidean_with_current_events(row, rotation, name)
-    rotation = rotation or 0
-    name = name or "pattern"
-    local events = get_euclidean_events()
-    local length = row_states[row]["euc_length"]
-    return apply_manual_euclidean(row, events, length, rotation, name)
-end
 
 -- Helper function to get the current euclidean rotation for a row
 function get_euclidean_rotation(row)
