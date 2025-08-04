@@ -238,12 +238,12 @@ function get_euclidean_rotation(row)
 end
 
 -- Function to display current event count info
-function show_euclidean_events_info(row)
+function get_euclidean_events_info(row)
     local events = get_euclidean_events(row)
     local length = get_euclidean_length(row)
     local rotation = get_euclidean_rotation(row)
     local info = "Euclidean row " .. (row or "?") .. ": " .. events .. "/" .. length .. " R: " .. rotation
-    print(info)
+    --print(info)
     return info
 end
 
@@ -257,8 +257,8 @@ function get_row_states_tally(row_states)
     for row = 1, ROWS do
         tally = tally ..
         " Row: " ..
-        row ..
-        " first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0) .. " euc_events is: " .. (row_states[row]["euc_events"] or 4)
+        row .. get_euclidean_events_info(row)
+        --" first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0) .. " euc_events is: " .. (row_states[row]["euc_events"] or 4)
     end
     return tally
 end
@@ -1611,7 +1611,7 @@ function process_step()
       -- print ("process_step says euc_events is:  " .. get_euclidean_events(sequence_row)
 
 
-      show_euclidean_events_info(sequence_row)
+      print(get_euclidean_events_info(sequence_row))
       -- print ("process_step says euc_length is:  " .. grid_one_state[row_states[sequence_row]["euc_length"]])
       --print ("process_step says euc_rotation is:  " .. grid_one_state[row_states[sequence_row]["euc_rotation"]])
 
@@ -2166,7 +2166,7 @@ function init()
 
     -- Display current Euclidean system status on startup
     print("Complete Euclidean Sequencer Integration Initialized")
-    show_euclidean_events_info()
+    print(print(get_euclidean_events_info()))
     print("Euclidean Controls: LENGTH (pos 6) → EVENTS (pos 7) → ROTATION (pos 5)")
     print("All ARM_EUCLIDIAN operations work on the selected row")
     print("Press ARM_EUCLIDIAN_LENGTH_BUTTON + column/row to set sequence length for that row")
