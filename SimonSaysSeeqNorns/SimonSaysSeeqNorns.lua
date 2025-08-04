@@ -177,6 +177,7 @@ first_midi_step = 1
 last_midi_step = 16
 
 ONE = 1
+first_step = 1
 midi_step_count = first_step
 last_step = COLS
 
