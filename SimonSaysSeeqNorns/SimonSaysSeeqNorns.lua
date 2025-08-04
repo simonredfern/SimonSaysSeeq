@@ -222,7 +222,7 @@ function get_row_states_tally(row_states)
         tally = tally ..
         " Row: " ..
         row ..
-        " first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"]
+        " first_step is: " .. row_states[row]["first_step"] .. " euc_length is: " .. row_states[row]["euc_length"] .. " euc_rotation is: " .. (row_states[row]["euc_rotation"] or 0)
     end
     return tally
 end
@@ -235,6 +235,7 @@ function create_row_states()
         row_states[row] = {}   -- create a table for each row
         row_states[row]["first_step"] = 1
         row_states[row]["euc_length"] = 16
+        row_states[row]["euc_rotation"] = 0
         row_states[row]["current_step"] = 1
     end
 
@@ -243,6 +244,16 @@ end
 
 function load_row_states()
     row_states = Tab.load(ROW_STATES_FILE)
+
+    -- Migrate old save files that don't have euc_rotation field
+    if row_states then
+        for row = 1, 8 do
+            if row_states[row] and row_states[row]["euc_rotation"] == nil then
+                row_states[row]["euc_rotation"] = 0
+                print("Migrating row " .. row .. " - added euc_rotation field")
+            end
+        end
+    end
 
     print("Result of table load is:")
     print(row_states)
@@ -2729,6 +2740,29 @@ function apply_euclidean_to_row_with_length(row, events, rotation)
     print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " to row " .. row)
 end
 
+-- New function that uses euclidean length instead of last_step
+function apply_euclidean_to_row_with_euc_length(row, events, rotation)
+    rotation = rotation or 0
+    local length = row_states[row]["euc_length"]
+
+    -- Generate the Euclidean rhythm using the euclidean length
+    local pattern = generate_euclidean_rhythm(events, length, rotation)
+
+    -- Clear the row first
+    for step = 1, 16 do
+        unconditional_set_grid(step, row, 0)
+    end
+
+    -- Apply the pattern to the grid row
+    for step = 1, math.min(length, 16) do -- Limit to 16 steps max
+        if pattern[step] then
+            unconditional_set_grid(step, row, pattern[step])
+        end
+    end
+
+    print("Applied Euclidean rhythm: " .. events .. "/" .. length .. " (euc_length) to row " .. row)
+end
+
 -- Complete Euclidean Sequencer Integration
 -- ========================================
 -- This system provides full control over Euclidean rhythm generation using three dedicated buttons:
@@ -2774,6 +2808,24 @@ function generate_euclidean_with_rotation(row, rotation_step)
     return events, rotation
 end
 
+-- New function that uses stored rotation from row_states
+function generate_euclidean_with_stored_rotation(row)
+    local sequence_length = row_states[row]["euc_length"]
+    local rotation = row_states[row]["euc_rotation"] or 0  -- Use stored rotation
+    local events = euclidean_events_count  -- Use the globally set event count
+
+    -- Ensure events doesn't exceed sequence length
+    events = math.min(events, sequence_length)
+
+    -- Generate and apply the Euclidean pattern using euclidean length, not last_step
+    apply_euclidean_to_row_with_euc_length(row, events, rotation)
+
+    print("Generated Euclidean: " .. events .. "/" .. sequence_length ..
+          " rotation:" .. rotation .. " row:" .. row)
+
+    return events, rotation
+end
+
 -- Global variable to store Euclidean event count
 euclidean_events_count = 4  -- Default to 4 events
 
@@ -2787,10 +2839,11 @@ function set_euclidean_events(events, row)
     euclidean_events_count = events
     print("Euclidean events count set to: " .. events .. "/16 for row " .. row)
 
-    -- Auto-generate Euclidean pattern for the specific row with current settings
+    -- Auto-generate Euclidean pattern for the specific row with current settings and stored rotation
     local sequence_length = row_states[row]["euc_length"]
-    apply_euclidean_to_row_with_length(row, events, 0)
-    print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern for row " .. row)
+    local rotation = row_states[row]["euc_rotation"] or 0
+    apply_euclidean_to_row_with_euc_length(row, events, rotation)
+    print("ARM_EUCLIDIAN_EVENTS: Generated " .. events .. "/" .. sequence_length .. " Euclidean pattern with rotation " .. rotation .. " for row " .. row)
 
     -- Mark grids as dirty so they get saved
     grids_are_dirty = true
@@ -2911,6 +2964,14 @@ function apply_euclidean_with_current_events(row, rotation, name)
     local events = get_euclidean_events()
     local length = row_states[row]["euc_length"]
     return apply_manual_euclidean(row, events, length, rotation, name)
+end
+
+-- Helper function to get the current euclidean rotation for a row
+function get_euclidean_rotation(row)
+    if not row_states[row] then
+        return 0
+    end
+    return row_states[row]["euc_rotation"] or 0
 end
 
 -- Quick preset functions for ARM_EUCLIDIAN_EVENTS_BUTTON event counts
@@ -3122,6 +3183,7 @@ end
 function reset_row_states(row)
     row_states[row]["first_step"] = 1
     row_states[row]["euc_length"] = 16
+    row_states[row]["euc_rotation"] = 0
     -- row_states[row]["current_step"] = 1
 end
 
@@ -3771,19 +3833,22 @@ end -- End of function for my_grid_two
 
 
 function set_euclidian_rotation(x, y)
-    -- x is the rotation step
+    -- x is the rotation step (1-based)
     -- y is the row
 
-    -- We can set the first step (y) for the sequence row (x) as long as it is less than the last step of that row.
+    -- We can set the rotation as long as it is within the euclidean length
     if x <= row_states[y]["euc_length"] then
         -- Save state for undo before making changes
         push_grid_undo()
 
-        print("Setting first_step of row " .. y .. " to: " .. x)
-        row_states[y]["first_step"] = x
+        -- Convert to 0-based rotation and store it
+        local rotation = x - 1
+        row_states[y]["euc_rotation"] = rotation
 
-        -- Use advanced Euclidean generation with current event count
-        generate_euclidean_with_rotation(y, x)
+        print("Setting euclidean rotation of row " .. y .. " to: " .. rotation .. " (step " .. x .. ")")
+
+        -- Use advanced Euclidean generation with current event count and stored rotation
+        generate_euclidean_with_stored_rotation(y)
 
         -- Mark grids as dirty so they get saved
         grids_are_dirty = true
@@ -3791,10 +3856,9 @@ function set_euclidian_rotation(x, y)
         -- Show comprehensive info for user feedback
         local events = get_euclidean_events()
         local length = row_states[y]["euc_length"]
-        local rotation = x - 1
         print("ARM_EUCLIDIAN_ROTATION: Generated " .. events .. "/" .. length .. " Euclidean pattern, rotation=" .. rotation .. ", row=" .. y)
     else
-        print("No can do. Rotation step of row " .. y .. " would be after last step. " .. x)
+        print("No can do. Rotation step of row " .. y .. " would be after euclidean length. " .. x)
     end
 end
 
@@ -3806,10 +3870,11 @@ function set_euclidian_length(x, y)
         print("Setting euclidian_length (euc_length) of row" .. y .. " to: " .. x)
         row_states[y]["euc_length"] = x
 
-        -- Auto-generate Euclidean rhythm with current event count and length
+        -- Auto-generate Euclidean rhythm with current event count, length, and stored rotation
         local events = get_euclidean_events()
-        apply_euclidean_to_row_with_length(y, events, 0)
-        print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern for row " .. y)
+        local rotation = row_states[y]["euc_rotation"] or 0
+        apply_euclidean_to_row_with_euc_length(y, events, rotation)
+        print("ARM_EUCLIDIAN_LENGTH: Generated " .. events .. "/" .. x .. " Euclidean pattern with rotation " .. rotation .. " for row " .. y)
 
         -- Mark grids as dirty so they get saved
         grids_are_dirty = true
