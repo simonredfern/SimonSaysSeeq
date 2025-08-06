@@ -499,9 +499,19 @@ table.insert(BUTTONS, { name = ARM_SLIDE_OFF_BUTTON, x = 15, y = 8 })
 table.insert(BUTTONS, { name = ARM_SLIDE_ON_BUTTON, x = 16, y = 8 })
 
 
+function reset_all_row_states_current_step()
+    -- Reset all row current_step counters to their first_step value
+    for row = 1, TOTAL_SEQUENCE_ROWS do
+        if row_states and row_states[row] then
+            row_states[row]["current_step"] = row_states[row]["first_step"]
+        end
+    end
+end
+
 function reset_all_sequence_counters()
     init_midi_step_count()
     init_midi_bar_count()
+    reset_all_row_states_current_step()
 
 
     -- Initialize CO2 counters safely based on available data
@@ -1839,6 +1849,8 @@ function clock.transport.start() -- transport start
     init_tick_count()
     InitStepCountSinceStep()
     init_midi_bar_count()
+    init_midi_step_count()
+    reset_all_row_states_current_step()
 
     the_current_tick_count_since_start = 0
     screen.clear()
