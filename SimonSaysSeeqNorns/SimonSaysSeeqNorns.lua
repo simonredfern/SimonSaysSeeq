@@ -512,7 +512,16 @@ function reset_all_sequence_counters()
     init_midi_step_count()
     init_midi_bar_count()
     reset_all_row_states_current_step()
-
+    
+    -- Reset tick counters
+    init_tick_count()
+    InitStepCountSinceStep()
+    the_current_tick_count_since_start = 0
+    
+    -- Reset wow and flutter
+    init_wow_window()
+    init_flutter_window()
+    init_wow_and_flutter_counters()
 
     -- Initialize CO2 counters safely based on available data
     if no_of_co2_ppm_records > 0 then
@@ -1846,22 +1855,7 @@ function clock.transport.start() -- transport start
 
     print("====================== transport.start says Hello ========================")
 
-    init_tick_count()
-    InitStepCountSinceStep()
-    init_midi_bar_count()
-    init_midi_step_count()
-    reset_all_row_states_current_step()
-
-    the_current_tick_count_since_start = 0
     screen.clear()
-
-
-
-    init_wow_window()
-
-    init_flutter_window()
-
-    init_wow_and_flutter_counters()
 
     screen.move(1, 63)
     screen.text("Transport Start")
