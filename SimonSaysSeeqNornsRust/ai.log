@@ -1,0 +1,44 @@
+# AI Commands Log
+# This file tracks all commands run during development and testing
+
+## 2025-01-09 Grid Testing Session
+
+### Build Commands
+cargo build --bin test_grids
+cargo run --bin test_grids
+cargo run --bin test_grids --release
+
+### Direct Binary Execution
+./target/debug/test_grids
+
+### System Investigation Commands
+ls -la /dev/ttyACM*
+lsusb | grep -i monome
+lsusb | head -20
+udevadm info --query=all --name=/dev/ttyACM0
+udevadm info --query=all --name=/dev/ttyACM1
+ls target/debug/
+
+### Results Summary
+# Two grids physically connected:
+# - Grid m2949672 on /dev/ttyACM0 (VID: 0483:5740 - STMicroelectronics)
+# - Grid m5032747 on /dev/ttyACM1 (VID: cafe:4001 - Standard Monome)
+# Only the newer grid (m5032747) is detected and fully functional
+# Older grid (m2949672) not detected due to different VID/PID
+
+### Code Investigation Commands
+# Checked if current code uses OSC messages
+grep -r "osc|OSC" src/grid.rs
+grep -r "serialosc" src/grid.rs
+ls src/
+cat src/lib.rs
+
+### Key Discovery
+# Current code IS using OSC messages via grid_osc.rs module
+# - grid_osc.rs: OSC-based manager (DEFAULT, uses serialosc)
+# - grid.rs: Serial-based manager (legacy/fallback)
+# This explains why newer grid works well - it's using proper OSC communication
+
+### File Operations
+rm src/grid.rs
+# Deleted legacy serial-based grid manager, keeping only OSC-based implementation
