@@ -240,4 +240,9 @@ kill 14815 16252 16404 16463
 # Progress: Grid button presses now detected and responding
 # Issue: Some LEDs getting stuck on after button press
 # Problem: Button press/release logic not working correctly - LEDs not turning off
-# Need: Fix LED state management and ensure LEDs turn off after button release
+# Fixed: Coordinate conversion and press/release handling
+
+## 2025-08-10 01:44:25 Renaming RowSettings to MainRowStates
+# Task: Rename RowSettings to MainRowStates for clarity
+# Reason: Better distinction between main sequencer row states vs other sequencer types
+# Files to update: src/sequencer.rs and any references in other files

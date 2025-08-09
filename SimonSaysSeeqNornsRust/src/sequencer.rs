@@ -46,7 +46,7 @@ pub struct NoteEvent {
 
 /// Row settings for each sequence row
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RowSettings {
+pub struct MainRowStates {
     pub current_step: usize,
     pub first_step: usize,
     pub last_step: usize,
@@ -125,7 +125,7 @@ impl Default for TempoAnalysis {
     }
 }
 
-impl Default for RowSettings {
+impl Default for MainRowStates {
     fn default() -> Self {
         Self {
             current_step: 1,
@@ -154,7 +154,7 @@ pub struct PatternChainEntry {
 pub struct StateSnapshot {
     pub grid: Vec<Vec<u8>>,
     pub mozart: Vec<Vec<u8>>,
-    pub row_settings: Vec<RowSettings>,
+    pub row_settings: Vec<MainRowStates>,
     pub timestamp: std::time::SystemTime,
     pub description: String,
 }
@@ -180,7 +180,7 @@ pub struct SequencerState {
     /// Held state for grid button combinations
     pub held: Vec<Vec<u8>>,
     /// Row settings for each sequence row
-    pub row_settings: Vec<RowSettings>,
+    pub row_settings: Vec<MainRowStates>,
     /// Pattern chains for song mode
     pub pattern_chains: Vec<PatternChainEntry>,
     pub current_chain_position: usize,
@@ -249,7 +249,7 @@ impl Default for SequencerState {
         
         let mut row_settings = Vec::new();
         for _ in 0..ROWS {
-            row_settings.push(RowSettings::default());
+            row_settings.push(MainRowStates::default());
         }
         
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
@@ -1528,7 +1528,7 @@ impl Sequencer {
     }
     
     /// Set row settings
-    pub fn set_row_settings(&self, row: usize, settings: RowSettings) {
+    pub fn set_row_settings(&self, row: usize, settings: MainRowStates) {
         if row > 0 && row <= 7 {
             let mut state = self.state.lock().unwrap();
             state.row_settings[row - 1] = settings;
@@ -1537,7 +1537,7 @@ impl Sequencer {
     }
     
     /// Get row settings
-    pub fn get_row_settings(&self, row: usize) -> Option<RowSettings> {
+    pub fn get_row_settings(&self, row: usize) -> Option<MainRowStates> {
         if row > 0 && row <= 7 {
             let state = self.state.lock().unwrap();
             Some(state.row_settings[row - 1].clone())
