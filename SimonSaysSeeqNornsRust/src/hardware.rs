@@ -163,6 +163,7 @@ impl NornsHardware {
             info!("  4 5 6  ->  (0,1) (1,1) (2,1)");
             info!("  1 2 3  ->  (0,2) (1,2) (2,2)");
             info!("    0    ->  (0,3)");
+            info!("Press 'r' then Enter to run/stop sequencer");
             info!("Press 'q' then Enter to quit");
             info!("Press any numpad key then Enter to simulate grid press");
             
@@ -182,8 +183,18 @@ impl NornsHardware {
                     if let Ok(input) = line {
                         let input = input.trim();
                         if input == "q" {
+                            info!("Quit requested from keyboard");
                             let _ = sender_clone.send(HardwareEvent::Shutdown);
                             break;
+                        }
+                        
+                        if input == "r" {
+                            info!("Run/stop requested from keyboard");
+                            let _ = sender_clone.send(HardwareEvent::KeyPress {
+                                key: 3,  // Use key 3 which handles start/stop
+                                pressed: true,
+                            });
+                            continue;
                         }
                         
                         if let Some(key_char) = input.chars().next() {
@@ -207,7 +218,7 @@ impl NornsHardware {
                                     pressed: false,
                                 });
                             } else {
-                                warn!("Unknown key '{}'. Use numpad keys 0-9 or 'q' to quit", key_char);
+                                warn!("Unknown key '{}'. Use numpad keys 0-9, 'r' to run/stop, or 'q' to quit", key_char);
                             }
                         }
                     }

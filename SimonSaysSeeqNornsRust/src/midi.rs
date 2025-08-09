@@ -216,7 +216,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            debug!("MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            info!("🎹 MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -407,7 +407,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF (sim)", note_name));
             
-            debug!("MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
+            info!("🎹 MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())
@@ -456,7 +456,7 @@ impl MidiManager {
             }
         }
         #[cfg(not(feature = "midi"))]
-        debug!("MIDI Clock Start (simulation)");
+        info!("🕐 MIDI Clock Start (simulation)");
         
         Ok(())
     }
@@ -472,7 +472,7 @@ impl MidiManager {
             }
         }
         #[cfg(not(feature = "midi"))]
-        debug!("MIDI Clock Stop (simulation)");
+        info!("🕐 MIDI Clock Stop (simulation)");
         
         Ok(())
     }

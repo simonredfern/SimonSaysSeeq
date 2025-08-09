@@ -184,9 +184,10 @@ impl SimonSaysSeeq {
                             self.midi.all_notes_off()?;
                         }
                         3 => {
-                            // Right key - Start/Clear
+                            // Right key - Start/Stop toggle
                             if self.sequencer.is_running() {
-                                info!("Clear active MIDI notes");
+                                info!("Stop pressed");
+                                self.sequencer.stop();
                                 #[cfg(feature = "midi")]
                                 self.midi.all_notes_off()?;
                             } else {
@@ -236,9 +237,9 @@ impl SimonSaysSeeq {
                             #[cfg(not(feature = "midi"))]
                             {
                                 if note_event.note_on {
-                                    debug!("MIDI Note ON: {} vel:{} ch:{}", note_event.note, note_event.velocity, note_event.channel);
+                                    info!("🎹 MIDI Note ON: {} vel:{} ch:{}", note_event.note, note_event.velocity, note_event.channel);
                                 } else {
-                                    debug!("MIDI Note OFF: {} ch:{}", note_event.note, note_event.channel);
+                                    info!("🎹 MIDI Note OFF: {} ch:{}", note_event.note, note_event.channel);
                                 }
                             }
                         }
@@ -497,10 +498,10 @@ impl SimonSaysSeeq {
         
         #[cfg(not(feature = "hardware"))]
         {
-            // Simulation mode - just log the display info
+            // Simulation mode - display info to console
             let (step, bar) = self.sequencer.get_position();
             let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            debug!("Screen: Tempo: {:.1} | Step: {} Bar: {} | {}", self.tempo, step, bar, transport_text);
+            info!("🎵 Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.tempo, step, bar);
         }
         
         Ok(())

@@ -219,7 +219,7 @@ impl GridManager {
         
         #[cfg(not(feature = "hardware"))]
         {
-            debug!("Set LED (simulation) grid:{} ({}, {}) = {}", grid_id, x, y, brightness);
+            info!("💡 Grid LED: ({},{}) brightness {}", x, y, brightness);
             self.print_grid_state();
         }
         
@@ -274,7 +274,7 @@ impl GridManager {
         
         #[cfg(not(feature = "hardware"))]
         {
-            debug!("Set LED map (simulation) for grid {} with {} LEDs", grid_id, led_map.len());
+            info!("💡 Grid LED map updated: {} LEDs", led_map.len());
         }
         
         Ok(())
@@ -306,7 +306,7 @@ impl GridManager {
         
         #[cfg(not(feature = "hardware"))]
         {
-            debug!("Clear all LEDs (simulation) on grid {}", grid_id);
+            info!("💡 Grid cleared");
             // Clear our state tracking
             self.led_states.retain(|(gid, _, _), _| *gid != grid_id);
         }
@@ -469,7 +469,7 @@ impl GridManager {
         println!("  4 5 6");
         println!("  1 2 3");
         println!("    0");
-        println!("Press numpad key + Enter to toggle, 'q' + Enter to quit");
+        println!("Press numpad key + Enter to toggle, 'r' + Enter to run/stop, 'q' + Enter to quit");
     }
 }
 
