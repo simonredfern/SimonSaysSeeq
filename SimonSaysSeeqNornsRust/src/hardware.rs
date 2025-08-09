@@ -156,7 +156,65 @@ impl NornsHardware {
         
         #[cfg(not(feature = "hardware"))]
         {
-            // Simulation mode - just wait for shutdown signal
+            // Simulation mode with keyboard input
+            info!("Keyboard simulation mode active!");
+            info!("Use numpad keys to simulate grid presses:");
+            info!("  7 8 9  ->  (0,0) (1,0) (2,0)");
+            info!("  4 5 6  ->  (0,1) (1,1) (2,1)");
+            info!("  1 2 3  ->  (0,2) (1,2) (2,2)");
+            info!("    0    ->  (0,3)");
+            info!("Press 'q' then Enter to quit");
+            info!("Press any numpad key then Enter to simulate grid press");
+            
+            // Spawn keyboard input thread
+            let sender_clone = sender.clone();
+            let running_clone = running.clone();
+            
+            thread::spawn(move || {
+                use std::io::{self, BufRead};
+                let stdin = io::stdin();
+                
+                for line in stdin.lock().lines() {
+                    if !running_clone.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    
+                    if let Ok(input) = line {
+                        let input = input.trim();
+                        if input == "q" {
+                            let _ = sender_clone.send(HardwareEvent::Shutdown);
+                            break;
+                        }
+                        
+                        if let Some(key_char) = input.chars().next() {
+                            if let Some((x, y)) = Self::numpad_to_grid_coords(key_char) {
+                                info!("Grid press simulation: ({}, {})", x, y);
+                                
+                                // Send press event
+                                let _ = sender_clone.send(HardwareEvent::GridPress {
+                                    grid_id: 0,
+                                    x,
+                                    y,
+                                    pressed: true,
+                                });
+                                
+                                // Small delay, then send release event
+                                thread::sleep(Duration::from_millis(50));
+                                let _ = sender_clone.send(HardwareEvent::GridPress {
+                                    grid_id: 0,
+                                    x,
+                                    y,
+                                    pressed: false,
+                                });
+                            } else {
+                                warn!("Unknown key '{}'. Use numpad keys 0-9 or 'q' to quit", key_char);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Main simulation loop
             while running.load(Ordering::SeqCst) {
                 thread::sleep(Duration::from_millis(100));
             }
@@ -166,6 +224,18 @@ impl NornsHardware {
         let _ = sender.send(HardwareEvent::Shutdown);
         info!("Hardware input loop terminated");
         Ok(())
+    }
+
+    /// Map numpad keys to grid coordinates for simulation
+    #[cfg(not(feature = "hardware"))]
+    fn numpad_to_grid_coords(key: char) -> Option<(usize, usize)> {
+        match key {
+            '7' => Some((0, 0)), '8' => Some((1, 0)), '9' => Some((2, 0)),
+            '4' => Some((0, 1)), '5' => Some((1, 1)), '6' => Some((2, 1)),
+            '1' => Some((0, 2)), '2' => Some((1, 2)), '3' => Some((2, 2)),
+            '0' => Some((0, 3)),
+            _ => None,
+        }
     }
     
     /// Process a single input event

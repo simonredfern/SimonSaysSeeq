@@ -220,6 +220,7 @@ impl GridManager {
         #[cfg(not(feature = "hardware"))]
         {
             debug!("Set LED (simulation) grid:{} ({}, {}) = {}", grid_id, x, y, brightness);
+            self.print_grid_state();
         }
         
         Ok(())
@@ -437,6 +438,38 @@ impl GridManager {
         }
         
         Ok(())
+    }
+
+    /// Print visual representation of grid state (simulation mode only)
+    #[cfg(not(feature = "hardware"))]
+    fn print_grid_state(&self) {
+        // Clear screen and move cursor to top
+        print!("\x1B[2J\x1B[1;1H");
+        println!("Grid State (brightness 0-15):");
+        println!("┌─────┬─────┬─────┐");
+        for y in 0..4 {
+            print!("│");
+            for x in 0..3 {
+                let brightness = self.led_states.get(&(0, x, y)).unwrap_or(&0);
+                if *brightness > 0 {
+                    print!(" ■{:2} ", brightness);
+                } else {
+                    print!(" □ 0 ");
+                }
+                print!("│");
+            }
+            println!();
+            if y < 3 { 
+                println!("├─────┼─────┼─────┤"); 
+            }
+        }
+        println!("└─────┴─────┴─────┘");
+        println!("Numpad mapping:");
+        println!("  7 8 9");
+        println!("  4 5 6");
+        println!("  1 2 3");
+        println!("    0");
+        println!("Press numpad key + Enter to toggle, 'q' + Enter to quit");
     }
 }
 
