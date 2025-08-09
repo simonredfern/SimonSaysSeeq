@@ -141,8 +141,9 @@ impl GridManager {
     /// Check if a device is a monome grid
     #[cfg(feature = "hardware")]
     fn is_monome_device(&self, vid: u16, pid: u16) -> bool {
-        // Monome vendor ID
-        const MONOME_VID: u16 = 0x0A6A;
+        // Monome vendor IDs (original and alternate)
+        const MONOME_VID: u16 = 0x0A6A;       // Original monome VID
+        const MONOME_ALT_VID: u16 = 0xCAFE;   // Alternate VID for newer devices
         
         // Known monome product IDs
         const MONOME_PIDS: &[u16] = &[
@@ -153,9 +154,10 @@ impl GridManager {
             0x0011, // mk series 64
             0x0012, // mk series 128
             0x0013, // mk series 256
+            0x4001, // newer grid (detected)
         ];
         
-        vid == MONOME_VID && MONOME_PIDS.contains(&pid)
+        (vid == MONOME_VID || vid == MONOME_ALT_VID) && MONOME_PIDS.contains(&pid)
     }
     
     /// Check if a device is a Framework RGB Macropad
@@ -164,8 +166,9 @@ impl GridManager {
         // Framework vendor ID - common USB VID for Framework devices
         const FRAMEWORK_VID: u16 = 0x32AC;
         
-        // Framework RGB Macropad product IDs (check logs to find actual PID)
+        // Framework RGB Macropad product IDs (from detected device logs)
         const FRAMEWORK_MACROPAD_PIDS: &[u16] = &[
+            0x0013, // Laptop 16 RGB Macropad (detected)
             0x0005, // RGB Macropad (estimated)
             0x0006, // RGB Macropad alternate
             0x000A, // RGB Macropad v2 (estimated)

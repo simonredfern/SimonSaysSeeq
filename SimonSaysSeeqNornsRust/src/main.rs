@@ -4,7 +4,7 @@
 //! without requiring the Norns Lua environment.
 
 use anyhow::Result;
-use crossbeam_channel::Receiver;
+
 use log::{info, warn, error, debug};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -18,6 +18,8 @@ mod grid;
 mod screen;
 mod config;
 mod co2;
+
+use crossbeam_channel::{Sender, Receiver};
 
 use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
@@ -118,7 +120,7 @@ impl SimonSaysSeeq {
         loop {
             // Handle hardware events (non-blocking)
             while let Ok(event) = hw_rx.try_recv() {
-                if let Err(e) = self.handle_hardware_event(event, &hw_tx) {
+                if let Err(e) = self.handle_hardware_event(event) {
                     error!("Error handling hardware event: {}", e);
                 }
             }
@@ -148,7 +150,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
     
-    fn handle_hardware_event(&mut self, event: HardwareEvent, hw_sender: &Sender<HardwareEvent>) -> Result<()> {
+    fn handle_hardware_event(&mut self, event: HardwareEvent) -> Result<()> {
         match event {
             HardwareEvent::EncoderTurn { encoder, delta } => {
                 match encoder {
@@ -230,8 +232,7 @@ impl SimonSaysSeeq {
                     }
                     #[cfg(not(feature = "hardware"))]
                     {
-                        use crate::hardware::NornsHardware;
-                        NornsHardware::execute_flash_sequence(hw_sender);
+                        info!("🌈 Console RGB flash simulation (hardware disabled)");
                     }
                 }
             }
@@ -726,7 +727,7 @@ fn main() -> Result<()> {
             use crate::grid::GridManager;
             let mut grid = GridManager::new()?;
             
-            if let Some(grid_id) = grid.find_framework_macropad() {
+            if let Some(_grid_id) = grid.find_framework_macropad() {
                 println!("✅ Framework RGB Macropad found!");
                 println!("🚀 Starting rainbow flash test...");
                 grid.trigger_framework_flash()?;
