@@ -187,3 +187,38 @@ kill 14815 16252 16404 16463
 # Grid m2949672 dimensions: 16x8, so valid coordinates are (0-15, 0-7)
 # Fixed: Added coordinate conversion from sequencer (1-based) to grid (0-based)
 # Result: Both grids flash at startup - coordinate fix successful
+
+## 2025-08-10 01:10:10 Grid Interaction Issue
+# Issue: Grid button presses not detected - buttons don't light up when pressed
+# Problem: Grid input events not being received or processed
+# Fixed: Added grid polling to main loop, changed grid_id to String type
+# Result: Grid interaction should now work
+
+## 2025-08-10 01:13:51 Ctrl+C Still Not Working
+# Issue: Ctrl+C fix didn't work - still shows "shutdown signal received" but doesn't exit
+# Problem: Process continues running, need to close terminal each time
+# Previous fix: Added HardwareEvent::Shutdown send from signal handler - didn't work
+# Need deeper investigation of shutdown sequence and possible deadlock
+
+## 2025-08-10 01:15:00 All Fixes Applied and Compiled Successfully
+# Fixed: Grid polling added to main loop for button event detection
+# Fixed: Grid ID type changed from usize to String to match OSC grid IDs
+# Fixed: Grid routing logic updated for actual grid device IDs
+# Fixed: Coordinate conversion from sequencer (1-based) to grid (0-based)
+# Fixed: Added aggressive shutdown with timeout and std::process::exit fallback
+# Fixed: Added debug import back after compilation error
+# Status: All compilation errors resolved, ready for testing
+# Expected: Auto-start sequencer, grid interaction, step counting, proper Ctrl+C exit
+
+## 2025-08-10 01:17:59 Both Issues Still Not Working
+# Issue 1: Ctrl+C still doesn't work - process continues running despite timeout/exit fixes
+# Issue 2: Grid button presses not responding - no activity visible in logs
+# Problem: Either grid polling not working or log messages being hidden by other output
+# Need: Check if grid events are being generated, verify OSC communication working
+# Status: Core functionality still broken after multiple fix attempts
+
+## 2025-08-10 01:20:38 Ctrl+C Fix Successful
+# Fixed: Added direct signal handler in main() that bypasses hardware thread
+# Solution: Hardware thread signal handler wasn't working, direct ctrlc::set_handler works
+# Result: Ctrl+C now exits process immediately (100ms timeout)
+# Status: Ctrl+C issue resolved, still need to fix grid interaction

@@ -20,7 +20,7 @@ pub enum HardwareEvent {
     /// Key was pressed or released
     KeyPress { key: u8, pressed: bool },
     /// Grid button was pressed or released
-    GridPress { grid_id: usize, x: usize, y: usize, pressed: bool },
+    GridPress { grid_id: String, x: usize, y: usize, pressed: bool },
     /// Start/Stop toggle with flash
     StartStopToggle,
     /// Shutdown signal
@@ -204,7 +204,7 @@ impl NornsHardware {
                                 
                                 // Send press event
                                 let _ = sender_clone.send(HardwareEvent::GridPress {
-                                    grid_id: 0,
+                                    grid_id: "simulation".to_string(),
                                     x,
                                     y,
                                     pressed: true,
@@ -213,7 +213,7 @@ impl NornsHardware {
                                 // Small delay, then send release event
                                 thread::sleep(Duration::from_millis(50));
                                 let _ = sender_clone.send(HardwareEvent::GridPress {
-                                    grid_id: 0,
+                                    grid_id: "simulation".to_string(),
                                     x,
                                     y,
                                     pressed: false,
@@ -290,7 +290,7 @@ impl NornsHardware {
                 
                 // Send press event
                 let _ = sender_clone.send(HardwareEvent::GridPress {
-                    grid_id: 0,
+                    grid_id: "flash".to_string(),
                     x,
                     y,
                     pressed: true,
@@ -301,7 +301,7 @@ impl NornsHardware {
                 
                 // Send release event
                 let _ = sender_clone.send(HardwareEvent::GridPress {
-                    grid_id: 0,
+                    grid_id: "flash".to_string(),
                     x,
                     y,
                     pressed: false,

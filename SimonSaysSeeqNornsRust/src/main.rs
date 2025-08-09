@@ -4,7 +4,6 @@
 //! without requiring the Norns Lua environment.
 
 use anyhow::Result;
-
 use log::{info, warn, error, debug};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -118,6 +117,15 @@ impl SimonSaysSeeq {
         info!("🚀 Auto-starting sequencer for desktop testing");
         self.sequencer.start();
         
+        // Show grid connection status
+        let connected_grids = self.grid.get_connected_grids();
+        info!("🎹 Connected grids: {:?}", connected_grids);
+        for grid_id in &connected_grids {
+            if let Some((cols, rows)) = self.grid.get_dimensions(grid_id) {
+                info!("  Grid {}: {}x{}", grid_id, cols, rows);
+            }
+        }
+        
         // Flash all connected grids for visual feedback
         if let Err(e) = self.grid.flash_all_grids() {
             warn!("Failed to flash grids on sequencer start: {}", e);
@@ -126,10 +134,23 @@ impl SimonSaysSeeq {
         // Main event loop
         self.main_loop(hw_rx, seq_rx)?;
         
-        // Cleanup
+        // Cleanup with timeout
         self.running.store(false, Ordering::SeqCst);
-        let _ = hw_thread.join().map_err(|_| anyhow::anyhow!("Hardware thread panicked"))?;
-        let _ = seq_thread.join().map_err(|_| anyhow::anyhow!("Sequencer thread panicked"))?;
+        
+        // Give threads a chance to exit gracefully
+        info!("Shutting down threads...");
+        
+        // Try to join with timeout
+        let hw_result = std::thread::spawn(move || hw_thread.join()).join();
+        let seq_result = std::thread::spawn(move || seq_thread.join()).join();
+        
+        // If threads don't exit cleanly within reasonable time, force exit
+        thread::sleep(Duration::from_millis(500));
+        
+        if hw_result.is_err() || seq_result.is_err() {
+            warn!("Threads did not exit cleanly, forcing shutdown");
+            std::process::exit(0);
+        }
         
         info!("SimonSaysSeeq shut down successfully");
         Ok(())
@@ -144,6 +165,45 @@ impl SimonSaysSeeq {
             while let Ok(event) = hw_rx.try_recv() {
                 if let Err(e) = self.handle_hardware_event(event) {
                     error!("Error handling hardware event: {}", e);
+                }
+            }
+            
+            // Poll grid for button events
+            #[cfg(feature = "hardware")]
+            {
+                static mut DEBUG_COUNTER: u32 = 0;
+                unsafe {
+                    DEBUG_COUNTER += 1;
+                    if DEBUG_COUNTER % 1000 == 0 {
+                        debug!("🎹 Grid polling active ({}k polls)", DEBUG_COUNTER / 1000);
+                    }
+                }
+                
+                match self.grid.read_button_events() {
+                    Ok(grid_events) => {
+                        if !grid_events.is_empty() {
+                            info!("🎹 Received {} grid events", grid_events.len());
+                        }
+                        for grid_event in grid_events {
+                            info!("🎹 Grid event: {} ({}, {}) = {}", 
+                                  grid_event.grid_id, grid_event.x, grid_event.y, grid_event.pressed);
+                            let hardware_event = HardwareEvent::GridPress {
+                                grid_id: grid_event.grid_id,
+                                x: grid_event.x,
+                                y: grid_event.y,
+                                pressed: grid_event.pressed,
+                            };
+                            if let Err(e) = self.handle_hardware_event(hardware_event) {
+                                error!("Error handling grid event: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // Don't spam errors for no events
+                        if !e.to_string().contains("No events available") && !e.to_string().contains("would block") {
+                            debug!("Grid polling error: {}", e);
+                        }
+                    }
                 }
             }
             
@@ -162,6 +222,7 @@ impl SimonSaysSeeq {
             
             // Check for shutdown
             if !self.running.load(Ordering::SeqCst) {
+                info!("Main loop detected shutdown signal, breaking");
                 break;
             }
             
@@ -254,7 +315,7 @@ impl SimonSaysSeeq {
 
             HardwareEvent::GridPress { grid_id, x, y, pressed } => {
                 #[cfg(feature = "hardware")]
-                self.handle_grid_press(grid_id, x, y, pressed)?;
+                self.handle_grid_press(&grid_id, x, y, pressed)?;
                 #[cfg(not(feature = "hardware"))]
                 {
                     let button_name = match (x, y) {
@@ -280,8 +341,14 @@ impl SimonSaysSeeq {
             }
             
             HardwareEvent::Shutdown => {
-                info!("Shutdown requested");
+                info!("🛑 Shutdown requested - initiating immediate exit");
                 self.running.store(false, Ordering::SeqCst);
+                // More aggressive force exit
+                thread::spawn(|| {
+                    thread::sleep(Duration::from_millis(500));
+                    warn!("🛑 Forcing immediate exit");
+                    std::process::exit(0);
+                });
             }
         }
         
@@ -369,57 +436,53 @@ impl SimonSaysSeeq {
     }
     
     #[cfg(feature = "hardware")]
-    fn handle_grid_press(&mut self, grid_id: usize, x: usize, y: usize, pressed: bool) -> Result<()> {
+    fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
         if !pressed {
             return Ok(()); // Only handle press, not release
         }
         
         info!("Grid {} press at ({}, {})", grid_id, x, y);
         
-        match grid_id {
-    0 => {
-        // Grid One - main sequencer grid
-        if y <= 7 {
-            // Sequence rows (1-7)
-            // Check if any positions are held for advanced operations
-            if self.has_held_positions() {
-                self.handle_advanced_grid_operation(x, y)?;
-            } else {
-                // Normal grid operation - toggle or cycle ratchet
-                let current_value = self.sequencer.get_grid_value(x, y);
-                let new_value = match current_value {
-                    0 => 1,
-                    1 => 2, // Ratchet
-                    2 => 4, // Double ratchet
-                    _ => 0, // Clear
-                };
-                        
-                self.sequencer.set_grid_value(x, y, new_value);
-                #[cfg(feature = "hardware")]
-                {
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        self.grid.set_led(grid_id, x, y, if new_value > 0 { new_value.min(15) } else { 0 })?;
+        // Route to first grid as main sequencer, second grid as Mozart
+        let connected_grids = self.grid.get_connected_grids();
+        let is_first_grid = connected_grids.first().map(|id| id == grid_id).unwrap_or(false);
+        let is_second_grid = connected_grids.get(1).map(|id| id == grid_id).unwrap_or(false);
+        
+        if is_first_grid {
+            // Main sequencer grid
+            if y <= 7 {
+                // Sequence rows (1-7)
+                // Check if any positions are held for advanced operations
+                if self.has_held_positions() {
+                    self.handle_advanced_grid_operation(x, y)?;
+                } else {
+                    // Normal grid operation - toggle or cycle ratchet
+                    let current_value = self.sequencer.get_grid_value(x, y);
+                    let new_value = match current_value {
+                        0 => 1,
+                        1 => 2, // Ratchet
+                        2 => 4, // Double ratchet
+                        _ => 0, // Clear
+                    };
+                            
+                    self.sequencer.set_grid_value(x, y, new_value);
+                    #[cfg(feature = "hardware")]
+                    {
+                        self.grid.set_led(grid_id, x - 1, y - 1, if new_value > 0 { new_value.min(15) } else { 0 })?;
                     }
+                            
+                    info!("Set grid[{}][{}] = {}", x, y, new_value);
                 }
-                        
-                info!("Set grid[{}][{}] = {}", x, y, new_value);
+            } else {
+                // Control row (8)
+                self.handle_control_button(x, y)?;
             }
+        } else if is_second_grid {
+            // Mozart MIDI note control grid
+            self.handle_mozart_grid_press(x, y)?;
         } else {
-            // Control row (8)
-            self.handle_control_button(x, y)?;
+            warn!("Unknown grid ID: {}", grid_id);
         }
-    }
-            
-    1 => {
-        // Grid Two - Mozart MIDI note control
-        self.handle_mozart_grid_press(x, y)?;
-    }
-            
-    _ => {
-        warn!("Unknown grid ID: {}", grid_id);
-    }
-}
         
         Ok(())
     }
@@ -726,6 +789,20 @@ impl SimonSaysSeeq {
 }
 
 fn main() -> Result<()> {
+    // Set up direct signal handler that bypasses hardware thread
+    let shutdown_flag = Arc::new(AtomicBool::new(false));
+    let shutdown_flag_clone = shutdown_flag.clone();
+    
+    ctrlc::set_handler(move || {
+        info!("🛑 Direct Ctrl+C handler triggered - forcing exit");
+        shutdown_flag_clone.store(true, Ordering::SeqCst);
+        thread::spawn(|| {
+            thread::sleep(Duration::from_millis(100));
+            warn!("🛑 Direct force exit");
+            std::process::exit(0);
+        });
+    }).expect("Error setting direct Ctrl-C handler");
+    
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
     
