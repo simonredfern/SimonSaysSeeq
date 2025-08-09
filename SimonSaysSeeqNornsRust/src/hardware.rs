@@ -159,15 +159,15 @@ impl NornsHardware {
         #[cfg(not(feature = "hardware"))]
         {
             // Simulation mode with keyboard input
-            info!("Framework RGB Macropad simulation mode active!");
-            info!("Use keys 1-9, a-g to simulate 4x4 macropad grid presses:");
+            info!("Grid simulation mode active!");
+            info!("Use keys 1-9, a-g to simulate 4x4 grid presses:");
             info!("  1 2 3 4  ->  (0,0) (1,0) (2,0) (3,0)");
             info!("  q w e r  ->  (0,1) (1,1) (2,1) (3,1)");
             info!("  a s d f  ->  (0,2) (1,2) (2,2) (3,2)");
             info!("  z x c v  ->  (0,3) (1,3) (2,3) (3,3)");
             info!("Press 'space' then Enter to run/stop sequencer");
             info!("Press 'p' then Enter to quit");
-            info!("Press any macropad key then Enter to simulate button press");
+            info!("Press any grid key then Enter to simulate button press");
             
             // Spawn keyboard input thread
             let sender_clone = sender.clone();
@@ -197,8 +197,8 @@ impl NornsHardware {
                         }
                         
                         if let Some(key_char) = input.chars().next() {
-                            if let Some((x, y)) = Self::macropad_to_grid_coords(key_char) {
-                                info!("🔥 Macropad button press: ({}, {}) - Button {}", x, y, Self::coords_to_button_name(x, y));
+                            if let Some((x, y)) = Self::key_to_grid_coords(key_char) {
+                                info!("🔥 Grid button press: ({}, {}) - Button {}", x, y, Self::coords_to_button_name(x, y));
                                 
                                 // Send press event
                                 let _ = sender_clone.send(HardwareEvent::GridPress {
@@ -217,7 +217,7 @@ impl NornsHardware {
                                     pressed: false,
                                 });
                             } else {
-                                warn!("Unknown key '{}'. Use macropad keys 1-4/qwer/asdf/zxcv, 'space' to run/stop, or 'p' to quit", key_char);
+                                warn!("Unknown key '{}'. Use grid keys 1-4/qwer/asdf/zxcv, 'space' to run/stop, or 'p' to quit", key_char);
                             }
                         }
                     }
@@ -236,9 +236,9 @@ impl NornsHardware {
         Ok(())
     }
 
-    /// Map Framework RGB Macropad keys to grid coordinates for simulation
+    /// Map keyboard keys to grid coordinates for simulation
     #[cfg(not(feature = "hardware"))]
-    fn macropad_to_grid_coords(key: char) -> Option<(usize, usize)> {
+    fn key_to_grid_coords(key: char) -> Option<(usize, usize)> {
         match key {
             // Top row: 1 2 3 4
             '1' => Some((0, 0)), '2' => Some((1, 0)), '3' => Some((2, 0)), '4' => Some((3, 0)),
@@ -264,7 +264,7 @@ impl NornsHardware {
         }
     }
 
-    /// Execute Framework RGB Macropad flash sequence
+    /// Execute grid flash sequence
     #[cfg(not(feature = "hardware"))]
     pub fn execute_flash_sequence(sender: &Sender<HardwareEvent>) {
         use std::thread;
@@ -273,7 +273,7 @@ impl NornsHardware {
         // Spawn thread to avoid blocking main loop
         let sender_clone = sender.clone();
         thread::spawn(move || {
-            info!("🌈 Starting Framework RGB Macropad flash sequence!");
+            info!("🌈 Starting grid flash sequence!");
             
             // Flash all 16 buttons in order: 1,2,3,4,Q,W,E,R,A,S,D,F,Z,X,C,V
             let sequence = [
@@ -283,11 +283,10 @@ impl NornsHardware {
                 (0, 3), (1, 3), (2, 3), (3, 3),  // Z X C V
             ];
 
-            for (i, &(x, y)) in sequence.iter().enumerate() {
-                let button_name = Self::coords_to_button_name(x, y);
-                info!("💡 Flash button {} ({},{}) - Step {}/16", button_name, x, y, i + 1);
+            for (step, &(x, y)) in sequence.iter().enumerate() {
+                info!("💡 Flash step {}/16: Button ({}, {})", step + 1, x, y);
                 
-                // Simulate button press for visual feedback
+                // Send press event
                 let _ = sender_clone.send(HardwareEvent::GridPress {
                     grid_id: 0,
                     x,
@@ -295,19 +294,22 @@ impl NornsHardware {
                     pressed: true,
                 });
                 
-                // Hold the flash for 125ms (2000ms / 16 buttons = 125ms each)
-                thread::sleep(Duration::from_millis(125));
+                // Hold briefly
+                thread::sleep(Duration::from_millis(100));
                 
-                // Release button
+                // Send release event
                 let _ = sender_clone.send(HardwareEvent::GridPress {
                     grid_id: 0,
                     x,
                     y,
                     pressed: false,
                 });
+                
+                // Brief pause between buttons
+                thread::sleep(Duration::from_millis(50));
             }
             
-            info!("✨ Macropad flash sequence complete!");
+            info!("✨ Flash sequence complete!");
         });
     }
     
