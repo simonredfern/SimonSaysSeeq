@@ -1,0 +1,32 @@
+# AI Instructions for SimonSaysSeeq Project
+
+## Communication Style
+- Be concise and direct
+- Avoid excessive enthusiasm or chattiness
+- Focus on technical facts and actionable information
+- Use clear, professional language
+
+## Logging Protocol
+- Always update ai.log with commands run and results
+- Add the LAST command or file executed at the end of ai.log
+- Keep log entries brief and factual
+- Include only essential information: command, result, next steps
+- Use consistent formatting: command on one line, brief result/status below
+
+## Development Workflow
+1. Check ai.log first to understand current project state
+2. Run necessary commands/tests
+3. Update ai.log with what was done
+4. Provide concise summary to user
+
+## Code Standards
+- Prefer working solutions over perfect code
+- Test changes incrementally
+- Document significant findings in ai.log
+- Use appropriate feature flags (--features desktop for grid testing)
+
+## Grid Testing Notes
+- serialosc must be running manually (system service has permission issues)
+- Both grids (m5032747, m2949672) work via OSC
+- Use examples/debug_osc.rs for isolated grid testing
+- Comprehensive tests may give false negatives due to timing

@@ -5,7 +5,7 @@
 //! serial communication.
 
 pub mod config;
-pub mod grid;
+
 pub mod grid_osc;
 pub mod hardware;
 pub mod midi;
@@ -15,10 +15,8 @@ pub mod co2;
 
 // Re-export commonly used types
 pub use config::Config;
-// Use OSC-based grid manager by default for proper serialosc communication
+// Use OSC-based grid manager for proper serialosc communication
 pub use grid_osc::{GridManager, GridButtonEvent};
-// Keep old serial-based manager available for legacy/embedded use
-pub use grid::{GridManager as SerialGridManager, GridButtonEvent as SerialGridButtonEvent};
 pub use sequencer::Sequencer;
 pub use midi::MidiManager;
 pub use screen::ScreenManager;

@@ -114,3 +114,21 @@ ls -la /dev/ttyACM*
 # User confirmed system reboot - file descriptor issue should be resolved
 # Grids were reconnected before reboot, stuck LEDs should be cleared
 # Ready to continue testing when system comes back up
+
+## 2025-01-09 POST-REBOOT RESOLUTION
+
+### System Recovery
+ls -la /dev/ttyACM*
+lsusb | grep -i monome
+# Both grids connected, serialosc running after manual start
+
+### Build Fix
+# Fixed src/lib.rs - removed references to deleted grid.rs module
+cargo run --example single_grid_test --features desktop
+# Both grids detected but test reported false negative
+
+### Final Test
+cargo run --example debug_osc --features desktop
+# Created examples/debug_osc.rs for isolated testing
+# Result: Both grids working - user confirmed LEDs flashed on both m5032747 and m2949672
+# All issues resolved - both grids functional via OSC
