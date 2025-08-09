@@ -132,3 +132,6 @@ cargo run --example debug_osc --features desktop
 # Created examples/debug_osc.rs for isolated testing
 # Result: Both grids working - user confirmed LEDs flashed on both m5032747 and m2949672
 # All issues resolved - both grids functional via OSC
+
+### Final Setup
+# Created ai_instructions.txt with guidelines for future AI work on project
