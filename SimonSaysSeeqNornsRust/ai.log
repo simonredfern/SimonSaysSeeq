@@ -222,3 +222,22 @@ kill 14815 16252 16404 16463
 # Solution: Hardware thread signal handler wasn't working, direct ctrlc::set_handler works
 # Result: Ctrl+C now exits process immediately (100ms timeout)
 # Status: Ctrl+C issue resolved, still need to fix grid interaction
+
+## 2025-08-10 01:23:34 Excessive OSC Command Spam
+# Issue: Too many "Sending OSC command" log messages flooding output
+# Problem: Grid display update continuously sending LED commands even without button press
+# Fixed: Reduced OSC logging to debug level, removed continuous grid updates from step events
+# Result: Logging output much cleaner, step count visible
+
+## 2025-08-10 01:27:10 Grid Still Not Responding, Tempo Too Fast
+# Issue 1: Grid button presses still not detected despite OSC spam fix
+# Issue 2: Step count incrementing too fast for 120 BPM (should be ~2 steps/second)
+# Fixed: Sequencer tempo calculation (changed from 16 steps/beat to 4 steps/beat)
+# Fixed: Added explicit key event subscription with /sys/port command
+# Result: Tempo now correct, grid button events now detected
+
+## 2025-08-10 01:31:48 Grid Response Working But LEDs Stuck
+# Progress: Grid button presses now detected and responding
+# Issue: Some LEDs getting stuck on after button press
+# Problem: Button press/release logic not working correctly - LEDs not turning off
+# Need: Fix LED state management and ensure LEDs turn off after button release

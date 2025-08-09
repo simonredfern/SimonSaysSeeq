@@ -392,9 +392,7 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
                 
-                // Update grid display
-                #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                // Grid display updated only on user interaction, not every step
             }
             
             SequencerEvent::Beat { beat } => {
@@ -437,11 +435,12 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
-        if !pressed {
-            return Ok(()); // Only handle press, not release
-        }
+        // Convert from 0-based grid coordinates to 1-based sequencer coordinates
+        let seq_x = x + 1;
+        let seq_y = y + 1;
         
-        info!("Grid {} press at ({}, {})", grid_id, x, y);
+        info!("Grid {} {} at ({}, {}) -> seq({}, {})", 
+              grid_id, if pressed { "press" } else { "release" }, x, y, seq_x, seq_y);
         
         // Route to first grid as main sequencer, second grid as Mozart
         let connected_grids = self.grid.get_connected_grids();
@@ -450,36 +449,42 @@ impl SimonSaysSeeq {
         
         if is_first_grid {
             // Main sequencer grid
-            if y <= 7 {
-                // Sequence rows (1-7)
-                // Check if any positions are held for advanced operations
-                if self.has_held_positions() {
-                    self.handle_advanced_grid_operation(x, y)?;
-                } else {
-                    // Normal grid operation - toggle or cycle ratchet
-                    let current_value = self.sequencer.get_grid_value(x, y);
-                    let new_value = match current_value {
-                        0 => 1,
-                        1 => 2, // Ratchet
-                        2 => 4, // Double ratchet
-                        _ => 0, // Clear
-                    };
-                            
-                    self.sequencer.set_grid_value(x, y, new_value);
-                    #[cfg(feature = "hardware")]
-                    {
-                        self.grid.set_led(grid_id, x - 1, y - 1, if new_value > 0 { new_value.min(15) } else { 0 })?;
+            if seq_y <= 7 {
+                // Sequence rows (1-7) - only handle button presses, not releases
+                if pressed {
+                    // Check if any positions are held for advanced operations
+                    if self.has_held_positions() {
+                        self.handle_advanced_grid_operation(seq_x, seq_y)?;
+                    } else {
+                        // Normal grid operation - toggle or cycle ratchet
+                        let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
+                        let new_value = match current_value {
+                            0 => 1,
+                            1 => 2, // Ratchet
+                            2 => 4, // Double ratchet
+                            _ => 0, // Clear
+                        };
+                                
+                        self.sequencer.set_grid_value(seq_x, seq_y, new_value);
+                        #[cfg(feature = "hardware")]
+                        {
+                            self.grid.set_led(grid_id, x, y, if new_value > 0 { new_value.min(15) } else { 0 })?;
+                        }
+                                
+                        info!("Set grid[{}][{}] = {}", seq_x, seq_y, new_value);
                     }
-                            
-                    info!("Set grid[{}][{}] = {}", x, y, new_value);
                 }
             } else {
-                // Control row (8)
-                self.handle_control_button(x, y)?;
+                // Control row (8) - only handle presses
+                if pressed {
+                    self.handle_control_button(seq_x, seq_y)?;
+                }
             }
         } else if is_second_grid {
-            // Mozart MIDI note control grid
-            self.handle_mozart_grid_press(x, y)?;
+            // Mozart MIDI note control grid - only handle presses
+            if pressed {
+                self.handle_mozart_grid_press(seq_x, seq_y)?;
+            }
         } else {
             warn!("Unknown grid ID: {}", grid_id);
         }

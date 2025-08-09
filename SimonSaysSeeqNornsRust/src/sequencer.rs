@@ -708,8 +708,8 @@ impl Sequencer {
             };
             
             // Calculate microseconds per tick
-            // 60 seconds/minute * 1,000,000 microseconds/second / (tempo BPM * 16 steps/beat * 12 ticks/step)
-            let micros_per_tick = (60_000_000.0 / (tempo * 16.0 * 12.0)) as u64;
+            // 60 seconds/minute * 1,000,000 microseconds/second / (tempo BPM * 4 steps/beat * 12 ticks/step)
+            let micros_per_tick = (60_000_000.0 / (tempo * 4.0 * 12.0)) as u64;
             let tick_interval = Duration::from_micros(micros_per_tick);
             
             if current_time.duration_since(last_tick) >= tick_interval {
@@ -722,7 +722,7 @@ impl Sequencer {
                 
                 if is_running {
                     self.process_tick(tick_counter, &sender)?;
-                    tick_counter = (tick_counter + 1) % (16 * 12); // 16 steps * 12 ticks per step
+                    tick_counter = (tick_counter + 1) % (16 * 12); // 16 steps per bar * 12 ticks per step
                 }
             }
             

@@ -176,6 +176,18 @@ impl GridManager {
         let msg_buf = rosc::encoder::encode(&packet)?;
         self.socket.send_to(&msg_buf, &device_addr)?;
         
+        // Also explicitly request key events to be sent to our port
+        let key_msg = OscMessage {
+            addr: "/sys/port".to_string(),
+            args: vec![OscType::Int(self.local_port as i32)],
+        };
+        
+        let key_packet = OscPacket::Message(key_msg);
+        let key_msg_buf = rosc::encoder::encode(&key_packet)?;
+        self.socket.send_to(&key_msg_buf, &device_addr)?;
+        
+        info!("Requested grid {} to send key events to port {}", device_id, self.local_port);
+        
         // Wait for device info response
         let mut cols = 16; // Default
         let mut rows = 8;  // Default
@@ -321,8 +333,8 @@ impl GridManager {
             }
         };
         
-        info!("Sending OSC command: {} to {}", osc_msg.addr, device_addr);
-        info!("OSC args: {:?}", osc_msg.args);
+        debug!("Sending OSC command: {} to {}", osc_msg.addr, device_addr);
+        debug!("OSC args: {:?}", osc_msg.args);
         
         let packet = OscPacket::Message(osc_msg);
         let msg_buf = rosc::encoder::encode(&packet)?;
@@ -378,8 +390,8 @@ impl GridManager {
                 args: vec![OscType::Int(0)],
             };
             
-            info!("Sending clear command: {} to {}", addr, device_addr);
-            info!("Clear args: {:?}", osc_msg.args);
+            debug!("Sending clear command: {} to {}", addr, device_addr);
+            debug!("Clear args: {:?}", osc_msg.args);
             
             let packet = OscPacket::Message(osc_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
@@ -566,8 +578,8 @@ impl GridManager {
                 addr: format!("{}/grid/led/all", prefix),
                 args: vec![OscType::Int(1)], // On
             };
-            info!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
-            info!("Flash args: {:?}", flash_msg.args);
+            debug!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
+            debug!("Flash args: {:?}", flash_msg.args);
             
             let packet = OscPacket::Message(flash_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
@@ -671,8 +683,8 @@ impl GridManager {
                 }
             };
             
-            info!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
-            info!("Flash args: {:?}", flash_msg.args);
+            debug!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
+            debug!("Flash args: {:?}", flash_msg.args);
             
             let packet = OscPacket::Message(flash_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
