@@ -133,7 +133,7 @@ impl GridManager {
         
         // Open serial port with appropriate settings for monome
         let mut port = serialport::new(port_name, 115200)
-            .timeout(Duration::from_millis(500)) // Increased timeout for initial connection
+            .timeout(Duration::from_millis(200)) // Reduced timeout to prevent hangs
             .data_bits(serialport::DataBits::Eight)
             .flow_control(serialport::FlowControl::None)
             .parity(serialport::Parity::None)
@@ -188,16 +188,20 @@ impl GridManager {
     fn test_grid_communication(&self, port: &mut Box<dyn SerialPort>) -> Result<()> {
         debug!("Sending test command to grid...");
         
-        // Send a simple LED command to test communication
+        // Send a simple LED command to test communication with timeout
         let test_cmd = [0x1A, 0x00, 0x00]; // Clear all LEDs command
+        
+        // Set a strict timeout for this operation
+        port.set_timeout(Duration::from_millis(100))?;
+        
         port.write_all(&test_cmd)
             .map_err(|e| anyhow!("Failed to write test command: {}", e))?;
         
         port.flush()
             .map_err(|e| anyhow!("Failed to flush serial port: {}", e))?;
         
-        // Small delay to ensure command is processed
-        std::thread::sleep(Duration::from_millis(50));
+        // Minimal delay to ensure command is processed
+        std::thread::sleep(Duration::from_millis(10));
         
         debug!("Grid communication test completed");
         Ok(())
@@ -288,12 +292,22 @@ impl GridManager {
             
             #[cfg(feature = "hardware")]
             {
-                let mut port = device.port.lock().unwrap();
+                // Try to acquire lock with timeout to prevent deadlocks
+                let mut port = device.port.try_lock()
+                    .map_err(|_| anyhow!("Failed to acquire port lock for grid {}", grid_id))?;
+                
+                // Set strict timeout for LED operations
+                port.set_timeout(Duration::from_millis(50))?;
                 
                 // Send LED command: [0x1B, x, y, brightness]
                 let led_cmd = [0x1B, x as u8, y as u8, brightness];
-                port.write_all(&led_cmd)?;
-                port.flush()?;
+                port.write_all(&led_cmd)
+                    .map_err(|e| anyhow!("Failed to write LED command: {}", e))?;
+                
+                // Only flush occasionally to reduce blocking I/O
+                if brightness == 0 || (x + y) % 4 == 0 {
+                    port.flush().ok(); // Don't fail on flush errors
+                }
             }
             
             debug!("Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
@@ -522,22 +536,44 @@ impl GridManager {
     
     /// Test grid functionality
     pub fn test_grid(&mut self, grid_id: usize) -> Result<()> {
-        info!("Testing grid {} functionality...", grid_id);
+        info!("Testing grid {} functionality (SAFE MODE)...", grid_id);
         
         if let Some((cols, rows)) = self.get_dimensions(grid_id) {
-            // Flash all LEDs
-            for brightness in [15, 0, 15, 0] {
+            let total_leds = cols * rows;
+            
+            // Safety check - limit test to reasonable grid sizes
+            if total_leds > 256 {
+                warn!("Grid {} too large for full test ({} LEDs), doing corner test only", grid_id, total_leds);
+                // Test just the corners
+                let corners = [(0, 0), (cols-1, 0), (0, rows-1), (cols-1, rows-1)];
+                for &(x, y) in &corners {
+                    self.set_led(grid_id, x, y, 15)?;
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+                std::thread::sleep(Duration::from_millis(300));
+                self.clear_all(grid_id)?;
+                info!("Grid {} corner test completed", grid_id);
+                return Ok(());
+            }
+            
+            // Safer test - only 2 iterations and with delays
+            info!("Running limited flash test on {} LEDs...", total_leds);
+            for brightness in [10, 0] {  // Reduced from 4 to 2 iterations, lower brightness
                 for x in 0..cols {
                     for y in 0..rows {
                         self.set_led(grid_id, x, y, brightness)?;
+                        // Add small delay every few LEDs to prevent overwhelming the system
+                        if (x * rows + y) % 8 == 0 {
+                            std::thread::sleep(Duration::from_millis(1));
+                        }
                     }
                 }
-                std::thread::sleep(Duration::from_millis(200));
+                std::thread::sleep(Duration::from_millis(150)); // Reduced delay
             }
             
             // Clear
             self.clear_all(grid_id)?;
-            info!("Grid {} test completed", grid_id);
+            info!("Grid {} safe test completed", grid_id);
         }
         
         Ok(())

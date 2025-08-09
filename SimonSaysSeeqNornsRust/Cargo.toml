@@ -48,6 +48,9 @@ thiserror = "1.0"
 # Grid communication (Serial) (optional for development)
 serialport = { version = "4.2", optional = true }
 
+# OSC communication for serialosc
+rosc = { version = "0.10", optional = true }
+
 # Logging
 log = "0.4"
 env_logger = "0.10"
@@ -72,7 +75,7 @@ midi = ["midir"]
 simulation = []
 norns = ["hardware", "hardware-audio", "midi", "framebuffer-support"]
 cross-compile = ["midi"]  # Safe features for cross-compilation
-desktop = ["midi", "serialport"]  # Development on laptop with grid
+desktop = ["midi", "serialport", "rosc"]  # Development on laptop with grid
 framebuffer-support = ["framebuffer"]  # Optional framebuffer support
 
 [profile.release]
