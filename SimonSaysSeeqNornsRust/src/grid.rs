@@ -445,11 +445,11 @@ impl GridManager {
     fn print_grid_state(&self) {
         // Clear screen and move cursor to top
         print!("\x1B[2J\x1B[1;1H");
-        println!("Grid State (brightness 0-15):");
-        println!("┌─────┬─────┬─────┐");
+        println!("🌈 Framework RGB Macropad State (brightness 0-15):");
+        println!("┌─────┬─────┬─────┬─────┐");
         for y in 0..4 {
             print!("│");
-            for x in 0..3 {
+            for x in 0..4 {
                 let brightness = self.led_states.get(&(0, x, y)).unwrap_or(&0);
                 if *brightness > 0 {
                     print!(" ■{:2} ", brightness);
@@ -460,16 +460,16 @@ impl GridManager {
             }
             println!();
             if y < 3 { 
-                println!("├─────┼─────┼─────┤"); 
+                println!("├─────┼─────┼─────┼─────┤"); 
             }
         }
-        println!("└─────┴─────┴─────┘");
-        println!("Numpad mapping:");
-        println!("  7 8 9");
-        println!("  4 5 6");
-        println!("  1 2 3");
-        println!("    0");
-        println!("Press numpad key + Enter to toggle, 'r' + Enter to run/stop, 'q' + Enter to quit");
+        println!("└─────┴─────┴─────┴─────┘");
+        println!("Framework RGB Macropad mapping:");
+        println!("  1 2 3 4");
+        println!("  Q W E R");
+        println!("  A S D F");
+        println!("  Z X C V");
+        println!("Press macropad key + Enter to toggle, 'space' + Enter to run/stop, 'p' + Enter to quit");
     }
 }
 

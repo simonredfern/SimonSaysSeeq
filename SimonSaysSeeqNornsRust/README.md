@@ -21,13 +21,17 @@ In simulation mode, you'll see sequencer activity in the console:
 
 ```
 🎵 Sequencer: STOPPED | Tempo: 120.0 BPM | Step: 1 | Bar: 1
-r
+space
+🌈 Starting Framework RGB Macropad flash sequence!
+💡 Flash button 1 (0,0) - Step 1/16
+💡 Flash button 2 (1,0) - Step 2/16
+... (flash sequence continues)
+✨ Macropad flash sequence complete!
 🎵 Sequencer: RUNNING | Tempo: 120.0 BPM | Step: 1 | Bar: 1
 🎹 MIDI Note ON: 60 vel:100 ch:1
-💡 Grid LED: (0,0) brightness 15
-🎹 MIDI Note OFF: 60 ch:1
+🔥 Macropad button Q PRESSED: (0,1)
 🎵 Sequencer: RUNNING | Tempo: 120.0 BPM | Step: 2 | Bar: 1
-r
+space
 🎵 Sequencer: STOPPED | Tempo: 120.0 BPM | Step: 1 | Bar: 1
 ```
 
@@ -83,16 +87,21 @@ When running in simulation mode, the application provides rich console feedback:
 - **💡 Grid LEDs**: Visual representation of grid button states
 - **🕐 Transport**: Clock start/stop events
 
-The grid simulation displays a 3x4 grid representation:
+The Framework RGB Macropad simulation displays a 4x4 grid representation:
 
 ```
-Grid State (brightness 0-15):
-┌─────┬─────┬─────┐
-│ ■ 15│ □ 0 │ □ 0 │
-│ □ 0 │ ■ 8 │ □ 0 │
-│ □ 0 │ □ 0 │ ■ 15│
-│ □ 0 │ □ 0 │ □ 0 │
-└─────┴─────┴─────┘
+🌈 Framework RGB Macropad State (brightness 0-15):
+┌─────┬─────┬─────┬─────┐
+│ ■ 15│ □ 0 │ □ 0 │ ■ 8 │
+│ □ 0 │ ■ 15│ □ 0 │ □ 0 │
+│ □ 0 │ □ 0 │ ■ 12│ □ 0 │
+│ ■ 4 │ □ 0 │ □ 0 │ □ 0 │
+└─────┴─────┴─────┴─────┘
+Framework RGB Macropad mapping:
+  1 2 3 4
+  Q W E R
+  A S D F
+  Z X C V
 ```
 
 ### Log Levels
@@ -119,11 +128,11 @@ RUST_LOG=trace ./target/debug/simon_says_seeq
 - **Grid Pads**: Toggle sequence steps
 - **Hold + Grid**: Advanced operations (copy, paste, etc.)
 
-### Grid Simulation (Simulation Mode)
-- **Numpad 1-9, 0**: Simulate grid button presses
-- **r + Enter**: Run/stop sequencer
+### Framework RGB Macropad Simulation (Simulation Mode)
+- **1-4, QWER, ASDF, ZXCV**: Simulate 4x4 macropad button presses
+- **Space + Enter**: Run/stop sequencer (triggers RGB flash sequence on start)
 - **Enter**: Execute button press
-- **q + Enter**: Quit
+- **p + Enter**: Quit
 
 ### Encoders (Hardware Mode)
 - **E1**: Tempo

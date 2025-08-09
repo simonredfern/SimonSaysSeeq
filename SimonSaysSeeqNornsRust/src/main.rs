@@ -36,7 +36,6 @@ pub struct SimonSaysSeeq {
     sequencer: Sequencer,
     #[cfg(feature = "midi")]
     midi: MidiManager,
-    #[cfg(feature = "hardware")]
     grid: GridManager,
     #[cfg(feature = "hardware")]
     screen: ScreenManager,
@@ -55,7 +54,6 @@ impl SimonSaysSeeq {
             sequencer: Sequencer::new(),
             #[cfg(feature = "midi")]
             midi: MidiManager::new(&config.midi)?,
-            #[cfg(feature = "hardware")]
             grid: GridManager::new()?,
             #[cfg(feature = "hardware")]
             screen: ScreenManager::new()?,
@@ -108,7 +106,7 @@ impl SimonSaysSeeq {
         loop {
             // Handle hardware events (non-blocking)
             while let Ok(event) = hw_rx.try_recv() {
-                if let Err(e) = self.handle_hardware_event(event) {
+                if let Err(e) = self.handle_hardware_event(event, &hw_tx) {
                     error!("Error handling hardware event: {}", e);
                 }
             }
@@ -138,7 +136,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
     
-    fn handle_hardware_event(&mut self, event: HardwareEvent) -> Result<()> {
+    fn handle_hardware_event(&mut self, event: HardwareEvent, hw_sender: &Sender<HardwareEvent>) -> Result<()> {
         match event {
             HardwareEvent::EncoderTurn { encoder, delta } => {
                 match encoder {
@@ -200,11 +198,51 @@ impl SimonSaysSeeq {
                 }
             }
             
+            HardwareEvent::StartStopToggle => {
+                // Handle start/stop with RGB flash for macropad
+                if self.sequencer.is_running() {
+                    info!("Stop pressed via macropad");
+                    self.sequencer.stop();
+                    #[cfg(feature = "midi")]
+                    self.midi.all_notes_off()?;
+                } else {
+                    info!("Start pressed via macropad");
+                    self.sequencer.start();
+                    
+                    // Trigger RGB flash sequence in simulation mode
+                    #[cfg(not(feature = "hardware"))]
+                    {
+                        use crate::hardware::NornsHardware;
+                        NornsHardware::execute_flash_sequence(hw_sender);
+                    }
+                }
+            }
+
             HardwareEvent::GridPress { grid_id, x, y, pressed } => {
                 #[cfg(feature = "hardware")]
                 self.handle_grid_press(grid_id, x, y, pressed)?;
                 #[cfg(not(feature = "hardware"))]
-                info!("Grid press simulation: grid {} ({}, {}) {}", grid_id, x, y, if pressed { "pressed" } else { "released" });
+                {
+                    let button_name = match (x, y) {
+                        (0, 0) => "1", (1, 0) => "2", (2, 0) => "3", (3, 0) => "4",
+                        (0, 1) => "Q", (1, 1) => "W", (2, 1) => "E", (3, 1) => "R",
+                        (0, 2) => "A", (1, 2) => "S", (2, 2) => "D", (3, 2) => "F",
+                        (0, 3) => "Z", (1, 3) => "X", (2, 3) => "C", (3, 3) => "V",
+                        _ => "?",
+                    };
+                    if pressed {
+                        info!("🔥 Macropad button {} PRESSED: ({}, {})", button_name, x, y);
+                    } else {
+                        info!("💨 Macropad button {} released: ({}, {})", button_name, x, y);
+                    }
+                    
+                    // Update grid display
+                    if pressed {
+                        self.grid.set_led(grid_id, x, y, 15)?;
+                    } else {
+                        self.grid.set_led(grid_id, x, y, 0)?;
+                    }
+                }
             }
             
             HardwareEvent::Shutdown => {
