@@ -116,9 +116,11 @@ impl NornsHardware {
         
         // Set up signal handler for graceful shutdown
         let running_signal = running.clone();
+        let sender_signal = sender.clone();
         ctrlc::set_handler(move || {
             info!("Shutdown signal received");
             running_signal.store(false, Ordering::SeqCst);
+            let _ = sender_signal.send(HardwareEvent::Shutdown);
         }).expect("Error setting Ctrl-C handler");
         
         #[cfg(feature = "hardware")]

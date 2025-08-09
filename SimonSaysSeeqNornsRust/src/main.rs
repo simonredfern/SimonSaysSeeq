@@ -114,6 +114,15 @@ impl SimonSaysSeeq {
             sequencer.run_clock_loop(seq_tx, running_seq)
         });
         
+        // Auto-start the sequencer for desktop testing (no hardware required)
+        info!("🚀 Auto-starting sequencer for desktop testing");
+        self.sequencer.start();
+        
+        // Flash all connected grids for visual feedback
+        if let Err(e) = self.grid.flash_all_grids() {
+            warn!("Failed to flash grids on sequencer start: {}", e);
+        }
+        
         // Main event loop
         self.main_loop(hw_rx, seq_rx)?;
         
@@ -282,6 +291,8 @@ impl SimonSaysSeeq {
     fn handle_sequencer_event(&mut self, event: SequencerEvent) -> Result<()> {
         match event {
             SequencerEvent::Step { step, bar } => {
+                info!("🥁 Step {}.{}", bar, step);
+                
                 // Advance CO2 step counter
                 let step_co2_value = self.co2.advance_step();
                 
@@ -592,7 +603,8 @@ impl SimonSaysSeeq {
                 let brightness = if value > 0 { 5 } else { 0 };
                 let connected_grids = self.grid.get_connected_grids();
                 if let Some(grid_id) = connected_grids.first() {
-                    self.grid.set_led(grid_id, x, y, brightness)?;
+                    // Convert from sequencer coordinates (1-based) to grid coordinates (0-based)
+                    self.grid.set_led(grid_id, x - 1, y - 1, brightness)?;
                 }
             }
         }

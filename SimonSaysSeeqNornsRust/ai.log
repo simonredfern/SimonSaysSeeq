@@ -168,3 +168,22 @@ ps aux | grep simon
 # Stopping all running sequencer instances to allow manual terminal run
 # PIDs to stop: 14815, 16252, 16404, 16463
 kill 14815 16252 16404 16463
+
+## 2025-08-10 00:56:45 User Manual Test
+# User ran: cargo run --release --features desktop
+# Issue: No step count visible, no indication sequencer is running
+# Sequencer may not be starting properly or not displaying output
+# User request: Auto-start sequencer on startup (not using Norns hardware currently)
+# Need to modify sequencer to start automatically instead of waiting for hardware button
+
+## 2025-08-10 01:02:51 Ctrl+C Shutdown Issue
+# Issue: Ctrl+C shows "shutdown signal received" but application doesn't exit
+# Need to fix shutdown signal handling to properly terminate application
+# Fixed: Added direct HardwareEvent::Shutdown send from signal handler
+
+## 2025-08-10 01:05:14 LED Coordinates Out of Bounds Error
+# Error: LED coordinates (16, 1) out of bounds for grid m2949672 (16x8)
+# Issue: Code trying to set LED at x=16 on 16-wide grid (valid range 0-15)
+# Grid m2949672 dimensions: 16x8, so valid coordinates are (0-15, 0-7)
+# Fixed: Added coordinate conversion from sequencer (1-based) to grid (0-based)
+# Result: Both grids flash at startup - coordinate fix successful
