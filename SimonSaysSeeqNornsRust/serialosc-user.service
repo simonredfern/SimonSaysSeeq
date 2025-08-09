@@ -1,0 +1,12 @@
+[Unit]
+Description=serialosc daemon (user service)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/serialoscd
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

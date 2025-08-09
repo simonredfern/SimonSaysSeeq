@@ -1,0 +1,12 @@
+[Unit]
+Description=serialosc daemon
+After=network.target
+
+[Service]
+Type=simple
+User=simonredfern
+ExecStart=/usr/bin/serialoscd -c /var/lib/serialosc
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

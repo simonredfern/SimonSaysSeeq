@@ -135,3 +135,10 @@ cargo run --example debug_osc --features desktop
 
 ### Final Setup
 # Created ai_instructions.txt with guidelines for future AI work on project
+
+### serialosc Service Fix
+# Fixed serialosc failing to start at boot due to DynamicUser permission issues
+# Created user service instead: ~/.config/systemd/user/serialosc.service
+systemctl --user enable serialosc
+sudo loginctl enable-linger simonredfern
+# Result: serialosc now starts automatically and both grids detected on ports 15335, 13832
