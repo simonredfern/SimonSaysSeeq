@@ -179,13 +179,14 @@ impl GridManager {
         // Wait for device info response
         let mut cols = 16; // Default
         let mut rows = 8;  // Default
-        let mut prefix = "/grid".to_string(); // Default
+        let mut prefix = "/monome".to_string(); // Default to /monome (more common)
         let mut received_size = false;
+        let mut received_prefix = false;
         
         let info_timeout = Duration::from_millis(1000);
         let info_start = Instant::now();
         
-        while info_start.elapsed() < info_timeout && !received_size {
+        while info_start.elapsed() < info_timeout && (!received_size || !received_prefix) {
             let mut buf = [0u8; rosc::decoder::MTU];
             match self.socket.recv_from(&mut buf) {
                 Ok((size, _addr)) => {
@@ -204,6 +205,7 @@ impl GridManager {
                                 "/sys/prefix" => {
                                     if let Some(OscType::String(p)) = msg.args.get(0) {
                                         prefix = p.clone();
+                                        received_prefix = true;
                                         debug!("Device {} prefix: {}", device_id, prefix);
                                     }
                                 }
@@ -226,6 +228,10 @@ impl GridManager {
             warn!("Did not receive size info for device {}, using defaults", device_id);
         }
         
+        if !received_prefix {
+            warn!("Did not receive prefix info for device {}, using default: {}", device_id, prefix);
+        }
+        
         // Determine if device supports variable brightness
         let is_varibright = device_type.contains("128") || device_type.contains("256") || 
                            device_type.contains("one"); // Most modern grids support varibright
@@ -236,7 +242,7 @@ impl GridManager {
             port: device_port,
             cols,
             rows,
-            prefix,
+            prefix: prefix.clone(),
             is_varibright,
         };
         
@@ -291,11 +297,12 @@ impl GridManager {
         
         // Send OSC command
         let device_addr = format!("127.0.0.1:{}", device.port);
+        let prefix = &device.prefix;
         
         let osc_msg = if device.is_varibright {
             // Use level command for variable brightness
             OscMessage {
-                addr: format!("{}/grid/led/level/set", device.prefix),
+                addr: format!("{}/grid/led/level/set", prefix),
                 args: vec![
                     OscType::Int(x as i32),
                     OscType::Int(y as i32),
@@ -305,7 +312,7 @@ impl GridManager {
         } else {
             // Use basic on/off command
             OscMessage {
-                addr: format!("{}/grid/led/set", device.prefix),
+                addr: format!("{}/grid/led/set", prefix),
                 args: vec![
                     OscType::Int(x as i32),
                     OscType::Int(y as i32),
@@ -313,6 +320,9 @@ impl GridManager {
                 ],
             }
         };
+        
+        info!("Sending OSC command: {} to {}", osc_msg.addr, device_addr);
+        info!("OSC args: {:?}", osc_msg.args);
         
         let packet = OscPacket::Message(osc_msg);
         let msg_buf = rosc::encoder::encode(&packet)?;
@@ -350,22 +360,26 @@ impl GridManager {
         
         // Send OSC clear command
         let device_addr = format!("127.0.0.1:{}", device.port);
+        let prefix = &device.prefix;
         
         // Try both basic and level clear commands for maximum compatibility
         let clear_commands = if device.is_varibright {
             vec![
-                format!("{}/grid/led/level/all", device.prefix),
-                format!("{}/grid/led/all", device.prefix),
+                format!("{}/grid/led/level/all", prefix),
+                format!("{}/grid/led/all", prefix),
             ]
         } else {
-            vec![format!("{}/grid/led/all", device.prefix)]
+            vec![format!("{}/grid/led/all", prefix)]
         };
         
         for addr in clear_commands {
             let osc_msg = OscMessage {
-                addr,
+                addr: addr.clone(),
                 args: vec![OscType::Int(0)],
             };
+            
+            info!("Sending clear command: {} to {}", addr, device_addr);
+            info!("Clear args: {:?}", osc_msg.args);
             
             let packet = OscPacket::Message(osc_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
@@ -552,6 +566,9 @@ impl GridManager {
                 addr: format!("{}/grid/led/all", prefix),
                 args: vec![OscType::Int(1)], // On
             };
+            info!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
+            info!("Flash args: {:?}", flash_msg.args);
+            
             let packet = OscPacket::Message(flash_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
             self.socket.send_to(&msg_buf, &device_addr)?;
@@ -653,6 +670,9 @@ impl GridManager {
                     args: vec![OscType::Int(brightness)],
                 }
             };
+            
+            info!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
+            info!("Flash args: {:?}", flash_msg.args);
             
             let packet = OscPacket::Message(flash_msg);
             let msg_buf = rosc::encoder::encode(&packet)?;
