@@ -17,6 +17,21 @@ cargo build --no-default-features --features="simulation"
 ./test_local.sh --simulation
 ```
 
+### Framework RGB Macropad Mode (Hardware)
+
+For use with Framework Laptop 16 RGB Macropad:
+
+```bash
+# Build with hardware support
+cargo build --features="hardware"
+
+# Test RGB Macropad connection and rainbow flash
+./target/debug/simon_says_seeq --test-macropad
+
+# Run with RGB Macropad support
+./target/debug/simon_says_seeq
+```
+
 In simulation mode, you'll see sequencer activity in the console:
 
 ```
@@ -51,8 +66,10 @@ cargo build --release --features="hardware,midi"
 
 - **High-Performance Sequencing**: Written in Rust for maximum performance
 - **Grid Support**: Monome grid integration for tactile control
+- **Framework RGB Macropad**: Native support for Framework Laptop 16 RGB Macropad
 - **MIDI I/O**: Full MIDI input/output support
 - **Real-time Display**: Visual feedback on Norns screen
+- **RGB Flash Sequences**: Dynamic LED animations on sequencer start
 - **Simulation Mode**: Test without hardware using console output
 - **Pattern Management**: Save/load and chain patterns
 - **CO2 Integration**: Environmental data integration for tempo modulation
@@ -64,7 +81,7 @@ cargo build --release --features="hardware,midi"
 Different feature sets are available:
 
 - `simulation`: Console-only mode for development
-- `hardware`: Full hardware support (encoders, buttons, screen)
+- `hardware`: Full hardware support (encoders, buttons, screen, Framework RGB Macropad)
 - `midi`: MIDI input/output support
 - `desktop`: Development with grid on laptop
 
@@ -88,6 +105,52 @@ When running in simulation mode, the application provides rich console feedback:
 - **🕐 Transport**: Clock start/stop events
 
 The Framework RGB Macropad simulation displays a 4x4 grid representation:
+
+```
+
+## Framework RGB Macropad Support
+
+### Hardware Detection
+
+The application automatically detects Framework RGB Macropad devices:
+
+```bash
+# Test macropad detection and RGB functionality
+./target/debug/simon_says_seeq --test-macropad
+
+# Expected output:
+🌈 Framework RGB Macropad Test Mode
+✅ Framework RGB Macropad found!
+🚀 Starting rainbow flash test...
+💡 Flash button (0,0) with color RGB(255, 0, 0) - Step 1/16
+💡 Flash button (1,0) with color RGB(255, 127, 0) - Step 2/16
+...
+✨ Test complete!
+```
+
+### USB Device Information
+
+Framework RGB Macropad typically appears as:
+- **Vendor ID**: `32AC` (Framework Computer Inc.)
+- **Product Name**: Framework RGB Macropad
+- **Layout**: 4x4 button grid with individual RGB LEDs
+
+### RGB Features
+
+- **Individual LED Control**: Each of the 16 buttons has independent RGB control
+- **Rainbow Flash Sequence**: Automatic RGB animation on sequencer start
+- **Real-time Feedback**: LEDs respond to button presses and sequencer activity
+- **Color Coding**: Different colors can represent different sequencer states
+
+### Troubleshooting
+
+If the RGB Macropad doesn't light up:
+
+1. **Check USB Connection**: Ensure the macropad is properly connected
+2. **Verify Detection**: Run `--test-macropad` to see if device is found
+3. **Check Permissions**: On Linux, you may need udev rules for HID access
+4. **Build with Hardware Features**: Ensure you built with `--features="hardware"`
+5. **View Device List**: Application logs show all detected USB HID devices
 
 ```
 🌈 Framework RGB Macropad State (brightness 0-15):
@@ -127,6 +190,12 @@ RUST_LOG=trace ./target/debug/simon_says_seeq
 ### Grid (Hardware Mode)
 - **Grid Pads**: Toggle sequence steps
 - **Hold + Grid**: Advanced operations (copy, paste, etc.)
+
+### Framework RGB Macropad (Hardware Mode)
+- **16 RGB Buttons**: 4x4 grid for step sequencing and control
+- **LED Feedback**: Real-time visual feedback for active steps
+- **RGB Flash**: Rainbow animation on sequencer start
+- **Press Detection**: Hardware button press detection
 
 ### Framework RGB Macropad Simulation (Simulation Mode)
 - **1-4, QWER, ASDF, ZXCV**: Simulate 4x4 macropad button presses
@@ -194,5 +263,27 @@ AGPL-3.0 - See LICENSE file for details
 
 For hardware testing, ensure you have access to:
 - Norns or compatible hardware
-- Monome grid (optional)
+- Monome grid (optional)  
+- Framework Laptop 16 RGB Macropad (optional)
 - MIDI devices (optional)
+
+### Framework RGB Macropad Setup
+
+1. **Connect Hardware**: Plug in Framework RGB Macropad via USB
+2. **Test Detection**: Run `./target/debug/simon_says_seeq --test-macropad`
+3. **Check Permissions**: Ensure your user has HID device access
+4. **Verify RGB**: Look for rainbow flash during test mode
+
+### Linux udev Rules (if needed)
+
+Create `/etc/udev/rules.d/50-framework-macropad.rules`:
+```
+# Framework RGB Macropad
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="32ac", MODE="0666", GROUP="plugdev"
+```
+
+Then reload udev rules:
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```

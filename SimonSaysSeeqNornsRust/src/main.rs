@@ -67,6 +67,18 @@ impl SimonSaysSeeq {
     pub fn run(&mut self) -> Result<()> {
         info!("Starting SimonSaysSeeq Rust application");
         
+        // List connected devices for debugging
+        #[cfg(feature = "hardware")]
+        {
+            info!("🔍 Checking for Framework RGB Macropad and other grid devices...");
+            if let Some(grid_id) = self.grid.find_framework_macropad() {
+                info!("✅ Framework RGB Macropad found as device {}", grid_id);
+            } else {
+                info!("⚠️ No Framework RGB Macropad detected");
+                info!("💡 Check USB connection and device logs above for VID:PID info");
+            }
+        }
+        
         self.running.store(true, Ordering::SeqCst);
         
         // Create communication channels
@@ -209,7 +221,13 @@ impl SimonSaysSeeq {
                     info!("Start pressed via macropad");
                     self.sequencer.start();
                     
-                    // Trigger RGB flash sequence in simulation mode
+                    // Trigger RGB flash sequence
+                    #[cfg(feature = "hardware")]
+                    {
+                        if let Err(e) = self.grid.trigger_framework_flash() {
+                            warn!("Failed to trigger Framework RGB flash: {}", e);
+                        }
+                    }
                     #[cfg(not(feature = "hardware"))]
                     {
                         use crate::hardware::NornsHardware;
@@ -688,12 +706,43 @@ fn main() -> Result<()> {
         println!("    --config <FILE>  Use custom configuration file");
         println!("    --no-hardware    Disable hardware features (simulation mode)");
         println!("    --no-midi        Disable MIDI features");
+        println!("    --test-macropad  Test Framework RGB Macropad and exit");
         return Ok(());
     }
     
     // Handle version flag
     if args.len() > 1 && (args[1] == "--version" || args[1] == "-v") {
         println!("SimonSaysSeeq Rust v{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    
+    // Handle Framework RGB Macropad test mode
+    if args.len() > 1 && args[1] == "--test-macropad" {
+        println!("🌈 Framework RGB Macropad Test Mode");
+        println!("===================================");
+        
+        #[cfg(feature = "hardware")]
+        {
+            use crate::grid::GridManager;
+            let mut grid = GridManager::new()?;
+            
+            if let Some(grid_id) = grid.find_framework_macropad() {
+                println!("✅ Framework RGB Macropad found!");
+                println!("🚀 Starting rainbow flash test...");
+                grid.trigger_framework_flash()?;
+                println!("✨ Test complete!");
+            } else {
+                println!("❌ No Framework RGB Macropad detected");
+                println!("💡 Make sure the device is connected via USB");
+                println!("🔍 Check the device list above for VID:PID information");
+            }
+        }
+        
+        #[cfg(not(feature = "hardware"))]
+        {
+            println!("❌ Hardware features disabled - rebuild with --features=\"hardware\" to test actual device");
+        }
+        
         return Ok(());
     }
     

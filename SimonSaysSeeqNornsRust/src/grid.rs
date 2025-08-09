@@ -28,6 +28,7 @@ struct GridDevice {
     cols: usize,
     name: String,
     is_varibright: bool,
+    is_framework_macropad: bool,
 }
 
 /// Grid manager handles multiple grid devices
@@ -65,19 +66,34 @@ impl GridManager {
     /// Discover and connect to grid devices
     #[cfg(feature = "hardware")]
     fn discover_grids(&mut self) -> Result<()> {
-        info!("Discovering monome grid devices...");
+        info!("Discovering grid devices (monome and Framework RGB Macropad)...");
         
-        // First, collect all the grid device info we need
+        // First, log all USB HID devices for debugging
+        info!("Available USB HID devices:");
+        for device_info in self.hid_api.device_list() {
+            let vid = device_info.vendor_id();
+            let pid = device_info.product_id();
+            let product_name = device_info.product_string().unwrap_or("Unknown");
+            let manufacturer = device_info.manufacturer_string().unwrap_or("Unknown");
+            info!("  - VID:PID {:04X}:{:04X} {} by {}", vid, pid, product_name, manufacturer);
+        }
+        
+        // Now collect all the grid device info we need
         let mut grid_devices_to_add = Vec::new();
         
         for device_info in self.hid_api.device_list() {
             let vid = device_info.vendor_id();
             let pid = device_info.product_id();
             
-            if self.is_monome_device(vid, pid) {
+            if self.is_monome_device(vid, pid) || self.is_framework_macropad(vid, pid) {
                 match device_info.open_device(&self.hid_api) {
                     Ok(device) => {
-                        let (cols, rows, is_varibright) = Self::detect_grid_specs_static(pid);
+                        let is_framework = self.is_framework_macropad(vid, pid);
+                        let (cols, rows, is_varibright) = if is_framework {
+                            (4, 4, true) // Framework RGB Macropad is 4x4 with RGB support
+                        } else {
+                            Self::detect_grid_specs_static(pid)
+                        };
                         
                         let grid_device = GridDevice {
                             device: Arc::new(Mutex::new(device)),
@@ -85,6 +101,7 @@ impl GridManager {
                             cols,
                             name: device_info.product_string().unwrap_or("Unknown Grid").to_string(),
                             is_varibright,
+                            is_framework_macropad: is_framework,
                         };
                         
                         grid_devices_to_add.push((grid_device, cols, rows, device_info.product_string().unwrap_or("Unknown").to_string()));
@@ -139,6 +156,37 @@ impl GridManager {
         ];
         
         vid == MONOME_VID && MONOME_PIDS.contains(&pid)
+    }
+    
+    /// Check if a device is a Framework RGB Macropad
+    #[cfg(feature = "hardware")]
+    fn is_framework_macropad(&self, vid: u16, pid: u16) -> bool {
+        // Framework vendor ID - common USB VID for Framework devices
+        const FRAMEWORK_VID: u16 = 0x32AC;
+        
+        // Framework RGB Macropad product IDs (check logs to find actual PID)
+        const FRAMEWORK_MACROPAD_PIDS: &[u16] = &[
+            0x0005, // RGB Macropad (estimated)
+            0x0006, // RGB Macropad alternate
+            0x000A, // RGB Macropad v2 (estimated)
+            0x0010, // RGB Macropad potential ID
+            0x0020, // RGB Macropad potential ID
+        ];
+        
+        // Also check for potential alternate vendor IDs
+        const FRAMEWORK_ALT_VIDS: &[u16] = &[
+            0x32AC, // Framework Computer Inc.
+            0x1209, // Generic PID.codes VID (sometimes used)
+        ];
+        
+        let is_framework_vid = FRAMEWORK_ALT_VIDS.contains(&vid);
+        let is_framework_pid = FRAMEWORK_MACROPAD_PIDS.contains(&pid);
+        
+        if is_framework_vid && is_framework_pid {
+            info!("🌈 Framework RGB Macropad detected: VID:PID {:04X}:{:04X}", vid, pid);
+        }
+        
+        is_framework_vid && is_framework_pid
     }
     
     /// Detect grid specifications based on product ID
@@ -198,9 +246,12 @@ impl GridManager {
                 let clamped_brightness = brightness.min(max_brightness);
                 
                 // Send LED command
-                let device_lock = device.device.lock().unwrap();
+                let mut device_lock = device.device.lock().unwrap();
                 
-                if device.is_varibright {
+                if device.is_framework_macropad {
+                    // Framework RGB Macropad command
+                    self.set_framework_macropad_led(&mut device_lock, x, y, clamped_brightness)?;
+                } else if device.is_varibright {
                     // Varibright command: [0x11, x, y, brightness]
                     let cmd = [0x11, x as u8, y as u8, clamped_brightness];
                     device_lock.write(&cmd).map_err(|e| anyhow!("Failed to set LED: {}", e))?;
@@ -440,6 +491,125 @@ impl GridManager {
         Ok(())
     }
 
+    /// Set Framework RGB Macropad LED with RGB color
+    #[cfg(feature = "hardware")]
+    fn set_framework_macropad_led(&self, device: &mut hidapi::HidDevice, x: usize, y: usize, brightness: u8) -> Result<()> {
+        // Convert button coordinates to linear index (0-15)
+        let button_index = (y * 4 + x) as u8;
+        
+        // Convert brightness (0-15) to RGB values
+        let rgb_value = ((brightness as u16 * 255) / 15) as u8;
+        
+        // Framework RGB Macropad command structure (estimated)
+        // Command format: [0x01, button_index, red, green, blue]
+        let buffer = [0x01, button_index, rgb_value, rgb_value, rgb_value]; // White color
+        
+        match device.write(&buffer) {
+            Ok(_) => {
+                debug!("Framework macropad LED set: button {} to brightness {}", button_index, brightness);
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to write to Framework macropad: {}", e);
+                Err(anyhow!("Framework macropad LED write failed: {}", e))
+            }
+        }
+    }
+    
+    /// Set Framework RGB Macropad LED with specific RGB color
+    #[cfg(feature = "hardware")]
+    pub fn set_framework_macropad_rgb(&mut self, grid_id: usize, x: usize, y: usize, red: u8, green: u8, blue: u8) -> Result<()> {
+        if let Some(device) = self.devices.get(&grid_id) {
+            let button_index = (y * 4 + x) as u8;
+            let mut device_guard = device.device.lock().unwrap();
+            
+            // Framework RGB Macropad RGB command
+            let buffer = [0x01, button_index, red, green, blue];
+            
+            match device_guard.write(&buffer) {
+                Ok(_) => {
+                    debug!("Framework macropad RGB LED set: button {} to RGB({}, {}, {})", button_index, red, green, blue);
+                    // Store max RGB component as brightness for compatibility
+                    let brightness = red.max(green).max(blue);
+                    self.led_states.insert((grid_id, x, y), (brightness * 15) / 255);
+                    Ok(())
+                }
+                Err(e) => {
+                    warn!("Failed to write RGB to Framework macropad: {}", e);
+                    Err(anyhow!("Framework macropad RGB write failed: {}", e))
+                }
+            }
+        } else {
+            Err(anyhow!("Grid {} not found", grid_id))
+        }
+    }
+    
+    /// Flash Framework RGB Macropad with rainbow colors
+    #[cfg(feature = "hardware")]
+    pub fn flash_framework_macropad_rainbow(&mut self, grid_id: usize) -> Result<()> {
+        use std::thread;
+        use std::time::Duration;
+        
+        // Rainbow colors for the flash sequence
+        let colors = [
+            (255, 0, 0),     // Red
+            (255, 127, 0),   // Orange  
+            (255, 255, 0),   // Yellow
+            (0, 255, 0),     // Green
+            (0, 0, 255),     // Blue
+            (75, 0, 130),    // Indigo
+            (148, 0, 211),   // Violet
+            (255, 0, 255),   // Magenta
+        ];
+        
+        info!("🌈 Starting Framework RGB Macropad rainbow flash sequence!");
+        
+        // Flash all 16 buttons in sequence with rainbow colors
+        for i in 0..16 {
+            let x = i % 4;
+            let y = i / 4;
+            let color_idx = i % colors.len();
+            let (r, g, b) = colors[color_idx];
+            
+            info!("💡 Flash button ({},{}) with color RGB({}, {}, {}) - Step {}/16", x, y, r, g, b, i + 1);
+            
+            // Set rainbow color
+            self.set_framework_macropad_rgb(grid_id, x, y, r, g, b)?;
+            
+            // Hold for 125ms
+            thread::sleep(Duration::from_millis(125));
+            
+            // Turn off
+            self.set_framework_macropad_rgb(grid_id, x, y, 0, 0, 0)?;
+        }
+        
+        info!("✨ Framework RGB Macropad rainbow flash complete!");
+        Ok(())
+    }
+    
+    /// Find first Framework RGB Macropad device ID
+    #[cfg(feature = "hardware")]
+    pub fn find_framework_macropad(&self) -> Option<usize> {
+        for (grid_id, device) in &self.devices {
+            if device.is_framework_macropad {
+                return Some(*grid_id);
+            }
+        }
+        None
+    }
+    
+    /// Trigger hardware RGB flash sequence for Framework devices
+    #[cfg(feature = "hardware")]
+    pub fn trigger_framework_flash(&mut self) -> Result<()> {
+        if let Some(grid_id) = self.find_framework_macropad() {
+            info!("🌈 Triggering hardware Framework RGB Macropad flash!");
+            self.flash_framework_macropad_rainbow(grid_id)?;
+        } else {
+            info!("⚠️ No Framework RGB Macropad found for hardware flash");
+        }
+        Ok(())
+    }
+    
     /// Print visual representation of grid state (simulation mode only)
     #[cfg(not(feature = "hardware"))]
     fn print_grid_state(&self) {
