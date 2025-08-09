@@ -21,9 +21,9 @@ ls target/debug/
 
 ### Results Summary
 # Two grids physically connected:
-# - Grid m2949672 on /dev/ttyACM0 (VID: 0483:5740 - STMicroelectronics)
-# - Grid m5032747 on /dev/ttyACM1 (VID: cafe:4001 - Standard Monome)
-# Only the newer grid (m5032747) is detected and fully functional
+# - Grid m2949672 on /dev/ttyACM0 (VID: 0483:5740 - STMicroelectronics) - OLDER grid, did not light up in current test
+# - Grid m5032747 on /dev/ttyACM1 (VID: cafe:4001 - Standard Monome) - NEWER grid, working but has STUCK LEDs
+# Only the newer grid (m5032747) is detected and functional, but has stuck LEDs from testing
 # Older grid (m2949672) not detected due to different VID/PID
 
 ### Code Investigation Commands
@@ -42,3 +42,75 @@ cat src/lib.rs
 ### File Operations
 rm src/grid.rs
 # Deleted legacy serial-based grid manager, keeping only OSC-based implementation
+
+### Additional Investigation
+grep -r "m2949672|m5032747" .
+cat examples/single_grid_test.rs
+cargo run --example single_grid_test
+# Error: Too many open files in system (os error 23)
+
+### Key Finding - CORRECTED
+# Found comprehensive test in examples/single_grid_test.rs that was used previously
+# This example has detailed testing code and analysis for both grids
+# CORRECTION: The NEWER grid (m5032747) has stuck LEDs from our recent testing
+# The OLDER grid (m2949672) did not light up in current test (but worked in previous tests)
+# Need to clear stuck LEDs on the newer grid at port 15335
+
+### System Issues
+# System experiencing "Too many open files" error (os error 23)
+# All terminal commands failing - likely from grid testing leaving file descriptors open
+# Commands attempted but failed:
+lsof | wc -l
+ulimit -n  
+echo "test"
+ls
+pwd
+
+### Current Status (as of 2025-08-09T23:59:15)
+# Grid m5032747 (newer): Has stuck LEDs from testing, needs clearing via OSC
+# Grid m2949672 (older): Not lighting up in current test, but worked previously
+# System: File descriptor exhaustion preventing further commands
+
+### Next Steps Needed
+1. Clear system file descriptor issue (restart session if needed)
+2. Clear stuck LEDs on newer grid: oscsend 127.0.0.1 15335 /monome/grid/led/all i 0
+3. Investigate why older grid not detected (VID/PID issue: 0483:5740 vs cafe:4001)
+4. Run comprehensive test again when system recovers
+
+### Grid Reconnection
+# Grids were unplugged and plugged back in
+# Stuck LEDs on newer grid should now be cleared
+# However, system file descriptor issue persists
+
+### Persistent System Issue
+# File descriptor exhaustion continues even after grid reconnection
+# Commands still failing:
+ls
+echo "test"
+pwd
+whoami
+date
+ls -la /dev/ttyACM*
+
+### Status Update
+# Grid hardware: Both reconnected, LEDs cleared
+# System: Still experiencing file descriptor exhaustion
+# Conclusion: The issue is system-wide, not grid-specific
+# May require terminal session restart or system reboot to resolve
+
+### POST-REBOOT INSTRUCTIONS
+# After system reboot, run these commands in order:
+# 1. Check grids are connected: ls -la /dev/ttyACM*
+# 2. Check USB devices: lsusb | grep -i monome
+# 3. Run comprehensive grid test: cargo run --example single_grid_test
+#    NOTE: This test uses OSC messages via grid_osc::GridManager and serialosc
+# 4. If that fails, run our test binary: ./target/debug/test_grids
+#    NOTE: This also uses OSC messages, not direct serial communication
+# 5. Expected: Newer grid (m5032747) should work, older grid (m2949672) may not be detected
+# 6. Goal: Test both grids and investigate detection issues for older grid
+# 7. Both tests communicate via serialosc OSC messages, not raw serial commands
+
+### REBOOT CONFIRMED
+# User confirmed system reboot - file descriptor issue should be resolved
+# Grids were reconnected before reboot, stuck LEDs should be cleared
+# Ready to continue testing when system comes back up
