@@ -846,6 +846,10 @@ impl Sequencer {
             }
         }
         
+        // Update global position counters to match MIDI counters
+        state.current_step = state.midi_step_count;
+        state.current_bar = state.midi_bar_count;
+        
         // Advance each row's current step based on its individual settings
         for (row_idx, row_settings) in state.row_settings.iter_mut().enumerate() {
             row_settings.current_step += 1;
