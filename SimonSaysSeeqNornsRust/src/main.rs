@@ -25,7 +25,6 @@ use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
-#[cfg(feature = "hardware")]
 use grid::GridManager;
 #[cfg(feature = "hardware")]
 use screen::ScreenManager;
@@ -72,8 +71,28 @@ impl SimonSaysSeeq {
         // List connected devices for debugging
         #[cfg(feature = "hardware")]
         {
-            info!("🔍 Checking for grid devices...");
+            let connected_grids = self.grid.get_connected_grids();
+            if connected_grids.is_empty() {
+                info!("🔍 No monome grid devices found");
+                info!("💡 Connect a monome grid device to use grid functionality");
+                info!("📋 Available HID devices are listed above - none match monome VID/PID");
+            } else {
+                info!("🔍 Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
+            }
         }
+        
+        #[cfg(not(feature = "hardware"))]
+        {
+            info!("🔍 Simulation mode - no actual hardware detection");
+        }
+        
+        // Show control instructions
+        info!("🎮 Controls:");
+        info!("  Ctrl+C: Stop application");
+        #[cfg(not(feature = "hardware"))]
+        info!("  Space+Enter: Start/Stop sequencer (simulation mode)");
+        #[cfg(not(feature = "hardware"))]
+        info!("  1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
         
         self.running.store(true, Ordering::SeqCst);
         
@@ -216,6 +235,11 @@ impl SimonSaysSeeq {
                 } else {
                     info!("Start pressed");
                     self.sequencer.start();
+                    
+                    // Flash all connected grids for visual feedback
+                    if let Err(e) = self.grid.flash_all_grids() {
+                        warn!("Failed to flash grids on sequencer start: {}", e);
+                    }
                 }
             }
 
@@ -557,7 +581,7 @@ impl SimonSaysSeeq {
             }
         }
         
-        self.grid.refresh(0)?;
+        self.grid.refresh()?;
         Ok(())
     }
     

@@ -1,14 +1,15 @@
 //! Grid module - Handle monome grid communication and LED control
 //! 
-//! Provides interface to monome grid devices via USB HID communication.
+//! Provides interface to monome grid devices via serial communication (CDC-ACM).
 
 use anyhow::{Result, anyhow};
 #[cfg(feature = "hardware")]
-use hidapi::{HidApi, HidDevice};
+use serialport::{SerialPort, available_ports, SerialPortType};
 use log::{info, debug, warn};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
+use std::time::Duration;
+use std::io::{Read, Write};
 
 /// Grid button event
 #[derive(Debug, Clone)]
@@ -23,118 +24,188 @@ pub struct GridButtonEvent {
 #[derive(Debug)]
 struct GridDevice {
     #[cfg(feature = "hardware")]
-    device: Arc<Mutex<HidDevice>>,
+    port: Arc<Mutex<Box<dyn SerialPort>>>,
     rows: usize,
     cols: usize,
     name: String,
     is_varibright: bool,
+    port_name: String,
 }
 
 /// Grid manager handles multiple grid devices
 pub struct GridManager {
     devices: HashMap<usize, GridDevice>,
     led_states: HashMap<(usize, usize, usize), u8>, // (grid_id, x, y) -> brightness
-    #[cfg(feature = "hardware")]
-    hid_api: HidApi,
 }
 
 impl GridManager {
     /// Create a new grid manager
     pub fn new() -> Result<Self> {
+        let mut manager = Self {
+            devices: HashMap::new(),
+            led_states: HashMap::new(),
+        };
+        
         #[cfg(feature = "hardware")]
         {
-            let mut manager = Self {
-                devices: HashMap::new(),
-                led_states: HashMap::new(),
-                hid_api: HidApi::new()?,
-            };
             manager.discover_grids()?;
-            Ok(manager)
         }
         
         #[cfg(not(feature = "hardware"))]
         {
             info!("Grid simulation mode - no actual grid devices");
-            Ok(Self {
-                devices: HashMap::new(),
-                led_states: HashMap::new(),
-            })
         }
+        
+        Ok(manager)
     }
     
-    /// Discover and connect to grid devices
+    /// Discover and connect to grid devices via serial ports
     #[cfg(feature = "hardware")]
     fn discover_grids(&mut self) -> Result<()> {
-        info!("Discovering grid devices (monome)...");
+        info!("Discovering grid devices via serial ports...");
         
-        // First, log all USB HID devices for debugging
-        info!("Available USB HID devices:");
-        for device_info in self.hid_api.device_list() {
-            let vid = device_info.vendor_id();
-            let pid = device_info.product_id();
-            let product_name = device_info.product_string().unwrap_or("Unknown");
-            let manufacturer = device_info.manufacturer_string().unwrap_or("Unknown");
-            info!("  - VID:PID {:04X}:{:04X} {} by {}", vid, pid, product_name, manufacturer);
+        debug!("Enumerating available serial ports...");
+        let ports = match available_ports() {
+            Ok(ports) => ports,
+            Err(e) => {
+                warn!("Failed to enumerate serial ports: {}", e);
+                return Ok(()); // Don't fail completely, just no grids available
+            }
+        };
+        
+        let mut monome_count = 0;
+        
+        // Log all available serial ports
+        info!("Found {} serial port(s):", ports.len());
+        for port in &ports {
+            debug!("  - {}: {:?}", port.port_name, port.port_type);
+            
+            if let SerialPortType::UsbPort(usb_info) = &port.port_type {
+                let vid = usb_info.vid;
+                let pid = usb_info.pid;
+                debug!("    USB VID:PID {:04X}:{:04X}", vid, pid);
+                debug!("    Manufacturer: {:?}", usb_info.manufacturer);
+                debug!("    Product: {:?}", usb_info.product);
+                
+                if self.is_monome_device(vid, pid) {
+                    info!("    ✅ MONOME GRID DETECTED: {} (VID:{:04X} PID:{:04X})", 
+                          port.port_name, vid, pid);
+                    monome_count += 1;
+                }
+            }
         }
         
-        // Now collect all the grid device info we need
-        let mut grid_devices_to_add = Vec::new();
+        if monome_count == 0 {
+            info!("💡 No monome devices found. Expected combinations:");
+            info!("  - VID 0A6A (original monome)");
+            info!("  - VID CAFE (newer monome devices, like grid)");
+            info!("  - Common PIDs: 4001, 0001, 0002, 0003, etc.");
+        }
         
-        for device_info in self.hid_api.device_list() {
-            let vid = device_info.vendor_id();
-            let pid = device_info.product_id();
-            
-            if self.is_monome_device(vid, pid) {
-                match device_info.open_device(&self.hid_api) {
-                    Ok(device) => {
-                        let (cols, rows, is_varibright) = Self::detect_grid_specs_static(pid);
-                        
-                        let grid_device = GridDevice {
-                            device: Arc::new(Mutex::new(device)),
-                            rows,
-                            cols,
-                            name: device_info.product_string().unwrap_or("Unknown Grid").to_string(),
-                            is_varibright,
-                        };
-                        
-                        grid_devices_to_add.push((grid_device, cols, rows, device_info.product_string().unwrap_or("Unknown").to_string()));
-                    }
-                    Err(e) => {
-                        warn!("Failed to open grid device: {}", e);
+        // Connect to monome devices
+        info!("Attempting to connect to {} detected monome device(s)...", monome_count);
+        let mut grid_id = 0;
+        for port_info in &ports {
+            if let SerialPortType::UsbPort(usb_info) = &port_info.port_type {
+                if self.is_monome_device(usb_info.vid, usb_info.pid) {
+                    info!("Connecting to monome grid on {}...", port_info.port_name);
+                    match self.connect_to_grid(&port_info.port_name, usb_info.vid, usb_info.pid, grid_id) {
+                        Ok(()) => {
+                            info!("✅ Successfully connected to grid {} on {}", grid_id, port_info.port_name);
+                            grid_id += 1;
+                        }
+                        Err(e) => {
+                            warn!("❌ Failed to connect to grid on {}: {}", port_info.port_name, e);
+                        }
                     }
                 }
             }
         }
         
-        // Now add all the devices we found
-        let mut grid_count = 0;
-        for (grid_device, cols, rows, name) in grid_devices_to_add {
-            let grid_id = grid_count;
-            self.devices.insert(grid_id, grid_device);
-            
-            // Initialize LED state tracking
-            for x in 0..cols {
-                for y in 0..rows {
-                    self.led_states.insert((grid_id, x, y), 0);
-                }
-            }
-            
-            self.initialize_grid(grid_id)?;
-            
-            info!("Connected to grid {}: {} ({}x{}, varibright: {})", 
-                  grid_id, name, cols, rows, self.devices[&grid_id].is_varibright);
-            
-            grid_count += 1;
+        info!("Connected to {} grid device(s)", self.devices.len());
+        Ok(())
+    }
+    
+    /// Connect to a specific grid device
+    #[cfg(feature = "hardware")]
+    fn connect_to_grid(&mut self, port_name: &str, vid: u16, pid: u16, grid_id: usize) -> Result<()> {
+        debug!("Opening serial port {} with 115200 baud...", port_name);
+        
+        // Open serial port with appropriate settings for monome
+        let mut port = serialport::new(port_name, 115200)
+            .timeout(Duration::from_millis(500)) // Increased timeout for initial connection
+            .data_bits(serialport::DataBits::Eight)
+            .flow_control(serialport::FlowControl::None)
+            .parity(serialport::Parity::None)
+            .stop_bits(serialport::StopBits::One)
+            .open()
+            .map_err(|e| anyhow!("Failed to open serial port {}: {}", port_name, e))?;
+        
+        debug!("Serial port {} opened successfully", port_name);
+        
+        // Detect grid specifications
+        let (cols, rows, is_varibright) = self.detect_grid_specs(pid);
+        let product_name = format!("Monome Grid ({:04X}:{:04X})", vid, pid);
+        
+        // Test communication by sending a query command
+        debug!("Testing communication with grid on {}...", port_name);
+        if let Err(e) = self.test_grid_communication(&mut port) {
+            warn!("Communication test failed for {}: {}", port_name, e);
+            // Don't fail completely, some grids might not respond to test commands
+        } else {
+            debug!("Communication test successful for {}", port_name);
         }
         
-        info!("Found {} grid device(s)", grid_count);
+        let grid_device = GridDevice {
+            port: Arc::new(Mutex::new(port)),
+            rows,
+            cols,
+            name: product_name,
+            is_varibright,
+            port_name: port_name.to_string(),
+        };
+        
+        // Initialize LED state tracking
+        for x in 0..cols {
+            for y in 0..rows {
+                self.led_states.insert((grid_id, x, y), 0);
+            }
+        }
+        
+        self.devices.insert(grid_id, grid_device);
+        
+        // Initialize the grid (clear all LEDs)
+        self.initialize_grid(grid_id)?;
+        
+        info!("Grid {} connected: {} ({}x{}, varibright: {})", 
+              grid_id, self.devices[&grid_id].name, cols, rows, is_varibright);
+        
+        Ok(())
+    }
+    
+    /// Test grid communication
+    #[cfg(feature = "hardware")]
+    fn test_grid_communication(&self, port: &mut Box<dyn SerialPort>) -> Result<()> {
+        debug!("Sending test command to grid...");
+        
+        // Send a simple LED command to test communication
+        let test_cmd = [0x1A, 0x00, 0x00]; // Clear all LEDs command
+        port.write_all(&test_cmd)
+            .map_err(|e| anyhow!("Failed to write test command: {}", e))?;
+        
+        port.flush()
+            .map_err(|e| anyhow!("Failed to flush serial port: {}", e))?;
+        
+        // Small delay to ensure command is processed
+        std::thread::sleep(Duration::from_millis(50));
+        
+        debug!("Grid communication test completed");
         Ok(())
     }
     
     /// Check if a device is a monome grid
-    #[cfg(feature = "hardware")]
     fn is_monome_device(&self, vid: u16, pid: u16) -> bool {
-        // Monome vendor IDs (original and alternate)
+        // Monome vendor IDs
         const MONOME_VID: u16 = 0x0A6A;       // Original monome VID
         const MONOME_ALT_VID: u16 = 0xCAFE;   // Alternate VID for newer devices
         
@@ -147,148 +218,137 @@ impl GridManager {
             0x0011, // mk series 64
             0x0012, // mk series 128
             0x0013, // mk series 256
-            0x4001, // newer grid (detected)
+            0x4001, // newer grid (commonly seen)
+            0x4002, // potential additional grid
+            0x4003, // potential additional grid
         ];
         
-        (vid == MONOME_VID || vid == MONOME_ALT_VID) && MONOME_PIDS.contains(&pid)
+        let is_monome_vid = vid == MONOME_VID || vid == MONOME_ALT_VID;
+        let is_known_pid = MONOME_PIDS.contains(&pid);
+        
+        // Be more permissive with PIDs for monome VIDs
+        if is_monome_vid {
+            debug!("Monome VID detected: {:04X}, PID: {:04X}, known PID: {}", vid, pid, is_known_pid);
+            return true; // Accept any PID for known monome VIDs
+        }
+        
+        false
     }
-    
-
     
     /// Detect grid specifications based on product ID
-    #[cfg(feature = "hardware")]
     fn detect_grid_specs(&self, pid: u16) -> (usize, usize, bool) {
-        Self::detect_grid_specs_static(pid)
-    }
-    
-    /// Static version of detect_grid_specs for use during discovery
-    #[cfg(feature = "hardware")]
-    fn detect_grid_specs_static(pid: u16) -> (usize, usize, bool) {
         match pid {
             0x0001 => (8, 8, false),   // 40h - 8x8, no varibright
-            0x0002 => (8, 8, false),   // 64 - 8x8, no varibright
+            0x0002 => (8, 8, false),   // 64 - 8x8, no varibright  
             0x0003 => (16, 8, false),  // 128 - 16x8, no varibright
             0x0004 => (16, 16, false), // 256 - 16x16, no varibright
             0x0011 => (8, 8, true),    // mk series - 8x8, varibright
             0x0012 => (16, 8, true),   // mk series - 16x8, varibright
             0x0013 => (16, 16, true),  // mk series - 16x16, varibright
-            _ => (16, 8, true),        // Default to 128 mk specs
+            0x4001 => (16, 8, true),   // Assume modern grid 128
+            _ => (16, 8, true),        // Default to 128 mk specs for unknown PIDs
         }
     }
     
-    /// Initialize a grid device
+    /// Initialize a grid device (clear all LEDs)
     #[cfg(feature = "hardware")]
     fn initialize_grid(&mut self, grid_id: usize) -> Result<()> {
         if let Some(device) = self.devices.get(&grid_id) {
-            let device_lock = device.device.lock().unwrap();
+            let mut port = device.port.lock().unwrap();
             
-            // Send initialization command (clear all LEDs)
-            let clear_cmd = [0x1A, 0x00, 0x00]; // Clear all command
-            if let Err(e) = device_lock.write(&clear_cmd) {
-                warn!("Failed to send clear command to grid {}: {}", grid_id, e);
-            } else {
-                debug!("Grid {} initialized and cleared", grid_id);
-            }
+            // Send clear all LEDs command
+            let clear_cmd = [0x1A, 0x00, 0x00];
+            port.write_all(&clear_cmd)?;
+            port.flush()?;
+            
+            debug!("Grid {} initialized and cleared", grid_id);
         }
         
         Ok(())
     }
     
-    /// Set LED brightness at specific coordinates
+    /// Set LED brightness for a specific position
     pub fn set_led(&mut self, grid_id: usize, x: usize, y: usize, brightness: u8) -> Result<()> {
-        // Update our state tracking
-        self.led_states.insert((grid_id, x, y), brightness);
-        
-        #[cfg(feature = "hardware")]
-        {
-            if let Some(device) = self.devices.get(&grid_id) {
-                // Validate coordinates
-                if x >= device.cols || y >= device.rows {
-                    return Err(anyhow!("Grid coordinates out of bounds: ({}, {}) for grid {}", x, y, grid_id));
-                }
-                
-                // Clamp brightness based on device capabilities
-                let max_brightness = if device.is_varibright { 15 } else { 1 };
-                let clamped_brightness = brightness.min(max_brightness);
-                
-                // Send LED command
-                let mut device_lock = device.device.lock().unwrap();
-                
-                if device.is_varibright {
-                    // Varibright command: [0x11, x, y, brightness]
-                    let cmd = [0x11, x as u8, y as u8, clamped_brightness];
-                    device_lock.write(&cmd).map_err(|e| anyhow!("Failed to set LED: {}", e))?;
-                } else {
-                    // Binary LED command: [0x10, x, y, on/off]
-                    let on_off = if clamped_brightness > 0 { 1 } else { 0 };
-                    let cmd = [0x10, x as u8, y as u8, on_off];
-                    device_lock.write(&cmd).map_err(|e| anyhow!("Failed to set LED: {}", e))?;
-                }
-                
-                debug!("Set LED grid:{} ({}, {}) = {}", grid_id, x, y, clamped_brightness);
-            } else {
-                return Err(anyhow!("Grid {} not found", grid_id));
+        if let Some(device) = self.devices.get(&grid_id) {
+            // Validate coordinates
+            if x >= device.cols || y >= device.rows {
+                return Err(anyhow!("LED coordinates ({}, {}) out of bounds for grid {} ({}x{})", 
+                                 x, y, grid_id, device.cols, device.rows));
             }
-        }
-        
-        #[cfg(not(feature = "hardware"))]
-        {
-            info!("💡 Grid LED: ({},{}) brightness {}", x, y, brightness);
-            self.print_grid_state();
+            
+            // Clamp brightness
+            let brightness = if device.is_varibright { 
+                brightness.min(15) 
+            } else { 
+                if brightness > 0 { 15 } else { 0 }
+            };
+            
+            // Update internal state
+            self.led_states.insert((grid_id, x, y), brightness);
+            
+            #[cfg(feature = "hardware")]
+            {
+                let mut port = device.port.lock().unwrap();
+                
+                // Send LED command: [0x1B, x, y, brightness]
+                let led_cmd = [0x1B, x as u8, y as u8, brightness];
+                port.write_all(&led_cmd)?;
+                port.flush()?;
+            }
+            
+            debug!("Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
+        } else {
+            return Err(anyhow!("Grid {} not found", grid_id));
         }
         
         Ok(())
     }
     
-    /// Get LED brightness at specific coordinates
-    pub fn get_led(&self, grid_id: usize, x: usize, y: usize) -> Option<u8> {
-        self.led_states.get(&(grid_id, x, y)).copied()
+    /// Get LED brightness for a specific position
+    pub fn get_led(&self, grid_id: usize, x: usize, y: usize) -> u8 {
+        self.led_states.get(&(grid_id, x, y)).copied().unwrap_or(0)
     }
     
-    /// Set multiple LEDs efficiently
-    pub fn set_led_map(&mut self, grid_id: usize, led_map: &[u8]) -> Result<()> {
-        #[cfg(feature = "hardware")]
-        {
-            if let Some(device) = self.devices.get(&grid_id) {
-                let expected_size = device.cols * device.rows;
-                if led_map.len() != expected_size {
-                    return Err(anyhow!("LED map size mismatch: expected {}, got {}", expected_size, led_map.len()));
-                }
+    /// Set multiple LEDs from a 2D brightness map
+    pub fn set_led_map(&mut self, grid_id: usize, led_map: &[Vec<u8>]) -> Result<()> {
+        if let Some(device) = self.devices.get(&grid_id) {
+            let rows = led_map.len().min(device.rows);
+            let cols = if rows > 0 { led_map[0].len().min(device.cols) } else { 0 };
+            
+            #[cfg(feature = "hardware")]
+            {
+                let mut port = device.port.lock().unwrap();
                 
-                let device_lock = device.device.lock().unwrap();
-                
-                if device.is_varibright {
-                    // Send varibright map command
-                    let mut cmd = vec![0x1A, 0x00, 0x00]; // Map command header
-                    cmd.extend_from_slice(led_map);
-                    device_lock.write(&cmd).map_err(|e| anyhow!("Failed to set LED map: {}", e))?;
-                } else {
-                    // For binary devices, convert to packed format
-                    let mut packed_data = Vec::new();
-                    for chunk in led_map.chunks(8) {
-                        let mut byte = 0u8;
-                        for (i, &brightness) in chunk.iter().enumerate() {
-                            if brightness > 0 {
-                                byte |= 1 << i;
-                            }
+                // Send LED map in chunks to avoid overwhelming the device
+                for y in 0..rows {
+                    for x in 0..cols {
+                        let brightness = if device.is_varibright { 
+                            led_map[y][x].min(15) 
+                        } else { 
+                            if led_map[y][x] > 0 { 15 } else { 0 }
+                        };
+                        
+                        // Update internal state
+                        self.led_states.insert((grid_id, x, y), brightness);
+                        
+                        // Send LED command
+                        let led_cmd = [0x1B, x as u8, y as u8, brightness];
+                        port.write_all(&led_cmd)?;
+                        
+                        // Small delay to prevent overwhelming
+                        if (x + y * cols) % 8 == 0 {
+                            port.flush()?;
+                            std::thread::sleep(Duration::from_micros(100));
                         }
-                        packed_data.push(byte);
                     }
-                    
-                    let mut cmd = vec![0x1A, 0x00, 0x00]; // Map command header
-                    cmd.extend_from_slice(&packed_data);
-                    device_lock.write(&cmd).map_err(|e| anyhow!("Failed to set LED map: {}", e))?;
                 }
                 
-                debug!("Set LED map for grid {}", grid_id);
-            } else {
-                return Err(anyhow!("Grid {} not found", grid_id));
+                port.flush()?;
             }
-        }
-        
-        #[cfg(not(feature = "hardware"))]
-        {
-            info!("💡 Grid LED map updated: {} LEDs", led_map.len());
+            
+            debug!("Updated LED map for grid {} ({}x{})", grid_id, cols, rows);
+        } else {
+            return Err(anyhow!("Grid {} not found", grid_id));
         }
         
         Ok(())
@@ -296,96 +356,124 @@ impl GridManager {
     
     /// Clear all LEDs on a grid
     pub fn clear_all(&mut self, grid_id: usize) -> Result<()> {
-        #[cfg(feature = "hardware")]
-        {
-            if let Some(device) = self.devices.get(&grid_id) {
-                let device_lock = device.device.lock().unwrap();
+        if let Some(device) = self.devices.get(&grid_id) {
+            // Clear internal state
+            for x in 0..device.cols {
+                for y in 0..device.rows {
+                    self.led_states.insert((grid_id, x, y), 0);
+                }
+            }
+            
+            #[cfg(feature = "hardware")]
+            {
+                let mut port = device.port.lock().unwrap();
                 
                 // Send clear all command
-                let clear_cmd = [0x1A, 0x00, 0x00]; // Clear all command
-                device_lock.write(&clear_cmd).map_err(|e| anyhow!("Failed to clear grid: {}", e))?;
-                
-                // Update our state tracking
-                for x in 0..device.cols {
-                    for y in 0..device.rows {
-                        self.led_states.insert((grid_id, x, y), 0);
-                    }
-                }
-                
-                debug!("Cleared all LEDs on grid {}", grid_id);
-            } else {
-                return Err(anyhow!("Grid {} not found", grid_id));
+                let clear_cmd = [0x1A, 0x00, 0x00];
+                port.write_all(&clear_cmd)?;
+                port.flush()?;
             }
-        }
-        
-        #[cfg(not(feature = "hardware"))]
-        {
-            info!("💡 Grid cleared");
-            // Clear our state tracking
-            self.led_states.retain(|(gid, _, _), _| *gid != grid_id);
+            
+            debug!("Cleared all LEDs on grid {}", grid_id);
+        } else {
+            return Err(anyhow!("Grid {} not found", grid_id));
         }
         
         Ok(())
     }
     
-    /// Refresh grid display (no-op for most grids, but useful for some)
-    pub fn refresh(&mut self, grid_id: usize) -> Result<()> {
-        debug!("Refresh grid {}", grid_id);
+    /// Refresh all LEDs (resend current state)
+    pub fn refresh(&mut self) -> Result<()> {
+        let grid_ids: Vec<usize> = self.devices.keys().copied().collect();
+        for grid_id in grid_ids {
+            self.refresh_grid(grid_id)?;
+        }
+        Ok(())
+    }
+    
+    /// Refresh a specific grid
+    pub fn refresh_grid(&mut self, grid_id: usize) -> Result<()> {
+        if let Some(device) = self.devices.get(&grid_id) {
+            #[cfg(feature = "hardware")]
+            {
+                let mut port = device.port.lock().unwrap();
+                
+                for x in 0..device.cols {
+                    for y in 0..device.rows {
+                        let brightness = self.led_states.get(&(grid_id, x, y)).copied().unwrap_or(0);
+                        let led_cmd = [0x1B, x as u8, y as u8, brightness];
+                        port.write_all(&led_cmd)?;
+                    }
+                }
+                
+                port.flush()?;
+            }
+            
+            debug!("Refreshed grid {}", grid_id);
+        }
+        
         Ok(())
     }
     
     /// Get grid dimensions
     pub fn get_dimensions(&self, grid_id: usize) -> Option<(usize, usize)> {
-        self.devices.get(&grid_id).map(|device| (device.cols, device.rows))
+        self.devices.get(&grid_id).map(|d| (d.cols, d.rows))
     }
     
     /// Get grid name
     pub fn get_name(&self, grid_id: usize) -> Option<&str> {
-        self.devices.get(&grid_id).map(|device| device.name.as_str())
+        self.devices.get(&grid_id).map(|d| d.name.as_str())
     }
     
-    /// Check if grid supports varibright
+    /// Check if grid supports variable brightness
     pub fn is_varibright(&self, grid_id: usize) -> bool {
-        self.devices.get(&grid_id).map(|device| device.is_varibright).unwrap_or(false)
+        self.devices.get(&grid_id).map(|d| d.is_varibright).unwrap_or(false)
     }
     
     /// Get list of connected grid IDs
     pub fn get_connected_grids(&self) -> Vec<usize> {
-        self.devices.keys().cloned().collect()
+        self.devices.keys().copied().collect()
     }
     
-    /// Read button events from all grids (blocking)
+    /// Read button events from all grids
     pub fn read_button_events(&mut self) -> Result<Vec<GridButtonEvent>> {
         let mut events = Vec::new();
         
         #[cfg(feature = "hardware")]
         {
             for (&grid_id, device) in &self.devices {
-                let device_lock = device.device.lock().unwrap();
+                let mut port = device.port.lock().unwrap();
                 
-                // Try to read from the device (non-blocking)
+                // Try to read from the serial port (non-blocking)
                 let mut buf = [0u8; 64];
-                match device_lock.read_timeout(&mut buf, 0) {
-                    Ok(size) if size > 0 => {
+                match port.read(&mut buf) {
+                    Ok(bytes_read) if bytes_read > 0 => {
                         // Parse button events from the buffer
-                        // Format: [0x00, x, y, pressed]
-                        if size >= 4 && buf[0] == 0x00 {
-                            let x = buf[1] as usize;
-                            let y = buf[2] as usize;
-                            let pressed = buf[3] != 0;
-                            
-                            // Validate coordinates
-                            if x < device.cols && y < device.rows {
-                                events.push(GridButtonEvent {
-                                    grid_id,
-                                    x,
-                                    y,
-                                    pressed,
-                                });
+                        // Monome serial format: [0x00, x, y, pressed] or similar
+                        let mut i = 0;
+                        while i + 3 < bytes_read {
+                            if buf[i] == 0x00 {  // Button event marker
+                                let x = buf[i + 1] as usize;
+                                let y = buf[i + 2] as usize;
+                                let pressed = buf[i + 3] != 0;
                                 
-                                debug!("Grid {} button ({}, {}) {}", 
-                                       grid_id, x, y, 
-                                       if pressed { "pressed" } else { "released" });
+                                // Validate coordinates
+                                if x < device.cols && y < device.rows {
+                                    events.push(GridButtonEvent {
+                                        grid_id,
+                                        x,
+                                        y,
+                                        pressed,
+                                    });
+                                    
+                                    debug!("Grid {} button ({}, {}) {}", 
+                                           grid_id, x, y, 
+                                           if pressed { "pressed" } else { "released" });
+                                }
+                                
+                                i += 4;
+                            } else {
+                                i += 1;
                             }
                         }
                     }
@@ -393,7 +481,9 @@ impl GridManager {
                         // No data available
                     }
                     Err(e) => {
-                        warn!("Error reading from grid {}: {}", grid_id, e);
+                        if e.kind() != std::io::ErrorKind::TimedOut {
+                            warn!("Error reading from grid {}: {}", grid_id, e);
+                        }
                     }
                 }
             }
@@ -403,99 +493,124 @@ impl GridManager {
     }
     
     /// Update step cursor display on all grids
-    pub fn update_step_cursor(&mut self, step: usize, _bar: usize) -> Result<()> {
-        let grid_ids: Vec<usize> = self.devices.keys().cloned().collect();
-        
+    pub fn update_step_cursor(&mut self, current_step: usize, steps_per_row: usize) -> Result<()> {
+        let grid_ids: Vec<usize> = self.devices.keys().copied().collect();
         for grid_id in grid_ids {
-            if let Some(device) = self.devices.get(&grid_id) {
-                let cols = device.cols;
-                let rows = device.rows;
+            if let Some((cols, rows)) = self.get_dimensions(grid_id) {
+                // Calculate cursor position
+                let cursor_x = current_step % steps_per_row;
+                let cursor_y = current_step / steps_per_row;
                 
-                // Clear previous step cursor (bottom row)
-                for x in 0..cols {
-                    if rows > 0 {
-                        self.set_led(grid_id, x, rows - 1, 0)?;
+                if cursor_x < cols && cursor_y < rows {
+                    // Flash the current step
+                    self.set_led(grid_id, cursor_x, cursor_y, 15)?;
+                    
+                    // Dim the previous step (simple approach)
+                    if current_step > 0 {
+                        let prev_x = (current_step - 1) % steps_per_row;
+                        let prev_y = (current_step - 1) / steps_per_row;
+                        if prev_x < cols && prev_y < rows {
+                            self.set_led(grid_id, prev_x, prev_y, 3)?;
+                        }
                     }
                 }
-                
-                // Set current step cursor
-                if step > 0 && step <= cols && rows > 0 {
-                    self.set_led(grid_id, step - 1, rows - 1, 4)?;
-                }
             }
         }
         
         Ok(())
     }
     
-    /// Test grid by lighting up LEDs in a pattern
+    /// Test grid functionality
     pub fn test_grid(&mut self, grid_id: usize) -> Result<()> {
-        if let Some(device) = self.devices.get(&grid_id) {
-            let cols = device.cols;
-            let rows = device.rows;
-            let max_brightness = if device.is_varibright { 15 } else { 1 };
-            
-            info!("Testing grid {} ({}x{})", grid_id, cols, rows);
-            
-            // Light up all LEDs briefly
-            for x in 0..cols.min(8) {
-                for y in 0..rows.min(4) {
-                    self.set_led(grid_id, x, y, max_brightness)?;
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                    self.set_led(grid_id, x, y, 0)?;
+        info!("Testing grid {} functionality...", grid_id);
+        
+        if let Some((cols, rows)) = self.get_dimensions(grid_id) {
+            // Flash all LEDs
+            for brightness in [15, 0, 15, 0] {
+                for x in 0..cols {
+                    for y in 0..rows {
+                        self.set_led(grid_id, x, y, brightness)?;
+                    }
                 }
+                std::thread::sleep(Duration::from_millis(200));
             }
             
+            // Clear
+            self.clear_all(grid_id)?;
             info!("Grid {} test completed", grid_id);
-        } else {
-            warn!("Grid {} not found for testing", grid_id);
         }
         
         Ok(())
     }
-
-
     
-    /// Print visual representation of grid state (simulation mode only)
-    #[cfg(not(feature = "hardware"))]
-    fn print_grid_state(&self) {
-        // Clear screen and move cursor to top
-        print!("\x1B[2J\x1B[1;1H");
-        println!("Grid State (brightness 0-15):");
-        println!("┌─────┬─────┬─────┬─────┐");
-        for y in 0..4 {
-            print!("│");
-            for x in 0..4 {
-                let brightness = self.led_states.get(&(0, x, y)).unwrap_or(&0);
-                if *brightness > 0 {
-                    print!(" ■{:2} ", brightness);
-                } else {
-                    print!("  ·  ");
+    /// Flash all connected grids
+    pub fn flash_all_grids(&mut self) -> Result<()> {
+        let grid_ids: Vec<usize> = self.devices.keys().copied().collect();
+        
+        for &grid_id in &grid_ids {
+            self.flash_grid(grid_id)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Flash a specific grid
+    pub fn flash_grid(&mut self, grid_id: usize) -> Result<()> {
+        if let Some((cols, rows)) = self.get_dimensions(grid_id) {
+            info!("Flashing grid {} ({}x{})...", grid_id, cols, rows);
+            
+            // Flash sequence
+            for _ in 0..3 {
+                // All on
+                for x in 0..cols {
+                    for y in 0..rows {
+                        self.set_led(grid_id, x, y, 15)?;
+                    }
                 }
+                std::thread::sleep(Duration::from_millis(150));
+                
+                // All off
+                self.clear_all(grid_id)?;
+                std::thread::sleep(Duration::from_millis(150));
             }
-            println!("│");
-            if y < 3 {
-                println!("├─────┼─────┼─────┼─────┤");
+            
+            info!("Grid {} flash completed", grid_id);
+        } else {
+            warn!("Grid {} not found for flashing", grid_id);
+        }
+        
+        Ok(())
+    }
+    
+    /// Print current grid state (for debugging)
+    fn print_grid_state(&self, grid_id: usize) {
+        if let Some(device) = self.devices.get(&grid_id) {
+            info!("Grid {} state ({}x{}):", grid_id, device.cols, device.rows);
+            for y in 0..device.rows {
+                let mut row = String::new();
+                for x in 0..device.cols {
+                    let brightness = self.led_states.get(&(grid_id, x, y)).copied().unwrap_or(0);
+                    row.push_str(&format!("{:2} ", brightness));
+                }
+                info!("  {}", row);
             }
         }
-        println!("└─────┴─────┴─────┴─────┘");
-        println!("Grid mapping:");
-        println!("  1 2 3 4");
-        println!("  Q W E R");
-        println!("  A S D F");
-        println!("  Z X C V");
-        println!("Press grid key + Enter to toggle, 'space' + Enter to run/stop, 'p' + Enter to quit");
     }
 }
 
 impl Drop for GridManager {
     fn drop(&mut self) {
-        // Clear all grids before dropping
-        let grid_ids: Vec<usize> = self.devices.keys().cloned().collect();
+        info!("Shutting down grid manager...");
+        
+        // Clear all grids before shutdown
+        let grid_ids: Vec<usize> = self.devices.keys().copied().collect();
         for grid_id in grid_ids {
-            let _ = self.clear_all(grid_id);
+            if let Err(e) = self.clear_all(grid_id) {
+                warn!("Failed to clear grid {} on shutdown: {}", grid_id, e);
+            }
         }
-        info!("Grid manager dropped, all grids cleared");
+        
+        info!("Grid manager shutdown complete");
     }
 }
 
@@ -509,29 +624,28 @@ mod tests {
         assert!(manager.is_ok());
     }
     
-    #[cfg(feature = "hardware")]
     #[test]
     fn test_monome_device_detection() {
         let manager = GridManager::new().unwrap();
-        assert!(manager.is_monome_device(0x0A6A, 0x0012)); // monome 128
-        assert!(!manager.is_monome_device(0x1234, 0x5678)); // random device
+        assert!(manager.is_monome_device(0x0A6A, 0x4001)); // Original VID with modern PID
+        assert!(manager.is_monome_device(0xCAFE, 0x4001)); // Alt VID with modern PID
+        assert!(!manager.is_monome_device(0x1234, 0x5678)); // Random VID/PID
     }
     
-    #[cfg(feature = "hardware")]
     #[test]
     fn test_grid_specs_detection() {
         let manager = GridManager::new().unwrap();
-        let (cols, rows, varibright) = manager.detect_grid_specs(0x0012);
+        let (cols, rows, varibright) = manager.detect_grid_specs(0x4001);
         assert_eq!(cols, 16);
         assert_eq!(rows, 8);
-        assert!(varibright);
+        assert_eq!(varibright, true);
     }
     
     #[test]
     fn test_led_operations_without_device() {
         let mut manager = GridManager::new().unwrap();
-        // These should not panic even without actual devices
-        assert!(manager.set_led(0, 0, 0, 5).is_ok());
-        assert!(manager.clear_all(0).is_ok());
+        // These should fail gracefully when no device is connected
+        assert!(manager.set_led(0, 0, 0, 15).is_err());
+        assert_eq!(manager.get_led(0, 0, 0), 0);
     }
 }

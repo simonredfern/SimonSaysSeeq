@@ -6,6 +6,10 @@ authors = ["SimonSaysSeeq Contributors"]
 description = "Pure Rust implementation of SimonSaysSeeq for Norns hardware"
 license = "AGPL-3.0"
 
+[lib]
+name = "simon_says_seeq_rust"
+path = "src/lib.rs"
+
 [[bin]]
 name = "simon_says_seeq"
 path = "src/main.rs"
@@ -41,8 +45,8 @@ toml = "0.8"
 anyhow = "1.0"
 thiserror = "1.0"
 
-# Grid communication (USB HID) (optional for development)
-hidapi = { version = "2.4", optional = true }
+# Grid communication (Serial) (optional for development)
+serialport = { version = "4.2", optional = true }
 
 # Logging
 log = "0.4"
@@ -62,13 +66,13 @@ tempfile = "3.8"
 
 [features]
 default = ["hardware", "midi"]
-hardware = ["evdev", "hidapi"]
+hardware = ["evdev", "serialport"]
 hardware-audio = ["cpal"]
 midi = ["midir"]
 simulation = []
 norns = ["hardware", "hardware-audio", "midi", "framebuffer-support"]
 cross-compile = ["midi"]  # Safe features for cross-compilation
-desktop = ["midi", "hidapi"]  # Development on laptop with grid
+desktop = ["midi", "serialport"]  # Development on laptop with grid
 framebuffer-support = ["framebuffer"]  # Optional framebuffer support
 
 [profile.release]
