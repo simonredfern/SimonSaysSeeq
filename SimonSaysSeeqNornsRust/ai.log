@@ -142,3 +142,29 @@ cargo run --example debug_osc --features desktop
 systemctl --user enable serialosc
 sudo loginctl enable-linger simonredfern
 # Result: serialosc now starts automatically and both grids detected on ports 15335, 13832
+
+## 2025-08-10 00:42:00 Hardware Mode Testing
+# Starting hardware mode test of sequencer after fixing grid ID type mismatches in main.rs
+
+cargo run --release --features hardware,midi
+# Error: missing grid module import, fixed module declarations and imports
+# Fixed grid::GridManager -> simon_says_seeq_rust::grid_osc::GridManager
+# Fixed remaining grid ID type mismatches (0,1 -> proper string grid IDs)
+# Run attempt canceled at 2025-08-10 00:45:00 - sequencer not started
+
+## 2025-08-10 00:46:44 Sequencer Grid Interaction Test
+# Attempting to start sequencer for grid interaction testing
+cargo run --release --features hardware,midi
+# Multiple sequencer instances discovered running:
+# PID 14815 (hardware,midi features) - running 15+ minutes
+# PID 16252 (hardware,midi features) - running 7+ minutes  
+# PID 16404 (hardware,midi features) - running 3+ minutes
+# PID 16463 (desktop features) - running 1+ minute
+# Issue: OSC grid support disabled without 'rosc' feature (need desktop features)
+# Status: Sequencer IS running, commands completing normally, not canceled
+ps aux | grep simon
+
+## 2025-08-10 00:54:01 Stopping All Sequencer Instances
+# Stopping all running sequencer instances to allow manual terminal run
+# PIDs to stop: 14815, 16252, 16404, 16463
+kill 14815 16252 16404 16463

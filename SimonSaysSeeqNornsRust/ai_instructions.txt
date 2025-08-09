@@ -12,6 +12,8 @@
 - Keep log entries brief and factual
 - Include only essential information: command, result, next steps
 - Use consistent formatting: command on one line, brief result/status below
+- All ai.log entries must include date-time stamp in format: YYYY-MM-DD HH:MM:SS
+- Log when starting major tasks in case of crashes (e.g. "Starting hardware mode test", "Beginning compilation", etc.)
 
 ## Development Workflow
 1. Check ai.log first to understand current project state

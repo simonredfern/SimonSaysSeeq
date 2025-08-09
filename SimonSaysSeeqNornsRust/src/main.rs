@@ -14,18 +14,18 @@ use std::time::{Duration, Instant};
 mod hardware;
 mod sequencer;
 mod midi;
-mod grid;
+
 mod screen;
 mod config;
 mod co2;
 
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::Receiver;
 
 use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
-use grid::GridManager;
+use simon_says_seeq_rust::grid_osc::GridManager;
 #[cfg(feature = "hardware")]
 use screen::ScreenManager;
 use config::Config;
@@ -385,7 +385,12 @@ impl SimonSaysSeeq {
                         
                 self.sequencer.set_grid_value(x, y, new_value);
                 #[cfg(feature = "hardware")]
-                self.grid.set_led(0, x, y, if new_value > 0 { new_value.min(15) } else { 0 })?;
+                {
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.grid.set_led(grid_id, x, y, if new_value > 0 { new_value.min(15) } else { 0 })?;
+                    }
+                }
                         
                 info!("Set grid[{}][{}] = {}", x, y, new_value);
             }
@@ -417,7 +422,12 @@ impl SimonSaysSeeq {
                 info!("Reset all sequences");
                 self.sequencer.reset_all();
                 #[cfg(feature = "hardware")]
-                self.grid.clear_all(0)?;
+                {
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.grid.clear_all(grid_id)?;
+                    }
+                }
             }
             2 => {
                 // Randomize current row or all
@@ -506,7 +516,10 @@ impl SimonSaysSeeq {
             
             // Update LED to show note value (brightness = note % 16)
             let brightness = ((note % 15) + 1) as u8;
-            self.grid.set_led(1, x, y, brightness)?;
+            let connected_grids = self.grid.get_connected_grids();
+            if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
+                self.grid.set_led(grid_id, x, y, brightness)?;
+            }
             
             info!("Set Mozart[{}][{}] = note {}", x + 1, y + 1, note);
         }
@@ -577,7 +590,10 @@ impl SimonSaysSeeq {
             for y in 1..=7 {
                 let value = self.sequencer.get_grid_value(x, y);
                 let brightness = if value > 0 { 5 } else { 0 };
-                self.grid.set_led(0, x, y, brightness)?;
+                let connected_grids = self.grid.get_connected_grids();
+                if let Some(grid_id) = connected_grids.first() {
+                    self.grid.set_led(grid_id, x, y, brightness)?;
+                }
             }
         }
         
