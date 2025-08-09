@@ -62,13 +62,14 @@ tempfile = "3.8"
 
 [features]
 default = ["hardware", "midi"]
-hardware = ["evdev", "framebuffer", "hidapi"]
+hardware = ["evdev", "hidapi"]
 hardware-audio = ["cpal"]
 midi = ["midir"]
 simulation = []
-norns = ["hardware", "hardware-audio", "midi"]
+norns = ["hardware", "hardware-audio", "midi", "framebuffer-support"]
 cross-compile = ["midi"]  # Safe features for cross-compilation
 desktop = ["midi", "hidapi"]  # Development on laptop with grid
+framebuffer-support = ["framebuffer"]  # Optional framebuffer support
 
 [profile.release]
 opt-level = 3

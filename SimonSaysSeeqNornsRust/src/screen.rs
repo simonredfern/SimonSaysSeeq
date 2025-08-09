@@ -3,7 +3,7 @@
 //! Provides drawing capabilities for the 128x64 monochrome OLED screen on Norns.
 
 use anyhow::Result;
-#[cfg(feature = "hardware")]
+#[cfg(feature = "framebuffer-support")]
 use framebuffer::Framebuffer;
 use log::{info, debug, warn};
 
@@ -129,12 +129,12 @@ const FONT_6X8: &[&[u8]] = &[
 
 /// Screen manager for Norns OLED display
 pub struct ScreenManager {
-    #[cfg(feature = "hardware")]
+    #[cfg(feature = "framebuffer-support")]
     framebuffer: Option<Framebuffer>,
     width: usize,
     height: usize,
     buffer: Vec<u8>,
-    #[cfg(feature = "hardware")]
+    #[cfg(feature = "framebuffer-support")]
     fb_buffer: Vec<u8>,
     cursor_x: usize,
     cursor_y: usize,
@@ -145,28 +145,28 @@ impl ScreenManager {
     /// Create a new screen manager
     pub fn new() -> Result<Self> {
         let mut manager = Self {
-            #[cfg(feature = "hardware")]
+            #[cfg(feature = "framebuffer-support")]
             framebuffer: None,
             width: 128,
             height: 64,
             buffer: vec![0u8; 128 * 64 / 8], // 1 bit per pixel, packed
-            #[cfg(feature = "hardware")]
+            #[cfg(feature = "framebuffer-support")]
             fb_buffer: vec![0u8; 128 * 64 * 2], // 16 bits per pixel for framebuffer
             cursor_x: 0,
             cursor_y: 0,
             beat_indicator: 0,
         };
         
-        #[cfg(feature = "hardware")]
+        #[cfg(feature = "framebuffer-support")]
         manager.initialize()?;
-        #[cfg(not(feature = "hardware"))]
+        #[cfg(not(feature = "framebuffer-support"))]
         info!("Screen simulation mode - no actual framebuffer access");
         
         Ok(manager)
     }
     
     /// Initialize the framebuffer
-    #[cfg(feature = "hardware")]
+    #[cfg(feature = "framebuffer-support")]
     fn initialize(&mut self) -> Result<()> {
         match Framebuffer::new("/dev/fb0") {
             Ok(fb) => {
@@ -415,7 +415,7 @@ impl ScreenManager {
         // Draw beat indicator
         self.draw_beat_indicator();
         
-        #[cfg(feature = "hardware")]
+        #[cfg(feature = "framebuffer-support")]
         {
             // Convert 1-bit buffer to 16-bit framebuffer format first
             self.convert_buffer_to_framebuffer();
@@ -434,7 +434,7 @@ impl ScreenManager {
             }
         }
         
-        #[cfg(not(feature = "hardware"))]
+        #[cfg(not(feature = "framebuffer-support"))]
         {
             debug!("Screen update (simulation mode)");
         }
@@ -442,7 +442,7 @@ impl ScreenManager {
         Ok(())
     }
     
-    #[cfg(feature = "hardware")]
+    #[cfg(feature = "framebuffer-support")]
     fn convert_buffer_to_framebuffer(&mut self) {
         // Convert 1-bit packed buffer to 16-bit RGB565 format
         // RGB565: RRRRRGGGGGGBBBBB (16 bits total)
