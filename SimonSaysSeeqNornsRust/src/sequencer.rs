@@ -154,7 +154,7 @@ pub struct PatternChainEntry {
 pub struct StateSnapshot {
     pub grid: Vec<Vec<u8>>,
     pub mozart: Vec<Vec<u8>>,
-    pub row_settings: Vec<MainRowStates>,
+    pub row_states: Vec<MainRowStates>,
     pub timestamp: std::time::SystemTime,
     pub description: String,
 }
@@ -179,8 +179,8 @@ pub struct SequencerState {
     pub slide: SlideState,
     /// Held state for grid button combinations
     pub held: Vec<Vec<u8>>,
-    /// Row settings for each sequence row
-    pub row_settings: Vec<MainRowStates>,
+    /// Row states for each sequence row
+    pub row_states: Vec<MainRowStates>,
     /// Pattern chains for song mode
     pub pattern_chains: Vec<PatternChainEntry>,
     pub current_chain_position: usize,
@@ -247,9 +247,9 @@ impl Default for SequencerState {
         };
         let held = vec![vec![0u8; ROWS]; COLS];
         
-        let mut row_settings = Vec::new();
+        let mut row_states = Vec::new();
         for _ in 0..ROWS {
-            row_settings.push(MainRowStates::default());
+            row_states.push(MainRowStates::default());
         }
         
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
@@ -282,7 +282,7 @@ impl Default for SequencerState {
             mozart_grid,
             slide,
             held,
-            row_settings,
+            row_states,
             pattern_chains: Vec::new(),
             current_chain_position: 0,
             chain_mode_enabled: false,
@@ -372,8 +372,8 @@ impl Sequencer {
             // Reset to beginning
             state.current_step = 1;
             state.current_bar = 1;
-            for row_settings in &mut state.row_settings {
-                row_settings.current_step = 1;
+            for row_state in &mut state.row_states {
+                row_state.current_step = 1;
             }
             info!("Sequencer stopped and reset");
         }
@@ -591,8 +591,8 @@ impl Sequencer {
         // Reset positions
         state.current_step = 1;
         state.current_bar = 1;
-        for row_settings in &mut state.row_settings {
-            row_settings.current_step = 1;
+        for row_state in &mut state.row_states {
+            row_state.current_step = 1;
         }
         
         info!("All sequences reset");
@@ -636,16 +636,16 @@ impl Sequencer {
             return None; // No trigger
         }
         
-        let row_settings = &state.row_settings[row - 1];
+        let row_state = &state.row_states[row - 1];
         
         // Check if this step is within the row's range
-        if step < row_settings.first_step || step > row_settings.last_step {
+        if step < row_state.first_step || step > row_state.last_step {
             return None;
         }
         
         // Probability check
         use rand::Rng;
-        if rand::thread_rng().gen::<f32>() > row_settings.probability {
+        if rand::thread_rng().gen::<f32>() > row_state.probability {
             return None;
         }
         
@@ -665,9 +665,9 @@ impl Sequencer {
             
             // Note ON event
             events.push(NoteEvent {
-                note: row_settings.midi_note,
-                velocity: row_settings.midi_velocity,
-                channel: row_settings.midi_channel,
+                note: row_state.midi_note,
+                velocity: row_state.midi_velocity,
+                channel: row_state.midi_channel,
                 note_on: true,
                 tick_offset,
             });
@@ -680,9 +680,9 @@ impl Sequencer {
             };
             
             events.push(NoteEvent {
-                note: row_settings.midi_note,
+                note: row_state.midi_note,
                 velocity: 0,
-                channel: row_settings.midi_channel,
+                channel: row_state.midi_channel,
                 note_on: false,
                 tick_offset: off_tick,
             });
@@ -851,16 +851,16 @@ impl Sequencer {
         state.current_bar = state.midi_bar_count;
         
         // Advance each row's current step based on its individual settings
-        for (row_idx, row_settings) in state.row_settings.iter_mut().enumerate() {
-            let old_step = row_settings.current_step;
-            row_settings.current_step += 1;
-            if row_settings.current_step > row_settings.last_step {
-                row_settings.current_step = row_settings.first_step;
+        for (row_idx, row_state) in state.row_states.iter_mut().enumerate() {
+            let old_step = row_state.current_step;
+            row_state.current_step += 1;
+            if row_state.current_step > row_state.last_step {
+                row_state.current_step = row_state.first_step;
             }
             if row_idx < 3 { // Debug first 3 rows
                 info!("🎯 Row {} step advancement: {} -> {} (range: {}-{})", 
-                      row_idx + 1, old_step, row_settings.current_step, 
-                      row_settings.first_step, row_settings.last_step);
+                      row_idx + 1, old_step, row_state.current_step, 
+                      row_state.first_step, row_state.last_step);
             }
         }
         
@@ -883,8 +883,8 @@ impl Sequencer {
     fn process_step(&self, state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
         // Process each sequence row
         for sequence_row in 1..=state.total_sequence_rows {
-            if let Some(row_settings) = state.row_settings.get(sequence_row - 1) {
-                let current_step = row_settings.current_step;
+            if let Some(row_state) = state.row_states.get(sequence_row - 1) {
+                let current_step = row_state.current_step;
                 
                 // Get grid value for this row at current step
                 if current_step > 0 && current_step <= state.cols {
@@ -973,11 +973,11 @@ impl Sequencer {
         state.tempo_analysis = TempoAnalysis::default();
         
         // Initialize row settings
-        for (i, row_settings) in state.row_settings.iter_mut().enumerate() {
-            row_settings.current_step = row_settings.first_step;
-            row_settings.midi_note = 60 + i as u8; // Start from middle C
-            row_settings.midi_velocity = 100;
-            row_settings.midi_channel = 1;
+        for (i, row_state) in state.row_states.iter_mut().enumerate() {
+            row_state.current_step = row_state.first_step;
+            row_state.midi_note = 60 + i as u8; // Start from middle C
+            row_state.midi_velocity = 100;
+            row_state.midi_channel = (i + 1) as u8;
         }
         
         info!("Sequencer state tables initialized");
@@ -1071,7 +1071,7 @@ impl Sequencer {
         let snapshot = StateSnapshot {
             grid: state.grid.clone(),
             mozart: state.mozart.clone(),
-            row_settings: state.row_settings.clone(),
+            row_states: state.row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: description.clone(),
         };
@@ -1105,7 +1105,7 @@ impl Sequencer {
         let current_snapshot = StateSnapshot {
             grid: current_state.grid.clone(),
             mozart: current_state.mozart.clone(),
-            row_settings: current_state.row_settings.clone(),
+            row_states: current_state.row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: "Current state before undo".to_string(),
         };
@@ -1118,7 +1118,7 @@ impl Sequencer {
             let mut state = self.state.lock().unwrap();
             state.grid = snapshot.grid;
             state.mozart = snapshot.mozart;
-            state.row_settings = snapshot.row_settings;
+            state.row_states = snapshot.row_states;
             
             let description = snapshot.description.clone();
             info!("Undid: {}", description);
@@ -1142,7 +1142,7 @@ impl Sequencer {
         let current_snapshot = StateSnapshot {
             grid: current_state.grid.clone(),
             mozart: current_state.mozart.clone(),
-            row_settings: current_state.row_settings.clone(),
+            row_states: current_state.row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: "State before redo".to_string(),
         };
@@ -1155,7 +1155,7 @@ impl Sequencer {
             let mut state = self.state.lock().unwrap();
             state.grid = snapshot.grid;
             state.mozart = snapshot.mozart;
-            state.row_settings = snapshot.row_settings;
+            state.row_states = snapshot.row_states;
             
             let description = snapshot.description.clone();
             info!("Redid: {}", description);
@@ -1197,7 +1197,7 @@ impl Sequencer {
             state.grid = pattern_state.grid.clone();
             state.mozart = pattern_state.mozart.clone();
             state.slide = pattern_state.slide.clone();
-            state.row_settings = pattern_state.row_settings.clone();
+            state.row_states = pattern_state.row_states.clone();
             
             // Keep current transport state
             let current_step = state.current_step;
@@ -1372,7 +1372,7 @@ impl Sequencer {
                 state.grid = pattern_state.grid.clone();
                 state.mozart = pattern_state.mozart.clone();
                 state.slide = pattern_state.slide.clone();
-                state.row_settings = pattern_state.row_settings.clone();
+                state.row_states = pattern_state.row_states.clone();
                 info!("Loaded pattern {} in chain", next_pattern_id);
             }
         }
@@ -1532,20 +1532,20 @@ impl Sequencer {
         info!("Copied {}x{} section from ({},{}) to ({},{})", width, height, src_x, src_y, dest_x, dest_y);
     }
     
-    /// Set row settings
-    pub fn set_row_settings(&self, row: usize, settings: MainRowStates) {
+    /// Set row states
+    pub fn set_row_states(&self, row: usize, states: MainRowStates) {
         if row > 0 && row <= 7 {
             let mut state = self.state.lock().unwrap();
-            state.row_settings[row - 1] = settings;
-            debug!("Updated settings for row {}", row);
+            state.row_states[row - 1] = states;
+            debug!("Updated states for row {}", row);
         }
     }
     
-    /// Get row settings
-    pub fn get_row_settings(&self, row: usize) -> Option<MainRowStates> {
+    /// Get row states
+    pub fn get_row_states(&self, row: usize) -> Option<MainRowStates> {
         if row > 0 && row <= 7 {
             let state = self.state.lock().unwrap();
-            Some(state.row_settings[row - 1].clone())
+            Some(state.row_states[row - 1].clone())
         } else {
             None
         }

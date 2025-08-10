@@ -683,8 +683,8 @@ impl SimonSaysSeeq {
     fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
         // Grid display with position scrolling - 4 brightness levels
         for seq_y in 1..=7 {
-            let row_settings = self.sequencer.get_row_settings(seq_y);
-            if let Some(row_state) = row_settings {
+            let row_states = self.sequencer.get_row_states(seq_y);
+            if let Some(row_state) = row_states {
                 // Debug row state every few updates
                 static mut DEBUG_COUNTER: u32 = 0;
                 unsafe {
@@ -692,6 +692,24 @@ impl SimonSaysSeeq {
                     if DEBUG_COUNTER % 20 == 0 && seq_y <= 3 { // Only debug first 3 rows, every 20 updates
                         info!("🎯 Row {} current_step = {} (first_step={}, last_step={})", 
                               seq_y, row_state.current_step, row_state.first_step, row_state.last_step);
+                    }
+                }
+                
+                // Debug all rows' current_step simultaneously
+                if seq_y == 1 {
+                    static mut ALL_ROWS_DEBUG_COUNTER: u32 = 0;
+                    unsafe {
+                        ALL_ROWS_DEBUG_COUNTER += 1;
+                        if ALL_ROWS_DEBUG_COUNTER % 20 == 0 {
+                            // Show current_step for all rows at once
+                            let mut row_steps = Vec::new();
+                            for r in 1..=7 {
+                                if let Some(rs) = self.sequencer.get_row_states(r) {
+                                    row_steps.push(format!("R{}:{}", r, rs.current_step));
+                                }
+                            }
+                            info!("🔍 ALL ROWS CURRENT_STEP: [{}]", row_steps.join(" "));
+                        }
                     }
                 }
                 
@@ -707,6 +725,8 @@ impl SimonSaysSeeq {
                         (true, true) => 14,      // 90% - Has pattern AND current position
                     };
                     
+
+                    
                     // Convert to 0-based grid coordinates
                     self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
                 }
@@ -721,7 +741,7 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
-        if let Some(row_state) = self.sequencer.get_row_settings(seq_y) {
+        if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
             let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
             let is_current_step = seq_x == row_state.current_step;
             
