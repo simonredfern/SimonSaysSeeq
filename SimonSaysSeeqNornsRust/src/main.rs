@@ -140,12 +140,12 @@ impl SimonSaysSeeq {
         // Initialize main grid with some default pattern for testing
         #[cfg(feature = "hardware")]
         {
-            // Set test patterns for all rows to verify display pipeline
-            for row in 1..=7 {
-                self.sequencer.set_grid_value(1, row, 1);   // Step 1
-                self.sequencer.set_grid_value(5, row, 2);   // Step 5  
-                self.sequencer.set_grid_value(9, row, 1);   // Step 9
-                self.sequencer.set_grid_value(13, row, 2);  // Step 13
+            // Set test patterns for all rows to verify display pipeline (0-indexed)
+            for row in 0..=6 {
+                self.sequencer.set_grid_value(0, row, 1);   // Step 0 (display: step 1)
+                self.sequencer.set_grid_value(4, row, 2);   // Step 4 (display: step 5)
+                self.sequencer.set_grid_value(8, row, 1);   // Step 8 (display: step 9)
+                self.sequencer.set_grid_value(12, row, 2);  // Step 12 (display: step 13)
             }
             
             // Update main grid initially
@@ -350,9 +350,9 @@ impl SimonSaysSeeq {
                     }
                     
                     // Update grid display
-                    // Convert from 0-based grid to 1-based sequencer coordinates
-                    let seq_x = x + 1;
-                    let seq_y = y + 1;
+                    // Use native 0-based grid coordinates directly
+                    let seq_x = x;
+                    let seq_y = y;
                     if pressed {
                         self.grid.set_led(grid_id, x, y, 15, "handle_hardware_event")?;
                     } else {
@@ -470,8 +470,8 @@ impl SimonSaysSeeq {
         let is_main_grid = main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false);
         
         if is_main_grid {
-            // Main sequencer grid - ROWS 1 AND 2 ONLY
-            if seq_y == 1 || seq_y == 2 {
+            // Main sequencer grid - ROWS 0 AND 1 ONLY (0-indexed)
+            if seq_y == 0 || seq_y == 1 {
                 // Sequence rows 1 and 2 only - only handle button presses, not releases
                 if pressed {
                     // Check if any positions are held for advanced operations
@@ -483,15 +483,15 @@ impl SimonSaysSeeq {
                         let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
                         
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
-        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {}", seq_x, seq_y, current_value, new_value);
+        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {} (step {}, row {})", seq_x, seq_y, current_value, new_value, seq_x + 1, seq_y + 1);
                         
                         // Update only this specific LED for immediate response
                         #[cfg(feature = "hardware")]
                         self.update_single_led(grid_id, seq_x, seq_y)?;
                     }
                 }
-            } else if seq_y == 8 {
-                // Control row (8) - only handle presses
+            } else if seq_y == 7 {
+                // Control row (7, 0-indexed) - only handle presses
                 if pressed {
                     self.handle_control_button(seq_x, seq_y)?;
                 }
@@ -528,9 +528,9 @@ impl SimonSaysSeeq {
                         self.sequencer.clear_section(1, row, 16, 1);
                     }
                 } else {
-                    info!("Clear rows 1 and 2 only");
-                    self.sequencer.clear_section(1, 1, 16, 1);
-                    self.sequencer.clear_section(1, 2, 16, 1);
+                    info!("Clear rows 0 and 1 only (0-indexed)");
+                    self.sequencer.clear_section(0, 0, 15, 0);
+                    self.sequencer.clear_section(0, 1, 15, 0);
                 }
                 #[cfg(feature = "hardware")]
                 self.update_grid_display()?;
@@ -692,21 +692,21 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
-        // Grid display with position scrolling - 4 brightness levels - ROWS 1 AND 2 ONLY
-        for seq_y in 1..=2 {
+        // Grid display with position scrolling - 4 brightness levels - ROWS 0 AND 1 ONLY (0-indexed)
+        for seq_y in 0..=1 {
             let row_states = self.sequencer.get_row_states(seq_y);
             if let Some(row_state) = row_states {
                 // Debug row state every few updates
                 static mut DEBUG_COUNTER: u32 = 0;
                 unsafe {
                     DEBUG_COUNTER += 1;
-                    if DEBUG_COUNTER % 20 == 0 && seq_y <= 3 { // Only debug first 3 rows, every 20 updates
-                        info!("🎯 Row {} current_step = {} (first_step={}, last_step={})", 
-                              seq_y, row_state.current_step, row_state.first_step, row_state.last_step);
+                    if DEBUG_COUNTER % 20 == 0 && seq_y <= 2 { // Only debug first 3 rows, every 20 updates
+                        info!("🎯 Row {} current_step = {} (first_step={}, last_step={}) [display: row {}]", 
+                              seq_y, row_state.current_step, row_state.first_step, row_state.last_step, seq_y + 1);
                     }
                 }
                 
-                for seq_x in 1..=16 {
+                for seq_x in 0..=15 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
                     let is_current_step = seq_x == row_state.current_step;
                     
@@ -720,11 +720,11 @@ impl SimonSaysSeeq {
                     
 
                     
-                    // Convert to 0-based grid coordinates and set LED
-                    self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_main_grid_display")?;
+                    // Use native 0-based grid coordinates directly
+                    self.grid.set_led(grid_id, seq_x, seq_y, brightness, "update_main_grid_display")?;
                 }
             } else {
-                warn!("No row settings found for row {}", seq_y);
+                warn!("No row settings found for row {} (display: row {})", seq_y, seq_y + 1);
             }
         }
         
@@ -733,8 +733,8 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
-        // Only update LEDs for rows 1 and 2
-        if seq_y != 1 && seq_y != 2 {
+        // Only update LEDs for rows 0 and 1 (0-indexed)
+        if seq_y != 0 && seq_y != 1 {
             return Ok(());
         }
         
@@ -750,8 +750,8 @@ impl SimonSaysSeeq {
                 (true, true) => 14,      // Has pattern AND current position
             };
             
-            // Convert to 0-based grid coordinates and set LED
-            self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_single_led")?;
+            // Use native 0-based grid coordinates directly
+            self.grid.set_led(grid_id, seq_x, seq_y, brightness, "update_single_led")?;
         }
         
         Ok(())

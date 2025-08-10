@@ -127,9 +127,9 @@ impl Default for TempoAnalysis {
 impl Default for MainRowStates {
     fn default() -> Self {
         Self {
-            current_step: 1,
-            first_step: 1,
-            last_step: 16,
+            current_step: 0,
+            first_step: 0,
+            last_step: 15,
             midi_note: 60, // Middle C
             midi_velocity: 100,
             midi_channel: 1,
@@ -368,10 +368,10 @@ impl Sequencer {
         if state.is_running {
             state.is_running = false;
             // Reset to beginning
-            state.current_step = 1;
+            state.current_step = 0;
             state.current_bar = 1;
             for row_state in &mut state.row_states {
-                row_state.current_step = 1;
+                row_state.current_step = 0;
             }
             info!("Sequencer stopped and reset");
         }
@@ -397,20 +397,18 @@ impl Sequencer {
 
     /// Set grid value at position with automatic undo snapshot
     pub fn set_grid_value(&self, x: usize, y: usize, value: u8) {
-        if x > 0 && x <= 16 && y > 0 && y <= 8 {
-            self.push_undo_snapshot(format!("Set grid[{}][{}] = {}", x, y, value));
-
+        if x < 16 && y < 8 {
+            self.push_undo_snapshot(format!("Set grid[{}][{}] = {} (display: step {}, row {})", x, y, value, x + 1, y + 1));
             let mut state = self.state.lock().unwrap();
-            state.grid[x - 1][y - 1] = value;
-            debug!("Set grid[{}][{}] = {}", x, y, value);
+            state.grid[x][y] = value;
         }
     }
 
     /// Get grid value at position
     pub fn get_grid_value(&self, x: usize, y: usize) -> u8 {
         let state = self.state.lock().unwrap();
-        if x > 0 && x <= 16 && y > 0 && y <= 8 {
-            state.grid[x - 1][y - 1]
+        if x < 16 && y < 8 {
+            state.grid[x][y]
         } else {
             0
         }
@@ -530,13 +528,13 @@ impl Sequencer {
     /// Set first step for sequencer
     pub fn set_first_step(&self, step: usize) {
         let mut state = self.state.lock().unwrap();
-        state.first_step = step.clamp(1, 16);
+        state.first_step = step.clamp(0, 15);
     }
 
     /// Set last step for sequencer
     pub fn set_last_step(&self, step: usize) {
         let mut state = self.state.lock().unwrap();
-        state.last_step = step.clamp(1, 16);
+        state.last_step = step.clamp(0, 15);
     }
 
     /// Get row data for display
@@ -587,10 +585,10 @@ impl Sequencer {
         }
 
         // Reset positions
-        state.current_step = 1;
+        state.current_step = 0;
         state.current_bar = 1;
         for row_state in &mut state.row_states {
-            row_state.current_step = 1;
+            row_state.current_step = 0;
         }
 
         info!("All sequences reset");
@@ -857,8 +855,8 @@ impl Sequencer {
                 let current_step = row_state.current_step;
 
                 // Get grid value for this row at current step
-                if current_step > 0 && current_step <= state.cols {
-                    let grid_value = state.grid[current_step - 1][sequence_row - 1];
+                if current_step < state.cols {
+                    let grid_value = state.grid[current_step][sequence_row - 1];
 
                     if grid_value > 0 {
                         // This step is active - trigger would happen here
@@ -1144,7 +1142,7 @@ impl Sequencer {
 
         // Reset transport state for saved patterns
         pattern_state.is_running = false;
-        pattern_state.current_step = 1;
+        pattern_state.current_step = 0;
         pattern_state.current_bar = 1;
 
         let mut patterns = self.patterns.lock().unwrap();
@@ -1343,9 +1341,9 @@ impl Sequencer {
                 // Find next non-zero note for sliding target
                 let mut target_note = base_note;
                 for offset in 1..=8 {
-                    let target_x = ((x - 1 + offset) % 16) + 1;
+                    let target_x = (x + offset) % 16;
                     if self.get_grid_value(target_x, y) > 0 {
-                        target_note = state.mozart[target_x - 1][y - 1] as f32;
+                        target_note = state.mozart[target_x][y] as f32;
                         break;
                     }
                 }
@@ -1524,15 +1522,15 @@ mod tests {
         let sequencer = Sequencer::new();
 
         // Test setting and getting grid values
-        sequencer.set_grid_value(1, 1, 1);
-        assert_eq!(sequencer.get_grid_value(1, 1), 1);
+        sequencer.set_grid_value(0, 0, 1);
+        assert_eq!(sequencer.get_grid_value(0, 0), 1);
 
-        sequencer.set_grid_value(16, 7, 2);
-        assert_eq!(sequencer.get_grid_value(16, 7), 2);
+        sequencer.set_grid_value(15, 6, 2);
+        assert_eq!(sequencer.get_grid_value(15, 6), 2);
 
         // Test bounds checking
-        sequencer.set_grid_value(17, 9, 1); // Should be ignored
-        assert_eq!(sequencer.get_grid_value(17, 9), 0);
+        sequencer.set_grid_value(16, 8, 1); // Should be ignored
+        assert_eq!(sequencer.get_grid_value(16, 8), 0);
     }
 
     #[test]
@@ -1572,11 +1570,11 @@ mod tests {
     fn test_step_events() {
         let sequencer = Sequencer::new();
 
-        // Set a trigger on step 1, row 1
-        sequencer.set_grid_value(1, 1, 1);
+        // Set a trigger on step 0, row 0
+        sequencer.set_grid_value(0, 0, 1);
 
         // Should get note events for this step
-        let events = sequencer.get_step_events(1, 1, 1);
+        let events = sequencer.get_step_events(0, 1, 1);
         assert!(events.is_some());
 
         let events = events.unwrap();

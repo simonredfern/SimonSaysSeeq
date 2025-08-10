@@ -281,13 +281,13 @@ impl GridManager {
 
     /// Set a single LED
     pub fn set_led(&mut self, grid_id: &str, x: usize, y: usize, brightness: u8, caller: &str) -> Result<()> {
-        // Convert to sequencer coordinates for row restrictions (1-based)
-        let seq_x = x + 1;
-        let seq_y = y + 1;
+        // Use native 0-based coordinates directly
+        let seq_x = x;
+        let seq_y = y;
 
-        // Only allow LED updates for rows 1 and 2
-        if seq_y != 1 && seq_y != 2 {
-            info!("set_led says: LED update blocked for row {}: {} (caller: {})", seq_y, format!("({}, {})", seq_x, seq_y), caller);
+        // Only allow LED updates for rows 0 and 1 (0-indexed)
+        if seq_y != 0 && seq_y != 1 {
+            info!("set_led says: LED update blocked for row {} (display: row {}): {} (caller: {})", seq_y, seq_y + 1, format!("({}, {})", seq_x, seq_y), caller);
             return Ok(());
         }
 
