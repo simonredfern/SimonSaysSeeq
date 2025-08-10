@@ -112,33 +112,31 @@ impl SimonSaysSeeq {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        info!("run says: Starting SimonSaysSeeq Rust application");
+        // info!("run says: Starting SimonSaysSeeq Rust application");
         
         // List connected devices for debugging
         #[cfg(feature = "hardware")]
         {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() {
-                info!("run says: No monome grid devices found");
-                info!("run says: Connect a monome grid device to use grid functionality");
-                info!("run says: Available HID devices are listed above - none match monome VID/PID");
+                // info!("No monome grid devices found - connect grid for hardware functionality");
             } else {
-                info!("run says: Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
+                // info!("Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
             }
         }
         
         #[cfg(not(feature = "hardware"))]
         {
-            info!("run says: Simulation mode - no actual hardware detection");
+            // info!("run says: Simulation mode - no actual hardware detection");
         }
         
         // Show control instructions
-        info!("run says: Controls:");
-        info!("run says:   Ctrl+C: Stop application");
-        #[cfg(not(feature = "hardware"))]
-        info!("run says:   Space+Enter: Start/Stop sequencer (simulation mode)");
-        #[cfg(not(feature = "hardware"))]
-        info!("run says:   1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
+        // info!("run says: Controls:");
+        // info!("run says:   Ctrl+C: Stop application");
+        // #[cfg(not(feature = "hardware"))]
+        // info!("run says:   Space+Enter: Start/Stop sequencer (simulation mode)");
+        // #[cfg(not(feature = "hardware"))]
+        // info!("run says:   1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
         
         self.running.store(true, Ordering::SeqCst);
         
@@ -161,24 +159,22 @@ impl SimonSaysSeeq {
         });
         
         // Auto-start the sequencer for desktop testing (no hardware required)
-        info!("run says: Auto-starting sequencer for desktop testing");
-        info!("run says: Setting tempo to: {:.1} BPM", self.tempo);
+        // info!("Auto-starting sequencer - tempo: {:.1} BPM", self.tempo);
         self.sequencer.set_tempo(self.tempo);
-        info!("run says: Current sequencer tempo: {:.1} BPM", self.sequencer.get_tempo());
         self.sequencer.start();
         
         // Show grid connection status
-        let connected_grids = self.grid.get_connected_grids();
-        info!("run says: Connected grids: {:?}", connected_grids);
-        for grid_id in &connected_grids {
-            if let Some((cols, rows)) = self.grid.get_dimensions(grid_id) {
-                info!("run says:   Grid {}: {}x{}", grid_id, cols, rows);
-            }
-        }
+        // let connected_grids = self.grid.get_connected_grids();
+        // info!("run says: Connected grids: {:?}", connected_grids);
+        // for grid_id in &connected_grids {
+        //     if let Some((cols, rows)) = self.grid.get_dimensions(grid_id) {
+        //         info!("run says:   Grid {}: {}x{}", grid_id, cols, rows);
+        //     }
+        // }
         
         // Flash all connected grids for visual feedback
         if let Err(e) = self.grid.flash_all_grids() {
-            warn!("Failed to flash grids on sequencer start: {}", e);
+            // warn!("Failed to flash grids on sequencer start: {}", e);
         }
         
         // Initialize main grid with some default pattern for testing
@@ -203,7 +199,7 @@ impl SimonSaysSeeq {
         self.running.store(false, Ordering::SeqCst);
         
         // Give threads a chance to exit gracefully
-        info!("run says: Shutting down threads...");
+        // info!("run says: Shutting down threads...");
         
         // Try to join with timeout
         let hw_result = std::thread::spawn(move || hw_thread.join()).join();
@@ -213,11 +209,11 @@ impl SimonSaysSeeq {
         thread::sleep(Duration::from_millis(500));
         
         if hw_result.is_err() || seq_result.is_err() {
-            warn!("run says: Threads did not exit cleanly, forcing shutdown");
+            // warn!("run says: Threads did not exit cleanly, forcing shutdown");
             std::process::exit(0);
         }
         
-        info!("run says: SimonSaysSeeq shut down successfully");
+        // info!("run says: SimonSaysSeeq shut down successfully");
         Ok(())
     }
     
@@ -229,7 +225,7 @@ impl SimonSaysSeeq {
             // Handle hardware events (non-blocking)
             while let Ok(event) = hw_rx.try_recv() {
                 if let Err(e) = self.handle_hardware_event(event) {
-                    error!("Error handling hardware event: {}", e);
+                    // error!("Error handling hardware event: {}", e);
                 }
             }
             
@@ -255,7 +251,7 @@ impl SimonSaysSeeq {
                                     pressed: grid_event.pressed,
                                 };
                                 if let Err(e) = self.handle_hardware_event(hardware_event) {
-                                    error!("Error handling grid event: {}", e);
+                                    // error!("Error handling grid event: {}", e);
                                 }
                             }
                         }
@@ -272,7 +268,7 @@ impl SimonSaysSeeq {
             // Handle sequencer events (non-blocking)
             while let Ok(event) = seq_rx.try_recv() {
                 if let Err(e) = self.handle_sequencer_event(event) {
-                    error!("Error handling sequencer event: {}", e);
+                    // error!("Error handling sequencer event: {}", e);
                 }
             }
             
@@ -284,7 +280,7 @@ impl SimonSaysSeeq {
             
             // Check for shutdown
             if !self.running.load(Ordering::SeqCst) {
-                info!("main_loop says: Main loop detected shutdown signal, breaking");
+                // info!("main_loop says: Main loop detected shutdown signal, breaking");
                 break;
             }
             
@@ -304,20 +300,20 @@ impl SimonSaysSeeq {
                         let current_swing = self.sequencer.get_swing_amount();
                         let new_swing = (current_swing + delta as f32 * 0.01).clamp(0.0, 0.5);
                         self.sequencer.set_swing(new_swing);
-                        info!("Swing changed to: {:.2}", new_swing);
+                        // info!("Swing changed to: {:.2}", new_swing);
                     }
                     2 => {
                         // Middle encoder controls global transpose
                         let current_transpose = self.sequencer.get_global_transpose();
                         let new_transpose = (current_transpose as i32 + delta).clamp(-24, 24);
                         self.sequencer.set_global_transpose(new_transpose as i8);
-                        info!("Global transpose changed to: {} semitones", new_transpose);
+                        // info!("Global transpose changed to: {} semitones", new_transpose);
                     }
                     3 => {
                         // Right encoder controls tempo
                         self.tempo = (self.tempo + delta as f32).clamp(20.0, 200.0);
                         self.sequencer.set_tempo(self.tempo);
-                        info!("Tempo changed to: {:.1} BPM", self.tempo);
+                        // info!("Tempo changed to: {:.1} BPM", self.tempo);
                     }
                     _ => {}
                 }
@@ -329,13 +325,13 @@ impl SimonSaysSeeq {
                         1 => {
                             // Key 1 - Undo/Redo (long press for redo)
                             match self.sequencer.undo() {
-                                Ok(description) => info!("Undid: {}", description),
-                                Err(e) => warn!("Cannot undo: {}", e),
+                                Ok(description) => {}, // info!("Undid: {}", description),
+                                Err(e) => {}, // warn!("Cannot undo: {}", e),
                             }
                         }
                         2 => {
                             // Left key - Stop
-                            info!("Stop pressed");
+                            // info!("Stop pressed");
                             self.sequencer.stop();
                             #[cfg(feature = "midi")]
                             self.midi.all_notes_off()?;
@@ -343,12 +339,12 @@ impl SimonSaysSeeq {
                         3 => {
                             // Right key - Start/Stop toggle
                             if self.sequencer.is_running() {
-                                info!("Stop pressed");
+                                // info!("Stop pressed");
                                 self.sequencer.stop();
                                 #[cfg(feature = "midi")]
                                 self.midi.all_notes_off()?;
                             } else {
-                                info!("Start pressed");
+                                // info!("Start pressed");
                                 self.sequencer.start();
                             }
                         }
@@ -360,17 +356,17 @@ impl SimonSaysSeeq {
             HardwareEvent::StartStopToggle => {
                 // Handle start/stop toggle
                 if self.sequencer.is_running() {
-                    info!("Stop pressed");
+                    // info!("Stop pressed");
                     self.sequencer.stop();
                     #[cfg(feature = "midi")]
                     self.midi.all_notes_off()?;
                 } else {
-                    info!("Start pressed");
+                    // info!("Start pressed");
                     self.sequencer.start();
                     
                     // Flash all connected grids for visual feedback
                     if let Err(e) = self.grid.flash_all_grids() {
-                        warn!("Failed to flash grids on sequencer start: {}", e);
+                        // warn!("Failed to flash grids on sequencer start: {}", e);
                     }
                 }
             }
@@ -387,11 +383,11 @@ impl SimonSaysSeeq {
                         (0, 3) => "Z", (1, 3) => "X", (2, 3) => "C", (3, 3) => "V",
                         _ => "?",
                     };
-                    if pressed {
-                        info!("handle_hardware_event says: Grid button {} PRESSED: ({}, {})", button_name, x, y);
-                    } else {
-                        info!("handle_hardware_event says: Grid button {} released: ({}, {})", button_name, x, y);
-                    }
+                    // if pressed {
+                    //     info!("handle_hardware_event says: Grid button {} PRESSED: ({}, {})", button_name, x, y);
+                    // } else {
+                    //     info!("handle_hardware_event says: Grid button {} released: ({}, {})", button_name, x, y);
+                    // }
                     
                     // Update grid display
                     // Use native 0-based grid coordinates directly
@@ -492,11 +488,11 @@ impl SimonSaysSeeq {
                 #[cfg(not(feature = "midi"))]
                 {
                     if midi_event.note_on {
-                        info!("MIDI Note ON: {} vel:{} ch:{} step:{}", 
-                              midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                        // info!("MIDI Note ON: {} vel:{} ch:{} step:{}", 
+                        //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
                     } else {
-                        info!("MIDI Note OFF: {} ch:{} step:{}", 
-                              midi_event.note, midi_event.channel, midi_event.step);
+                        // info!("MIDI Note OFF: {} ch:{} step:{}", 
+                        //       midi_event.note, midi_event.channel, midi_event.step);
                     }
                 }
             }
@@ -511,8 +507,8 @@ impl SimonSaysSeeq {
         let seq_x = x;
         let seq_y = y;
         
-        info!("handle_grid_press says: Button {}: grid {} at ({}, {}) pressed={}", 
-              if pressed { "PRESS" } else { "RELEASE" }, grid_id, x, y, pressed);
+        // info!("handle_grid_press says: Button {}: grid {} at ({}, {}) pressed={}", 
+        //       if pressed { "PRESS" } else { "RELEASE" }, grid_id, x, y, pressed);
         
         // Should only get main grid events now due to filtering, but double-check
         let connected_grids = self.grid.get_connected_grids();
@@ -524,25 +520,46 @@ impl SimonSaysSeeq {
             if seq_y <= 6 {
                 // Sequence rows 0-6 - only handle button presses, not releases
                 if pressed {
-                    // Check if any positions are held for advanced operations
-                    if self.has_held_positions() {
-                        self.handle_advanced_grid_operation(seq_x, seq_y)?;
+                    // Check if there's an active Euclidean ARM action
+                    if let Some(arm_action) = self.active_arm_action {
+                        match arm_action {
+                            ArmAction::EuclidianEvents => {
+                                let events = seq_x + 1; // Column + 1
+                                info!("ARM EUCLIDIAN_EVENTS: Generating rhythm on row {} with {} events (column {})", seq_y, events, seq_x);
+                                self.sequencer.generate_euclidean_rhythm(seq_y, events, 16, 0);
+                                info!("ARM EUCLIDIAN_EVENTS: Successfully generated {} events on row {}", events, seq_y);
+                                #[cfg(feature = "hardware")]
+                                self.refresh_all_pattern_leds()?;
+                            },
+                            ArmAction::EuclidianLength => {
+                                let length = seq_x + 1; // Column + 1
+                                info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (column {})", seq_y, length, seq_x);
+                                self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
+                                info!("ARM EUCLIDIAN_LENGTH: Successfully generated length {} on row {}", length, seq_y);
+                                #[cfg(feature = "hardware")]
+                                self.refresh_all_pattern_leds()?;
+                            },
+                            ArmAction::EuclidianRotation => {
+                                let rotation = seq_x; // Column + 0
+                                info!("ARM EUCLIDIAN_ROTATION: Generating rhythm on row {} with rotation {} (column {})", seq_y, rotation, seq_x);
+                                self.sequencer.generate_euclidean_rhythm(seq_y, 5, 16, rotation);
+                                info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
+                                #[cfg(feature = "hardware")]
+                                self.refresh_all_pattern_leds()?;
+                            },
+                            _ => {
+                                // For other ARM actions, handle normally
+                                self.handle_normal_grid_operation(grid_id, seq_x, seq_y)?;
+                            }
+                        }
                     } else {
-                        // Normal grid operation - toggle or cycle ratchet
-                        let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
-                        
-                        self.sequencer.set_grid_value(seq_x, seq_y, new_value);
-        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {} (step {}, row {})", seq_x, seq_y, current_value, new_value, seq_x + 1, seq_y + 1); // +1 for user display
-                        
-                        // Update only this specific LED for immediate response
-                        #[cfg(feature = "hardware")]
-                        self.update_single_led(grid_id, seq_x, seq_y)?;
+                        // No ARM action active, handle normally
+                        self.handle_normal_grid_operation(grid_id, seq_x, seq_y)?;
                     }
                 }
             } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
-                info!("handle_grid_press says: ROW 7 event - button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
+                info!("ARM CONTROL: Row 7 button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
                 
                 // Check if this column corresponds to a valid ARM action
                 if let Some(arm_action) = ArmAction::from_column(seq_x) {
@@ -550,6 +567,7 @@ impl SimonSaysSeeq {
                         // Turn off previous ARM button if any
                         if let Some(prev_action) = self.active_arm_action {
                             let prev_column = prev_action.to_column();
+                            info!("ARM CONTROL: Deactivating previous ARM action {:?} (column {})", prev_action, prev_column);
                             #[cfg(feature = "hardware")]
                             {
                                 self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
@@ -558,7 +576,7 @@ impl SimonSaysSeeq {
                         
                         // Set new active ARM action and light it up
                         self.active_arm_action = Some(arm_action);
-                        info!("handle_grid_press says: ARM action {:?} pressed (ON)", arm_action);
+                        info!("ARM CONTROL: Activated ARM action {:?} (column {}) - waiting for sequence row press", arm_action, seq_x);
                         #[cfg(feature = "hardware")]
                         {
                             self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_action_press")?;
@@ -569,23 +587,23 @@ impl SimonSaysSeeq {
                         self.handle_arm_action(arm_action)?;
                     } else {
                         // Clear active ARM action and turn off LED
-                        info!("handle_grid_press says: ROW 7 RELEASE detected for column {}, current active: {:?}", seq_x, self.active_arm_action);
+                        info!("ARM CONTROL: Release detected for column {}, current active: {:?}", seq_x, self.active_arm_action);
                         if let Some(current_action) = self.active_arm_action {
                             if current_action.to_column() == seq_x {
                                 self.active_arm_action = None;
-                                info!("handle_grid_press says: ARM action {:?} released (OFF) - LED turning OFF", current_action);
+                                info!("ARM CONTROL: Deactivated ARM action {:?} - returned to normal mode", current_action);
                                 #[cfg(feature = "hardware")]
                                 {
                                     self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_action_release")?;
                                     self.grid.refresh()?;
                                 }
                             } else {
-                                info!("handle_grid_press says: ARM action release ignored - not the active action");
+                                info!("ARM CONTROL: Release ignored - column {} is not the active ARM action", seq_x);
                             }
                         }
                     }
                 } else {
-                    info!("handle_grid_press says: ROW 7 column {} is not a valid ARM action", seq_x);
+                    // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", seq_x);
                 }
             }
         } else {
@@ -602,8 +620,8 @@ impl SimonSaysSeeq {
             ArmAction::Undo => {
                 // Undo last action
                 match self.sequencer.undo() {
-                    Ok(description) => info!("handle_arm_action says: Undid: {}", description),
-                    Err(e) => warn!("handle_arm_action says: Cannot undo: {}", e),
+                    Ok(description) => info!("ARM UNDO: Successfully undid: {}", description),
+                    Err(e) => warn!("ARM UNDO: Cannot undo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
                 {
@@ -614,8 +632,8 @@ impl SimonSaysSeeq {
             ArmAction::Redo => {
                 // Redo last undone action
                 match self.sequencer.redo() {
-                    Ok(description) => info!("handle_arm_action says: Redid: {}", description),
-                    Err(e) => warn!("handle_arm_action says: Cannot redo: {}", e),
+                    Ok(description) => info!("ARM REDO: Successfully redid: {}", description),
+                    Err(e) => warn!("ARM REDO: Cannot redo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
                 {
@@ -624,51 +642,24 @@ impl SimonSaysSeeq {
                 }
             }
             ArmAction::EuclidianEvents => {
-                // Set Euclidean rhythm events count
-                if let Some(held_row) = self.get_first_held_row() {
-                    self.sequencer.generate_euclidean_rhythm(held_row, 5, 16, 0);
-                    info!("handle_arm_action says: Generated Euclidean rhythm with 5 events for row {}", held_row);
-                    #[cfg(feature = "hardware")]
-                    {
-                        self.update_grid_display()?;
-                    }
-                } else {
-                    info!("handle_arm_action says: No row held for Euclidean events");
-                }
+                // Euclidean Events ARM button activated - waiting for sequence row press
+                info!("ARM EUCLIDIAN_EVENTS: ARM button activated - press sequence row at column N for N+1 events");
             }
             ArmAction::EuclidianLength => {
-                // Set Euclidean rhythm length
-                if let Some(held_row) = self.get_first_held_row() {
-                    self.sequencer.generate_euclidean_rhythm(held_row, 3, 8, 0);
-                    info!("handle_arm_action says: Generated Euclidean rhythm with length 8 for row {}", held_row);
-                    #[cfg(feature = "hardware")]
-                    {
-                        self.update_grid_display()?;
-                    }
-                } else {
-                    info!("handle_arm_action says: No row held for Euclidean length");
-                }
+                // Euclidean Length ARM button activated - waiting for sequence row press
+                info!("ARM EUCLIDIAN_LENGTH: ARM button activated - press sequence row at column N for length N+1");
             }
             ArmAction::EuclidianRotation => {
-                // Set Euclidean rhythm rotation
-                if let Some(held_row) = self.get_first_held_row() {
-                    self.sequencer.generate_euclidean_rhythm(held_row, 5, 16, 4);
-                    info!("handle_arm_action says: Generated Euclidean rhythm with rotation 4 for row {}", held_row);
-                    #[cfg(feature = "hardware")]
-                    {
-                        self.update_grid_display()?;
-                    }
-                } else {
-                    info!("handle_arm_action says: No row held for Euclidean rotation");
-                }
+                // Euclidean Rotation ARM button activated - waiting for sequence row press
+                info!("ARM EUCLIDIAN_ROTATION: ARM button activated - press sequence row at column N for rotation N");
             }
             ArmAction::Ratchet => {
                 // Ratchet functionality - placeholder
-                info!("handle_arm_action says: Ratchet action - not yet implemented");
+                info!("ARM RATCHET: ARM button activated - not yet implemented");
             }
             ArmAction::PresetGrid => {
                 // Preset grid functionality - placeholder
-                info!("handle_arm_action says: Preset grid action - not yet implemented");
+                info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
             }
         }
         Ok(())
@@ -759,7 +750,7 @@ impl SimonSaysSeeq {
             // Simulation mode - display info to console
             let (step, bar) = self.sequencer.get_position();
             let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            info!("update_screen says: Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
+            // info!("update_screen says: Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
         }
         
         Ok(())
@@ -813,8 +804,8 @@ impl SimonSaysSeeq {
                 unsafe {
                     DEBUG_COUNTER += 1;
                     if DEBUG_COUNTER % 20 == 0 && seq_y <= 6 { // Debug all 7 sequencer rows, every 20 updates
-                        info!("🎯 Row {} current_step = {} (first_step={}, last_step={}) [display: row {}]", 
-                              seq_y, row_state.current_step, row_state.first_step, row_state.last_step, seq_y + 1);
+                        // info!("🎯 Row {} current_step = {} (first_step={}, last_step={}) [display: row {}]", 
+                        //       seq_y, row_state.current_step, row_state.first_step, row_state.last_step, seq_y + 1);
                     }
                 }
                 
@@ -836,7 +827,7 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_id, seq_x, seq_y, brightness, "update_main_grid_display")?;
                 }
             } else {
-                warn!("No row settings found for row {} (display: row {})", seq_y, seq_y + 1);
+                // warn!("No row settings found for row {} (display: row {})", seq_y, seq_y + 1);
             }
         }
         
@@ -968,6 +959,26 @@ impl SimonSaysSeeq {
                 }
             }
             self.grid.refresh()?;
+        }
+        Ok(())
+    }
+
+    /// Handle normal grid operation (toggle pattern)
+    #[cfg(feature = "hardware")]
+    fn handle_normal_grid_operation(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
+        // Check if any positions are held for advanced operations
+        if self.has_held_positions() {
+            self.handle_advanced_grid_operation(seq_x, seq_y)?;
+        } else {
+            // Normal grid operation - toggle or cycle ratchet
+            let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
+            let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
+            
+            self.sequencer.set_grid_value(seq_x, seq_y, new_value);
+            // info!("handle_normal_grid_operation says: Toggle: grid[{}][{}] {} -> {} (step {}, row {})", seq_x, seq_y, current_value, new_value, seq_x + 1, seq_y + 1); // +1 for user display
+            
+            // Update only this specific LED for immediate response
+            self.update_single_led(grid_id, seq_x, seq_y)?;
         }
         Ok(())
     }
