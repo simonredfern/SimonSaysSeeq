@@ -395,3 +395,12 @@ kill 14815 16252 16404 16463
 # Grid event detection now happens in microseconds instead of hundreds of milliseconds
 # Core button press functionality working perfectly with immediate LED response
 # Status: Major performance issue resolved - ready for next features
+
+## 2025-08-10 02:38:23 Implementing Position Scrolling with Brightness Levels
+# Goal: Add position scrolling display with brightness levels:
+#   - 0% (brightness 0): LED off - no pattern, not current position
+#   - 25% (brightness 4): Current position indicator - no pattern, but current step
+#   - 50% (brightness 8): Pattern data - has pattern, not current position  
+#   - 75% (brightness 12): Pattern + position - has pattern AND current step
+# Need: Modify grid display logic to check MainRowStates current_step vs LED position
+# Implementation: Update update_main_grid_display() with brightness calculation

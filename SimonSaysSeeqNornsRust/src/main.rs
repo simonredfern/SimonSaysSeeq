@@ -196,9 +196,7 @@ impl SimonSaysSeeq {
                         for grid_event in grid_events {
                             // Only process events from main grid and only button presses (not releases)
                             if Some(&grid_event.grid_id) == main_grid_id.as_ref() && grid_event.pressed {
-                                let poll_time = poll_start.elapsed();
-                                info!("🕒 GRID EVENT DETECTED after {}μs polling: {} at ({}, {})", 
-                                      poll_time.as_micros(), grid_event.grid_id, grid_event.x, grid_event.y);
+                                // Grid event detected - removed timing for performance
                                 
                                 let hardware_event = HardwareEvent::GridPress {
                                     grid_id: grid_event.grid_id,
@@ -372,7 +370,7 @@ impl SimonSaysSeeq {
     fn handle_sequencer_event(&mut self, event: SequencerEvent) -> Result<()> {
         match event {
             SequencerEvent::Step { step, bar } => {
-                debug!("🥁 Step {}.{}", bar, step);
+                // Step event - display updates handled
                 
                 // Advance CO2 step counter
                 let step_co2_value = self.co2.advance_step();
@@ -406,8 +404,9 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
                 
-                // Don't update grid on every step for now - only on button press
-                // Removed pattern check logging for performance
+                // Update grid display to show current step positions
+                #[cfg(feature = "hardware")]
+                self.update_grid_display()?;
             }
             
             SequencerEvent::Beat { beat } => {
@@ -454,8 +453,7 @@ impl SimonSaysSeeq {
         let seq_x = x + 1;
         let seq_y = y + 1;
         
-        let timing_start = Instant::now();
-        info!("🕒 Button press START: grid {} at ({}, {})", grid_id, x, y);
+        info!("🕒 Button press: grid {} at ({}, {})", grid_id, x, y);
         
         // Should only get main grid events now due to filtering, but double-check
         let connected_grids = self.grid.get_connected_grids();
@@ -472,32 +470,15 @@ impl SimonSaysSeeq {
                         self.handle_advanced_grid_operation(seq_x, seq_y)?;
                     } else {
                         // Normal grid operation - toggle or cycle ratchet
-                        let pattern_read_time = Instant::now();
                         let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        info!("🕒 Pattern read after {}μs: value={}", timing_start.elapsed().as_micros(), current_value);
-                        
                         let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
                         
-                        let pattern_update_time = Instant::now();
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
-                        info!("🕒 Pattern updated after {}μs: {} -> {}", timing_start.elapsed().as_micros(), current_value, new_value);
+                        info!("🔄 Toggle: grid[{}][{}] {} -> {}", seq_x, seq_y, current_value, new_value);
                         
+                        // Update grid display to show new pattern with position info
                         #[cfg(feature = "hardware")]
-                        {
-                            let led_command_start = Instant::now();
-                            let brightness = if new_value > 0 { 8 } else { 0 };
-                            info!("🕒 LED command starting after {}μs: brightness={}", timing_start.elapsed().as_micros(), brightness);
-                            
-                            self.grid.set_led(grid_id, x, y, brightness)?;
-                            let led_command_end = Instant::now();
-                            
-                            let total_time = timing_start.elapsed();
-                            let led_time = led_command_end.duration_since(led_command_start);
-                            
-                            info!("🕒 LED command COMPLETED after {}μs (LED call took {}μs)", 
-                                  total_time.as_micros(), led_time.as_micros());
-                            info!("🕒 BUTTON PRESS COMPLETE: Total={}μs", total_time.as_micros());
-                        }
+                        self.update_grid_display()?;
                     }
                 }
             } else {
@@ -685,25 +666,38 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_grid_display(&mut self) -> Result<()> {
-        // Grid display update disabled during button presses for better responsiveness
-        // Only the immediate LED update happens on button press
+        let connected_grids = self.grid.get_connected_grids();
+        
+        // Update only the main grid with position scrolling
+        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            self.update_main_grid_display(&main_grid_id)?;
+        }
+        
+        self.grid.refresh()?;
         Ok(())
     }
     
     #[cfg(feature = "hardware")]
     fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
-        // Simple grid display - just show pattern data
+        // Grid display with position scrolling - 4 brightness levels
         for seq_y in 1..=7 {
-            for seq_x in 1..=16 {
-                let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                
-                // Simple brightness: 0 = off, 1+ = half brightness
-                let brightness = if pattern_value > 0 { 8 } else { 0 };
-                
-                // Removed debug logging for performance
-                
-                // Convert to 0-based grid coordinates
-                self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+            let row_settings = self.sequencer.get_row_settings(seq_y);
+            if let Some(row_state) = row_settings {
+                for seq_x in 1..=16 {
+                    let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
+                    let is_current_step = seq_x == row_state.current_step;
+                    
+                    // 4 brightness levels based on pattern and position:
+                    let brightness = match (pattern_value > 0, is_current_step) {
+                        (false, false) => 0,     // 0% - No pattern, not current position
+                        (false, true) => 4,      // 25% - No pattern, but current position  
+                        (true, false) => 8,      // 50% - Has pattern, not current position
+                        (true, true) => 12,      // 75% - Has pattern AND current position
+                    };
+                    
+                    // Convert to 0-based grid coordinates
+                    self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+                }
             }
         }
         
