@@ -1061,6 +1061,18 @@ kill 14815 16252 16404 16463
 # LOCATION: src/config.rs SequencerConfig::default() -> default_tempo: 60.0
 # COMPILED: Successfully, ready for slow-tempo debugging session
 #
+## 2025-08-10 19:20:30 Simplified to True Single Entry Point: set_led
+# REFACTORED: Removed update_led_controlled wrapper function - unnecessary layer
+# MOVED: Row restrictions and caller/reason logging directly into GridManager::set_led
+# BENEFIT: grid.set_led() is now the TRUE single bottleneck for all LED updates
+# CHANGES:
+#   - Added caller and reason parameters to set_led(grid_id, x, y, brightness, reason, caller)
+#   - Row restrictions enforced directly in set_led function
+#   - All LED logging centralized in set_led function
+#   - Removed update_led_controlled wrapper completely
+# RESULT: Every LED update attempt logged with complete traceability
+# COMPILED: Successfully, ready for testing with true single entry point
+#
 # TEST EXECUTION RESULTS (2025-08-10 18:31:48):
 # - Started serialosc successfully: systemctl --user start serialosc
 # - Connected to both grids: m2949672 (monome 128) and m5032747 (monome one)  

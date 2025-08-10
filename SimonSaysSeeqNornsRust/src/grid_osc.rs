@@ -280,7 +280,19 @@ impl GridManager {
     }
     
     /// Set a single LED
-    pub fn set_led(&mut self, grid_id: &str, x: usize, y: usize, brightness: u8) -> Result<()> {
+    pub fn set_led(&mut self, grid_id: &str, x: usize, y: usize, brightness: u8, reason: &str, caller: &str) -> Result<()> {
+        // Convert to sequencer coordinates for row restrictions (1-based)
+        let seq_x = x + 1;
+        let seq_y = y + 1;
+        
+        // Only allow LED updates for rows 1 and 2
+        if seq_y != 1 && seq_y != 2 {
+            info!("🚫 LED update blocked for row {}: {} (reason: {}, caller: {})", seq_y, format!("({}, {})", seq_x, seq_y), reason, caller);
+            return Ok(());
+        }
+        
+        debug!("✅ LED update row {}: ({}, {}) -> grid({}, {}) brightness={} (reason: {}, caller: {})", seq_y, seq_x, seq_y, x, y, brightness, reason, caller);
+        
         // Debug logging for row 2 (y=1 in 0-based coordinates)
         if y == 1 {
             info!("🔍 Row 2 LED update: x={}, y={}, brightness={}", x, y, brightness);
@@ -433,7 +445,7 @@ impl GridManager {
             }
             
             for (y, &brightness) in column.iter().enumerate() {
-                self.set_led(grid_id, x, y, brightness)?;
+                self.set_led(grid_id, x, y, brightness, "bulk_update", "set_led_map")?;
                 
                 // Add small delay every 8 LEDs to prevent overwhelming
                 if (x * rows + y) % 8 == 0 {
