@@ -18,8 +18,9 @@
 ## Development Workflow
 1. Check ai.log first to understand current project state
 2. Run necessary commands/tests
-3. Update ai.log with what was done
-4. Provide concise summary to user
+3. Always ask the user what worked when a grid is involved. Ask the user what they saw when a grid is involved.
+4. Update ai.log with what was done
+5. Provide concise summary to user
 
 ## Code Standards
 - Prefer working solutions over perfect code
@@ -28,7 +29,7 @@
 - Use appropriate feature flags (--features desktop for grid testing)
 
 ## Grid Testing Notes
-- serialosc must be running manually (system service has permission issues)
+- serialosc must be running manually (system maybe service has permission issues)
 - Both grids (m5032747, m2949672) work via OSC
 - Use examples/debug_osc.rs for isolated grid testing
 - Comprehensive tests may give false negatives due to timing
