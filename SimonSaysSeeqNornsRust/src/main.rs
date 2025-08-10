@@ -510,7 +510,7 @@ impl SimonSaysSeeq {
                         self.grid.refresh()?;
                     }
                     
-                    // Handle control button function
+                    // Handle control button function (ARM LED will be restored automatically)
                     self.handle_control_button(seq_x, seq_y)?;
                 } else {
                     // Clear ARM state and turn off button
@@ -535,14 +535,15 @@ impl SimonSaysSeeq {
         // Control buttons on row 8 of grid one
         match x {
             1 => {
-                // Reset all
+                // Reset all sequences (but preserve row 7 ARM button states)
                 info!("Reset all sequences");
                 self.sequencer.reset_all();
                 #[cfg(feature = "hardware")]
                 {
                     let connected_grids = self.grid.get_connected_grids();
                     if let Some(grid_id) = connected_grids.first() {
-                        self.grid.clear_all(grid_id)?;
+                        // Clear only sequencer rows 0-6, preserve row 7
+                        self.grid.clear_all_sequence_rows(grid_id)?;
                     }
                 }
             }
@@ -560,7 +561,13 @@ impl SimonSaysSeeq {
                     self.sequencer.clear_section(0, 1, 15, 0);
                 }
                 #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                {
+                    self.update_grid_display()?;
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.restore_arm_button_leds(grid_id)?;
+                    }
+                }
             }
             3 => {
                 // Undo
@@ -569,7 +576,13 @@ impl SimonSaysSeeq {
                     Err(e) => warn!("Cannot undo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                {
+                    self.update_grid_display()?;
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.restore_arm_button_leds(grid_id)?;
+                    }
+                }
             }
             4 => {
                 // Redo
@@ -578,7 +591,13 @@ impl SimonSaysSeeq {
                     Err(e) => warn!("Cannot redo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                {
+                    self.update_grid_display()?;
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.restore_arm_button_leds(grid_id)?;
+                    }
+                }
             }
             5 => {
                 // Generate Euclidean rhythm
@@ -586,7 +605,13 @@ impl SimonSaysSeeq {
                     self.sequencer.generate_euclidean_rhythm(held_row, 5, 16, 0);
                     info!("Generated Euclidean rhythm for row {}", held_row);
                     #[cfg(feature = "hardware")]
-                    self.update_grid_display()?;
+                    {
+                        self.update_grid_display()?;
+                        let connected_grids = self.grid.get_connected_grids();
+                        if let Some(grid_id) = connected_grids.first() {
+                            self.restore_arm_button_leds(grid_id)?;
+                        }
+                    }
                 }
             }
             6 => {
@@ -601,7 +626,13 @@ impl SimonSaysSeeq {
                 self.sequencer.scroll_pattern(1, 0); // Scroll right
                 info!("Scrolled pattern right");
                 #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                {
+                    self.update_grid_display()?;
+                    let connected_grids = self.grid.get_connected_grids();
+                    if let Some(grid_id) = connected_grids.first() {
+                        self.restore_arm_button_leds(grid_id)?;
+                    }
+                }
             }
             8 => {
                 // Chain mode toggle
@@ -886,6 +917,18 @@ impl SimonSaysSeeq {
         } else {
             false
         }
+    }
+
+    /// Restore ARM button LED states after grid operations that might have cleared them
+    #[cfg(feature = "hardware")]
+    fn restore_arm_button_leds(&mut self, grid_id: &str) -> Result<()> {
+        for (button_index, &is_pressed) in self.arm_states.iter().enumerate() {
+            if is_pressed {
+                self.grid.set_led(grid_id, button_index, 7, 10, "restore_arm_leds")?;
+            }
+        }
+        self.grid.refresh()?;
+        Ok(())
     }
 
     fn handle_advanced_grid_operation(&mut self, x: usize, y: usize) -> Result<()> {

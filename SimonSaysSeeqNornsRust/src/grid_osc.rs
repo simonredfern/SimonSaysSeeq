@@ -420,6 +420,40 @@ impl GridManager {
         }
     }
 
+    /// Clear only sequencer rows (0-6), preserve control row (7)
+    pub fn clear_all_sequence_rows(&mut self, grid_id: &str) -> Result<()> {
+        #[cfg(not(feature = "rosc"))]
+        {
+            return Err(anyhow!("OSC feature not enabled"));
+        }
+
+        #[cfg(feature = "rosc")]
+        {
+        let cols = {
+            let device = self.devices.get(grid_id)
+                .ok_or_else(|| anyhow!("Grid {} not found", grid_id))?;
+            device.cols
+        };
+
+        // Clear internal state for sequencer rows only (0-6)
+        for x in 0..cols {
+            for y in 0..=6 {
+                self.assumed_led_states.insert((grid_id.to_string(), x, y), 0);
+            }
+        }
+
+        // Clear LEDs for sequencer rows only
+        for y in 0..=6 {
+            for x in 0..cols {
+                self.set_led(grid_id, x, y, 0, "clear_sequence_rows")?;
+            }
+        }
+
+        debug!("Cleared sequencer rows (0-6) on grid {}", grid_id);
+        Ok(())
+        }
+    }
+
     /// Set LED map for efficient bulk updates
     pub fn set_led_map(&mut self, grid_id: &str, led_map: &[Vec<u8>]) -> Result<()> {
         let (cols, rows) = {
