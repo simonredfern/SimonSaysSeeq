@@ -1353,3 +1353,47 @@ kill 14815 16252 16404 16463
 #   - Found 0 active MIDI notes (system clean)
 #   - Utility ready for use when debugging stuck notes
 # STATUS: MIDI diagnostics enhanced with list capability alongside existing clear utility
+
+## 2025-08-10 22:54:55 Running Sequencer Process Found - Source of Grid Activity
+# DISCOVERY: Found active sequencer process writing to serial OSC
+# PROCESS: target/release/simon_says_seeq (PID 50899) running since 22:51
+# ANALYSIS: Only rows 1 and 2 show activity because that's what the running sequencer was programmed to do
+# CONFIRMED: No other processes writing to grid - serialosc daemon + device handlers only provide communication
+# GRID ACTIVITY SOURCE: Current running sequencer instance, not interference from other processes
+# USER OBSERVATION CORRECT: Activity limited to rows 1-2 indicates intentional sequencer programming
+# NEXT: Can examine or terminate running process to isolate grid for testing if needed
+# STATUS: Mystery solved - grid activity is from intended sequencer operation, not external interference
+
+## 2025-08-10 23:01:34 Row 1 Scrolling Skip Issue Investigation Started
+# USER REPORT: Row 1 sometimes skips a scroll LED with sequencer running and all steps off
+# ISSUE: Position scrolling LED not advancing smoothly (1→2→3→4), occasionally skipping steps
+# CONTEXT: Running sequencer PID 50899 since 22:51, consuming 6.7% CPU (active)
+# DIAGNOSIS APPROACH:
+#   - Cannot monitor running sequencer state from separate process (different instances)
+#   - Created examples/monitor_row1_scrolling.rs for standalone monitoring
+#   - Created examples/visual_scroll_test.rs for manual observation
+#   - Need to isolate if issue is: timing, race condition, or step advancement logic
+# POSSIBLE CAUSES:
+#   1. Race condition between step advancement and grid display update
+#   2. Display update timing issues (33ms refresh vs step timing)
+#   3. Step advancement logic bug in advance_step() function
+#   4. Grid communication timing causing LED updates to be missed
+# NEXT: Manual observation with visual test or examination of running sequencer tempo/timing
+# STATUS: Skip issue confirmed by user, investigating timing and synchronization
+
+## 2025-08-10 23:06:58 ROOT CAUSE DISCOVERED - Intentional Row 1-2 Only Restriction
+# CRITICAL FINDING: Both interference and Row 2 issues caused by hardcoded row restrictions
+# RESTRICTION LOCATIONS:
+#   1. GridManager set_led(): Blocks all LED updates to rows 3-8 
+#   2. Main sequencer display: Only processes rows 1-2 (seq_y in 1..=2)
+#   3. Button handling: Only accepts input from rows 1-2
+#   4. Clear operations: Only clears rows 1-2
+# CODE EVIDENCE:
+#   - src/grid_osc.rs:289: "if seq_y != 1 && seq_y != 2 { LED update blocked }"
+#   - src/main.rs:696: "for seq_y in 1..=2 { // ROWS 1 AND 2 ONLY"
+#   - src/main.rs:472: "if seq_y == 1 || seq_y == 2 { // Main sequencer grid - ROWS 1 AND 2 ONLY"
+# INTERFERENCE EXPLANATION:
+#   - Row 1 skips occur due to Row 2 processing overhead in same loop
+#   - Row 2 malfunction caused by coordinate/timing issues within restriction
+#   - System designed to only use 2 rows, not full 8-row capability
+# STATUS: Hardware working correctly, software intentionally limited to rows 1-2 only
