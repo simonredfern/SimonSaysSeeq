@@ -1688,7 +1688,7 @@ kill 14815 16252 16404 16463
 # PROBLEM LOCATION: src/main.rs line 205-206 in main_loop()
 # ISSUE: Code filtered with "&& grid_event.pressed" - only allowed press events through
 # CONSEQUENCE: Row 7 ARM buttons never received release events, LEDs stayed on
-# SOLUTION IMPLEMENTED: 
+# SOLUTION IMPLEMENTED:
 #   - Removed "&& grid_event.pressed" filter from grid event processing
 #   - Now allows both press AND release events to reach handle_grid_press()
 #   - Sequencer rows 0-6 still ignore releases (have their own "if pressed" check)
@@ -1696,3 +1696,38 @@ kill 14815 16252 16404 16463
 # DETAILED LOGGING ADDED: Enhanced debug messages to track press/release events
 # COMPILATION: Successful with warnings only using --release --features desktop
 # STATUS: ARM button momentary behavior should now work correctly with press/release
+
+## 2025-08-11 01:14:44 ARM Action Enum System Successfully Implemented
+# USER REQUEST: Create enum for ARM actions with specific column mappings on row 7
+# ARM ACTION MAPPING IMPLEMENTED:
+#   - Column 0: UNDO
+#   - Column 1: REDO
+#   - Column 4: EUCLIDIAN_EVENTS  
+#   - Column 5: EUCLIDIAN_LENGTH
+#   - Column 6: EUCLIDIAN_ROTATION
+#   - Column 7: RATCHET
+#   - Column 10: PRESET_GRID
+# ENUM STRUCTURE CREATED:
+#   - ArmAction enum with Debug, Clone, Copy, PartialEq, Eq derives
+#   - from_column(usize) -> Option<ArmAction>: Convert grid column to action
+#   - to_column(&self) -> usize: Convert action to grid column
+# SYSTEM REFACTORED:
+#   - Changed active_arm_button: Option<usize> to active_arm_action: Option<ArmAction>
+#   - Updated handle_grid_press() to validate ARM action columns before processing
+#   - Replaced handle_control_button() with handle_arm_action(ArmAction)
+#   - Updated utility methods: has_active_arm_action(), get_active_arm_action(), is_arm_action_active()
+# ARM ACTION HANDLERS:
+#   - Undo: Calls sequencer.undo() with proper error handling
+#   - Redo: Calls sequencer.redo() with proper error handling
+#   - EuclidianEvents: Generate rhythm with 5 events (requires held row)
+#   - EuclidianLength: Generate rhythm with length 8 (requires held row)
+#   - EuclidianRotation: Generate rhythm with rotation 4 (requires held row)
+#   - Ratchet: Placeholder for future implementation
+#   - PresetGrid: Placeholder for future implementation
+# GRID BEHAVIOR:
+#   - Only valid ARM action columns respond to press/release events
+#   - Invalid columns (2, 3, 8, 9, 11-15) are ignored with log message
+#   - Maintains exclusive selection (only one ARM action active at a time)
+#   - LED management preserved with proper column mapping
+# COMPILATION: Successful with warnings only using cargo build --release --features desktop
+# STATUS: ARM action enum system ready for testing with proper column validation

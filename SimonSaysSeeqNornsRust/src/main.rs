@@ -18,6 +18,47 @@ mod screen;
 mod config;
 mod co2;
 
+/// ARM actions that can be triggered from row 7 (control row) of the grid
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ArmAction {
+    Undo,              // Column 0
+    Redo,              // Column 1
+    EuclidianEvents,   // Column 4
+    EuclidianLength,   // Column 5
+    EuclidianRotation, // Column 6
+    Ratchet,           // Column 7
+    PresetGrid,        // Column 10
+}
+
+impl ArmAction {
+    /// Convert grid column to ARM action
+    fn from_column(column: usize) -> Option<Self> {
+        match column {
+            0 => Some(ArmAction::Undo),
+            1 => Some(ArmAction::Redo),
+            4 => Some(ArmAction::EuclidianEvents),
+            5 => Some(ArmAction::EuclidianLength),
+            6 => Some(ArmAction::EuclidianRotation),
+            7 => Some(ArmAction::Ratchet),
+            10 => Some(ArmAction::PresetGrid),
+            _ => None,
+        }
+    }
+    
+    /// Convert ARM action to grid column
+    fn to_column(&self) -> usize {
+        match self {
+            ArmAction::Undo => 0,
+            ArmAction::Redo => 1,
+            ArmAction::EuclidianEvents => 4,
+            ArmAction::EuclidianLength => 5,
+            ArmAction::EuclidianRotation => 6,
+            ArmAction::Ratchet => 7,
+            ArmAction::PresetGrid => 10,
+        }
+    }
+}
+
 use crossbeam_channel::Receiver;
 
 use hardware::{NornsHardware, HardwareEvent};
@@ -44,8 +85,8 @@ pub struct SimonSaysSeeq {
     running: Arc<AtomicBool>,
     tempo: f32,
     main_grid_preference: Option<String>,
-    // Active ARM button for row 7 (control row) - only one can be active at a time
-    active_arm_button: Option<usize>,
+    // Active ARM action for row 7 (control row) - only one can be active at a time
+    active_arm_action: Option<ArmAction>,
 }
 
 impl SimonSaysSeeq {
@@ -66,7 +107,7 @@ impl SimonSaysSeeq {
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
             main_grid_preference: Some("m2949672".to_string()), // Default main grid
-            active_arm_button: None, // No ARM button initially active
+            active_arm_action: None, // No ARM action initially active
         })
     }
 
@@ -502,40 +543,49 @@ impl SimonSaysSeeq {
             } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
                 info!("handle_grid_press says: ROW 7 event - button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
-                if pressed {
-                    // Turn off previous ARM button if any
-                    if let Some(prev_button) = self.active_arm_button {
-                        #[cfg(feature = "hardware")]
-                        {
-                            self.grid.set_led(grid_id, prev_button, seq_y, 0, "arm_button_deactivate")?;
+                
+                // Check if this column corresponds to a valid ARM action
+                if let Some(arm_action) = ArmAction::from_column(seq_x) {
+                    if pressed {
+                        // Turn off previous ARM button if any
+                        if let Some(prev_action) = self.active_arm_action {
+                            let prev_column = prev_action.to_column();
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
+                            }
                         }
-                    }
-                    
-                    // Set new active ARM button and light it up
-                    self.active_arm_button = Some(seq_x);
-                    info!("handle_grid_press says: ARM_{} pressed (ON)", seq_x);
-                    #[cfg(feature = "hardware")]
-                    {
-                        self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_button_press")?;
-                        self.grid.refresh()?;
-                    }
-                    
-                    // Handle control button function
-                    self.handle_control_button(seq_x, seq_y)?;
-                } else {
-                    // Clear active ARM button and turn off LED
-                    info!("handle_grid_press says: ROW 7 RELEASE detected for button {}, current active: {:?}", seq_x, self.active_arm_button);
-                    if self.active_arm_button == Some(seq_x) {
-                        self.active_arm_button = None;
-                        info!("handle_grid_press says: ARM_{} released (OFF) - LED turning OFF", seq_x);
+                        
+                        // Set new active ARM action and light it up
+                        self.active_arm_action = Some(arm_action);
+                        info!("handle_grid_press says: ARM action {:?} pressed (ON)", arm_action);
                         #[cfg(feature = "hardware")]
                         {
-                            self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_button_release")?;
+                            self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_action_press")?;
                             self.grid.refresh()?;
                         }
+                        
+                        // Handle ARM action function
+                        self.handle_arm_action(arm_action)?;
                     } else {
-                        info!("handle_grid_press says: ARM_{} release ignored - not the active button", seq_x);
+                        // Clear active ARM action and turn off LED
+                        info!("handle_grid_press says: ROW 7 RELEASE detected for column {}, current active: {:?}", seq_x, self.active_arm_action);
+                        if let Some(current_action) = self.active_arm_action {
+                            if current_action.to_column() == seq_x {
+                                self.active_arm_action = None;
+                                info!("handle_grid_press says: ARM action {:?} released (OFF) - LED turning OFF", current_action);
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_action_release")?;
+                                    self.grid.refresh()?;
+                                }
+                            } else {
+                                info!("handle_grid_press says: ARM action release ignored - not the active action");
+                            }
+                        }
                     }
+                } else {
+                    info!("handle_grid_press says: ROW 7 column {} is not a valid ARM action", seq_x);
                 }
             }
         } else {
@@ -546,120 +596,103 @@ impl SimonSaysSeeq {
     }
     
     #[cfg(feature = "hardware")]
-    fn handle_control_button(&mut self, x: usize, _y: usize) -> Result<()> {
-        // Control buttons on row 8 of grid one
-        match x {
-            1 => {
-                // Reset all sequences (but preserve row 7 ARM button states)
-                info!("Reset all sequences");
-                self.sequencer.reset_all();
-                #[cfg(feature = "hardware")]
-                {
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        // Clear only sequencer rows 0-6, preserve row 7
-                        self.grid.clear_all_sequence_rows(grid_id)?;
-                    }
-                }
-            }
-            2 => {
-                // Clear current row or all
-                if self.has_held_positions() {
-                    info!("Clear selected rows");
-                    let held_rows = self.get_held_rows();
-                    for &row in &held_rows {
-                        self.sequencer.clear_section(1, row, 16, 1);
-                    }
-                } else {
-                    info!("Clear rows 0 and 1 only (0-indexed)");
-                    self.sequencer.clear_section(0, 0, 15, 0);
-                    self.sequencer.clear_section(0, 1, 15, 0);
-                }
-                #[cfg(feature = "hardware")]
-                {
-                    self.update_grid_display()?;
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_button_leds(grid_id)?;
-                    }
-                }
-            }
-            3 => {
-                // Undo
+    fn handle_arm_action(&mut self, action: ArmAction) -> Result<()> {
+        // Handle ARM actions based on enum
+        match action {
+            ArmAction::Undo => {
+                // Undo last action
                 match self.sequencer.undo() {
-                    Ok(description) => info!("Undid: {}", description),
-                    Err(e) => warn!("Cannot undo: {}", e),
+                    Ok(description) => info!("handle_arm_action says: Undid: {}", description),
+                    Err(e) => warn!("handle_arm_action says: Cannot undo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
                 {
                     self.update_grid_display()?;
                     let connected_grids = self.grid.get_connected_grids();
                     if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_button_leds(grid_id)?;
+                        self.restore_arm_action_leds(grid_id)?;
                     }
                 }
             }
-            4 => {
-                // Redo
+            ArmAction::Redo => {
+                // Redo last undone action
                 match self.sequencer.redo() {
-                    Ok(description) => info!("Redid: {}", description),
-                    Err(e) => warn!("Cannot redo: {}", e),
+                    Ok(description) => info!("handle_arm_action says: Redid: {}", description),
+                    Err(e) => warn!("handle_arm_action says: Cannot redo: {}", e),
                 }
                 #[cfg(feature = "hardware")]
                 {
                     self.update_grid_display()?;
                     let connected_grids = self.grid.get_connected_grids();
                     if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_button_leds(grid_id)?;
+                        self.restore_arm_action_leds(grid_id)?;
                     }
                 }
             }
-            5 => {
-                // Generate Euclidean rhythm
+            ArmAction::EuclidianEvents => {
+                // Set Euclidean rhythm events count
                 if let Some(held_row) = self.get_first_held_row() {
                     self.sequencer.generate_euclidean_rhythm(held_row, 5, 16, 0);
-                    info!("Generated Euclidean rhythm for row {}", held_row);
+                    info!("handle_arm_action says: Generated Euclidean rhythm with 5 events for row {}", held_row);
                     #[cfg(feature = "hardware")]
                     {
                         self.update_grid_display()?;
                         let connected_grids = self.grid.get_connected_grids();
                         if let Some(grid_id) = connected_grids.first() {
-                            self.restore_arm_button_leds(grid_id)?;
+                            self.restore_arm_action_leds(grid_id)?;
                         }
                     }
+                } else {
+                    info!("handle_arm_action says: No row held for Euclidean events");
                 }
             }
-            6 => {
-                // Copy pattern section
-                if self.has_held_positions() {
-                    info!("Copy selected pattern section");
-                    // Implementation would depend on held position logic
-                }
-            }
-            7 => {
-                // Scroll pattern
-                self.sequencer.scroll_pattern(1, 0); // Scroll right
-                info!("Scrolled pattern right");
-                #[cfg(feature = "hardware")]
-                {
-                    self.update_grid_display()?;
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_button_leds(grid_id)?;
+            ArmAction::EuclidianLength => {
+                // Set Euclidean rhythm length
+                if let Some(held_row) = self.get_first_held_row() {
+                    self.sequencer.generate_euclidean_rhythm(held_row, 3, 8, 0);
+                    info!("handle_arm_action says: Generated Euclidean rhythm with length 8 for row {}", held_row);
+                    #[cfg(feature = "hardware")]
+                    {
+                        self.update_grid_display()?;
+                        let connected_grids = self.grid.get_connected_grids();
+                        if let Some(grid_id) = connected_grids.first() {
+                            self.restore_arm_action_leds(grid_id)?;
+                        }
                     }
+                } else {
+                    info!("handle_arm_action says: No row held for Euclidean length");
                 }
             }
-            8 => {
-                // Chain mode toggle
-                let chain_enabled = !self.sequencer.is_chain_mode_enabled();
-                self.sequencer.set_chain_mode(chain_enabled);
-                info!("Chain mode: {}", if chain_enabled { "enabled" } else { "disabled" });
+            ArmAction::EuclidianRotation => {
+                // Set Euclidean rhythm rotation
+                if let Some(held_row) = self.get_first_held_row() {
+                    self.sequencer.generate_euclidean_rhythm(held_row, 5, 16, 4);
+                    info!("handle_arm_action says: Generated Euclidean rhythm with rotation 4 for row {}", held_row);
+                    #[cfg(feature = "hardware")]
+                    {
+                        self.update_grid_display()?;
+                        let connected_grids = self.grid.get_connected_grids();
+                        if let Some(grid_id) = connected_grids.first() {
+                            self.restore_arm_action_leds(grid_id)?;
+                        }
+                    }
+                } else {
+                    info!("handle_arm_action says: No row held for Euclidean rotation");
+                }
             }
-            _ => {}
+            ArmAction::Ratchet => {
+                // Ratchet functionality - placeholder
+                info!("handle_arm_action says: Ratchet action - not yet implemented");
+            }
+            ArmAction::PresetGrid => {
+                // Preset grid functionality - placeholder
+                info!("handle_arm_action says: Preset grid action - not yet implemented");
+            }
         }
-        
         Ok(())
     }
+
+
     
     #[cfg(feature = "hardware")]
     fn handle_mozart_grid_press(&mut self, x: usize, y: usize) -> Result<()> {
@@ -911,26 +944,28 @@ impl SimonSaysSeeq {
         None
     }
 
-    /// Check if any ARM button is currently active
-    fn has_active_arm_button(&self) -> bool {
-        self.active_arm_button.is_some()
+    /// Check if any ARM action is currently active
+    fn has_active_arm_action(&self) -> bool {
+        self.active_arm_action.is_some()
     }
     
-    /// Get the currently active ARM button index
-    fn get_active_arm_button(&self) -> Option<usize> {
-        self.active_arm_button
+    /// Get the currently active ARM action
+    fn get_active_arm_action(&self) -> Option<ArmAction> {
+        self.active_arm_action
     }
     
-    /// Check if specific ARM button is active
-    fn is_arm_button_active(&self, button_index: usize) -> bool {
-        self.active_arm_button == Some(button_index)
+    /// Check if specific ARM action is active
+    fn is_arm_action_active(&self, action: ArmAction) -> bool {
+        self.active_arm_action == Some(action)
     }
 
     /// Restore ARM button LED state after grid operations that might have cleared it
     #[cfg(feature = "hardware")]
-    fn restore_arm_button_leds(&mut self, grid_id: &str) -> Result<()> {
-        if let Some(button_index) = self.active_arm_button {
-            self.grid.set_led(grid_id, button_index, 7, 10, "restore_arm_leds")?;
+    /// Restore ARM action LEDs after grid display update
+    fn restore_arm_action_leds(&mut self, grid_id: &str) -> Result<()> {
+        if let Some(action) = self.active_arm_action {
+            let column = action.to_column();
+            self.grid.set_led(grid_id, column, 7, 10, "restore_arm_action_leds")?;
         }
         self.grid.refresh()?;
         Ok(())
