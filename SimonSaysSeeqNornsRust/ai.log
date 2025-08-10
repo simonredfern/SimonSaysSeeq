@@ -1397,3 +1397,17 @@ kill 14815 16252 16404 16463
 #   - Row 2 malfunction caused by coordinate/timing issues within restriction
 #   - System designed to only use 2 rows, not full 8-row capability
 # STATUS: Hardware working correctly, software intentionally limited to rows 1-2 only
+
+## 2025-08-10 23:18:57 Code Clarity Improvement - Renamed led_states to assumed_led_states
+# CHANGE: Renamed led_states to assumed_led_states in GridManager for better clarity
+# PURPOSE: Makes it clear this tracks assumed LED state based on sent commands, not verified hardware state
+# LOCATIONS UPDATED:
+#   - GridManager struct field declaration
+#   - new() constructor initialization
+#   - connect_to_device() LED state initialization  
+#   - set_led() state cache update
+#   - get_led() state query function
+#   - clear_all() state reset operation
+# BENEFIT: Eliminates confusion between display state cache and sequence pattern data
+# CONFIRMATION: All changes compiled successfully, no functional impact
+# STATUS: Code clarity improved, separation between display and sequence data emphasized

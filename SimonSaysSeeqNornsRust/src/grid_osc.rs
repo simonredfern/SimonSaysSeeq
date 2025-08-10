@@ -42,7 +42,7 @@ pub struct GridManager {
     #[cfg(feature = "rosc")]
     socket: UdpSocket,
     devices: HashMap<String, GridDevice>,
-    led_states: HashMap<(String, usize, usize), u8>,
+    assumed_led_states: HashMap<(String, usize, usize), u8>,
     #[cfg(feature = "rosc")]
     local_port: u16,
 }
@@ -64,7 +64,7 @@ impl GridManager {
             let mut manager = Self {
                 socket,
                 devices: HashMap::new(),
-                led_states: HashMap::new(),
+                assumed_led_states: HashMap::new(),
                 local_port,
             };
 
@@ -79,7 +79,7 @@ impl GridManager {
             info!("new says: OSC grid support disabled (rosc feature not enabled)");
             Ok(Self {
                 devices: HashMap::new(),
-                led_states: HashMap::new(),
+                assumed_led_states: HashMap::new(),
             })
         }
     }
@@ -264,7 +264,7 @@ impl GridManager {
         // Initialize LED state tracking
         for x in 0..cols {
             for y in 0..rows {
-                self.led_states.insert((device_id.to_string(), x, y), 0);
+                self.assumed_led_states.insert((device_id.to_string(), x, y), 0);
             }
         }
 
@@ -319,7 +319,7 @@ impl GridManager {
         };
 
         // Update internal state
-        self.led_states.insert((grid_id.to_string(), x, y), brightness);
+        self.assumed_led_states.insert((grid_id.to_string(), x, y), brightness);
 
         // Send OSC command
         let device_addr = format!("127.0.0.1:{}", device.port);
@@ -362,7 +362,7 @@ impl GridManager {
 
     /// Get current LED state
     pub fn get_led(&self, grid_id: &str, x: usize, y: usize) -> u8 {
-        self.led_states.get(&(grid_id.to_string(), x, y)).copied().unwrap_or(0)
+        self.assumed_led_states.get(&(grid_id.to_string(), x, y)).copied().unwrap_or(0)
     }
 
     /// Clear all LEDs on a grid
@@ -380,7 +380,7 @@ impl GridManager {
         // Clear internal state
         for x in 0..device.cols {
             for y in 0..device.rows {
-                self.led_states.insert((grid_id.to_string(), x, y), 0);
+                self.assumed_led_states.insert((grid_id.to_string(), x, y), 0);
             }
         }
 
