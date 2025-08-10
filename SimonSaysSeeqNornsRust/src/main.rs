@@ -43,6 +43,7 @@ pub struct SimonSaysSeeq {
     config: Config,
     running: Arc<AtomicBool>,
     tempo: f32,
+    main_grid_preference: Option<String>,
 }
 
 impl SimonSaysSeeq {
@@ -61,6 +62,7 @@ impl SimonSaysSeeq {
             config,
             running: Arc::new(AtomicBool::new(false)),
             tempo: 120.0,
+            main_grid_preference: Some("m2949672".to_string()), // Default main grid
         })
     }
 
@@ -129,6 +131,19 @@ impl SimonSaysSeeq {
         // Flash all connected grids for visual feedback
         if let Err(e) = self.grid.flash_all_grids() {
             warn!("Failed to flash grids on sequencer start: {}", e);
+        }
+        
+        // Initialize main grid with some default pattern for testing
+        #[cfg(feature = "hardware")]
+        {
+            // Set some test pattern on main sequencer
+            self.sequencer.set_grid_value(1, 1, 1);
+            self.sequencer.set_grid_value(5, 1, 2);
+            self.sequencer.set_grid_value(9, 1, 1);
+            self.sequencer.set_grid_value(13, 1, 2);
+            
+            // Update main grid initially
+            self.update_grid_display()?;
         }
         
         // Main event loop
@@ -358,7 +373,7 @@ impl SimonSaysSeeq {
     fn handle_sequencer_event(&mut self, event: SequencerEvent) -> Result<()> {
         match event {
             SequencerEvent::Step { step, bar } => {
-                info!("🥁 Step {}.{}", bar, step);
+                info!("🥁 Step {}.{} | Running: {}", bar, step, self.sequencer.is_running());
                 
                 // Advance CO2 step counter
                 let step_co2_value = self.co2.advance_step();
@@ -392,7 +407,12 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
                 
-                // Grid display updated only on user interaction, not every step
+                // Don't update grid on every step for now - only on button press
+                info!("🎯 Pattern check: 1,1={}, 5,1={}, 9,1={}, 13,1={}", 
+                      self.sequencer.get_grid_value(1, 1),
+                      self.sequencer.get_grid_value(5, 1),
+                      self.sequencer.get_grid_value(9, 1), 
+                      self.sequencer.get_grid_value(13, 1));
             }
             
             SequencerEvent::Beat { beat } => {
@@ -442,12 +462,12 @@ impl SimonSaysSeeq {
         info!("Grid {} {} at ({}, {}) -> seq({}, {})", 
               grid_id, if pressed { "press" } else { "release" }, x, y, seq_x, seq_y);
         
-        // Route to first grid as main sequencer, second grid as Mozart
+        // Route based on main grid preference or discovery order
         let connected_grids = self.grid.get_connected_grids();
-        let is_first_grid = connected_grids.first().map(|id| id == grid_id).unwrap_or(false);
-        let is_second_grid = connected_grids.get(1).map(|id| id == grid_id).unwrap_or(false);
+        let main_grid = self.get_main_grid_id(&connected_grids);
+        let is_main_grid = main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false);
         
-        if is_first_grid {
+        if is_main_grid {
             // Main sequencer grid
             if seq_y <= 7 {
                 // Sequence rows (1-7) - only handle button presses, not releases
@@ -458,20 +478,19 @@ impl SimonSaysSeeq {
                     } else {
                         // Normal grid operation - toggle or cycle ratchet
                         let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let new_value = match current_value {
-                            0 => 1,
-                            1 => 2, // Ratchet
-                            2 => 4, // Double ratchet
-                            _ => 0, // Clear
-                        };
+                        let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
+                        
+                        info!("🔄 BUTTON TOGGLE: grid[{}][{}] {} -> {} (press at grid {},{})", 
+                              seq_x, seq_y, current_value, new_value, x, y);
                                 
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
                         #[cfg(feature = "hardware")]
                         {
-                            self.grid.set_led(grid_id, x, y, if new_value > 0 { new_value.min(15) } else { 0 })?;
+                            let brightness = if new_value > 0 { 8 } else { 0 };
+                            self.grid.set_led(grid_id, x, y, brightness)?;
+                            info!("🔥 LED UPDATE: grid({}, {}) -> brightness {} for value {} | Should be {}", 
+                                  x, y, brightness, new_value, if new_value > 0 { "ON" } else { "OFF" });
                         }
-                                
-                        info!("Set grid[{}][{}] = {}", seq_x, seq_y, new_value);
                     }
                 }
             } else {
@@ -480,13 +499,8 @@ impl SimonSaysSeeq {
                     self.handle_control_button(seq_x, seq_y)?;
                 }
             }
-        } else if is_second_grid {
-            // Mozart MIDI note control grid - only handle presses
-            if pressed {
-                self.handle_mozart_grid_press(seq_x, seq_y)?;
-            }
         } else {
-            warn!("Unknown grid ID: {}", grid_id);
+            info!("Ignoring second grid - focusing on main grid only");
         }
         
         Ok(())
@@ -664,22 +678,58 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_grid_display(&mut self) -> Result<()> {
-        // Update grid one with current sequence state
-        for x in 1..=16 {
-            for y in 1..=7 {
-                let value = self.sequencer.get_grid_value(x, y);
-                let brightness = if value > 0 { 5 } else { 0 };
-                let connected_grids = self.grid.get_connected_grids();
-                if let Some(grid_id) = connected_grids.first() {
-                    // Convert from sequencer coordinates (1-based) to grid coordinates (0-based)
-                    self.grid.set_led(grid_id, x - 1, y - 1, brightness)?;
-                }
-            }
+        let connected_grids = self.grid.get_connected_grids();
+        
+        // Update only the main grid
+        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            self.update_main_grid_display(&main_grid_id)?;
         }
         
         self.grid.refresh()?;
         Ok(())
     }
+    
+    #[cfg(feature = "hardware")]
+    fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
+        // Simple grid display - just show pattern data
+        for seq_y in 1..=7 {
+            for seq_x in 1..=16 {
+                let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
+                
+                // Simple brightness: 0 = off, 1+ = half brightness
+                let brightness = if pattern_value > 0 { 8 } else { 0 };
+                
+                debug!("🎯 Grid update: pos({}, {}) pattern={} -> brightness={}", 
+                       seq_x, seq_y, pattern_value, brightness);
+                
+                // Convert to 0-based grid coordinates
+                self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Set main grid preference
+    pub fn set_main_grid_preference(&mut self, grid_id: String) {
+        info!("Setting main grid preference to: {}", grid_id);
+        self.main_grid_preference = Some(grid_id);
+    }
+    
+    /// Get the main grid ID based on preference or discovery order
+    fn get_main_grid_id(&self, connected_grids: &[String]) -> Option<String> {
+        if let Some(preferred_id) = &self.main_grid_preference {
+            if connected_grids.contains(preferred_id) {
+                info!("Using preferred main grid: {}", preferred_id);
+                return Some(preferred_id.clone());
+            } else {
+                warn!("Preferred main grid {} not found, using first available", preferred_id);
+            }
+        }
+        
+        connected_grids.first().cloned()
+    }
+
     
     // Helper methods for advanced grid operations
     
@@ -810,6 +860,24 @@ fn main() -> Result<()> {
     
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
+    let mut main_grid_id: Option<String> = None;
+    
+    // Parse grid selection argument
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--main-grid" => {
+                if i + 1 < args.len() {
+                    main_grid_id = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    eprintln!("Error: --main-grid requires a grid ID argument");
+                    std::process::exit(1);
+                }
+            }
+            _ => i += 1,
+        }
+    }
     
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
@@ -818,11 +886,12 @@ fn main() -> Result<()> {
         println!("USAGE:");
         println!("    simon_says_seeq [OPTIONS]\n");
         println!("OPTIONS:");
-        println!("    -h, --help       Print help information");
-        println!("    -v, --version    Print version information");
-        println!("    --config <FILE>  Use custom configuration file");
-        println!("    --no-hardware    Disable hardware features (simulation mode)");
-        println!("    --no-midi        Disable MIDI features");
+        println!("    -h, --help           Print help information");
+        println!("    -v, --version        Print version information");
+        println!("    --config <FILE>      Use custom configuration file");
+        println!("    --no-hardware        Disable hardware features (simulation mode)");
+        println!("    --no-midi            Disable MIDI features");
+        println!("    --main-grid <ID>     Specify which grid to use as main sequencer (default: m2949672)");
 
         return Ok(());
     }
@@ -842,6 +911,12 @@ fn main() -> Result<()> {
     
     // Create and run application
     let mut app = SimonSaysSeeq::new()?;
+    
+    // Set main grid preference if specified
+    if let Some(grid_id) = main_grid_id {
+        app.set_main_grid_preference(grid_id);
+    }
+    
     app.run()?;
     
     Ok(())

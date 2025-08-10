@@ -246,3 +246,79 @@ kill 14815 16252 16404 16463
 # Task: Rename RowSettings to MainRowStates for clarity
 # Reason: Better distinction between main sequencer row states vs other sequencer types
 # Files to update: src/sequencer.rs and any references in other files
+# Status: Completed successfully - all references updated
+
+## 2025-08-10 01:47:39 Grid Position Display Issue
+# Discovery: Each MainRowStates has current_step that increments independently
+# Each row can have different loop lengths (first_step to last_step)
+# Issue: Grid display doesn't show current position scrolling for each row
+# Need: Modify update_grid_display() to show current step position visually
+# Expected: Each row should highlight its current step position as it advances
+
+## 2025-08-10 01:49:29 Multiple Grid Display Issues
+# Issue 1: Pattern data not showing on grid - steps don't light up when set
+# Issue 2: Grid independence broken - pressing button on one grid affects other grid at offset position
+# Issue 3: Need to implement position scrolling display for each row
+# Root cause: Grid display logic needs complete overhaul for proper pattern and position display
+# Two grids should be completely independent with different functions
+
+## 2025-08-10 01:52:31 Grids Animating But Not Scrolling
+# Progress: Both grids now animating in time independently 
+# Issue: No scrolling/position display visible - current step highlighting not working
+# Problem: Either MainRowStates.current_step not updating correctly or display logic flawed
+# Clarification: Only main grid should scroll showing MainRowStates positions, Mozart grid should be static
+# Need: Fix Mozart grid to be static and debug main grid position scrolling
+
+## 2025-08-10 01:55:24 Focus on Main Grid Only
+# Decision: Disable Mozart grid completely for now, focus only on main grid scrolling
+# Need: Remove all Mozart grid handling and concentrate on main grid position display
+# Goal: Get main grid showing pattern data + current step positions scrolling properly
+
+## 2025-08-10 02:02:38 Grid Assignment Decision
+# Grid assignment: m2949672 should be the main grid for MainRowStates by default
+# Grid m5032747 will be secondary/Mozart grid
+# Added command-line option --main-grid to override, but m2949672 is preferred default
+# This should be set as default in code for consistent behavior
+
+## 2025-08-10 02:04:23 Debugging Scrolling Issue
+# Issue: Position scrolling not visible on main grid despite animation
+# Problem: current_step highlighting logic may not be working correctly
+# Debug plan:
+#   1. Check if current_step values are actually incrementing per row
+#   2. Verify position highlighting brightness logic (0/3/8/15 system)
+#   3. Ensure grid display update timing is correct
+#   4. Test if pattern data is showing at all vs position highlights
+# Expected: Each row should show moving bright spot indicating current position
+
+## 2025-08-10 02:08:23 Simplify to Basic Button Press Test
+# Decision: Step back to basics - focus on simple button press functionality
+# Goal: When pressing an OFF button (LED totally off), it should turn ON with half brightness
+# Need: Remove complex scrolling logic, test basic pattern setting and LED response
+# Expected: Press button -> LED lights up at medium brightness -> pattern data stored
+
+## 2025-08-10 02:10:36 Basic Button Press Working with Delay
+# Success: Button press functionality working - LEDs turn on/off at half brightness
+# Issue: Short delay between button press and LED response
+# Cause: Likely double grid update - immediate LED set + full grid refresh
+# Optimization needed: Remove redundant grid updates or improve OSC timing
+# Status: Core functionality confirmed working, need to improve responsiveness
+
+## 2025-08-10 02:13:10 Focus on Button Turn Off
+# Issue: Need to confirm button turn off functionality
+# Goal: When pressing active button (LED on), it should turn off (LED brightness 0)
+# State storage: Pattern values stored in main sequencer grid structure
+# Cycling logic: 0 -> 1 -> 2 -> 4 -> 0 (off -> on -> ratchet -> double ratchet -> off)
+# Need: Verify the cycling works correctly and LEDs respond to all states
+
+## 2025-08-10 02:15:36 Simplify to On/Off Toggle Only
+# Change: Remove button cycling - just simple on/off toggle
+# Logic: 0 (off) -> 1 (on) -> 0 (off) -> 1 (on) - no ratcheting
+# Goal: Press button -> toggle between on/off states only
+# Ratcheting is separate functionality, not needed for basic button press
+
+## 2025-08-10 02:17:25 Basic Button Toggle Confirmed Working
+# Success: Button on/off toggle functionality working correctly
+# Grid m2949672 responding properly to button presses
+# LED states: OFF (brightness 0) <-> ON (brightness 8)
+# Pattern data stored correctly in sequencer grid structure
+# Status: Core button interaction working, ready for next feature
