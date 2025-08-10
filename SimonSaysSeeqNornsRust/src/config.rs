@@ -142,7 +142,7 @@ impl Default for GridConfig {
 impl Default for SequencerConfig {
     fn default() -> Self {
         Self {
-            default_tempo: 120.0,
+            default_tempo: 60.0,
             steps_per_bar: 16,
             ticks_per_step: 12,
             default_first_step: 1,
