@@ -1,0 +1,108 @@
+step,time_s,turned_on_bright,turned_on_dim,got_brighter,got_dim,turned_off
+2,0.202,,,,r5c14 r8c7 r8c9,r5c2
+3,0.405,,r5c2 r6c2,r3c2 r5c3 r5c14 r6c3 r6c4 r6c5 r6c14 r7c4 r8c6 r8c7 r8c9,,
+4,0.607,,r7c2 r8c2,r4c2 r5c2 r7c3 r7c5 r7c14 r8c3 r8c4 r8c5 r8c14,,
+5,0.81,,,r6c2 r7c2 r8c2,,
+6,1.012,,,,r1c8 r1c12 r2c8 r3c8,
+7,1.215,,,,r1c4 r1c13 r2c12 r4c8,
+8,1.417,,,,r1c7 r1c11 r2c7 r2c11 r3c6 r3c7 r3c9 r3c10 r3c11,
+9,1.62,,,r1c11 r2c11,r1c9 r2c9 r2c16 r3c12 r3c13,
+10,1.822,,,r1c13 r2c16,r1c11 r2c11 r3c1,
+11,2.025,,,,r1c13 r2c4 r2c13,
+12,2.227,,,,r2c5 r2c16 r3c15 r4c7 r4c9 r4c10,
+13,2.43,,,r2c4 r2c5 r3c1 r3c15 r4c7 r4c9 r4c10,,
+14,2.632,,,,r1c16 r2c4 r2c5 r3c1 r4c1 r4c10,
+15,2.835,,,r1c16,r1c1 r1c2 r1c3 r1c5 r2c1 r3c15 r4c6 r4c7,
+16,3.037,,,r1c2 r1c5,r1c16 r3c5 r4c9 r4c11,
+17,3.24,,,r1c3,r5c8,
+18,3.442,,,r1c16 r3c15,,
+19,3.645,,,,r3c15 r4c13,
+20,3.847,,,r1c1 r2c1 r2c5 r2c7 r3c1 r3c5 r3c6 r3c10 r3c15 r4c11 r4c13,,
+21,4.05,,,r2c4,r1c1 r1c3 r1c5 r2c5 r2c7 r3c1 r3c4 r3c5 r3c6 r3c10 r4c4 r4c5 r4c11 r4c12 r4c13 r4c15 r5c1 r5c6 r5c7 r5c9,
+22,4.252,,,,r1c14 r1c16 r2c3 r2c4 r3c3 r4c3 r5c4 r5c5 r5c10 r6c1 r6c8,
+23,4.455,,,r2c8,r3c2 r3c14 r4c2 r5c3 r5c11 r5c12 r5c13 r6c6 r6c7,
+24,4.657,,,,r1c2 r2c8 r2c14 r3c16,
+25,4.86,,,r2c12,r4c14 r4c16,
+26,5.062,,,r2c14 r5c3,r2c12 r5c15,
+27,5.265,,,r1c2 r3c2 r4c2 r4c3 r4c14 r4c16 r5c4 r5c5 r5c10 r5c11 r5c12 r5c15 r6c1 r6c6 r6c7 r6c8,,
+28,5.467,,,r3c14 r4c4 r5c1 r5c6 r5c7 r5c9 r5c13,r8c2,
+29,5.67,,,,r3c14 r4c4 r5c1,
+30,5.94,,,r8c2,r3c15 r4c3 r5c6 r5c7 r5c9,
+31,6.142,,,r3c14 r3c15 r4c15 r5c6,r1c2 r2c1 r2c14 r4c16 r5c13 r5c15 r6c8 r8c2,
+32,6.345,,,r1c2 r4c3 r5c1 r5c15 r6c8 r8c2,,
+33,6.547,,,r3c3,r5c10 r5c12 r5c15,
+34,6.75,,,r4c4 r5c10,r4c15 r5c1 r8c2,
+35,6.952,,,r5c1,r4c4 r5c6 r5c11,
+36,7.155,,,r3c1 r3c6 r3c10 r8c2,r3c14 r5c1 r5c10,
+37,7.425,,,,r1c2 r3c3 r4c3 r4c14 r6c1 r6c8,
+38,7.627,,,r3c8,r5c4 r5c5,
+39,7.83,,,,r2c2 r3c8 r5c3 r6c6 r6c7,
+40,8.1,,,r3c13 r3c14,r4c2 r6c9 r6c10 r6c11 r6c13,
+41,8.302,,,r3c16 r6c13,r3c13 r3c14 r5c16,
+42,8.572,,,,r3c16 r6c5 r6c12 r6c13,
+43,8.775,,,r5c16 r6c5 r6c12,,
+44,9.045,,,r4c2 r6c10 r6c11 r6c13,,
+45,9.315,,,r4c10 r5c3 r6c6,r2c6 r3c1 r3c10 r8c2,
+46,9.517,,,r8c2,r6c6 r6c10 r6c11,
+47,9.72,,,r2c2 r5c4 r5c5 r6c1 r6c6 r6c10,r8c2,
+48,9.922,,,,r5c5 r6c10,
+49,10.125,,,r3c1 r4c1 r4c3 r4c5 r4c6 r4c14 r4c15 r5c1 r5c5 r5c15,r6c12,
+50,10.327,,,r4c4,r3c1 r4c3 r4c5 r5c1 r5c3 r5c4 r5c5 r6c1 r6c6 r6c13,
+51,10.53,,,r4c5,r4c4 r5c15 r5c16 r7c14 r8c14,
+52,10.732,,,r4c8,r2c2 r4c5 r6c4 r6c5,
+53,10.935,,,r6c4,r4c8 r4c14 r7c2 r7c8,
+54,11.137,,,r4c12 r7c8,r5c14 r6c4 r6c14 r6c15,
+55,11.34,,,r4c14 r5c15,r4c12 r7c8,
+56,11.61,,,r7c2,r3c2 r4c14 r5c15 r6c3 r7c1,
+57,11.88,,,r6c14 r7c14 r8c2 r8c14,r5c2 r7c6 r7c7 r7c9,
+58,12.082,,,,r6c16 r7c10 r7c11 r7c13 r8c1,
+59,12.285,,,r5c1 r5c2,r1c15 r2c10 r4c1 r4c2 r4c15 r7c4 r7c12,
+60,12.487,,,r6c16 r7c12,r6c2 r7c3 r7c5 r8c8,
+61,12.825,,,r7c11 r7c13 r8c8,,
+62,13.095,,,r6c2 r7c3 r7c4 r7c5 r7c10,,
+63,13.297,,,r4c2 r5c6 r5c10 r5c14 r5c15 r6c15 r7c9 r8c1,,
+64,13.5,,,r5c4 r5c16,,
+65,13.702,,,r5c5,r4c2 r5c4 r5c16 r8c2 r8c14,
+66,13.905,,,r5c8 r8c2 r8c14,r5c5 r7c9,
+67,14.107,,,,r5c8 r8c1,
+68,14.31,,,r5c12 r8c1,r7c10 r7c11,
+69,14.512,,,r4c2 r7c11,r5c12 r8c2,
+70,14.715,,,r7c9 r7c10,r7c14 r8c14,
+71,14.917,,,r7c6,r6c14,
+72,15.187,,,r6c14 r7c14 r8c2,r4c2 r6c15 r7c6 r7c10 r7c11 r8c1,
+73,15.39,,,r6c15 r8c14,r4c10 r5c1 r5c2 r5c14 r6c2 r6c16 r7c3 r7c4 r7c5 r7c9 r7c12 r7c13 r8c8,
+74,15.592,,,,r1c6 r8c3 r8c4 r8c6 r8c7 r8c9 r8c10 r8c11,
+75,15.795,,,,r6c14 r7c2 r7c16 r8c5 r8c12 r8c13,
+76,16.065,,,,r7c15 r8c15,
+77,16.402,,,r5c1 r5c2 r6c1 r6c2 r6c6 r6c10 r7c2 r8c5 r8c15,,
+78,16.605,,,r6c4,r5c1 r5c2 r8c5 r8c15,
+79,16.807,,,r8c15,r6c4 r7c2,
+80,17.01,,,r6c8 r7c2,r8c15,
+81,17.212,,,r6c9 r7c16,r6c8,
+82,17.415,,,r5c2 r6c11 r6c12 r6c14 r8c3 r8c15,r6c9 r8c14,
+83,17.617,,,r6c13 r7c15 r8c4 r8c5,r6c11 r6c12 r7c14 r8c2,
+84,17.887,,,r7c14 r8c2,r6c13 r7c15 r8c4 r8c5,
+85,18.225,,,r8c14,r5c2 r6c14 r7c14 r7c16 r8c3 r8c15,
+86,18.562,,,r7c14 r7c15 r8c15,r3c15 r6c1 r6c2,
+87,18.9,,,,r7c2 r8c15,
+88,19.17,,,,r7c14 r8c2 r8c14 r8c16,r4c1
+89,19.372,,,,,r1c1 r4c2 r5c1 r5c2 r6c1 r6c2
+90,19.575,,r1c1 r5c2 r6c1 r6c2,r7c1 r7c2 r7c6 r7c10,,
+91,20.047,,,,,r1c1 r4c3 r5c2 r6c1
+92,20.25,,,r7c8 r7c9,,r3c1 r3c2 r4c4 r5c3 r6c2 r6c3 r8c1
+93,20.452,,r3c2 r4c4,r7c11,r7c8 r7c9,
+94,20.655,,,r7c12 r7c13 r7c14,r7c11,r3c2 r4c4
+95,20.857,,,r7c16,r7c12 r7c13 r7c14,r1c2 r3c3 r5c4 r6c4 r7c3 r8c2
+96,21.06,,,,r7c16,r1c3 r2c1 r4c5 r8c3
+97,21.465,,,,r7c1,r2c2
+98,21.667,,,r1c6 r3c10,r6c6 r7c6,r1c4 r3c4 r5c5 r6c5 r7c1 r7c2 r7c4 r8c4
+99,21.87,,,,r1c10 r2c15 r6c10,r2c3 r6c6 r7c5
+100,22.207,,r7c5,,,r3c5
+101,22.477,,,,,r1c5 r2c4 r7c5
+102,22.747,,,,,r6c7 r8c5
+103,22.95,,,,,r1c8 r5c7 r7c6
+104,23.152,,r5c7 r7c6,,,r1c13
+105,23.49,,,,,r2c8 r7c6
+106,23.76,,,,,r2c5 r4c7 r4c8 r5c7 r5c8 r6c8 r7c7 r8c6
+107,24.03,,,,,r1c9 r1c10
+108,24.3,,,,,r1c11 r1c12
