@@ -544,3 +544,53 @@ kill 14815 16252 16404 16463
 # Current brightness levels: 0 (off), 4 (position only), 8 (pattern only), 12 (pattern+position)
 # Investigation needed: Verify scrolling position indicator visibility and timing
 # Goal: Ensure position scrolling is clearly visible and appropriately bright across all rows
+## 2025-08-10 10:52:43 Position Brightness Increased to 40%
+# APPLIED: Increased position-only brightness from level 4 (25%) to level 6 (40%)
+# LOCATIONS UPDATED:
+#   - src/main.rs line 705: (false, true) => 6,  // 40% - No pattern, but current position
+#   - src/main.rs line 731: (false, true) => 6,  // 40% - No pattern, but current position
+#
+# NEW BRIGHTNESS SCHEME:
+#   - 0: Off (no pattern, not current position)
+#   - 6: Position only (40% - increased from 25%)
+#   - 8: Pattern only (50% - unchanged)  
+#   - 12: Pattern + position (75% - unchanged)
+#
+# EXPECTATION: Level 6 should provide better visibility for position scrolling
+# while maintaining clear distinction from pattern brightness (level 8)
+# NEXT: Test updated brightness levels with grid to verify improvement
+
+## 2025-08-10 10:54:16 Pattern Brightness Increased to 65%
+# APPLIED: Increased pattern-only brightness from level 8 (50%) to level 10 (65%)
+# LOCATIONS UPDATED:
+#   - src/main.rs line 706: (true, false) => 10,  // 65% - Has pattern, not current position
+#   - src/main.rs line 732: (true, false) => 10,  // 65% - Has pattern, not current position
+#
+# UPDATED BRIGHTNESS SCHEME:
+#   - 0: Off (no pattern, not current position)
+#   - 6: Position only (40%)
+#   - 10: Pattern only (65% - increased from 50%)
+#   - 12: Pattern + position (75% - unchanged)
+#
+# BENEFIT: Larger brightness gap between position (40%) and pattern (65%)
+# should improve visual distinction and make patterns more prominent
+# NEXT: Test complete brightness scheme for optimal visibility
+
+## 2025-08-10 10:55:07 Pattern+Position Brightness Increased to 90% - Complete
+# APPLIED: Increased pattern+position brightness from level 12 (75%) to level 14 (90%)
+# LOCATIONS UPDATED:
+#   - src/main.rs line 707: (true, true) => 14,  // 90% - Has pattern AND current position
+#   - src/main.rs line 733: (true, true) => 14,  // 90% - Has pattern AND current position
+#
+# FINAL BRIGHTNESS SCHEME COMPLETE:
+#   - 0: Off (no pattern, not current position) - 0%
+#   - 6: Position only (40% - was 25%)
+#   - 10: Pattern only (65% - was 50%)  
+#   - 14: Pattern + position (90% - was 75%)
+#
+# BRIGHTNESS OPTIMIZATION COMPLETE ✅
+# - Excellent visual separation with clear 25-point gaps
+# - Position scrolling now 60% brighter for better tracking
+# - Pattern steps 30% brighter for better visibility
+# - Combined state 20% brighter for maximum emphasis
+# - Ready for testing with improved visibility across all states

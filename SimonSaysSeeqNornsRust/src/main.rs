@@ -702,9 +702,9 @@ impl SimonSaysSeeq {
                     // 4 brightness levels based on pattern and position:
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,     // 0% - No pattern, not current position
-                        (false, true) => 4,      // 25% - No pattern, but current position  
-                        (true, false) => 8,      // 50% - Has pattern, not current position
-                        (true, true) => 12,      // 75% - Has pattern AND current position
+                        (false, true) => 6,      // 40% - No pattern, but current position  
+                        (true, false) => 10,     // 65% - Has pattern, not current position
+                        (true, true) => 14,      // 90% - Has pattern AND current position
                     };
                     
                     // Convert to 0-based grid coordinates
@@ -728,9 +728,9 @@ impl SimonSaysSeeq {
             // Same brightness logic as main display
             let brightness = match (pattern_value > 0, is_current_step) {
                 (false, false) => 0,     // No pattern, not current position
-                (false, true) => 4,      // No pattern, but current position  
-                (true, false) => 8,      // Has pattern, not current position
-                (true, true) => 12,      // Has pattern AND current position
+                (false, true) => 6,      // No pattern, but current position  
+                (true, false) => 10,     // Has pattern, not current position
+                (true, true) => 14,      // Has pattern AND current position
             };
             
             // Convert to 0-based grid coordinates and update immediately
