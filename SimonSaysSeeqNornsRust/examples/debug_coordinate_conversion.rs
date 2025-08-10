@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Setting LED: seq({},{}) -> grid({},{}) brightness 10", 
                     seq_x, seq_y, grid_x, grid_y);
             
-            grid_manager.set_led(main_grid_id, grid_x, grid_y, 10)?;
+            grid_manager.set_led(main_grid_id, grid_x, grid_y, 12)?;
         }
         
         grid_manager.refresh()?;
@@ -66,13 +66,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Clear previous position indicator
             for x in 0..16 {
                 let pattern_exists = test_positions.contains(&(x + 1));
-                let brightness = if pattern_exists { 10 } else { 0 }; // Pattern only
+                let brightness = if pattern_exists { 12 } else { 0 }; // Pattern only - BRIGHT
                 grid_manager.set_led(main_grid_id, x, seq_y - 1, brightness)?;
             }
             
             // Set current position with higher brightness
             let pattern_exists = test_positions.contains(&current_step);
-            let brightness = if pattern_exists { 14 } else { 6 }; // Position or pattern+position
+            let brightness = if pattern_exists { 15 } else { 8 }; // Position or pattern+position - MAX or MEDIUM
             grid_manager.set_led(main_grid_id, current_step - 1, seq_y - 1, brightness)?;
             
             grid_manager.refresh()?;
@@ -103,10 +103,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let is_current_step = seq_x == current_step;
             
             let brightness = match (pattern_exists, is_current_step) {
-                (false, false) => 0,   // No pattern, not current position
-                (false, true) => 6,    // Position only
-                (true, false) => 10,   // Pattern only  
-                (true, true) => 14,    // Pattern + position
+                (false, false) => 0,   // No pattern, not current position - OFF
+                (false, true) => 8,    // Position only - MEDIUM
+                (true, false) => 12,   // Pattern only - BRIGHT
+                (true, true) => 15,    // Pattern + position - MAXIMUM
             };
             
             if brightness > 0 {
