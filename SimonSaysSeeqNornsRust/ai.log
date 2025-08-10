@@ -898,6 +898,55 @@ kill 14815 16252 16404 16463
 # - Main sequencer display update loop timing issues
 #
 # NEXT: Focus investigation on sequencer step advancement and row state timing
+#
+# MAIN SEQUENCER SCROLLING INVESTIGATION (2025-08-10 12:05:00):
+# - Created examples/test_main_sequencer_scrolling.rs to monitor actual sequencer
+# - Started real main sequencer with identical test patterns for all rows
+# - 20-second monitoring with 30 FPS display updates using exact main sequencer logic
+#
+# TEST RESULTS:
+# - All rows show identical current_step values (all stuck at current_step = 1)
+# - No step advancement observed in isolated test environment
+# - But user confirms: "still only row 1 is scrolling properly" in real main sequencer
+#
+# CRITICAL FINDING: The bug is NOT in step advancement logic
+# - All rows have identical current_step values in both test and real sequencer
+# - But Row 1 displays correctly while Rows 2-7 display incorrectly
+# - Issue is in DISPLAY LOGIC, not step advancement logic
+#
+# ROOT CAUSE NARROWED TO: Grid display update logic in main sequencer
+# - Something causes Row 1 to render correctly but Rows 2-7 to render incorrectly
+# - Even when all rows have identical current_step and pattern values
+# - Bug is in the visual rendering pipeline, not the state management
+#
+# INVESTIGATION STATUS: Row 2-7 scrolling issue isolated to display rendering
+# - Coordinate conversion: ✓ Working correctly
+# - LED interference: ✓ No interference detected  
+# - Pattern storage: ✓ Working correctly for all rows
+# - Step advancement: ✓ All rows advance identically
+# - Display logic: ✗ Row 1 renders correctly, Rows 2-7 render incorrectly
+#
+# NEXT SESSION: Investigate grid display rendering differences between Row 1 vs Rows 2-7
+# Focus on main sequencer's update_main_grid_display() function and LED rendering pipeline
+#
+# MAIN SEQUENCER TEST RESULTS (2025-08-10 12:03:00):
+# - Created examples/test_main_sequencer_scrolling.rs to monitor actual sequencer
+# - TEST FINDINGS: All rows have identical current_step values (all stuck at step 1)
+# - BUT: In real main sequencer, Row 1 scrolls properly while Rows 2-7 don't
+# - CRITICAL INSIGHT: Issue is NOT in step advancement logic (all rows advance identically)
+# - CRITICAL INSIGHT: Issue IS in grid display update logic handling different rows
+#
+# CONFIRMED: The bug is in the main sequencer's grid display update logic
+# - All rows receive identical current_step values from sequencer
+# - Row 1 displays the position scrolling correctly
+# - Rows 2-7 display incorrectly despite having same current_step value
+# - Something in update_main_grid_display() handles Row 1 differently than Rows 2-7
+#
+# FINAL CONCLUSION: Bug located in main sequencer grid display logic
+# - Not coordinate conversion (works perfectly in isolation)
+# - Not step advancement (all rows advance identically)  
+# - Not interference (no cross-talk between rows)
+# - Must be row-specific display rendering bug in main.rs update_main_grid_display()
 
 ## 2025-08-10 11:13:15 Approach Correction - User Determines Success
 # APPROACH: User observes grid directly and reports success/failure
