@@ -463,9 +463,9 @@ impl SimonSaysSeeq {
         let is_main_grid = main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false);
         
         if is_main_grid {
-            // Main sequencer grid - ROW 2 ONLY
-            if seq_y == 2 {
-                // Sequence row 2 only - only handle button presses, not releases
+            // Main sequencer grid - ROWS 1 AND 2 ONLY
+            if seq_y == 1 || seq_y == 2 {
+                // Sequence rows 1 and 2 only - only handle button presses, not releases
                 if pressed {
                     // Check if any positions are held for advanced operations
                     if self.has_held_positions() {
@@ -521,7 +521,8 @@ impl SimonSaysSeeq {
                         self.sequencer.clear_section(1, row, 16, 1);
                     }
                 } else {
-                    info!("Clear row 2 only");
+                    info!("Clear rows 1 and 2 only");
+                    self.sequencer.clear_section(1, 1, 16, 1);
                     self.sequencer.clear_section(1, 2, 16, 1);
                 }
                 #[cfg(feature = "hardware")]
@@ -683,8 +684,8 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
-        // Grid display with position scrolling - 4 brightness levels - ROW 2 ONLY
-        for seq_y in 2..=2 {
+        // Grid display with position scrolling - 4 brightness levels - ROWS 1 AND 2 ONLY
+        for seq_y in 1..=2 {
             let row_states = self.sequencer.get_row_states(seq_y);
             if let Some(row_state) = row_states {
                 // Debug row state every few updates
@@ -812,12 +813,14 @@ impl SimonSaysSeeq {
                     // Control row held - special functions
                     if x <= 8 {
                         // Randomize column
-                        // Only randomize row 2
+                        // Only randomize rows 1 and 2
+                        self.sequencer.randomize_section(x, 1);
                         self.sequencer.randomize_section(x, 2);
                         info!("Randomized column {}", x);
                     } else {
                         // Clear column
-                        // Only clear row 2
+                        // Only clear rows 1 and 2
+                        self.sequencer.set_grid_value(x, 1, 0);
                         self.sequencer.set_grid_value(x, 2, 0);
                         info!("Cleared column {}", x);
                     }

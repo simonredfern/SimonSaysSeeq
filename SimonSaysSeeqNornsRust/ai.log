@@ -1000,6 +1000,41 @@ kill 14815 16252 16404 16463
 # PURPOSE: Test if row 2 scrolling works properly in actual sequencer with button interaction
 # READY: cargo run to test row 2 only sequencer
 #
+## 2025-08-10 18:46:00 Row 2 Only Sequencer Test - SUCCESS
+# USER CONFIRMED: "the sequencer scrolling works for row 2 only"
+# CRITICAL SUCCESS: Row 2 scrolling works perfectly in main sequencer when isolated
+# 
+# ROOT CAUSE IDENTIFIED: Interference between multiple rows (1-7) in full sequencer
+# - Row 2 hardware/OSC communication: ✅ Working perfectly
+# - Row 2 scrolling logic: ✅ Working perfectly  
+# - Row 2 in isolation: ✅ Working perfectly
+# - Row 2 with row 1: ✅ Working perfectly
+# - Row 2 in full sequencer alone: ✅ Working perfectly
+# - Issue appears ONLY when all 7 rows active simultaneously
+#
+# PROBLEM: Grid update conflicts, LED state race conditions, or OSC timing issues
+# when processing all 112 LEDs across 7 rows in full sequencer
+# 
+# NEXT: Restore full sequencer and implement grid update optimization
+#
+## 2025-08-10 18:53:13 Rows 1+2 Sequencer Test - Partial Success, New Symptoms
+# EXECUTED: cargo run (rows 1 and 2 active sequencer)
+# USER OBSERVATION: 
+#   - Row 1: ✅ Scrolls correctly, correct LEDs lit
+#   - Row 2: ❌ No scrolling, but intermittent extra LEDs lighting up and turning off
+#
+# CRITICAL FINDING: Issue confirmed in main sequencer multi-row coordination
+# - Row 2 alone: ✅ Works perfectly
+# - Row 2 + Row 1 simple test: ✅ Works perfectly  
+# - Row 2 + Row 1 main sequencer: ❌ Row 2 fails, Row 1 works
+#
+# NEW SYMPTOM: Intermittent LED behavior on row 2 suggests conflicting updates
+# - Some other sequencer logic interfering with row 2 beyond main display loop
+# - Possible race conditions between threads updating row 2
+# - LED state conflicts from different parts of code
+#
+# ROOT CAUSE: Main sequencer multi-row coordination issues, not basic grid communication
+#
 # TEST EXECUTION RESULTS (2025-08-10 18:31:48):
 # - Started serialosc successfully: systemctl --user start serialosc
 # - Connected to both grids: m2949672 (monome 128) and m5032747 (monome one)  
