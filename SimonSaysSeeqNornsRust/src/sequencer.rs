@@ -831,6 +831,7 @@ impl Sequencer {
                       row_idx + 1, old_step, row_state.current_step, 
                       row_state.first_step, row_state.last_step);
             }
+
         }
         
         // Update CO2 counters if we have data

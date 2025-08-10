@@ -795,3 +795,76 @@ kill 14815 16252 16404 16463
 #
 # STATUS: Sequencer simplified and ready for Row 2 investigation
 # All behavior is now completely predictable and repeatable
+
+## 2025-08-10 11:20:15 Row 2-7 Flickering Instead of Advancing
+# USER OBSERVATION: Rows 2-7 are flickering rather than smoothly advancing position
+# Row 1 advances correctly, but rows 2-7 show flickering behavior
+# INVESTIGATION NEEDED: What else might be controlling or interfering with rows 2-7?
+# 
+# POSSIBLE CAUSES:
+# 1. Different timing/threading for different rows
+# 2. Grid coordinate mapping issues for rows 2-7  
+# 3. LED refresh conflicts or race conditions
+# 4. Row-specific processing logic differences
+# 5. Memory/state corruption affecting rows 2-7
+# 6. Grid hardware communication issues for specific rows
+
+## 2025-08-10 11:30:16 ROOT CAUSE FOUND - Grid Update Frequency Causing Flicker
+# BREAKTHROUGH: Debug logs reveal the actual cause of Row 2-7 flickering
+# 
+# DISCOVERY: All rows advance identically and correctly (11→12→13→14→15→16→1→2...)
+# REAL ISSUE: update_grid_display() called on every sequencer step = excessive refresh rate
+# 
+# THE PROBLEM:
+# - Every step advance triggers full grid refresh (all 112 LEDs)
+# - Position indicators constantly turn on/off as they move
+# - Rapid LED switching creates flickering appearance
+# - Row 1 may appear less flickery due to different pattern density
+# 
+# SOLUTION NEEDED: Reduce grid refresh frequency or optimize LED updates
+# - Either limit grid updates to specific intervals
+# - Or implement smarter LED update logic that minimizes flicker
+# 
+# STATUS: Root cause identified - excessive grid refresh frequency
+
+## 2025-08-10 11:32:00 Previous Analysis Incorrect - Need Simpler Approach
+# USER FEEDBACK: Previous flickering analysis doesn't make sense
+# RESET: Need to approach Row 2-7 scrolling issue more simply
+# 
+# BASIC FACTS:
+# - Row 1 scrolling works correctly (position advances smoothly)
+# - Rows 2-7 are flickering instead of smooth scrolling
+# - All rows show identical current_step values in debug
+# - Need to find simpler explanation for this difference
+
+## 2025-08-10 11:33:30 Row 2 Shows Inconsistent Steps - Race Condition or Memory Issue
+# CLARIFICATION: Row 2 showing inconsistent step values (1→2 but sometimes jumps to 5,6,7)
+# This is different from smooth scrolling - Row 2 current_step is getting corrupted
+# 
+# SYMPTOMS:
+# - Row 1: Smooth sequential steps (1→2→3→4...)
+# - Row 2: Inconsistent steps (1→2 but then random 5,6,7)
+# 
+# LIKELY CAUSES:
+# - Race condition in row_states access/modification
+# - Memory corruption affecting Row 2's current_step specifically  
+# - Thread safety issue with mutex locks
+# - Array bounds or indexing error affecting Row 2
+# 
+# INVESTIGATION: Check row_states array access patterns
+
+## 2025-08-10 11:35:00 Project Compiles Again - Row 2 Issue Analysis
+# RESTORED: Removed debug code, project compiles with warnings only
+# 
+# ROW 2 ISSUE SUMMARY:
+# - User observes: Row 2 shows steps 1→2 normally but sometimes jumps to 5, 6, 7
+# - This suggests current_step corruption or race condition specific to Row 2
+# - Row 1 works correctly with smooth sequential advancement
+# 
+# INVESTIGATION APPROACH NEEDED:
+# Since project couldn't compile during testing, need different strategy:
+# 1. Code review approach to find Row 2 specific issues
+# 2. Look for indexing bugs, race conditions, or coordinate mapping issues
+# 3. Focus on simple logical errors rather than complex debugging
+# 
+# STATUS: Ready for code analysis approach to Row 2 scrolling issue

@@ -699,24 +699,6 @@ impl SimonSaysSeeq {
                     }
                 }
                 
-                // Debug all rows' current_step simultaneously
-                if seq_y == 1 {
-                    static mut ALL_ROWS_DEBUG_COUNTER: u32 = 0;
-                    unsafe {
-                        ALL_ROWS_DEBUG_COUNTER += 1;
-                        if ALL_ROWS_DEBUG_COUNTER % 20 == 0 {
-                            // Show current_step for all rows at once
-                            let mut row_steps = Vec::new();
-                            for r in 1..=7 {
-                                if let Some(rs) = self.sequencer.get_row_states(r) {
-                                    row_steps.push(format!("R{}:{}", r, rs.current_step));
-                                }
-                            }
-                            info!("🔍 ALL ROWS CURRENT_STEP: [{}]", row_steps.join(" "));
-                        }
-                    }
-                }
-                
                 for seq_x in 1..=16 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
                     let is_current_step = seq_x == row_state.current_step;
