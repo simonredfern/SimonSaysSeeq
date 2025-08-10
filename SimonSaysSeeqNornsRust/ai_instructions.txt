@@ -31,5 +31,6 @@
 ## Grid Testing Notes
 - serialosc must be running manually (system maybe service has permission issues)
 - Both grids (m5032747, m2949672) work via OSC
+- The prefered grid, original grid is m2949672
 - Use examples/debug_osc.rs for isolated grid testing
 - Comprehensive tests may give false negatives due to timing

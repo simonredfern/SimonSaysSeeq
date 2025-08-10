@@ -987,7 +987,18 @@ kill 14815 16252 16404 16463
 # EXECUTED: cargo run --example test_rows_1_and_2 --features desktop
 # RESULT: Test completed successfully, ran 3 full cycles on both rows simultaneously
 # STATUS: Both rows set with identical patterns at positions [1,5,9,13], scrolled in sync
-# AWAITING: User observation of row behavior during combined test - looking for interference
+# USER CONFIRMED: "test_rows_1_and_2.rs worked" - both rows scrolled correctly together
+#
+## 2025-08-10 18:45:00 Main Sequencer Modified for Row 2 Only Testing
+# MODIFIED: src/main.rs to restrict sequencer to only work with row 2
+# CHANGES:
+#   - update_main_grid_display(): Changed loop from (1..=7) to (2..=2) - row 2 only
+#   - handle_grid_press(): Changed condition from (seq_y <= 7) to (seq_y == 2) - row 2 only
+#   - handle_control_button(): Clear function now only clears row 2, not all rows (1..=7)
+#   - handle_advanced_grid_operation(): Column operations only affect row 2
+# COMPILED: Successfully with warnings only
+# PURPOSE: Test if row 2 scrolling works properly in actual sequencer with button interaction
+# READY: cargo run to test row 2 only sequencer
 #
 # TEST EXECUTION RESULTS (2025-08-10 18:31:48):
 # - Started serialosc successfully: systemctl --user start serialosc
