@@ -1731,3 +1731,114 @@ kill 14815 16252 16404 16463
 #   - LED management preserved with proper column mapping
 # COMPILATION: Successful with warnings only using cargo build --release --features desktop
 # STATUS: ARM action enum system ready for testing with proper column validation
+
+## 2025-08-11 01:19:42 Enhanced Grid Update for ARM UNDO/REDO Operations
+# ISSUE IDENTIFIED: ARM UNDO/REDO operations needed more comprehensive grid updates
+# ANALYSIS: UNDO/REDO changes multiple sequencer states that require full grid refresh:
+#   - Grid state (pattern data across all rows)
+#   - Mozart state (MIDI note mappings) 
+#   - Row states (current step positions, first/last step boundaries)
+# ENHANCEMENT IMPLEMENTED:
+#   - Added clear_all_sequence_rows() call before grid update for clean state
+#   - Ensured full update_grid_display() captures all pattern and position changes
+#   - Preserved restore_arm_action_leds() to maintain ARM button visibility
+#   - Removed redundant refresh() calls (update_grid_display already refreshes)
+# COMPREHENSIVE UPDATE SEQUENCE FOR UNDO/REDO:
+#   1. Call sequencer.undo() or sequencer.redo() - changes internal state
+#   2. Clear sequencer rows (0-6) to ensure clean visual state
+#   3. Full grid display update - rebuilds all patterns and current step indicators
+#   4. Restore ARM action LED to maintain user feedback
+# BENEFIT: ARM UNDO/REDO operations now properly refresh entire grid state
+# COMPILATION: Successful with warnings only using cargo check --features desktop
+# STATUS: Enhanced grid update ready for testing with comprehensive state refresh
+
+## 2025-08-11 01:23:13 Removed Redundant ARM LED Restore Calls
+# OPTIMIZATION: Removed unnecessary restore_arm_action_leds() calls after update_grid_display()
+# ANALYSIS: update_grid_display() only touches sequencer rows (0-6), not control row (7)
+#   - update_main_grid_display() iterates: for seq_y in 0..=6
+#   - Control row (row 7) with ARM action LEDs is never affected
+#   - Therefore restore_arm_action_leds() after update_grid_display() is redundant
+# CHANGES MADE:
+#   - Removed restore_arm_action_leds() calls from all ARM actions:
+#     * ArmAction::Undo: Only clear_all_sequence_rows() + update_grid_display() 
+#     * ArmAction::Redo: Only clear_all_sequence_rows() + update_grid_display()
+#     * ArmAction::EuclidianEvents: Only update_grid_display()
+#     * ArmAction::EuclidianLength: Only update_grid_display() 
+#     * ArmAction::EuclidianRotation: Only update_grid_display()
+# SIMPLIFIED UPDATE SEQUENCE:
+#   1. Execute ARM action (undo/redo/euclidean generation)
+#   2. Clear sequencer rows (UNDO/REDO only) for clean visual state
+#   3. Update grid display - rebuilds patterns and positions (rows 0-6 only)
+#   4. ARM action LED remains untouched and visible throughout
+# BENEFIT: Cleaner code without redundant operations, ARM LEDs preserved automatically
+# COMPILATION: Successful with warnings only using cargo check --features desktop
+# STATUS: Optimized ARM action grid updates ready for testing
+
+## 2025-08-11 01:24:19 Completely Removed restore_arm_action_leds Function
+# CLEANUP: Permanently removed restore_arm_action_leds() function to prevent future misuse
+# RATIONALE: Function was unnecessary since update_grid_display() never touches control row (7)
+#   - ARM action LEDs on row 7 are automatically preserved during sequencer updates
+#   - update_main_grid_display() only iterates through rows 0-6 (sequencer rows)
+#   - No explicit restoration of ARM LEDs is ever needed
+# FUNCTION REMOVED: restore_arm_action_leds(&mut self, grid_id: &str) -> Result<()>
+#   - Eliminated temptation to add redundant LED restoration calls
+#   - Simplified codebase by removing unnecessary complexity
+#   - Enforces proper separation between sequencer (rows 0-6) and control (row 7) logic
+# ARM ACTION UPDATE FLOW NOW FINAL:
+#   1. Execute ARM action (changes sequencer internal state)
+#   2. Clear sequencer rows (UNDO/REDO only) for clean visual state
+#   3. Update grid display (rows 0-6 only) - ARM LEDs remain untouched
+# BENEFIT: Cleaner architecture with no possibility of redundant ARM LED operations
+# COMPILATION: Successful with warnings only using cargo check --features desktop
+# STATUS: ARM action system finalized with proper separation of concerns
+
+## 2025-08-11 01:29:10 Surgical UNDO/REDO Grid Updates Implementation
+# ISSUE: UNDO/REDO operations were using unnecessary clear + rebuild approach
+# PROBLEM WITH PREVIOUS APPROACH:
+#   - clear_all_sequence_rows() cleared ALL sequencer LEDs
+#   - update_grid_display() rebuilt ALL sequencer LEDs
+#   - This caused potential timing issues and visual glitches
+#   - Unnecessary work clearing and rebuilding unchanged LEDs
+# SURGICAL APPROACH IMPLEMENTED:
+#   - Removed clear_all_sequence_rows() calls from UNDO/REDO operations
+#   - Direct call to update_grid_display() which properly sets LED states
+#   - update_main_grid_display() calculates correct brightness for each LED:
+#     * brightness = 0 for positions without pattern/not current
+#     * brightness = 6 for current position without pattern  
+#     * brightness = 10 for pattern without current position
+#     * brightness = 14 for pattern at current position
+# BENEFITS:
+#   - More responsive UNDO/REDO operations
+#   - No visual glitches from clearing grid
+#   - Only necessary LED updates performed
+#   - Preserves current playback position indicators
+# FINAL ARM UNDO/REDO FLOW:
+#   1. Execute sequencer.undo() or sequencer.redo()
+#   2. Call update_grid_display() to refresh all LED states properly
+#   3. ARM action LED remains untouched on row 7
+# COMPILATION: Successful with warnings only using cargo check --features desktop
+# STATUS: Surgical UNDO/REDO updates ready for testing - should be more reliable
+
+## 2025-08-11 01:33:03 Targeted UNDO/REDO Display Fix Implementation
+# ISSUE IDENTIFIED: UNDO/REDO changed sequencer state but display didn't update until scroll passed changed positions
+# ROOT CAUSE ANALYSIS: 
+#   - UNDO/REDO successfully changed sequencer internal state
+#   - update_grid_display() marked "only used for initialization" - not suitable for runtime updates
+#   - Grid display only updated when sequencer scroll position passed through changed positions
+#   - Pattern LEDs remained stale until playback reached those steps
+# SOLUTION IMPLEMENTED: Created refresh_all_pattern_leds() function
+#   - Uses same brightness logic as update_single_led() and update_main_grid_display()
+#   - Iterates through all grid positions (rows 0-6, columns 0-15)
+#   - Calculates correct brightness for each LED based on current pattern and position state:
+#     * brightness = 0: No pattern + not current position
+#     * brightness = 6: Current position + no pattern
+#     * brightness = 10: Has pattern + not current position  
+#     * brightness = 14: Has pattern + current position
+#   - Calls grid.refresh() to ensure changes are visible immediately
+# IMPLEMENTATION CHANGES:
+#   - Replaced update_grid_display() calls with refresh_all_pattern_leds() in UNDO/REDO
+#   - New function targets the specific problem: pattern display refresh
+#   - Uses proven LED update logic from working grid button press system
+# EXPECTED RESULT: UNDO/REDO operations now immediately update all affected pattern LEDs
+# COMPILATION: Successful with warnings only using cargo check --features desktop
+# STATUS: Targeted UNDO/REDO display fix ready for testing - should show changes immediately

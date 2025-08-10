@@ -607,11 +607,8 @@ impl SimonSaysSeeq {
                 }
                 #[cfg(feature = "hardware")]
                 {
-                    self.update_grid_display()?;
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_action_leds(grid_id)?;
-                    }
+                    // Refresh all pattern LEDs after undo - pattern state may have changed
+                    self.refresh_all_pattern_leds()?;
                 }
             }
             ArmAction::Redo => {
@@ -622,11 +619,8 @@ impl SimonSaysSeeq {
                 }
                 #[cfg(feature = "hardware")]
                 {
-                    self.update_grid_display()?;
-                    let connected_grids = self.grid.get_connected_grids();
-                    if let Some(grid_id) = connected_grids.first() {
-                        self.restore_arm_action_leds(grid_id)?;
-                    }
+                    // Refresh all pattern LEDs after redo - pattern state may have changed
+                    self.refresh_all_pattern_leds()?;
                 }
             }
             ArmAction::EuclidianEvents => {
@@ -637,10 +631,6 @@ impl SimonSaysSeeq {
                     #[cfg(feature = "hardware")]
                     {
                         self.update_grid_display()?;
-                        let connected_grids = self.grid.get_connected_grids();
-                        if let Some(grid_id) = connected_grids.first() {
-                            self.restore_arm_action_leds(grid_id)?;
-                        }
                     }
                 } else {
                     info!("handle_arm_action says: No row held for Euclidean events");
@@ -654,10 +644,6 @@ impl SimonSaysSeeq {
                     #[cfg(feature = "hardware")]
                     {
                         self.update_grid_display()?;
-                        let connected_grids = self.grid.get_connected_grids();
-                        if let Some(grid_id) = connected_grids.first() {
-                            self.restore_arm_action_leds(grid_id)?;
-                        }
                     }
                 } else {
                     info!("handle_arm_action says: No row held for Euclidean length");
@@ -671,10 +657,6 @@ impl SimonSaysSeeq {
                     #[cfg(feature = "hardware")]
                     {
                         self.update_grid_display()?;
-                        let connected_grids = self.grid.get_connected_grids();
-                        if let Some(grid_id) = connected_grids.first() {
-                            self.restore_arm_action_leds(grid_id)?;
-                        }
                     }
                 } else {
                     info!("handle_arm_action says: No row held for Euclidean rotation");
@@ -959,15 +941,34 @@ impl SimonSaysSeeq {
         self.active_arm_action == Some(action)
     }
 
-    /// Restore ARM button LED state after grid operations that might have cleared it
+
+
+    /// Refresh all pattern LEDs on the grid (used after operations that change multiple positions)
     #[cfg(feature = "hardware")]
-    /// Restore ARM action LEDs after grid display update
-    fn restore_arm_action_leds(&mut self, grid_id: &str) -> Result<()> {
-        if let Some(action) = self.active_arm_action {
-            let column = action.to_column();
-            self.grid.set_led(grid_id, column, 7, 10, "restore_arm_action_leds")?;
+    fn refresh_all_pattern_leds(&mut self) -> Result<()> {
+        let connected_grids = self.grid.get_connected_grids();
+        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            // Update all LEDs using the same logic as update_single_led
+            for seq_y in 0..=6 {
+                if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                    for seq_x in 0..=15 {
+                        let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
+                        let is_current_step = seq_x == row_state.current_step;
+                        
+                        // Same brightness logic as update_single_led and update_main_grid_display
+                        let brightness = match (pattern_value > 0, is_current_step) {
+                            (false, false) => 0,     // No pattern, not current position
+                            (false, true) => 6,      // No pattern, but current position  
+                            (true, false) => 10,     // Has pattern, not current position
+                            (true, true) => 14,      // Has pattern AND current position
+                        };
+                        
+                        self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "refresh_all_pattern_leds")?;
+                    }
+                }
+            }
+            self.grid.refresh()?;
         }
-        self.grid.refresh()?;
         Ok(())
     }
 
