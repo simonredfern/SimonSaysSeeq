@@ -723,6 +723,49 @@ kill 14815 16252 16404 16463
 # 
 # STATUS: Row 2 scrolling issue confirmed by user observation, root cause unknown
 
+## 2025-08-10 11:45:12 Row 2-7 Scrolling Investigation
+# ANALYSIS: Looking for difference between Row 1 (working) vs Rows 2-7 (not working)
+# INVESTIGATION AREAS:
+#   1. Step advancement logic in advance_step() - appears correct for all rows
+#   2. Grid display logic in update_main_grid_display() - uses same logic for all rows  
+#   3. Row state access via get_row_states() - converts 1-based to 0-based correctly
+#   4. Timing: update_grid_display() called on every step event
+#
+# KEY FINDINGS:
+# - advance_step() increments all rows identically: row_state.current_step += 1
+# - get_row_states(row) correctly accesses row_states[row-1] for all rows
+# - update_main_grid_display() loops seq_y in 1..=7 and processes all rows identically
+# - Grid coordinate conversion same for all rows: seq_x-1, seq_y-1
+#
+# HYPOTHESIS: Race condition between step advancement and display update
+# - Step advancement happens in sequencer thread with mutex lock
+# - Display update happens in main thread with separate mutex lock
+# - Rows 2-7 may have different timing sensitivity than Row 1
+#
+# NEXT: Add detailed row-specific logging to identify exact difference
+
+## 2025-08-10 11:46:30 Coordinate Conversion Test Created
+# Created examples/debug_coordinate_conversion.rs to isolate coordinate handling
+# TEST PURPOSE: Verify if coordinate conversion differs between Row 1 vs Rows 2-7
+# TEST PROCEDURE:
+#   1. Test each row individually with identical patterns (steps 1,5,9,13)
+#   2. Test position scrolling simulation for each row
+#   3. Test all rows simultaneously like main sequencer
+#   4. Use exact same coordinate conversion: seq_x-1, seq_y-1
+#
+# HYPOTHESIS: If coordinate conversion is correct, all rows should behave identically
+# If Row 1 differs from others in this test: Coordinate/LED addressing bug
+# If all rows behave same in test: Issue is in sequencer state management during full app
+#
+# STATUS: Test compiled successfully, ready for visual observation
+#
+# TEST RESULTS: User reports "good scrolling behaviour but some unexpected offset"
+# CRITICAL FINDING: Offset behavior confirms coordinate conversion issue
+# - Some rows showing patterns/scrolling at different positions than expected
+# - This explains why Row 1 works correctly but Rows 2-7 have scrolling problems
+# - Root cause likely in coordinate conversion logic or grid addressing
+# NEXT: Need specific details about offset pattern to identify exact bug location
+
 ## 2025-08-10 11:13:15 Approach Correction - User Determines Success
 # APPROACH: User observes grid directly and reports success/failure
 # ROLE: Make requested changes, avoid conclusions about visual results
