@@ -1529,3 +1529,31 @@ kill 14815 16252 16404 16463
 #   - Coordinate system fully 0-indexed throughout
 #   - Selective LED update optimization preserved
 # STATUS: 7-row sequencer expansion project complete and fully functional
+
+## 2025-08-11 00:26:32 MIDI Log Message Format Check Required
+# TASK: Review MIDI-related log messages for ai_instructions.txt compliance
+# REQUIREMENTS: All log messages must use "function_name says: " format
+# REQUIREMENTS: Remove tick boxes, emojis, and decorative characters
+# REQUIREMENTS: Use plain text only for clarity and consistency
+# SCOPE: Check info!, debug!, warn!, error! messages in MIDI code
+# PRIORITY: Ensure logging standards are consistently applied across codebase
+
+## 2025-08-11 00:26:32 MIDI Log Message Format Successfully Fixed
+# PROBLEMS FOUND: Multiple MIDI log messages violated ai_instructions.txt standards
+# VIOLATIONS CORRECTED:
+#   1. Missing "function_name says:" format in 25+ log messages
+#   2. Emoji usage (🎹, 🕐) in note_on, note_off, clock functions
+#   3. Inconsistent formatting across MIDI functions
+# FUNCTIONS UPDATED:
+#   - new(): Added function name prefix
+#   - initialize_output(): Added function name prefix to all messages
+#   - initialize_input(): Added function name prefix to all messages  
+#   - note_on(): Added function name prefix, removed 🎹 emoji
+#   - note_off(): Added function name prefix, removed 🎹 emoji
+#   - send_clock_start(): Added function name prefix, removed 🕐 emoji
+#   - send_clock_stop(): Added function name prefix, removed 🕐 emoji
+#   - all_notes_off(), test_output(), cleanup_stuck_notes(): Added function name prefix
+#   - handle_midi_input_message(), reset_clock(), set_clock_source(): Added function name prefix
+# COMPILATION: Successful with warnings only
+# RESULT: All MIDI log messages now follow "function_name says:" format with plain text
+# STATUS: MIDI logging standards compliance complete

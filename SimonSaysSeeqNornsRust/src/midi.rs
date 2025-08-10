@@ -105,7 +105,7 @@ impl MidiManager {
             manager.initialize_input()?;
         }
         #[cfg(not(feature = "midi"))]
-        info!("MIDI simulation mode - no actual MIDI I/O");
+        info!("new says: MIDI simulation mode - no actual MIDI I/O");
         
         Ok(manager)
     }
@@ -116,10 +116,10 @@ impl MidiManager {
         let midi_out = MidiOutput::new("SimonSaysSeeq")?;
         let out_ports = midi_out.ports();
         
-        info!("Available MIDI output ports:");
+        info!("initialize_output says: Available MIDI output ports:");
         for (i, port) in out_ports.iter().enumerate() {
             if let Ok(name) = midi_out.port_name(port) {
-                info!("  {}: {}", i, name);
+                info!("initialize_output says:   {}: {}", i, name);
             }
         }
         
@@ -129,7 +129,7 @@ impl MidiManager {
         } else if !out_ports.is_empty() {
             out_ports[0].clone()
         } else {
-            warn!("No MIDI output ports available - MIDI will be disabled");
+            warn!("initialize_output says: No MIDI output ports available - MIDI will be disabled");
             return Ok(());
         };
         
@@ -138,11 +138,11 @@ impl MidiManager {
         
         match midi_out.connect(&selected_port, "SimonSaysSeeq Output") {
             Ok(connection) => {
-                info!("Connected to MIDI output: {}", port_name);
+                info!("initialize_output says: Connected to MIDI output: {}", port_name);
                 self.output_connection = Some(connection);
             }
             Err(e) => {
-                error!("Failed to connect to MIDI port {}: {}", port_name, e);
+                error!("initialize_output says: Failed to connect to MIDI port {}: {}", port_name, e);
                 return Err(anyhow!("MIDI connection failed: {}", e));
             }
         }
@@ -193,9 +193,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                debug!("MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                debug!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                debug!("MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                debug!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
@@ -216,7 +216,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            info!("🎹 MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            info!("note_on says: MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -228,10 +228,10 @@ impl MidiManager {
         let midi_in = MidiInput::new("SimonSaysSeeq Input")?;
         let in_ports = midi_in.ports();
         
-        info!("Available MIDI input ports:");
+        info!("initialize_input says: Available MIDI input ports:");
         for (i, port) in in_ports.iter().enumerate() {
             if let Ok(name) = midi_in.port_name(port) {
-                info!("  {}: {}", i, name);
+                info!("initialize_input says:   {}: {}", i, name);
             }
         }
         
@@ -241,7 +241,7 @@ impl MidiManager {
         } else if !in_ports.is_empty() {
             in_ports[0].clone()
         } else {
-            warn!("No MIDI input ports available - MIDI input will be disabled");
+            warn!("initialize_input says: No MIDI input ports available - MIDI input will be disabled");
             return Ok(());
         };
         
@@ -256,11 +256,11 @@ impl MidiManager {
             Self::handle_midi_input_message(timestamp, message, &sender, &clock_state);
         }, ()) {
             Ok(connection) => {
-                info!("Connected to MIDI input: {}", port_name);
+                info!("initialize_input says: Connected to MIDI input: {}", port_name);
                 self.input_connection = Some(connection);
             }
             Err(e) => {
-                error!("Failed to connect to MIDI input port {}: {}", port_name, e);
+                error!("initialize_input says: Failed to connect to MIDI input port {}: {}", port_name, e);
                 return Err(anyhow!("MIDI input connection failed: {}", e));
             }
         }
@@ -366,7 +366,7 @@ impl MidiManager {
             }
             _ => {
                 // Ignore other messages
-                debug!("Unhandled MIDI message: {:02X?}", message);
+                debug!("handle_midi_input_message says: Unhandled MIDI message: {:02X?}", message);
             }
         }
     }
@@ -391,9 +391,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} OFF", note_name));
                 
-                debug!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+                debug!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
             } else {
-                debug!("MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
+                debug!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
             }
         }
         
@@ -407,7 +407,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF (sim)", note_name));
             
-            info!("🎹 MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
+            info!("note_off says: MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())
@@ -415,7 +415,7 @@ impl MidiManager {
     
     /// Send all notes off (panic button)
     pub fn all_notes_off(&mut self) -> Result<()> {
-        info!("Sending All Notes Off");
+        info!("all_notes_off says: Sending All Notes Off");
         
         // Send note off for all currently active notes
         let active_notes = {
@@ -452,11 +452,11 @@ impl MidiManager {
             if let Some(ref mut connection) = self.output_connection {
                 let msg = [0xFA]; // MIDI Clock Start
                 connection.send(&msg)?;
-                debug!("MIDI Clock Start sent");
+                debug!("send_clock_start says: MIDI Clock Start sent");
             }
         }
         #[cfg(not(feature = "midi"))]
-        info!("🕐 MIDI Clock Start (simulation)");
+        info!("send_clock_start says: MIDI Clock Start (simulation)");
         
         Ok(())
     }
@@ -468,11 +468,11 @@ impl MidiManager {
             if let Some(ref mut connection) = self.output_connection {
                 let msg = [0xFC]; // MIDI Clock Stop
                 connection.send(&msg)?;
-                debug!("MIDI Clock Stop sent");
+                debug!("send_clock_stop says: MIDI Clock Stop sent");
             }
         }
         #[cfg(not(feature = "midi"))]
-        info!("🕐 MIDI Clock Stop (simulation)");
+        info!("send_clock_stop says: MIDI Clock Stop (simulation)");
         
         Ok(())
     }
@@ -493,7 +493,7 @@ impl MidiManager {
     pub fn set_clock_source(&self, source: ClockSource) {
         let mut clock = self.clock_state.lock().unwrap();
         clock.source = source;
-        info!("Clock source set to: {:?}", clock.source);
+        info!("set_clock_source says: Clock source set to: {:?}", clock.source);
     }
     
     /// Get clock source
@@ -533,7 +533,7 @@ impl MidiManager {
         clock.clock_ticks = 0;
         clock.last_clock_time = None;
         clock.external_tempo = None;
-        debug!("Clock state reset");
+        debug!("reset_clock says: Clock state reset");
     }
     
     /// Get the last note sent (for display purposes)
@@ -573,7 +573,7 @@ impl MidiManager {
         };
         
         for (note, channel) in stuck_notes {
-            warn!("Cleaning up stuck note: {} on channel {}", note, channel);
+            warn!("cleanup_stuck_notes says: Cleaning up stuck note: {} on channel {}", note, channel);
             self.note_off(note, channel)?;
         }
         
@@ -582,14 +582,14 @@ impl MidiManager {
     
     /// Test MIDI output with a short note
     pub fn test_output(&mut self) -> Result<()> {
-        info!("Testing MIDI output...");
+        info!("test_output says: Testing MIDI output...");
         
         // Send a middle C note for 100ms
         self.note_on(60, 100, 1)?;
         std::thread::sleep(Duration::from_millis(100));
         self.note_off(60, 1)?;
         
-        info!("MIDI test completed");
+        info!("test_output says: MIDI test completed");
         Ok(())
     }
     
