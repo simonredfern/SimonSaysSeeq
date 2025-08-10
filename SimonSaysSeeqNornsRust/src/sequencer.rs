@@ -595,28 +595,7 @@ impl Sequencer {
         
         info!("All sequences reset");
     }
-    
-    /// Randomize grid with some interesting patterns
-    pub fn randomize_grid(&self) {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let mut state = self.state.lock().unwrap();
-        
-        for col in 0..16 {
-            for row in 0..7 { // Only sequence rows
-                // Simple 40% chance for each step
-                if rng.gen::<f32>() < 0.4 {
-                    // Occasionally add ratchets
-                    let value = if rng.gen::<f32>() < 0.1 { 2 } else { 1 };
-                    state.grid[col][row] = value;
-                } else {
-                    state.grid[col][row] = 0;
-                }
-            }
-        }
-        
-        info!("Grid randomized");
-    }
+
     
     /// Get note events for a specific step
     pub fn get_step_events(&self, row: usize, _bar: usize, step: usize) -> Option<Vec<NoteEvent>> {

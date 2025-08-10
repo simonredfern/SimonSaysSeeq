@@ -520,7 +520,8 @@ impl SimonSaysSeeq {
                     self.sequencer.randomize_rows(&held_rows, 0.5, 2);
                 } else {
                     info!("Randomize all rows");
-                    self.sequencer.randomize_grid();
+                    let all_rows = vec![1, 2, 3, 4, 5, 6, 7];
+                    self.sequencer.randomize_rows(&all_rows, 0.4, 2);
                 }
                 #[cfg(feature = "hardware")]
                 self.update_grid_display()?;
