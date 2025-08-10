@@ -1442,3 +1442,18 @@ kill 14815 16252 16404 16463
 #      - test_main_sequencer_scrolling.rs: 1..=7 -> 0..=6, native coordinates
 # RESULT: Warning eliminated, all coordinate systems now consistently 0-indexed
 # STATUS: Coordinate system refactor fully complete, compilation successful
+
+## 2025-08-10 23:46:18 Debug Messages Added for Row 0 and Row 1 Step Advancement
+# CHANGE: Enabled debug logging in advance_step() function for rows 0 and 1
+# LOCATION: src/sequencer.rs line 827-831 in advance_step() method
+# MESSAGE FORMAT: Row X step advancement: old -> new (range: first-last)
+# LEVEL: DEBUG - visible when running with debug logging enabled
+# BENEFIT: Track step advancement behavior for visual debugging
+# STATUS: Debug messages will show when rows 0 and 1 advance their current_step
+
+## 2025-08-10 23:49:12 Massive Grid Update Optimization - Selective LED Updates
+# PROBLEM SOLVED: set_led() called excessively (32 LEDs on every step advance)
+# OPTIMIZATION: Only update LEDs that actually changed
+# CHANGES MADE:
+#   1. Enhanced process_step() to send selective GridUpdate events
+# CHANGES: Enhanced process_step(), added GridUpdate events, created selective handler

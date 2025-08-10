@@ -413,9 +413,8 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
                 
-                // Update grid display to show current step positions
-                #[cfg(feature = "hardware")]
-                self.update_grid_display()?;
+                // Grid updates now handled by selective GridUpdate events
+                // No need for full grid refresh on every step
             }
             
             SequencerEvent::Beat { beat } => {
@@ -424,6 +423,12 @@ impl SimonSaysSeeq {
                 self.screen.set_beat_indicator(beat);
                 #[cfg(not(feature = "hardware"))]
                 debug!("Beat indicator: {}", beat);
+            }
+            
+            SequencerEvent::GridUpdate { row, old_step, new_step } => {
+                // Selective grid update - only update changed LEDs
+                #[cfg(feature = "hardware")]
+                self.handle_grid_update(row, old_step, new_step)?;
             }
             
             SequencerEvent::MidiEvent(midi_event) => {
@@ -677,6 +682,30 @@ impl SimonSaysSeeq {
         Ok(())
     }
     
+    /// Selective grid update - only update specific LEDs that changed
+    #[cfg(feature = "hardware")]
+    fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
+        let connected_grids = self.grid.get_connected_grids();
+        
+        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            if let Some(row_state) = self.sequencer.get_row_states(row) {
+                // Update old position LED (turn off position indicator)
+                let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
+                let old_brightness = if old_pattern_value > 0 { 10 } else { 0 }; // Pattern only or off
+                self.grid.set_led(&main_grid_id, old_step, row, old_brightness, "grid_update_old")?;
+                
+                // Update new position LED (turn on position indicator)
+                let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
+                let new_brightness = if new_pattern_value > 0 { 14 } else { 6 }; // Pattern+position or position only
+                self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
+            }
+        }
+        
+        self.grid.refresh()?;
+        Ok(())
+    }
+    
+    /// Full grid display update (only used for initialization)
     #[cfg(feature = "hardware")]
     fn update_grid_display(&mut self) -> Result<()> {
         let connected_grids = self.grid.get_connected_grids();

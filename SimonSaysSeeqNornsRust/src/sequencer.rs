@@ -32,6 +32,8 @@ pub enum SequencerEvent {
     Beat { beat: usize },
     /// MIDI event to be sent to hardware
     MidiEvent(MidiEvent),
+    /// Grid update needed for specific row position change
+    GridUpdate { row: usize, old_step: usize, new_step: usize },
 }
 
 /// A MIDI note event at a specific timing
@@ -824,10 +826,10 @@ impl Sequencer {
             if row_state.current_step > row_state.last_step {
                 row_state.current_step = row_state.first_step;
             }
-            if row_idx < 3 { // Debug first 3 rows
-                //info!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
-                //      row_idx + 1, old_step, row_state.current_step,
-                //      row_state.first_step, row_state.last_step);
+            if row_idx == 0 || row_idx == 1 { // Debug rows 0 and 1 (0-indexed)
+                debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
+                      row_idx, old_step, row_state.current_step,
+                      row_state.first_step, row_state.last_step);
             }
 
         }
@@ -847,27 +849,38 @@ impl Sequencer {
         Ok(())
     }
 
-    /// Process triggers for the current step
-    fn process_step(&self, state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
-        // Process each sequence row
-        for sequence_row in 1..=state.total_sequence_rows {
-            if let Some(row_state) = state.row_states.get(sequence_row - 1) {
+    /// Process triggers for the current step and handle selective grid updates
+    fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
+        // Process each sequence row (0-indexed)
+        for row_idx in 0..state.row_states.len() {
+            // Only process rows 0 and 1 (visible rows)
+            if row_idx > 1 {
+                continue;
+            }
+            
+            if let Some(row_state) = state.row_states.get(row_idx) {
                 let current_step = row_state.current_step;
 
                 // Get grid value for this row at current step
                 if current_step < state.cols {
-                    let grid_value = state.grid[current_step][sequence_row - 1];
+                    let grid_value = state.grid[current_step][row_idx];
 
                     if grid_value > 0 {
                         // This step is active - trigger would happen here
-                        debug!("Trigger: row={}, step={}, value={}", sequence_row, current_step, grid_value);
+                        debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
-                        // Here we would:
-                        // 1. Send MIDI note based on row_settings.midi_note
-                        // 2. Handle ratcheting if grid_value > 1
-                        // 3. Send CV/Gate outputs via Crow
-                        // 4. Update grid LEDs
+                        // MIDI output disabled - patterns are visual only
+                        // Here we would send MIDI/CV if enabled
                     }
+                }
+                
+                // Send selective grid update event for this row
+                if let Err(e) = sender.send(SequencerEvent::GridUpdate { 
+                    row: row_idx, 
+                    old_step: if current_step == 0 { 15 } else { current_step - 1 },
+                    new_step: current_step 
+                }) {
+                    warn!("Failed to send grid update event: {}", e);
                 }
             }
         }
