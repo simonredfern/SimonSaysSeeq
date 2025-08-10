@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -34,22 +34,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Set Row 1 LED
     println!("Setting Row 1 Col 5 -> grid(4,0)");
-    grid_manager.set_led(main_grid_id, 4, 0, 15)?;
+    grid_manager.set_led(main_grid_id, 4, 0, 15, "example_caller")?;
     grid_manager.refresh()?;
     println!("Row 1 Col 5 should be lit - observe 5 seconds");
     thread::sleep(Duration::from_millis(5000));
     
     // Now set Row 2 LED and check if Row 1 is affected
     println!("Setting Row 2 Col 5 -> grid(4,1) - SAME COLUMN as Row 1");
-    grid_manager.set_led(main_grid_id, 4, 1, 15)?;
+    grid_manager.set_led(main_grid_id, 4, 1, 15, "example_caller")?;
     grid_manager.refresh()?;
     println!("Both Row 1 and Row 2 Col 5 should be lit");
     println!("CRITICAL: Did Row 1 Col 5 stay lit? (Y/N)");
     thread::sleep(Duration::from_millis(5000));
     
     // Clear for next test
-    grid_manager.set_led(main_grid_id, 4, 0, 0)?;
-    grid_manager.set_led(main_grid_id, 4, 1, 0)?;
+    grid_manager.set_led(main_grid_id, 4, 0, 0, "example_caller")?;
+    grid_manager.set_led(main_grid_id, 4, 1, 0, "example_caller")?;
     grid_manager.refresh()?;
     thread::sleep(Duration::from_millis(1000));
     
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     for test_row in 1..=5 {
         println!("  Adding Row {} Col 8 -> grid(7,{})", test_row, test_row - 1);
-        grid_manager.set_led(main_grid_id, 7, test_row - 1, 15)?;
+        grid_manager.set_led(main_grid_id, 7, test_row - 1, 15, "example_caller")?;
         grid_manager.refresh()?;
         println!("  {} LEDs should now be lit in Column 8", test_row);
         thread::sleep(Duration::from_millis(2000));
@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Clear for next test
     for y in 0..8 {
-        grid_manager.set_led(main_grid_id, 7, y, 0)?;
+        grid_manager.set_led(main_grid_id, 7, y, 0, "example_caller")?;
     }
     grid_manager.refresh()?;
     thread::sleep(Duration::from_millis(1000));
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Setting 8 LEDs rapidly in sequence:");
     for (i, (x, y)) in test_leds.iter().enumerate() {
         println!("  LED {}: grid({},{}) brightness 15", i + 1, x, y);
-        grid_manager.set_led(main_grid_id, *x, *y, 15)?;
+        grid_manager.set_led(main_grid_id, *x, *y, 15, "example_caller")?;
         grid_manager.refresh()?;
         thread::sleep(Duration::from_millis(200)); // Fast setting
     }
@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Clear for next test
     for (x, y) in test_leds {
-        grid_manager.set_led(main_grid_id, x, y, 0)?;
+        grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
     }
     grid_manager.refresh()?;
     thread::sleep(Duration::from_millis(1000));
@@ -113,10 +113,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Test setting all LEDs at once vs individually
     println!("Setting all Row 1 LEDs simultaneously:");
-    grid_manager.set_led(main_grid_id, 0, 0, 15)?;   // Col 1
-    grid_manager.set_led(main_grid_id, 4, 0, 15)?;   // Col 5
-    grid_manager.set_led(main_grid_id, 8, 0, 15)?;   // Col 9
-    grid_manager.set_led(main_grid_id, 12, 0, 15)?;  // Col 13
+    grid_manager.set_led(main_grid_id, 0, 0, 15, "example_caller")?;   // Col 1
+    grid_manager.set_led(main_grid_id, 4, 0, 15, "example_caller")?;   // Col 5
+    grid_manager.set_led(main_grid_id, 8, 0, 15, "example_caller")?;   // Col 9
+    grid_manager.set_led(main_grid_id, 12, 0, 15, "example_caller")?;  // Col 13
     grid_manager.refresh()?; // Single refresh for all
     
     println!("Row 1 should show 4 LEDs - observe for 3 seconds");

@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "test_main_sequencer_scrolling", "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "test_main_sequencer_scrolling", "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -111,7 +111,7 @@ fn update_main_grid_display(
                 };
                 
                 // Convert to 0-based grid coordinates (EXACT main sequencer logic)
-                grid_manager.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+                grid_manager.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_main_grid_display", "example_caller")?;
             }
         }
     }

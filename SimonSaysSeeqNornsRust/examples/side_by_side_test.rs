@@ -96,8 +96,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("   Lighting LED at (0,0) on both grids...");
             
             let led_start = Instant::now();
-            let result_a = manager.set_led(grid_a, 0, 0, 15);
-            let result_b = manager.set_led(grid_b, 0, 0, 15);
+            let result_a = manager.set_led(grid_a, 0, 0, 15, "example_caller");
+            let result_b = manager.set_led(grid_b, 0, 0, 15, "example_caller");
             let led_time = led_start.elapsed();
             
             info!("   Grid A LED on: {}", format_result(&result_a));
@@ -113,8 +113,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("   Grid B LED visible: {}", if grid_b_on { "✅ YES" } else { "❌ NO" });
             
             // Turn off the test LED
-            manager.set_led(grid_a, 0, 0, 0)?;
-            manager.set_led(grid_b, 0, 0, 0)?;
+            manager.set_led(grid_a, 0, 0, 0, "example_caller")?;
+            manager.set_led(grid_b, 0, 0, 0, "example_caller")?;
             thread::sleep(Duration::from_millis(300));
             
             info!("");
@@ -126,8 +126,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let pattern_positions = [(0, 0), (15, 0), (0, 7), (15, 7)];
             
             for &(x, y) in &pattern_positions {
-                let result_a = manager.set_led(grid_a, x, y, 10);
-                let result_b = manager.set_led(grid_b, x, y, 10);
+                let result_a = manager.set_led(grid_a, x, y, 10, "example_caller");
+                let result_b = manager.set_led(grid_b, x, y, 10, "example_caller");
                 
                 if result_a.is_err() || result_b.is_err() {
                     warn!("   Pattern position ({}, {}): A={}, B={}", 
@@ -147,8 +147,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             // Clear pattern
             for &(x, y) in &pattern_positions {
-                manager.set_led(grid_a, x, y, 0)?;
-                manager.set_led(grid_b, x, y, 0)?;
+                manager.set_led(grid_a, x, y, 0, "example_caller")?;
+                manager.set_led(grid_b, x, y, 0, "example_caller")?;
                 thread::sleep(Duration::from_millis(50));
             }
             
@@ -164,8 +164,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 for brightness in [3, 6, 9, 12, 15, 0] {
                     info!("   Setting brightness {} on both grids...", brightness);
-                    manager.set_led(grid_a, center_x, center_y, brightness)?;
-                    manager.set_led(grid_b, center_x, center_y, brightness)?;
+                    manager.set_led(grid_a, center_x, center_y, brightness, "example_caller")?;
+                    manager.set_led(grid_b, center_x, center_y, brightness, "example_caller")?;
                     thread::sleep(Duration::from_millis(400));
                 }
                 
@@ -185,8 +185,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("   Lighting up test pattern on both grids...");
             for x in 2..6 {
                 for y in 2..4 {
-                    manager.set_led(grid_a, x, y, 12)?;
-                    manager.set_led(grid_b, x, y, 12)?;
+                    manager.set_led(grid_a, x, y, 12, "example_caller")?;
+                    manager.set_led(grid_b, x, y, 12, "example_caller")?;
                 }
             }
             thread::sleep(Duration::from_millis(500));
@@ -304,7 +304,7 @@ fn force_clear_grid(manager: &mut GridManager, grid_id: &str) -> Result<(), Box<
     if let Some((cols, _rows)) = manager.get_dimensions(grid_id) {
         info!("   🔧 Individual LED clear (first row)...");
         for x in 0..cols {
-            manager.set_led(grid_id, x, 0, 0)?;
+            manager.set_led(grid_id, x, 0, 0, "example_caller")?;
             if x % 4 == 0 {
                 thread::sleep(Duration::from_millis(10));
             }

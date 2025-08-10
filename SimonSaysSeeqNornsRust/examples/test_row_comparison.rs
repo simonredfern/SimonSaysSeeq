@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set Row 1 pattern
     for seq_x in [1, 5, 9, 13] {
         println!("  Setting Row 1 Col {} -> grid({},{})", seq_x, seq_x - 1, 0);
-        grid_manager.set_led(main_grid_id, seq_x - 1, 0, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, 0, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     thread::sleep(Duration::from_millis(3000));
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set Row 6 pattern  
     for seq_x in [1, 5, 9, 13] {
         println!("  Setting Row 6 Col {} -> grid({},{})", seq_x, seq_x - 1, 5);
-        grid_manager.set_led(main_grid_id, seq_x - 1, 5, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, 5, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     thread::sleep(Duration::from_millis(3000));
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;

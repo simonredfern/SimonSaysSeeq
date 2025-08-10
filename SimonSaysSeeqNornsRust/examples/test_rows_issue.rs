@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     info!("🎨 Setting up test pattern...");
     for row in 0..7 { // Rows 0-6 (grid coords) = Rows 1-7 (sequencer coords)
         let brightness = (row + 1) * 2; // Brightness 2, 4, 6, 8, 10, 12, 14
-        grid.set_led(main_grid_id, 0, row, brightness as u8)?; // Column 0 = first column
+        grid.set_led(main_grid_id, 0, row, brightness as u8, "example_caller")?; // Column 0 = first column
         info!("   Row {} (seq row {}): Set LED at (0,{}) to brightness {}", 
               row, row + 1, row, brightness);
     }
@@ -105,11 +105,11 @@ fn main() -> Result<()> {
                                 if event.x == 0 {
                                     let pattern_brightness = (event.y + 1) * 2;
                                     let final_brightness = if new_state { 15 } else { pattern_brightness as u8 };
-                                    grid.set_led(main_grid_id, event.x, event.y, final_brightness)?;
+                                    grid.set_led(main_grid_id, event.x, event.y, final_brightness, "example_caller")?;
                                     info!("   LED update: Set ({},{}) to brightness {} (pattern column)", 
                                           event.x, event.y, final_brightness);
                                 } else {
-                                    grid.set_led(main_grid_id, event.x, event.y, brightness)?;
+                                    grid.set_led(main_grid_id, event.x, event.y, brightness, "example_caller")?;
                                     info!("   LED update: Set ({},{}) to brightness {}", 
                                           event.x, event.y, brightness);
                                 }

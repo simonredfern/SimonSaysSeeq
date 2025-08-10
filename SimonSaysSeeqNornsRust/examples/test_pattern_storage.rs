@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let brightness = if pattern_value > 0 { 12 } else { 0 };
                 
                 // Use main sequencer coordinate conversion
-                grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness)?;
+                grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness, "example_caller")?;
             }
         }
         
@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for seq_x in 1..=16 {
             let pattern_value = sequencer.get_grid_value(seq_x, seq_y);
             let brightness = if pattern_value > 0 { 12 } else { 0 };
-            grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness)?;
+            grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness, "example_caller")?;
         }
     }
     

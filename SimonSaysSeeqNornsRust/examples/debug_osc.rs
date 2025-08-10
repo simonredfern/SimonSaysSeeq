@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // Test 1: Try to set a single LED
         info!("Step 1: Setting LED at (0,0) with brightness 15");
-        manager.set_led(&device_id, 0, 0, 15)?;
+        manager.set_led(&device_id, 0, 0, 15, "debug_osc", "example_caller")?;
         
         println!("👀 Check grid {} - do you see LED at (0,0)? Press Enter to continue...", device_id);
         let mut input = String::new();
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // Test 2: Try different brightness
         info!("Step 2: Setting LED at (0,1) with brightness 1");
-        manager.set_led(&device_id, 0, 1, 1)?;
+        manager.set_led(&device_id, 0, 1, 1, "debug_osc", "example_caller")?;
         
         println!("👀 Check grid {} - do you see LED at (0,1)? Press Enter to continue...", device_id);
         let mut input = String::new();
@@ -66,9 +66,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Step 4: Flash test - 5 quick flashes");
         for i in 0..5 {
             info!("Flash {}/5", i + 1);
-            manager.set_led(&device_id, 1, 1, 15)?;
+            manager.set_led(&device_id, 1, 1, 15, "debug_osc", "example_caller")?;
             thread::sleep(Duration::from_millis(200));
-            manager.set_led(&device_id, 1, 1, 0)?;
+            manager.set_led(&device_id, 1, 1, 0, "debug_osc", "example_caller")?;
             thread::sleep(Duration::from_millis(200));
         }
         

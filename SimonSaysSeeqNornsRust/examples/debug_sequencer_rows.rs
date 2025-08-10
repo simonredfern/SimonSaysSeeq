@@ -92,7 +92,7 @@ fn main() -> Result<()> {
                 }
                 
                 // Set LED on actual grid
-                grid.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness)?;
+                grid.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness, "example_caller", "example_caller")?;
             }
             
             info!("   Display: {}", 
@@ -201,7 +201,7 @@ fn main() -> Result<()> {
                                       row_state.current_step, is_current_step, brightness);
                                 
                                 // Update LED immediately
-                                grid.set_led(main_grid_id, event.x, event.y, brightness)?;
+                                grid.set_led(main_grid_id, event.x, event.y, brightness, "example_caller", "example_caller")?;
                                 
                                 // Performance analysis per row
                                 match seq_y {

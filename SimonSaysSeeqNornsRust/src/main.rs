@@ -350,9 +350,9 @@ impl SimonSaysSeeq {
                     let seq_x = x + 1;
                     let seq_y = y + 1;
                     if pressed {
-                        self.grid.set_led(grid_id, x, y, 15, "hardware_press", "handle_hardware_event")?;
+                        self.grid.set_led(grid_id, x, y, 15, "handle_hardware_event")?;
                     } else {
-                        self.grid.set_led(grid_id, x, y, 0, "hardware_release", "handle_hardware_event")?;
+                        self.grid.set_led(grid_id, x, y, 0, "handle_hardware_event")?;
                     }
                 }
             }
@@ -608,7 +608,7 @@ impl SimonSaysSeeq {
             let connected_grids = self.grid.get_connected_grids();
             // Mozart LED updates disabled for debugging
             // if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
-            //     self.grid.set_led(grid_id, x, y, brightness, "mozart_grid", "handle_mozart_grid_press")?;
+            //     self.grid.set_led(grid_id, x, y, brightness, "handle_mozart_grid_press")?;
             // }
             
             info!("Set Mozart[{}][{}] = note {}", x + 1, y + 1, note);
@@ -717,7 +717,7 @@ impl SimonSaysSeeq {
 
                     
                     // Convert to 0-based grid coordinates and set LED
-                    self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "main_display", "update_main_grid_display")?;
+                    self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_main_grid_display")?;
                 }
             } else {
                 warn!("No row settings found for row {}", seq_y);
@@ -747,7 +747,7 @@ impl SimonSaysSeeq {
             };
             
             // Convert to 0-based grid coordinates and set LED
-            self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "button_press", "update_single_led")?;
+            self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_single_led")?;
         }
         
         Ok(())

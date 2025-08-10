@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("🧪 Test 1: Single LED command");
             debug!("About to send LED command for position (0,0)...");
             
-            match manager.set_led(grid_id, 0, 0, 15) {
+            match manager.set_led(grid_id, 0, 0, 15, "example_caller") {
                 Ok(_) => info!("✅ LED command sent successfully"),
                 Err(e) => info!("❌ LED command failed: {}", e),
             }

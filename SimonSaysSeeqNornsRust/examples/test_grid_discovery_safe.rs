@@ -122,7 +122,7 @@ fn safe_test_grid(manager: &mut GridManager, grid_id: usize, cols: usize, rows: 
     info!("   Step 1: Testing corner LEDs...");
     for &(x, y) in &corners {
         if x < cols && y < rows {
-            manager.set_led(grid_id, x, y, 8)?; // Lower brightness for safety
+            manager.set_led(grid_id, x, y, 8, "example_caller")?; // Lower brightness for safety
             thread::sleep(Duration::from_millis(150)); // Longer delay for larger grids
         }
     }
@@ -132,7 +132,7 @@ fn safe_test_grid(manager: &mut GridManager, grid_id: usize, cols: usize, rows: 
     info!("   Step 2: Clearing corner LEDs...");
     for &(x, y) in &corners {
         if x < cols && y < rows {
-            manager.set_led(grid_id, x, y, 0)?;
+            manager.set_led(grid_id, x, y, 0, "example_caller")?;
             thread::sleep(Duration::from_millis(100));
         }
     }
@@ -155,7 +155,7 @@ fn safe_test_grid(manager: &mut GridManager, grid_id: usize, cols: usize, rows: 
     info!("   Lighting up cross pattern (6 LEDs max)...");
     for &(x, y) in &safe_pattern {
         if x < cols && y < rows {
-            manager.set_led(grid_id, x, y, 6)?; // Very low brightness
+            manager.set_led(grid_id, x, y, 6, "example_caller")?; // Very low brightness
             thread::sleep(Duration::from_millis(100)); // Delay between each LED
         }
     }
@@ -170,7 +170,7 @@ fn safe_test_grid(manager: &mut GridManager, grid_id: usize, cols: usize, rows: 
     info!("   Step 5: Verification cleanup (ensuring all LEDs are OFF)...");
     for x in 0..cols {
         for y in 0..rows {
-            manager.set_led(grid_id, x, y, 0)?;
+            manager.set_led(grid_id, x, y, 0, "example_caller")?;
             // Only add delay every 16 LEDs to avoid too much delay
             if (x * rows + y) % 16 == 0 {
                 thread::sleep(Duration::from_millis(10));

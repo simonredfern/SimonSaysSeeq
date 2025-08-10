@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🧹 Clearing grid...");
     for y in 0..8 {
         for x in 0..16 {
-            grid.set_led(&grid_id, x, y, 0)?;
+            grid.set_led(&grid_id, x, y, 0, "example_caller", "example_caller")?;
         }
     }
     thread::sleep(Duration::from_millis(100));
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Set the pattern
     for &x in &pattern_positions {
-        grid.set_led(&grid_id, x, row_2_y, pattern_brightness)?;
+        grid.set_led(&grid_id, x, row_2_y, pattern_brightness, "example_caller", "example_caller")?;
     }
     
     info!("✅ Row 2 pattern set at positions: {:?}", pattern_positions.iter().map(|&x| x + 1).collect::<Vec<_>>());
@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else { 
                     0 
                 };
-                grid.set_led(&grid_id, prev_step, row_2_y, prev_brightness)?;
+                grid.set_led(&grid_id, prev_step, row_2_y, prev_brightness, "example_caller", "example_caller")?;
             } else if cycle > 0 {
                 // Clear position 16 from previous cycle
                 let prev_brightness = if pattern_positions.contains(&15) { 
@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else { 
                     0 
                 };
-                grid.set_led(&grid_id, 15, row_2_y, prev_brightness)?;
+                grid.set_led(&grid_id, 15, row_2_y, prev_brightness, "example_caller", "example_caller")?;
             }
             
             // Set current position
@@ -136,7 +136,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 position_brightness // Position only
             };
             
-            grid.set_led(&grid_id, current_step, row_2_y, current_brightness)?;
+            grid.set_led(&grid_id, current_step, row_2_y, current_brightness, "example_caller", "example_caller")?;
             
             thread::sleep(step_duration);
         }
@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else { 
         0 
     };
-    grid.set_led(&grid_id, 15, row_2_y, final_brightness)?;
+    grid.set_led(&grid_id, 15, row_2_y, final_brightness, "example_caller", "example_caller")?;
     
     info!("");
     info!("✅ Row 2 scrolling test completed!");
@@ -224,7 +224,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("");
     info!("🧹 Final cleanup...");
     for x in 0..16 {
-        grid.set_led(&grid_id, x, row_2_y, 0)?;
+        grid.set_led(&grid_id, x, row_2_y, 0, "example_caller", "example_caller")?;
     }
     
     info!("");

@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         
                         for x in 0..cols {
                             for y in 0..rows {
-                                match manager.set_led(grid_id, x, y, 0) {
+                                match manager.set_led(grid_id, x, y, 0, "example_caller", "example_caller") {
                                     Ok(_) => cleared_count += 1,
                                     Err(e) => {
                                         failed_count += 1;

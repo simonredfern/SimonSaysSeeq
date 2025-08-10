@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Setting Row {} Column 1: seq({},{}) -> grid({},{}) brightness 15", 
                 seq_y, 1, seq_y, grid_x, grid_y);
         
-        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15)?;
+        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15, "example_caller")?;
     }
     
     grid_manager.refresh()?;
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear and test column 16
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Setting Row {} Column 16: seq({},{}) -> grid({},{}) brightness 15", 
                 seq_y, 16, seq_y, grid_x, grid_y);
         
-        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15)?;
+        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15, "example_caller")?;
     }
     
     grid_manager.refresh()?;
@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear and test row boundaries
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -85,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for seq_x in 1..=16 {
             let grid_x = seq_x - 1;
             let grid_y = seq_y - 1;
-            grid_manager.set_led(main_grid_id, grid_x, grid_y, 8)?;
+            grid_manager.set_led(main_grid_id, grid_x, grid_y, 8, "example_caller")?;
         }
         grid_manager.refresh()?;
         thread::sleep(Duration::from_millis(1000));
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for seq_x in 1..=16 {
             let grid_x = seq_x - 1;
             let grid_y = seq_y - 1;
-            grid_manager.set_led(main_grid_id, grid_x, grid_y, 0)?;
+            grid_manager.set_led(main_grid_id, grid_x, grid_y, 0, "example_caller")?;
         }
         grid_manager.refresh()?;
         thread::sleep(Duration::from_millis(300));
@@ -114,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let grid_y = seq_y - 1;
         println!("Setting corner: seq({},{}) -> grid({},{}) brightness 15", 
                 seq_x, seq_y, grid_x, grid_y);
-        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15)?;
+        grid_manager.set_led(main_grid_id, grid_x, grid_y, 15, "example_caller")?;
     }
     
     grid_manager.refresh()?;

@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Clear entire grid
         for x in 0..16 {
             for y in 0..8 {
-                grid_manager.set_led(main_grid_id, x, y, 0)?;
+                grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
             }
         }
         grid_manager.refresh()?;
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     test_row, seq_x, pattern_value, brightness, seq_x - 1, test_row - 1);
             
             // Use exact same coordinate conversion as main sequencer
-            grid_manager.set_led(main_grid_id, seq_x - 1, test_row - 1, brightness)?;
+            grid_manager.set_led(main_grid_id, seq_x - 1, test_row - 1, brightness, "example_caller")?;
         }
         
         grid_manager.refresh()?;
@@ -72,13 +72,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Clear grid
         for x in 0..16 {
             for y in 0..8 {
-                grid_manager.set_led(main_grid_id, x, y, 0)?;
+                grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
             }
         }
         
         // Light up ONLY column 8 (middle) for this row
         println!("Lighting Row {} Column 8 -> grid({},{})", test_row, 7, test_row - 1);
-        grid_manager.set_led(main_grid_id, 7, test_row - 1, 15)?;
+        grid_manager.set_led(main_grid_id, 7, test_row - 1, 15, "example_caller")?;
         grid_manager.refresh()?;
         
         println!("Should see ONE LED in Row {} Column 8 (middle)", test_row);
@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Final state: Clear grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;

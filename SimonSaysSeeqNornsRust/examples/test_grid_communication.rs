@@ -113,7 +113,7 @@ fn run_comprehensive_test(
     let test_y = 0;
     
     info!("   Testing LED at position (0,0)...");
-    manager.set_led(grid_id, test_x, test_y, 15)?;
+    manager.set_led(grid_id, test_x, test_y, 15, "example_caller")?;
     thread::sleep(Duration::from_millis(300));
     
     print!("   👀 Is the LED at top-left corner (0,0) now ON? (y/n): ");
@@ -129,7 +129,7 @@ fn run_comprehensive_test(
     }
     
     info!("   Turning off LED at (0,0)...");
-    manager.set_led(grid_id, test_x, test_y, 0)?;
+    manager.set_led(grid_id, test_x, test_y, 0, "example_caller")?;
     thread::sleep(Duration::from_millis(300));
     
     print!("   👀 Is the LED at top-left corner (0,0) now OFF? (y/n): ");
@@ -155,7 +155,7 @@ fn run_comprehensive_test(
         
         for brightness in [1, 4, 8, 12, 15, 0] {
             info!("   Setting brightness to {}...", brightness);
-            manager.set_led(grid_id, test_x, test_y, brightness)?;
+            manager.set_led(grid_id, test_x, test_y, brightness, "example_caller")?;
             thread::sleep(Duration::from_millis(500));
         }
         
@@ -192,7 +192,7 @@ fn run_comprehensive_test(
     info!("   Lighting up test pattern (5 LEDs)...");
     for &(x, y) in &test_positions {
         if x < cols && y < rows {
-            manager.set_led(grid_id, x, y, 10)?;
+            manager.set_led(grid_id, x, y, 10, "example_caller")?;
             thread::sleep(Duration::from_millis(100));
         }
     }
@@ -228,7 +228,7 @@ fn run_comprehensive_test(
     for &(x, y) in &test_positions {
         if x < cols && y < rows {
             info!("   Clearing LED ({}, {})...", x, y);
-            manager.set_led(grid_id, x, y, 0)?;
+            manager.set_led(grid_id, x, y, 0, "example_caller")?;
             thread::sleep(Duration::from_millis(200));
         }
     }
@@ -269,7 +269,7 @@ fn run_comprehensive_test(
     info!("   Method 2: Individual LED clear (slow and thorough)...");
     for x in 0..cols {
         for y in 0..rows {
-            manager.set_led(grid_id, x, y, 0)?;
+            manager.set_led(grid_id, x, y, 0, "example_caller")?;
             // Longer delay to ensure each command is processed
             if (x * rows + y) % 4 == 0 {
                 thread::sleep(Duration::from_millis(20));
@@ -353,7 +353,7 @@ fn force_clear_all_leds(
     
     for x in 0..cols {
         for y in 0..rows {
-            match manager.set_led(grid_id, x, y, 0) {
+            match manager.set_led(grid_id, x, y, 0, "example_caller") {
                 Ok(_) => success_count += 1,
                 Err(e) => {
                     error_count += 1;
@@ -417,7 +417,7 @@ fn attempt_emergency_reset(
     for brightness in [0] {  // Only turn off, don't turn on
         for x in 0..cols {
             for y in 0..rows {
-                manager.set_led(grid_id, x, y, brightness)?;
+                manager.set_led(grid_id, x, y, brightness, "example_caller")?;
                 // Very slow to ensure each command is processed
                 if (x * rows + y) % 2 == 0 {
                     thread::sleep(Duration::from_millis(5));
@@ -445,10 +445,10 @@ fn attempt_emergency_reset(
     for x in 0..cols {
         for y in 0..rows {
             // First turn it on
-            manager.set_led(grid_id, x, y, 15)?;
+            manager.set_led(grid_id, x, y, 15, "example_caller")?;
             thread::sleep(Duration::from_millis(10));
             // Then turn it off
-            manager.set_led(grid_id, x, y, 0)?;
+            manager.set_led(grid_id, x, y, 0, "example_caller")?;
             thread::sleep(Duration::from_millis(10));
             
             if (x * rows + y) % 16 == 0 {

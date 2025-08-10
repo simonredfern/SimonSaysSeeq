@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 // Test 2: Single LED
                 info!("   Step 2: Testing single LED at (0,0)...");
-                if let Err(e) = manager.set_led(grid_id, 0, 0, 15) {
+                if let Err(e) = manager.set_led(grid_id, 0, 0, 15, "example_caller") {
                     warn!("   LED command failed: {}", e);
                     continue;
                 }
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let led_visible = input.trim().to_lowercase().starts_with('y');
                 
                 // Turn off the LED
-                manager.set_led(grid_id, 0, 0, 0)?;
+                manager.set_led(grid_id, 0, 0, 0, "example_caller")?;
                 thread::sleep(Duration::from_millis(300));
                 
                 if led_visible {
@@ -156,7 +156,7 @@ fn detailed_test(manager: &mut GridManager, grid_id: &str) -> Result<(), Box<dyn
     let corners = [(0, 0), (15, 0), (0, 7), (15, 7)];
     
     for &(x, y) in &corners {
-        manager.set_led(grid_id, x, y, 12)?;
+        manager.set_led(grid_id, x, y, 12, "example_caller")?;
         thread::sleep(Duration::from_millis(150));
     }
     
@@ -170,7 +170,7 @@ fn detailed_test(manager: &mut GridManager, grid_id: &str) -> Result<(), Box<dyn
     
     // Clear corners
     for &(x, y) in &corners {
-        manager.set_led(grid_id, x, y, 0)?;
+        manager.set_led(grid_id, x, y, 0, "example_caller")?;
         thread::sleep(Duration::from_millis(100));
     }
     
@@ -181,11 +181,11 @@ fn detailed_test(manager: &mut GridManager, grid_id: &str) -> Result<(), Box<dyn
     
     for brightness in [2, 5, 8, 11, 15] {
         info!("     Setting brightness {}...", brightness);
-        manager.set_led(grid_id, center_x, center_y, brightness)?;
+        manager.set_led(grid_id, center_x, center_y, brightness, "example_caller")?;
         thread::sleep(Duration::from_millis(400));
     }
     
-    manager.set_led(grid_id, center_x, center_y, 0)?;
+    manager.set_led(grid_id, center_x, center_y, 0, "example_caller")?;
     
     if prompt_user("Did you see the center LED change brightness?") {
         info!("   ✅ Brightness control working");
@@ -199,7 +199,7 @@ fn detailed_test(manager: &mut GridManager, grid_id: &str) -> Result<(), Box<dyn
     // Light up several LEDs
     for x in 5..11 {
         for y in 2..6 {
-            manager.set_led(grid_id, x, y, 8)?;
+            manager.set_led(grid_id, x, y, 8, "example_caller")?;
         }
     }
     thread::sleep(Duration::from_millis(500));

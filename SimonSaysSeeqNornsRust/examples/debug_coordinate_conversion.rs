@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Clear grid
         for x in 0..16 {
             for y in 0..8 {
-                grid_manager.set_led(main_grid_id, x, y, 0)?;
+                grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
             }
         }
         
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Setting LED: seq({},{}) -> grid({},{}) brightness 10", 
                     seq_x, seq_y, grid_x, grid_y);
             
-            grid_manager.set_led(main_grid_id, grid_x, grid_y, 12)?;
+            grid_manager.set_led(main_grid_id, grid_x, grid_y, 12, "example_caller")?;
         }
         
         grid_manager.refresh()?;
@@ -67,13 +67,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for x in 0..16 {
                 let pattern_exists = test_positions.contains(&(x + 1));
                 let brightness = if pattern_exists { 12 } else { 0 }; // Pattern only - BRIGHT
-                grid_manager.set_led(main_grid_id, x, seq_y - 1, brightness)?;
+                grid_manager.set_led(main_grid_id, x, seq_y - 1, brightness, "example_caller")?;
             }
             
             // Set current position with higher brightness
             let pattern_exists = test_positions.contains(&current_step);
             let brightness = if pattern_exists { 15 } else { 8 }; // Position or pattern+position - MAX or MEDIUM
-            grid_manager.set_led(main_grid_id, current_step - 1, seq_y - 1, brightness)?;
+            grid_manager.set_led(main_grid_id, current_step - 1, seq_y - 1, brightness, "example_caller")?;
             
             grid_manager.refresh()?;
             thread::sleep(Duration::from_millis(100)); // Fast scroll to see movement
@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid including row 8
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -114,13 +114,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         seq_y, seq_x, brightness, pattern_exists, is_current_step);
             }
             
-            grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness)?;
+            grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, brightness, "example_caller")?;
         }
     }
     
     // Ensure row 8 stays completely dark
     for x in 0..16 {
-        grid_manager.set_led(main_grid_id, x, 7, 0)?;
+        grid_manager.set_led(main_grid_id, x, 7, 0, "example_caller")?;
     }
     
     grid_manager.refresh()?;

@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clear entire grid
     for x in 0..16 {
         for y in 0..8 {
-            grid_manager.set_led(main_grid_id, x, y, 0)?;
+            grid_manager.set_led(main_grid_id, x, y, 0, "example_caller")?;
         }
     }
     grid_manager.refresh()?;
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set Row 1 pattern (top row)
     for seq_x in [1, 5, 9, 13] {
         println!("  Setting Row 1 Col {} -> grid({},{})", seq_x, seq_x - 1, 0);
-        grid_manager.set_led(main_grid_id, seq_x - 1, 0, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, 0, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set Row 6 pattern while Row 1 is still lit
     for seq_x in [1, 5, 9, 13] {
         println!("  Setting Row 6 Col {} -> grid({},{})", seq_x, seq_x - 1, 5);
-        grid_manager.set_led(main_grid_id, seq_x - 1, 5, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, 5, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     
@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set Row 7 pattern while Rows 1 and 6 are still lit
     for seq_x in [1, 5, 9, 13] {
         println!("  Setting Row 7 Col {} -> grid({},{})", seq_x, seq_x - 1, 6);
-        grid_manager.set_led(main_grid_id, seq_x - 1, 6, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, 6, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     
@@ -82,7 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (seq_x, seq_y) in test_positions {
         println!("  Confirming Row {} Col {} -> grid({},{})", 
                 seq_y, seq_x, seq_x - 1, seq_y - 1);
-        grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, 15)?;
+        grid_manager.set_led(main_grid_id, seq_x - 1, seq_y - 1, 15, "example_caller")?;
     }
     grid_manager.refresh()?;
     
