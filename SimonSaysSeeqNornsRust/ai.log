@@ -1681,3 +1681,18 @@ kill 14815 16252 16404 16463
 #   - restore_arm_button_leds(): Restore single active ARM button LED
 # COMPILATION: Successful with warnings only
 # STATUS: ARM button system simplified and ready for testing with exclusive selection
+
+## 2025-08-11 01:02:26 ARM Button Release Problem ROOT CAUSE FOUND AND FIXED
+# USER FEEDBACK: ARM button exclusive selection working (only one active) but LED not turning off on release
+# ROOT CAUSE IDENTIFIED: Grid event filtering was blocking ALL release events
+# PROBLEM LOCATION: src/main.rs line 205-206 in main_loop()
+# ISSUE: Code filtered with "&& grid_event.pressed" - only allowed press events through
+# CONSEQUENCE: Row 7 ARM buttons never received release events, LEDs stayed on
+# SOLUTION IMPLEMENTED: 
+#   - Removed "&& grid_event.pressed" filter from grid event processing
+#   - Now allows both press AND release events to reach handle_grid_press()
+#   - Sequencer rows 0-6 still ignore releases (have their own "if pressed" check)
+#   - Control row 7 now receives both press and release events as needed
+# DETAILED LOGGING ADDED: Enhanced debug messages to track press/release events
+# COMPILATION: Successful with warnings only using --release --features desktop
+# STATUS: ARM button momentary behavior should now work correctly with press/release

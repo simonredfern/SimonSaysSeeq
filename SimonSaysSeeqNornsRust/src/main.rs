@@ -203,8 +203,8 @@ impl SimonSaysSeeq {
                         let main_grid_id = self.get_main_grid_id(&connected_grids);
                         
                         for grid_event in grid_events {
-                            // Only process events from main grid and only button presses (not releases)
-                            if Some(&grid_event.grid_id) == main_grid_id.as_ref() && grid_event.pressed {
+                            // Only process events from main grid (both presses and releases)
+                            if Some(&grid_event.grid_id) == main_grid_id.as_ref() {
                                 // Grid event detected - removed timing for performance
                                 
                                 let hardware_event = HardwareEvent::GridPress {
@@ -470,7 +470,8 @@ impl SimonSaysSeeq {
         let seq_x = x;
         let seq_y = y;
         
-        info!("handle_grid_press says: Button press: grid {} at ({}, {})", grid_id, x, y);
+        info!("handle_grid_press says: Button {}: grid {} at ({}, {}) pressed={}", 
+              if pressed { "PRESS" } else { "RELEASE" }, grid_id, x, y, pressed);
         
         // Should only get main grid events now due to filtering, but double-check
         let connected_grids = self.grid.get_connected_grids();
@@ -500,6 +501,7 @@ impl SimonSaysSeeq {
                 }
             } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
+                info!("handle_grid_press says: ROW 7 event - button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
                 if pressed {
                     // Turn off previous ARM button if any
                     if let Some(prev_button) = self.active_arm_button {
@@ -522,14 +524,17 @@ impl SimonSaysSeeq {
                     self.handle_control_button(seq_x, seq_y)?;
                 } else {
                     // Clear active ARM button and turn off LED
+                    info!("handle_grid_press says: ROW 7 RELEASE detected for button {}, current active: {:?}", seq_x, self.active_arm_button);
                     if self.active_arm_button == Some(seq_x) {
                         self.active_arm_button = None;
-                        info!("handle_grid_press says: ARM_{} released (OFF)", seq_x);
+                        info!("handle_grid_press says: ARM_{} released (OFF) - LED turning OFF", seq_x);
                         #[cfg(feature = "hardware")]
                         {
                             self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_button_release")?;
                             self.grid.refresh()?;
                         }
+                    } else {
+                        info!("handle_grid_press says: ARM_{} release ignored - not the active button", seq_x);
                     }
                 }
             }
