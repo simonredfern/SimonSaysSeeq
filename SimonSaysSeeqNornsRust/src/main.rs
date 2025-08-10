@@ -683,6 +683,16 @@ impl SimonSaysSeeq {
         for seq_y in 1..=7 {
             let row_settings = self.sequencer.get_row_settings(seq_y);
             if let Some(row_state) = row_settings {
+                // Debug row state every few updates
+                static mut DEBUG_COUNTER: u32 = 0;
+                unsafe {
+                    DEBUG_COUNTER += 1;
+                    if DEBUG_COUNTER % 20 == 0 && seq_y <= 3 { // Only debug first 3 rows, every 20 updates
+                        info!("🎯 Row {} current_step = {} (first_step={}, last_step={})", 
+                              seq_y, row_state.current_step, row_state.first_step, row_state.last_step);
+                    }
+                }
+                
                 for seq_x in 1..=16 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
                     let is_current_step = seq_x == row_state.current_step;
@@ -698,6 +708,8 @@ impl SimonSaysSeeq {
                     // Convert to 0-based grid coordinates
                     self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
                 }
+            } else {
+                warn!("No row settings found for row {}", seq_y);
             }
         }
         
@@ -714,7 +726,6 @@ impl SimonSaysSeeq {
     fn get_main_grid_id(&self, connected_grids: &[String]) -> Option<String> {
         if let Some(preferred_id) = &self.main_grid_preference {
             if connected_grids.contains(preferred_id) {
-                info!("Using preferred main grid: {}", preferred_id);
                 return Some(preferred_id.clone());
             } else {
                 warn!("Preferred main grid {} not found, using first available", preferred_id);

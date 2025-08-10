@@ -248,8 +248,17 @@ impl Default for SequencerState {
         let held = vec![vec![0u8; ROWS]; COLS];
         
         let mut row_settings = Vec::new();
-        for _ in 0..ROWS {
-            row_settings.push(MainRowStates::default());
+        for i in 0..ROWS {
+            let mut settings = MainRowStates::default();
+            // Set up different loop lengths for testing
+            match i {
+                0 => { settings.last_step = 16; }, // Row 1: 16 steps
+                1 => { settings.last_step = 8; },  // Row 2: 8 steps  
+                2 => { settings.last_step = 12; }, // Row 3: 12 steps
+                3 => { settings.last_step = 4; },  // Row 4: 4 steps
+                _ => { settings.last_step = 16; }, // Others: 16 steps
+            }
+            row_settings.push(settings);
         }
         
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
@@ -852,11 +861,16 @@ impl Sequencer {
         
         // Advance each row's current step based on its individual settings
         for (row_idx, row_settings) in state.row_settings.iter_mut().enumerate() {
+            let old_step = row_settings.current_step;
             row_settings.current_step += 1;
             if row_settings.current_step > row_settings.last_step {
                 row_settings.current_step = row_settings.first_step;
             }
-            debug!("Row {} advanced to step {}", row_idx + 1, row_settings.current_step);
+            if row_idx < 3 { // Debug first 3 rows
+                info!("🎯 Row {} step advancement: {} -> {} (range: {}-{})", 
+                      row_idx + 1, old_step, row_settings.current_step, 
+                      row_settings.first_step, row_settings.last_step);
+            }
         }
         
         // Update CO2 counters if we have data

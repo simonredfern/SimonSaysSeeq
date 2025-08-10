@@ -404,3 +404,17 @@ kill 14815 16252 16404 16463
 #   - 75% (brightness 12): Pattern + position - has pattern AND current step
 # Need: Modify grid display logic to check MainRowStates current_step vs LED position
 # Implementation: Update update_main_grid_display() with brightness calculation
+
+## 2025-08-10 02:42:06 Row 1 Working But Other Rows Weird
+# Issue: Row 1 (top row) scrolling works correctly, but rows 2-7 behaving strangely
+# Problem: Either MainRowStates current_step not advancing properly for other rows
+# Or: Row settings not being retrieved correctly for rows 2-7
+# Need: Debug row state retrieval and current_step advancement for all rows
+
+## 2025-08-10 02:47:52 Debug Analysis - All Rows Advancing Together
+# FOUND ISSUE: All rows are advancing together instead of independently
+# Log shows: Row 1, 2, 3 all have identical current_step values (2->3, 3->4, etc.)
+# Problem: All rows synchronized instead of independent stepping
+# Root cause: Rows should advance independently but they're locked together
+# This explains why only row 1 looks right - all rows showing same position
+# Need: Fix sequencer to advance rows independently, not all together
