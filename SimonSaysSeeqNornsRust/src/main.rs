@@ -44,6 +44,8 @@ pub struct SimonSaysSeeq {
     running: Arc<AtomicBool>,
     tempo: f32,
     main_grid_preference: Option<String>,
+    // ARM button states for row 7 (control row) - true while button pressed
+    arm_states: [bool; 16],
 }
 
 impl SimonSaysSeeq {
@@ -64,6 +66,7 @@ impl SimonSaysSeeq {
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
             main_grid_preference: Some("m2949672".to_string()), // Default main grid
+            arm_states: [false; 16], // Initialize all ARM buttons as not pressed
         })
     }
 
@@ -496,9 +499,28 @@ impl SimonSaysSeeq {
                     }
                 }
             } else if seq_y == 7 {
-                // Control row (7, 0-indexed) - only handle presses
+                // Control row (7, 0-indexed) - handle both presses and releases
                 if pressed {
+                    // Set ARM state and light up button
+                    self.arm_states[seq_x] = true;
+                    info!("handle_grid_press says: ARM_{} pressed (ON)", seq_x);
+                    #[cfg(feature = "hardware")]
+                    {
+                        self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_button_press")?;
+                        self.grid.refresh()?;
+                    }
+                    
+                    // Handle control button function
                     self.handle_control_button(seq_x, seq_y)?;
+                } else {
+                    // Clear ARM state and turn off button
+                    self.arm_states[seq_x] = false;
+                    info!("handle_grid_press says: ARM_{} released (OFF)", seq_x);
+                    #[cfg(feature = "hardware")]
+                    {
+                        self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_button_release")?;
+                        self.grid.refresh()?;
+                    }
                 }
             }
         } else {
@@ -841,6 +863,29 @@ impl SimonSaysSeeq {
             }
         }
         None
+    }
+
+    /// Check if any ARM buttons are currently pressed
+    fn has_arm_buttons_pressed(&self) -> bool {
+        self.arm_states.iter().any(|&pressed| pressed)
+    }
+    
+    /// Get list of currently pressed ARM button indices
+    fn get_pressed_arm_buttons(&self) -> Vec<usize> {
+        self.arm_states
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, &pressed)| if pressed { Some(idx) } else { None })
+            .collect()
+    }
+    
+    /// Check if specific ARM button is pressed
+    fn is_arm_button_pressed(&self, button_index: usize) -> bool {
+        if button_index < 16 {
+            self.arm_states[button_index]
+        } else {
+            false
+        }
     }
 
     fn handle_advanced_grid_operation(&mut self, x: usize, y: usize) -> Result<()> {

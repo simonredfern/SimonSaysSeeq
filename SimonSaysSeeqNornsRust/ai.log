@@ -1557,3 +1557,47 @@ kill 14815 16252 16404 16463
 # COMPILATION: Successful with warnings only
 # RESULT: All MIDI log messages now follow "function_name says:" format with plain text
 # STATUS: MIDI logging standards compliance complete
+
+## 2025-08-11 00:33:16 Control Row (Row 7) Behavior Analysis Complete
+# ANALYSIS: Complete documentation of row 7 (0-indexed) control functionality
+# CONTROL BUTTON MAPPING (handle_control_button function):
+#   Column 1: Reset all sequences + clear grid display
+#   Column 2: Clear selected rows (if held) OR clear rows 0-1 (if none held)
+#   Column 3: Undo last operation
+#   Column 4: Redo last undone operation
+#   Column 5: Generate Euclidean rhythm for held row
+#   Column 6: Copy pattern section (if positions held, incomplete implementation)
+#   Column 7: Scroll pattern right
+#   Column 8: Toggle chain mode on/off
+#   Columns 9-16: No current functionality
+# VISUAL FEEDBACK: Row 7 has NO automatic LED updates (excluded from display loop)
+# HELD POSITION INTERACTIONS:
+#   - Holding row 7 positions enables special randomize/clear column functions
+#   - Holding other rows enables copy/paste operations
+#   - Multiple held rows enable pattern copying between rows
+# COORDINATE SYSTEM ISSUES FOUND:
+#   - has_held_positions(), get_held_rows(), get_first_held_row() use 1-indexed coords
+#   - handle_advanced_grid_operation() uses mixed coordinate systems
+#   - Some control functions still reference old row numbers
+# STATUS: Control row functional but has coordinate inconsistencies needing fixes
+
+## 2025-08-11 00:38:03 Control Row Visual Feedback Successfully Implemented
+# TASK: Implement ARM button state tracking and visual feedback for row 7
+# IMPLEMENTATION COMPLETED:
+#   1. Added arm_states: [bool; 16] array to SimonSaysSeeq struct
+#   2. Updated handle_grid_press to track both press AND release for row 7
+#   3. Added immediate LED feedback with brightness 10 on press, 0 on release
+#   4. Added grid.refresh() calls for immediate visual response
+#   5. Row 7 excluded from scrolling display (update_main_grid_display only processes 0-6)
+# FEATURES IMPLEMENTED:
+#   - ARM_0 to ARM_15 state tracking (true while pressed, false when released)
+#   - Instant visual feedback: LEDs light up ONLY while button held down
+#   - No scrolling or position indicators on row 7
+#   - Different behavior from sequencer rows 0-6 (momentary vs toggle)
+#   - Logging shows "ARM_X pressed (ON)" and "ARM_X released (OFF)"
+# UTILITY METHODS ADDED:
+#   - has_arm_buttons_pressed(): Check if any ARM buttons active
+#   - get_pressed_arm_buttons(): Get list of currently pressed button indices
+#   - is_arm_button_pressed(index): Check specific ARM button state
+# COMPILATION: Successful with warnings only
+# STATUS: ARM button visual feedback system complete and functional
