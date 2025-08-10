@@ -54,8 +54,8 @@ fn main() -> Result<()> {
     info!("");
     
     while start_time.elapsed() < monitor_duration {
-        // Get current row 1 state
-        if let Some(row_state) = sequencer.get_row_states(1) {
+        // Get current row 0 state (0-indexed)
+        if let Some(row_state) = sequencer.get_row_states(0) {
             let current_step = row_state.current_step;
             let current_time = Instant::now();
             
@@ -194,9 +194,9 @@ fn update_row1_display(
     grid_manager: &mut GridManager,
     grid_id: &str
 ) -> Result<()> {
-    if let Some(row_state) = sequencer.get_row_states(1) {
-        for seq_x in 1..=16 {
-            let pattern_value = sequencer.get_grid_value(seq_x, 1);
+    if let Some(row_state) = sequencer.get_row_states(0) {
+        for seq_x in 0..=15 {
+            let pattern_value = sequencer.get_grid_value(seq_x, 0);
             let is_current_step = seq_x == row_state.current_step;
             
             // 4 brightness levels based on pattern and position
@@ -207,8 +207,8 @@ fn update_row1_display(
                 (true, true) => 14,      // Has pattern AND current position
             };
             
-            // Convert to 0-based grid coordinates and set LED
-            grid_manager.set_led(grid_id, seq_x - 1, 0, brightness, "monitor_row1_scrolling")?;
+            // Use native 0-based coordinates directly
+            grid_manager.set_led(grid_id, seq_x, 0, brightness, "monitor_row1_scrolling")?;
         }
     }
     

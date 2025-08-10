@@ -84,20 +84,20 @@ fn update_test_grid(
     static mut FRAME_COUNT: u32 = 0;
     unsafe { FRAME_COUNT += 1; }
     
-    // Update all rows 1-7
-    for seq_y in 1..=7 {
+    // Update all rows 0-6 (0-indexed)
+    for seq_y in 0..=6 {
         if let Some(row_state) = sequencer.get_row_states(seq_y) {
             
-            // Log Row 1 and Row 2 current_step every 30 frames (1 second)
+            // Log Row 0 and Row 1 current_step every 30 frames (1 second)
             unsafe {
-                if FRAME_COUNT % 30 == 0 && (seq_y == 1 || seq_y == 2) {
-                    println!("🎯 Row {} current_step = {} (frame {})", 
-                           seq_y, row_state.current_step, FRAME_COUNT);
+                if FRAME_COUNT % 30 == 0 && (seq_y == 0 || seq_y == 1) {
+                    println!("🎯 Row {} current_step = {} (frame {}) [display: row {}]", 
+                           seq_y, row_state.current_step, FRAME_COUNT, seq_y + 1);
                 }
             }
             
             // Update all 16 steps for this row
-            for seq_x in 1..=16 {
+            for seq_x in 0..=15 {
                 let pattern_value = sequencer.get_grid_value(seq_x, seq_y);
                 let is_current_step = seq_x == row_state.current_step;
                 
@@ -109,14 +109,14 @@ fn update_test_grid(
                     (true, true) => 14,      // Pattern + position - 90%
                 };
                 
-                // Convert to 0-based coordinates and set LED
-                grid_manager.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "example_caller")?;
+                // Use native 0-based coordinates directly
+                grid_manager.set_led(grid_id, seq_x, seq_y, brightness, "example_caller")?;
             }
         } else {
-            // Row state not found - should not happen for rows 1-7
+            // Row state not found - should not happen for rows 0-6
             unsafe {
                 if FRAME_COUNT % 30 == 0 {
-                    println!("⚠️  No row state found for row {}", seq_y);
+                    println!("⚠️  No row state found for row {} (display: row {})", seq_y, seq_y + 1);
                 }
             }
         }

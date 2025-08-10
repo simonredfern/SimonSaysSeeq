@@ -1428,3 +1428,17 @@ kill 14815 16252 16404 16463
 #   - Native grid hardware compatibility
 # USER DISPLAY: Only user-facing messages add +1 for "step 1, row 1" display
 # STATUS: Step 1 complete, compilation successful, examples need updating next
+
+## 2025-08-10 23:39:42 Coordinate System Refactor - Step 2 Complete
+# PROBLEM FIXED: No row settings found for row 0 warning eliminated
+# ROOT CAUSE: get_row_states() and set_row_states() still expected 1-indexed coordinates
+# CHANGES COMPLETED:
+#   1. Updated get_row_states(): row > 0 && row <= 7 -> row < 7 (0-indexed)
+#   2. Updated set_row_states(): same coordinate bounds adjustment
+#   3. Fixed array indexing: state.row_states[row - 1] -> state.row_states[row]
+#   4. Updated examples to use 0-indexed coordinates:
+#      - debug_row_scrolling.rs: 1..=7 -> 0..=6, removed coordinate conversions
+#      - monitor_row1_scrolling.rs: monitors row 0 instead of row 1
+#      - test_main_sequencer_scrolling.rs: 1..=7 -> 0..=6, native coordinates
+# RESULT: Warning eliminated, all coordinate systems now consistently 0-indexed
+# STATUS: Coordinate system refactor fully complete, compilation successful

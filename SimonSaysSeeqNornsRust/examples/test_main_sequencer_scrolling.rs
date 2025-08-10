@@ -60,9 +60,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         frame_count += 1;
         if frame_count % 30 == 0 { // Every 30 frames (~1 second)
             println!("\n--- Frame {} ---", frame_count);
-            for row in 1..=3 { // Monitor first 3 rows
+            for row in 0..=2 { // Monitor first 3 rows (0-indexed)
                 if let Some(row_state) = sequencer.get_row_states(row) {
-                    println!("  Row {} current_step = {}", row, row_state.current_step);
+                    println!("  Row {} current_step = {} [display: row {}]", row, row_state.current_step, row + 1);
                 }
             }
         }
@@ -95,10 +95,10 @@ fn update_main_grid_display(
 ) -> Result<(), Box<dyn std::error::Error>> {
     
     // Grid display with position scrolling - 4 brightness levels (EXACT main sequencer logic)
-    for seq_y in 1..=7 {
+    for seq_y in 0..=6 {
         let row_states = sequencer.get_row_states(seq_y);
         if let Some(row_state) = row_states {
-            for seq_x in 1..=16 {
+            for seq_x in 0..=15 {
                 let pattern_value = sequencer.get_grid_value(seq_x, seq_y);
                 let is_current_step = seq_x == row_state.current_step;
                 
@@ -110,8 +110,8 @@ fn update_main_grid_display(
                     (true, true) => 14,      // Pattern + position - 90%
                 };
                 
-                // Convert to 0-based grid coordinates (EXACT main sequencer logic)
-                grid_manager.set_led(grid_id, seq_x - 1, seq_y - 1, brightness, "update_main_grid_display", "example_caller")?;
+                // Use native 0-based coordinates directly (EXACT main sequencer logic)
+                grid_manager.set_led(grid_id, seq_x, seq_y, brightness, "update_main_grid_display", "example_caller")?;
             }
         }
     }

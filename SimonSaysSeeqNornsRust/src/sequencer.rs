@@ -1473,18 +1473,18 @@ impl Sequencer {
 
     /// Set row states
     pub fn set_row_states(&self, row: usize, states: MainRowStates) {
-        if row > 0 && row <= 7 {
+        if row < 7 {
             let mut state = self.state.lock().unwrap();
-            state.row_states[row - 1] = states;
+            state.row_states[row] = states;
             debug!("set_row_states says: Updated states for row {}", row);
         }
     }
 
     /// Get row states
     pub fn get_row_states(&self, row: usize) -> Option<MainRowStates> {
-        if row > 0 && row <= 7 {
+        if row < 7 {
             let state = self.state.lock().unwrap();
-            Some(state.row_states[row - 1].clone())
+            Some(state.row_states[row].clone())
         } else {
             None
         }
