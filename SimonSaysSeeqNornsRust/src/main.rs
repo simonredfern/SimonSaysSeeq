@@ -513,15 +513,18 @@ impl SimonSaysSeeq {
                 }
             }
             2 => {
-                // Randomize current row or all
+                // Clear current row or all
                 if self.has_held_positions() {
-                    info!("Randomize selected rows");
+                    info!("Clear selected rows");
                     let held_rows = self.get_held_rows();
-                    self.sequencer.randomize_rows(&held_rows, 0.5, 2);
+                    for &row in &held_rows {
+                        self.sequencer.clear_section(1, row, 16, 1);
+                    }
                 } else {
-                    info!("Randomize all rows");
-                    let all_rows = vec![1, 2, 3, 4, 5, 6, 7];
-                    self.sequencer.randomize_rows(&all_rows, 0.4, 2);
+                    info!("Clear all rows");
+                    for row in 1..=7 {
+                        self.sequencer.clear_section(1, row, 16, 1);
+                    }
                 }
                 #[cfg(feature = "hardware")]
                 self.update_grid_display()?;

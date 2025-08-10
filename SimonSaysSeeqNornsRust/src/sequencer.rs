@@ -1232,36 +1232,7 @@ impl Sequencer {
     }
     
     /// Randomize specific rows with constraints
-    pub fn randomize_rows(&self, rows: &[usize], density: f32, max_ratchet: u8) {
-        if rows.is_empty() {
-            return;
-        }
-        
-        self.push_undo_snapshot(format!("Randomize rows {:?}", rows));
-        
-        let mut state = self.state.lock().unwrap();
-        let mut rng = rand::thread_rng();
-        
-        for &row in rows {
-            if row > 0 && row <= 8 {
-                let row_idx = row - 1;
-                for col in 0..16 {
-                    if rand::Rng::gen::<f32>(&mut rng) < density {
-                        let value = if max_ratchet > 1 && rand::Rng::gen::<f32>(&mut rng) < 0.2 {
-                            rand::Rng::gen_range(&mut rng, 2..=max_ratchet)
-                        } else {
-                            1
-                        };
-                        state.grid[col][row_idx] = value;
-                    } else {
-                        state.grid[col][row_idx] = 0;
-                    }
-                }
-            }
-        }
-        
-        info!("Randomized rows {:?} with density {:.2}", rows, density);
-    }
+
     
     /// Pattern Chain Management
     
