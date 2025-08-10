@@ -386,6 +386,12 @@ kill 14815 16252 16404 16463
 #   - Button press to event detection: 735ms - 1200ms (735,749μs to 1,199,754μs)
 #   - Once detected, processing is fast: 71-110μs total
 # Problem: Grid polling is taking nearly 1 second to detect button events
-# Root cause: Main loop polling frequency or OSC socket reading issue
-# The 100μs sleep in main loop is not the issue - something else blocking polling
-# Need: Fix grid event polling to be immediate, not delayed by seconds
+# Root cause: OSC socket blocking with 500ms timeout in grid_osc.rs
+# Fixed: Changed socket.set_read_timeout() to socket.set_nonblocking(true)
+
+## 2025-08-10 02:35:54 Button Response Delay Fixed Successfully
+# SUCCESS: Changed OSC socket from blocking (500ms timeout) to non-blocking
+# Result: Button response now immediate - delay completely eliminated
+# Grid event detection now happens in microseconds instead of hundreds of milliseconds
+# Core button press functionality working perfectly with immediate LED response
+# Status: Major performance issue resolved - ready for next features
