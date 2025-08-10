@@ -248,17 +248,8 @@ impl Default for SequencerState {
         let held = vec![vec![0u8; ROWS]; COLS];
         
         let mut row_settings = Vec::new();
-        for i in 0..ROWS {
-            let mut settings = MainRowStates::default();
-            // Set up different loop lengths for testing
-            match i {
-                0 => { settings.last_step = 16; }, // Row 1: 16 steps
-                1 => { settings.last_step = 8; },  // Row 2: 8 steps  
-                2 => { settings.last_step = 12; }, // Row 3: 12 steps
-                3 => { settings.last_step = 4; },  // Row 4: 4 steps
-                _ => { settings.last_step = 16; }, // Others: 16 steps
-            }
-            row_settings.push(settings);
+        for _ in 0..ROWS {
+            row_settings.push(MainRowStates::default());
         }
         
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]

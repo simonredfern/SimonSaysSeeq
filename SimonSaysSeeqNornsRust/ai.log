@@ -418,3 +418,10 @@ kill 14815 16252 16404 16463
 # Root cause: Rows should advance independently but they're locked together
 # This explains why only row 1 looks right - all rows showing same position
 # Need: Fix sequencer to advance rows independently, not all together
+
+## 2025-08-10 02:54:01 Row 1 Working Correctly, Rows 2-7 Weird
+# Status: Row 1 (top row) working perfectly - button on/off and scrolling both correct
+# Issue: Rows 2-7 behaving strangely despite identical loop settings (first_step=1, last_step=16)
+# Problem: All rows have same current_step values but visual behavior differs
+# Investigation needed: Display logic issue for rows 2-7 vs row 1
+# This is the next major issue to resolve
