@@ -57,7 +57,7 @@ impl GridManager {
             // Create UDP socket for OSC communication
             let socket = UdpSocket::bind("127.0.0.1:0")?;
             let local_port = socket.local_addr()?.port();
-            socket.set_read_timeout(Some(Duration::from_millis(500)))?;
+            socket.set_nonblocking(true)?;
             
             info!("Created OSC socket on port {}", local_port);
             
@@ -472,7 +472,7 @@ impl GridManager {
         {
         let mut events = Vec::new();
         
-        // Check for incoming OSC messages from grids
+        // Check for incoming OSC messages from grids (non-blocking)
         loop {
             let mut buf = [0u8; rosc::decoder::MTU];
             match self.socket.recv_from(&mut buf) {
@@ -500,12 +500,11 @@ impl GridManager {
                     }
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    // No more messages
+                    // No more messages available - this is expected with non-blocking socket
                     break;
                 }
                 Err(e) => {
-                    warn!("Error reading button events: {}", e);
-                    break;
+                    return Err(anyhow!("Error reading OSC messages: {}", e));
                 }
             }
         }

@@ -186,30 +186,29 @@ impl SimonSaysSeeq {
             // Poll grid for button events
             #[cfg(feature = "hardware")]
             {
-                static mut DEBUG_COUNTER: u32 = 0;
-                unsafe {
-                    DEBUG_COUNTER += 1;
-                    if DEBUG_COUNTER % 1000 == 0 {
-                        debug!("🎹 Grid polling active ({}k polls)", DEBUG_COUNTER / 1000);
-                    }
-                }
-                
+                let poll_start = Instant::now();
                 match self.grid.read_button_events() {
                     Ok(grid_events) => {
-                        if !grid_events.is_empty() {
-                            info!("🎹 Received {} grid events", grid_events.len());
-                        }
+                        // Filter events to only process main grid and only button presses
+                        let connected_grids = self.grid.get_connected_grids();
+                        let main_grid_id = self.get_main_grid_id(&connected_grids);
+                        
                         for grid_event in grid_events {
-                            info!("🎹 Grid event: {} ({}, {}) = {}", 
-                                  grid_event.grid_id, grid_event.x, grid_event.y, grid_event.pressed);
-                            let hardware_event = HardwareEvent::GridPress {
-                                grid_id: grid_event.grid_id,
-                                x: grid_event.x,
-                                y: grid_event.y,
-                                pressed: grid_event.pressed,
-                            };
-                            if let Err(e) = self.handle_hardware_event(hardware_event) {
-                                error!("Error handling grid event: {}", e);
+                            // Only process events from main grid and only button presses (not releases)
+                            if Some(&grid_event.grid_id) == main_grid_id.as_ref() && grid_event.pressed {
+                                let poll_time = poll_start.elapsed();
+                                info!("🕒 GRID EVENT DETECTED after {}μs polling: {} at ({}, {})", 
+                                      poll_time.as_micros(), grid_event.grid_id, grid_event.x, grid_event.y);
+                                
+                                let hardware_event = HardwareEvent::GridPress {
+                                    grid_id: grid_event.grid_id,
+                                    x: grid_event.x,
+                                    y: grid_event.y,
+                                    pressed: grid_event.pressed,
+                                };
+                                if let Err(e) = self.handle_hardware_event(hardware_event) {
+                                    error!("Error handling grid event: {}", e);
+                                }
                             }
                         }
                     }
@@ -241,8 +240,8 @@ impl SimonSaysSeeq {
                 break;
             }
             
-            // Small sleep to prevent busy waiting
-            thread::sleep(Duration::from_millis(1));
+            // Faster polling for better button responsiveness
+            thread::sleep(Duration::from_micros(100));
         }
         
         Ok(())
@@ -373,7 +372,7 @@ impl SimonSaysSeeq {
     fn handle_sequencer_event(&mut self, event: SequencerEvent) -> Result<()> {
         match event {
             SequencerEvent::Step { step, bar } => {
-                info!("🥁 Step {}.{} | Running: {}", bar, step, self.sequencer.is_running());
+                debug!("🥁 Step {}.{}", bar, step);
                 
                 // Advance CO2 step counter
                 let step_co2_value = self.co2.advance_step();
@@ -408,11 +407,7 @@ impl SimonSaysSeeq {
                 }
                 
                 // Don't update grid on every step for now - only on button press
-                info!("🎯 Pattern check: 1,1={}, 5,1={}, 9,1={}, 13,1={}", 
-                      self.sequencer.get_grid_value(1, 1),
-                      self.sequencer.get_grid_value(5, 1),
-                      self.sequencer.get_grid_value(9, 1), 
-                      self.sequencer.get_grid_value(13, 1));
+                // Removed pattern check logging for performance
             }
             
             SequencerEvent::Beat { beat } => {
@@ -459,10 +454,10 @@ impl SimonSaysSeeq {
         let seq_x = x + 1;
         let seq_y = y + 1;
         
-        info!("Grid {} {} at ({}, {}) -> seq({}, {})", 
-              grid_id, if pressed { "press" } else { "release" }, x, y, seq_x, seq_y);
+        let timing_start = Instant::now();
+        info!("🕒 Button press START: grid {} at ({}, {})", grid_id, x, y);
         
-        // Route based on main grid preference or discovery order
+        // Should only get main grid events now due to filtering, but double-check
         let connected_grids = self.grid.get_connected_grids();
         let main_grid = self.get_main_grid_id(&connected_grids);
         let is_main_grid = main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false);
@@ -477,19 +472,31 @@ impl SimonSaysSeeq {
                         self.handle_advanced_grid_operation(seq_x, seq_y)?;
                     } else {
                         // Normal grid operation - toggle or cycle ratchet
+                        let pattern_read_time = Instant::now();
                         let current_value = self.sequencer.get_grid_value(seq_x, seq_y);
+                        info!("🕒 Pattern read after {}μs: value={}", timing_start.elapsed().as_micros(), current_value);
+                        
                         let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
                         
-                        info!("🔄 BUTTON TOGGLE: grid[{}][{}] {} -> {} (press at grid {},{})", 
-                              seq_x, seq_y, current_value, new_value, x, y);
-                                
+                        let pattern_update_time = Instant::now();
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
+                        info!("🕒 Pattern updated after {}μs: {} -> {}", timing_start.elapsed().as_micros(), current_value, new_value);
+                        
                         #[cfg(feature = "hardware")]
                         {
+                            let led_command_start = Instant::now();
                             let brightness = if new_value > 0 { 8 } else { 0 };
+                            info!("🕒 LED command starting after {}μs: brightness={}", timing_start.elapsed().as_micros(), brightness);
+                            
                             self.grid.set_led(grid_id, x, y, brightness)?;
-                            info!("🔥 LED UPDATE: grid({}, {}) -> brightness {} for value {} | Should be {}", 
-                                  x, y, brightness, new_value, if new_value > 0 { "ON" } else { "OFF" });
+                            let led_command_end = Instant::now();
+                            
+                            let total_time = timing_start.elapsed();
+                            let led_time = led_command_end.duration_since(led_command_start);
+                            
+                            info!("🕒 LED command COMPLETED after {}μs (LED call took {}μs)", 
+                                  total_time.as_micros(), led_time.as_micros());
+                            info!("🕒 BUTTON PRESS COMPLETE: Total={}μs", total_time.as_micros());
                         }
                     }
                 }
@@ -500,7 +507,7 @@ impl SimonSaysSeeq {
                 }
             }
         } else {
-            info!("Ignoring second grid - focusing on main grid only");
+            warn!("Unexpected: Non-main grid event should have been filtered: {}", grid_id);
         }
         
         Ok(())
@@ -678,14 +685,8 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_grid_display(&mut self) -> Result<()> {
-        let connected_grids = self.grid.get_connected_grids();
-        
-        // Update only the main grid
-        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            self.update_main_grid_display(&main_grid_id)?;
-        }
-        
-        self.grid.refresh()?;
+        // Grid display update disabled during button presses for better responsiveness
+        // Only the immediate LED update happens on button press
         Ok(())
     }
     
@@ -699,8 +700,7 @@ impl SimonSaysSeeq {
                 // Simple brightness: 0 = off, 1+ = half brightness
                 let brightness = if pattern_value > 0 { 8 } else { 0 };
                 
-                debug!("🎯 Grid update: pos({}, {}) pattern={} -> brightness={}", 
-                       seq_x, seq_y, pattern_value, brightness);
+                // Removed debug logging for performance
                 
                 // Convert to 0-based grid coordinates
                 self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;

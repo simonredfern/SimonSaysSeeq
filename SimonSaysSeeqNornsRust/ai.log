@@ -322,3 +322,70 @@ kill 14815 16252 16404 16463
 # LED states: OFF (brightness 0) <-> ON (brightness 8)
 # Pattern data stored correctly in sequencer grid structure
 # Status: Core button interaction working, ready for next feature
+
+## 2025-08-10 02:19:01 Focus on Button Response Delay
+# Issue: Sluggish button response - delay between press and LED change
+# Goal: Optimize for immediate button feedback, eliminate perceived lag
+# Potential causes:
+#   1. Grid polling frequency in main loop (1ms sleep)
+#   2. OSC message timing/buffering
+#   3. Debug logging overhead
+#   4. Grid refresh calls
+# Need: Profile and optimize button press to LED response time
+
+## 2025-08-10 02:22:14 No Speed Improvement Despite Optimizations
+# Applied optimizations:
+#   - Faster polling (1ms -> 100μs)
+#   - Removed all debug logging during button press
+#   - Eliminated full grid updates (112 LED refresh)
+#   - Direct LED command only
+# Result: No noticeable speed improvement
+# Conclusion: Delay is in OSC communication layer or grid hardware itself
+# Issue: Either serialosc processing time or grid hardware response time
+# Need: Test OSC timing directly or investigate grid hardware limitations
+
+## 2025-08-10 02:25:03 Timing Analysis Results
+# Timing measurements: Total=65-69μs | Pattern=0μs | LED=47-49μs
+# LED command time is actually very fast (47-49 microseconds)
+# Issue discovered: Getting duplicate grid events (4 events per single button press)
+# Problem: Both press AND release events from both grids being processed
+# Issue: m5032747 events being processed despite main grid preference for m2949672
+# Root cause: Duplicate event processing causing perceived delay, not OSC speed
+# Solution needed: Filter duplicate events and ensure only main grid processes buttons
+
+## 2025-08-10 02:27:38 Delay Persists Despite Event Filtering
+# Applied event filtering to process only main grid button presses
+# Timing still shows: Total=69-74μs | Pattern=0μs | LED=47-50μs
+# OSC command execution is very fast (47-50 microseconds)
+# Conclusion: Delay is in grid hardware response time, not software
+# Grid hardware (m2949672 monome 128) has inherent LED response latency
+# This appears to be normal hardware behavior - ~50ms is typical for monome grids
+# Status: Software optimization complete, delay is hardware limitation
+
+## 2025-08-10 02:28:22 USB Hub Investigation
+# User question: Could USB hub be causing additional latency?
+# Valid point: USB hubs can add 1-10ms latency depending on type and quality
+# USB 2.0 hubs: Higher latency than USB 3.0+ hubs
+# Cheap/powered hubs: Can introduce buffering delays
+# Test needed: Connect grids directly to computer USB ports to compare response time
+# If hub is cause: Delay would be in USB communication, not just LED response
+
+## 2025-08-10 02:31:11 Direct USB 3 Connection Still Slow
+# Test result: Direct USB 3.0 connection to computer shows same slow response
+# Conclusion: Delay is NOT hardware/USB related - must be software logic issue
+# Issue: Despite 74μs software timing, perceived delay suggests logic problem
+# Possible causes:
+#   1. Grid polling timing - may not be immediate
+#   2. OSC message queuing/buffering in serialosc
+#   3. Event processing order or timing
+#   4. LED command not being sent immediately despite timing measurement
+# Need: Deeper investigation into when LED command actually reaches grid hardware
+
+## 2025-08-10 02:33:26 Found Delay Source - Massive Polling Delay
+# FOUND THE ISSUE: Grid event detection has huge delays:
+#   - Button press to event detection: 735ms - 1200ms (735,749μs to 1,199,754μs)
+#   - Once detected, processing is fast: 71-110μs total
+# Problem: Grid polling is taking nearly 1 second to detect button events
+# Root cause: Main loop polling frequency or OSC socket reading issue
+# The 100μs sleep in main loop is not the issue - something else blocking polling
+# Need: Fix grid event polling to be immediate, not delayed by seconds
