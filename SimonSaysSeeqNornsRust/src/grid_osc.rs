@@ -285,9 +285,9 @@ impl GridManager {
         let seq_x = x;
         let seq_y = y;
 
-        // Only allow LED updates for rows 0 and 1 (0-indexed)
-        if seq_y != 0 && seq_y != 1 {
-            info!("set_led says: LED update blocked for row {} (display: row {}): {} (caller: {})", seq_y, seq_y + 1, format!("({}, {})", seq_x, seq_y), caller);
+        // Allow LED updates for all sequencer rows (0-6, with row 7 for control)
+        if seq_y > 7 {
+            info!("set_led says: LED update blocked for invalid row {} (display: row {}): {} (caller: {})", seq_y, seq_y + 1, format!("({}, {})", seq_x, seq_y), caller);
             return Ok(());
         }
 

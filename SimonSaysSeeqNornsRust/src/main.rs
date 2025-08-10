@@ -463,9 +463,9 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
-        // Convert from 0-based grid coordinates to 1-based sequencer coordinates
-        let seq_x = x + 1;
-        let seq_y = y + 1;
+        // Use 0-based coordinates throughout (post-refactor)
+        let seq_x = x;
+        let seq_y = y;
         
         info!("handle_grid_press says: Button press: grid {} at ({}, {})", grid_id, x, y);
         
@@ -475,9 +475,9 @@ impl SimonSaysSeeq {
         let is_main_grid = main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false);
         
         if is_main_grid {
-            // Main sequencer grid - ROWS 0 AND 1 ONLY (0-indexed)
-            if seq_y == 0 || seq_y == 1 {
-                // Sequence rows 1 and 2 only - only handle button presses, not releases
+            // Main sequencer grid - ROWS 0-6 (0-indexed)
+            if seq_y <= 6 {
+                // Sequence rows 0-6 - only handle button presses, not releases
                 if pressed {
                     // Check if any positions are held for advanced operations
                     if self.has_held_positions() {
@@ -488,7 +488,7 @@ impl SimonSaysSeeq {
                         let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
                         
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
-        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {} (step {}, row {})", seq_x, seq_y, current_value, new_value, seq_x + 1, seq_y + 1);
+        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {} (step {}, row {})", seq_x, seq_y, current_value, new_value, seq_x + 1, seq_y + 1); // +1 for user display
                         
                         // Update only this specific LED for immediate response
                         #[cfg(feature = "hardware")]
@@ -721,15 +721,15 @@ impl SimonSaysSeeq {
     
     #[cfg(feature = "hardware")]
     fn update_main_grid_display(&mut self, grid_id: &str) -> Result<()> {
-        // Grid display with position scrolling - 4 brightness levels - ROWS 0 AND 1 ONLY (0-indexed)
-        for seq_y in 0..=1 {
+        // Grid display with position scrolling - 4 brightness levels - ROWS 0-6 (0-indexed)
+        for seq_y in 0..=6 {
             let row_states = self.sequencer.get_row_states(seq_y);
             if let Some(row_state) = row_states {
                 // Debug row state every few updates
                 static mut DEBUG_COUNTER: u32 = 0;
                 unsafe {
                     DEBUG_COUNTER += 1;
-                    if DEBUG_COUNTER % 20 == 0 && seq_y <= 2 { // Only debug first 3 rows, every 20 updates
+                    if DEBUG_COUNTER % 20 == 0 && seq_y <= 6 { // Debug all 7 sequencer rows, every 20 updates
                         info!("🎯 Row {} current_step = {} (first_step={}, last_step={}) [display: row {}]", 
                               seq_y, row_state.current_step, row_state.first_step, row_state.last_step, seq_y + 1);
                     }
@@ -762,8 +762,8 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
-        // Only update LEDs for rows 0 and 1 (0-indexed)
-        if seq_y != 0 && seq_y != 1 {
+        // Only update LEDs for rows 0-6 (0-indexed)
+        if seq_y > 6 {
             return Ok(());
         }
         

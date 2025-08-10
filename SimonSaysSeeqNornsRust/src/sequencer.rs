@@ -826,7 +826,7 @@ impl Sequencer {
             if row_state.current_step > row_state.last_step {
                 row_state.current_step = row_state.first_step;
             }
-            if row_idx == 0 || row_idx == 1 { // Debug rows 0 and 1 (0-indexed)
+            if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                 debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
                       row_idx, old_step, row_state.current_step,
                       row_state.first_step, row_state.last_step);
@@ -853,8 +853,8 @@ impl Sequencer {
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // Process each sequence row (0-indexed)
         for row_idx in 0..state.row_states.len() {
-            // Only process rows 0 and 1 (visible rows)
-            if row_idx > 1 {
+            // Only process rows 0-6 (sequencer rows, row 7 is control)
+            if row_idx > 6 {
                 continue;
             }
             
