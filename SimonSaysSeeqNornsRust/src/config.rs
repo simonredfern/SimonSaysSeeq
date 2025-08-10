@@ -67,8 +67,7 @@ pub struct SequencerConfig {
     pub default_first_step: usize,
     /// Default last step for new patterns
     pub default_last_step: usize,
-    /// Default probability for new patterns (0.0-1.0)
-    pub default_probability: f32,
+
     /// Auto-save interval (seconds, 0 = disabled)
     pub auto_save_interval: u64,
 }
@@ -148,7 +147,7 @@ impl Default for SequencerConfig {
             ticks_per_step: 12,
             default_first_step: 1,
             default_last_step: 16,
-            default_probability: 1.0,
+
             auto_save_interval: 300, // 5 minutes
         }
     }
@@ -269,9 +268,7 @@ impl Config {
             return Err(anyhow::anyhow!("Invalid step range"));
         }
         
-        if self.sequencer.default_probability < 0.0 || self.sequencer.default_probability > 1.0 {
-            return Err(anyhow::anyhow!("Probability must be 0.0-1.0"));
-        }
+
         
         // Validate display config
         if self.display.refresh_rate == 0 || self.display.refresh_rate > 120 {
@@ -313,7 +310,7 @@ impl Config {
                 ticks_per_step: 12,
                 default_first_step: 1,
                 default_last_step: 16,
-                default_probability: 1.0,
+
                 auto_save_interval: 0, // Disabled
             },
             hardware: HardwareConfig {

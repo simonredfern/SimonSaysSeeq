@@ -54,7 +54,6 @@ pub struct MainRowStates {
     pub midi_velocity: u8,
     pub midi_channel: u8,
     pub ratchet_count: u8,
-    pub probability: f32, // 0.0 to 1.0
 }
 
 /// MIDI note event for recording and playback
@@ -135,7 +134,6 @@ impl Default for MainRowStates {
             midi_velocity: 100,
             midi_channel: 1,
             ratchet_count: 1,
-            probability: 1.0,
         }
     }
 }
@@ -606,10 +604,8 @@ impl Sequencer {
         
         for col in 0..16 {
             for row in 0..7 { // Only sequence rows
-                // Higher probability for beats 1, 5, 9, 13 (downbeats)
-                let probability = if col % 4 == 0 { 0.6 } else { 0.3 };
-                
-                if rng.gen::<f32>() < probability {
+                // Simple 40% chance for each step
+                if rng.gen::<f32>() < 0.4 {
                     // Occasionally add ratchets
                     let value = if rng.gen::<f32>() < 0.1 { 2 } else { 1 };
                     state.grid[col][row] = value;
@@ -640,12 +636,6 @@ impl Sequencer {
         
         // Check if this step is within the row's range
         if step < row_state.first_step || step > row_state.last_step {
-            return None;
-        }
-        
-        // Probability check
-        use rand::Rng;
-        if rand::thread_rng().gen::<f32>() > row_state.probability {
             return None;
         }
         
