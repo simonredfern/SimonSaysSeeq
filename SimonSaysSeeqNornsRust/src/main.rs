@@ -346,10 +346,13 @@ impl SimonSaysSeeq {
                     }
                     
                     // Update grid display
+                    // Convert from 0-based grid to 1-based sequencer coordinates
+                    let seq_x = x + 1;
+                    let seq_y = y + 1;
                     if pressed {
-                        self.grid.set_led(grid_id, x, y, 15)?;
+                        self.update_led_controlled(grid_id, seq_x, seq_y, 15, "hardware_press", "handle_hardware_event")?;
                     } else {
-                        self.grid.set_led(grid_id, x, y, 0)?;
+                        self.update_led_controlled(grid_id, seq_x, seq_y, 0, "hardware_release", "handle_hardware_event")?;
                     }
                 }
             }
@@ -603,9 +606,13 @@ impl SimonSaysSeeq {
             // Update LED to show note value (brightness = note % 16)
             let brightness = ((note % 15) + 1) as u8;
             let connected_grids = self.grid.get_connected_grids();
-            if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
-                self.grid.set_led(grid_id, x, y, brightness)?;
-            }
+            // Mozart LED updates disabled for debugging
+            // if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
+            //     // Convert from 0-based grid to 1-based sequencer coordinates  
+            //     let seq_x = x + 1;
+            //     let seq_y = y + 1;
+            //     self.update_led_controlled(grid_id, seq_x, seq_y, brightness, "mozart_grid", "handle_mozart_grid_press")?;
+            // }
             
             info!("Set Mozart[{}][{}] = note {}", x + 1, y + 1, note);
         }
@@ -712,8 +719,8 @@ impl SimonSaysSeeq {
                     
 
                     
-                    // Convert to 0-based grid coordinates
-                    self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+                    // Use centralized LED update
+                    self.update_led_controlled(grid_id, seq_x, seq_y, brightness, "main_display", "update_main_grid_display")?;
                 }
             } else {
                 warn!("No row settings found for row {}", seq_y);
@@ -723,9 +730,35 @@ impl SimonSaysSeeq {
         Ok(())
     }
     
+    /// SINGLE ENTRY POINT for all LED updates - enforces row restrictions
+    #[cfg(feature = "hardware")]
+    fn update_led_controlled(&mut self, grid_id: &str, seq_x: usize, seq_y: usize, brightness: u8, reason: &str, caller: &str) -> Result<()> {
+        // Only allow LED updates for rows 1 and 2
+        if seq_y != 1 && seq_y != 2 {
+            info!("🚫 LED update blocked for row {}: {} (reason: {}, caller: {})", seq_y, format!("({}, {})", seq_x, seq_y), reason, caller);
+            return Ok(());
+        }
+        
+        // Convert to 0-based grid coordinates
+        let grid_x = seq_x - 1;
+        let grid_y = seq_y - 1;
+        
+        debug!("✅ LED update row {}: ({}, {}) -> grid({}, {}) brightness={} (reason: {}, caller: {})", seq_y, seq_x, seq_y, grid_x, grid_y, brightness, reason, caller);
+        
+        // This is the ONLY place that calls set_led
+        self.grid.set_led(grid_id, grid_x, grid_y, brightness)?;
+        
+        Ok(())
+    }
+    
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
+        // Only update LEDs for rows 1 and 2
+        if seq_y != 1 && seq_y != 2 {
+            return Ok(());
+        }
+        
         if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
             let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
             let is_current_step = seq_x == row_state.current_step;
@@ -738,8 +771,8 @@ impl SimonSaysSeeq {
                 (true, true) => 14,      // Has pattern AND current position
             };
             
-            // Convert to 0-based grid coordinates and update immediately
-            self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
+            // Use centralized LED update
+            self.update_led_controlled(grid_id, seq_x, seq_y, brightness, "button_press", "update_single_led")?;
         }
         
         Ok(())

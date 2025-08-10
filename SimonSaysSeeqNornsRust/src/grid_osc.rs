@@ -281,6 +281,11 @@ impl GridManager {
     
     /// Set a single LED
     pub fn set_led(&mut self, grid_id: &str, x: usize, y: usize, brightness: u8) -> Result<()> {
+        // Debug logging for row 2 (y=1 in 0-based coordinates)
+        if y == 1 {
+            info!("🔍 Row 2 LED update: x={}, y={}, brightness={}", x, y, brightness);
+        }
+        
         #[cfg(not(feature = "rosc"))]
         {
             return Err(anyhow!("OSC feature not enabled"));
