@@ -973,6 +973,22 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE: Issue must be interference/coordination between rows in main sequencer
 # NEXT FOCUS: Investigate main sequencer row coordination and timing issues
 #
+## 2025-08-10 18:41:13 Off-By-One Error Discovery and Fix Attempt
+# USER CORRECTION: Position offset (steps 2,6,10,14 instead of 1,5,9,13) is NOT normal indexing
+# BUG FOUND: Off-by-one error in coordinate mapping - using [1,5,9,13] instead of [0,4,8,12]
+# FIXED: Changed pattern_positions from [1, 5, 9, 13] to [0, 4, 8, 12] in test_row2_only.rs
+# EXECUTED: cargo run --example test_row2_only --features desktop (with fix)
+# RESULT: Test shows "Row 2 pattern set at positions: [1, 5, 9, 13]" (corrected display)
+# AWAITING: User confirmation if positions 1,5,9,13 now light up correctly on grid
+# USER CONFIRMED: "yes the test worked" - positions 1,5,9,13 now light correctly
+#
+## 2025-08-10 18:43:35 Rows 1 and 2 Combined Test Executed
+# CREATED: examples/test_rows_1_and_2.rs to test both rows simultaneously
+# EXECUTED: cargo run --example test_rows_1_and_2 --features desktop
+# RESULT: Test completed successfully, ran 3 full cycles on both rows simultaneously
+# STATUS: Both rows set with identical patterns at positions [1,5,9,13], scrolled in sync
+# AWAITING: User observation of row behavior during combined test - looking for interference
+#
 # TEST EXECUTION RESULTS (2025-08-10 18:31:48):
 # - Started serialosc successfully: systemctl --user start serialosc
 # - Connected to both grids: m2949672 (monome 128) and m5032747 (monome one)  

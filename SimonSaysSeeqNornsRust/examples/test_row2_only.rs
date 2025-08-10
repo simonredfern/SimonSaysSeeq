@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up row 2 pattern (y=1 in 0-based coordinates)
     info!("🎨 Setting up row 2 pattern...");
     let row_2_y = 1;
-    let pattern_positions = [1, 5, 9, 13]; // Steps 2, 6, 10, 14 (0-based: 1, 5, 9, 13)
+    let pattern_positions = [0, 4, 8, 12]; // Steps 1, 5, 9, 13 (0-based: 0, 4, 8, 12)
     let pattern_brightness = 10;
     
     // Set the pattern
