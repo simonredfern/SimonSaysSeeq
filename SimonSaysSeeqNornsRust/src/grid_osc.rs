@@ -52,14 +52,14 @@ impl GridManager {
     pub fn new() -> Result<Self> {
         #[cfg(feature = "rosc")]
         {
-            info!("Creating OSC-based grid manager...");
+            info!("new says: Creating OSC-based grid manager...");
 
             // Create UDP socket for OSC communication
             let socket = UdpSocket::bind("127.0.0.1:0")?;
             let local_port = socket.local_addr()?.port();
             socket.set_nonblocking(true)?;
 
-            info!("Created OSC socket on port {}", local_port);
+            info!("new says: Created OSC socket on port {}", local_port);
 
             let mut manager = Self {
                 socket,
@@ -76,7 +76,7 @@ impl GridManager {
 
         #[cfg(not(feature = "rosc"))]
         {
-            info!("OSC grid support disabled (rosc feature not enabled)");
+            info!("new says: OSC grid support disabled (rosc feature not enabled)");
             Ok(Self {
                 devices: HashMap::new(),
                 led_states: HashMap::new(),
@@ -87,7 +87,7 @@ impl GridManager {
     /// Discover grid devices through serialosc
     #[cfg(feature = "rosc")]
     fn discover_devices(&mut self) -> Result<()> {
-        info!("Discovering grid devices via serialosc...");
+        info!("discover_devices says: Discovering grid devices via serialosc...");
 
         // Send discovery request to serialosc server
         let list_msg = OscMessage {
@@ -104,7 +104,7 @@ impl GridManager {
         self.socket.send_to(&msg_buf, "127.0.0.1:12002")
             .map_err(|e| anyhow!("Failed to send discovery request to serialosc: {}", e))?;
 
-        info!("Sent device discovery request to serialosc");
+        info!("discover_devices says: Sent device discovery request to serialosc");
 
         // Wait for device responses
         let discovery_timeout = Duration::from_secs(3);
@@ -120,7 +120,7 @@ impl GridManager {
                             if msg.addr == "/serialosc/device" && msg.args.len() >= 3 {
                                 if let (Some(OscType::String(id)), Some(OscType::String(device_type)), Some(OscType::Int(port))) =
                                     (msg.args.get(0), msg.args.get(1), msg.args.get(2)) {
-                                    info!("Found serialosc device: {} (type: {}) on port {}", id, device_type, port);
+                                    info!("discover_devices says: Found serialosc device: {} (type: {}) on port {}", id, device_type, port);
                                     discovered_devices.push((id.clone(), device_type.clone(), *port as u16));
                                 }
                             }
@@ -132,34 +132,34 @@ impl GridManager {
                     thread::sleep(Duration::from_millis(50));
                 }
                 Err(e) => {
-                    warn!("Error receiving OSC discovery response: {}", e);
+                    warn!("discover_devices says: Error receiving OSC discovery response: {}", e);
                 }
             }
         }
 
         if discovered_devices.is_empty() {
-            info!("No serialosc devices found. Make sure:");
-            info!("  1. Your grid is connected via USB");
-            info!("  2. serialosc is running: sudo systemctl start serialosc");
-            info!("  3. You're in the dialout group");
+            info!("discover_devices says: No serialosc devices found. Make sure:");
+            info!("discover_devices says:   1. Your grid is connected via USB");
+            info!("discover_devices says:   2. serialosc is running: sudo systemctl start serialosc");
+            info!("discover_devices says:   3. You're in the dialout group");
             return Ok(());
         }
 
         // Connect to each discovered device
         for (device_id, device_type, device_port) in discovered_devices {
             if let Err(e) = self.connect_to_device(&device_id, &device_type, device_port) {
-                warn!("Failed to connect to device {}: {}", device_id, e);
+                warn!("discover_devices says: Failed to connect to device {}: {}", device_id, e);
             }
         }
 
-        info!("Connected to {} grid device(s) via OSC", self.devices.len());
+        info!("discover_devices says: Connected to {} grid device(s) via OSC", self.devices.len());
         Ok(())
     }
 
     /// Connect to a specific grid device and get its configuration
     #[cfg(feature = "rosc")]
     fn connect_to_device(&mut self, device_id: &str, device_type: &str, device_port: u16) -> Result<()> {
-        info!("Connecting to grid device: {} ({})", device_id, device_type);
+        info!("connect_to_device says: Connecting to grid device: {} ({})", device_id, device_type);
 
         let device_addr = format!("127.0.0.1:{}", device_port);
 
@@ -186,7 +186,7 @@ impl GridManager {
         let key_msg_buf = rosc::encoder::encode(&key_packet)?;
         self.socket.send_to(&key_msg_buf, &device_addr)?;
 
-        info!("Requested grid {} to send key events to port {}", device_id, self.local_port);
+        info!("connect_to_device says: Requested grid {} to send key events to port {}", device_id, self.local_port);
 
         // Wait for device info response
         let mut cols = 16; // Default
@@ -211,14 +211,14 @@ impl GridManager {
                                         cols = *c as usize;
                                         rows = *r as usize;
                                         received_size = true;
-                                        debug!("Device {} size: {}x{}", device_id, cols, rows);
+                                        debug!("connect_to_device says: Device {} size: {}x{}", device_id, cols, rows);
                                     }
                                 }
                                 "/sys/prefix" => {
                                     if let Some(OscType::String(p)) = msg.args.get(0) {
                                         prefix = p.clone();
                                         received_prefix = true;
-                                        debug!("Device {} prefix: {}", device_id, prefix);
+                                        debug!("connect_to_device says: Device {} prefix: {}", device_id, prefix);
                                     }
                                 }
                                 _ => {}
@@ -230,18 +230,18 @@ impl GridManager {
                     thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => {
-                    warn!("Error receiving device info: {}", e);
+                    warn!("connect_to_device says: Error receiving device info: {}", e);
                     break;
                 }
             }
         }
 
         if !received_size {
-            warn!("Did not receive size info for device {}, using defaults", device_id);
+            warn!("connect_to_device says: Did not receive size info for device {}, using defaults", device_id);
         }
 
         if !received_prefix {
-            warn!("Did not receive prefix info for device {}, using default: {}", device_id, prefix);
+            warn!("connect_to_device says: Did not receive prefix info for device {}, using default: {}", device_id, prefix);
         }
 
         // Determine if device supports variable brightness
@@ -270,10 +270,10 @@ impl GridManager {
 
         // Initialize the grid (clear all LEDs) - now device exists
         if let Err(e) = self.clear_all(device_id) {
-            warn!("Failed to clear grid {} during initialization: {}", device_id, e);
+            warn!("connect_to_device says: Failed to clear grid {} during initialization: {}", device_id, e);
         }
 
-        info!("Grid {} connected: {} ({}x{}, varibright: {})",
+        info!("connect_to_device says: Grid {} connected: {} ({}x{}, varibright: {})",
               device_id, device_type, cols, rows, is_varibright);
 
         Ok(())
@@ -287,18 +287,18 @@ impl GridManager {
 
         // Only allow LED updates for rows 1 and 2
         if seq_y != 1 && seq_y != 2 {
-            info!("🚫 LED update blocked for row {}: {} (caller: {})", seq_y, format!("({}, {})", seq_x, seq_y), caller);
+            info!("set_led says: LED update blocked for row {}: {} (caller: {})", seq_y, format!("({}, {})", seq_x, seq_y), caller);
             return Ok(());
         }
 
         //debug!("✅ LED update row {}: ({}, {}) -> grid({}, {}) brightness={} (reason: {}, caller: {})", seq_y, seq_x, seq_y, x, y, brightness, reason, caller);
 
-        debug!("✅ LED update row {}: ({}, {}) brightness={} (caller: {})", seq_y, seq_x, seq_y, brightness, caller);
+        debug!("set_led says: LED update row {}: ({}, {}) brightness={} (caller: {})", seq_y, seq_x, seq_y, brightness, caller);
 
 
         // Debug logging for row 2 (y=1 in 0-based coordinates)
         if y == 1 {
-            info!("🔍 Row 2 LED update: x={}, y={}, brightness={}", x, y, brightness);
+            info!("set_led says: Row 2 LED update: x={}, y={}, brightness={}", x, y, brightness);
         }
 
         #[cfg(not(feature = "rosc"))]
@@ -353,8 +353,8 @@ impl GridManager {
             }
         };
 
-        debug!("Sending OSC command: {} to {}", osc_msg.addr, device_addr);
-        debug!("OSC args: {:?}", osc_msg.args);
+        debug!("set_led says: Sending OSC command: {} to {}", osc_msg.addr, device_addr);
+        debug!("set_led says: OSC args: {:?}", osc_msg.args);
 
         let packet = OscPacket::Message(osc_msg);
         let msg_buf = rosc::encoder::encode(&packet)?;

@@ -386,7 +386,7 @@ impl Sequencer {
     pub fn set_tempo(&self, tempo: f32) {
         let mut state = self.state.lock().unwrap();
         state.tempo = tempo.clamp(20.0, 200.0);
-        debug!("Tempo set to: {:.1} BPM", state.tempo);
+        debug!("set_tempo says: Tempo set to: {:.1} BPM", state.tempo);
     }
 
     /// Get current position
@@ -960,7 +960,7 @@ impl Sequencer {
             let current_value = state.grid[x - 1][y - 1];
             let new_value = if current_value == 0 { 1 } else { 0 };
             state.grid[x - 1][y - 1] = new_value;
-            debug!("Toggled grid[{}][{}]: {} -> {}", x, y, current_value, new_value);
+            debug!("toggle_grid_position says: Toggled grid[{}][{}]: {} -> {}", x, y, current_value, new_value);
         }
     }
 
@@ -1229,7 +1229,7 @@ impl Sequencer {
         state.slide.scroll_offset.0 += x_offset;
         state.slide.scroll_offset.1 += y_offset;
 
-        info!("Scrolled pattern by ({}, {})", x_offset, y_offset);
+        info!("scroll_pattern says: Scrolled pattern by ({}, {})", x_offset, y_offset);
     }
 
     /// Randomize specific rows with constraints
@@ -1478,7 +1478,7 @@ impl Sequencer {
         if row > 0 && row <= 7 {
             let mut state = self.state.lock().unwrap();
             state.row_states[row - 1] = states;
-            debug!("Updated states for row {}", row);
+            debug!("set_row_states says: Updated states for row {}", row);
         }
     }
 

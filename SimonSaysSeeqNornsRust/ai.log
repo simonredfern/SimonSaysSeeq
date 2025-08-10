@@ -1300,6 +1300,21 @@ kill 14815 16252 16404 16463
 # NOTE: dev_with_grid.sh is just a wrapper - stick with direct cargo for consistency
 # STATUS: Ready for Row 2 debugging with 30 BPM tempo using cargo commands
 
+## 2025-08-10 22:27:00 Implemented New Logging Format Standards
+# USER REQUEST: Change log messages to prepend "function_name says: " and remove decorative characters
+# IMPLEMENTATION:
+#   - Added logging format instruction to ai_instructions.txt
+#   - Updated key log messages in main source files:
+#     * src/main.rs: run, shutdown, main_loop, handle_hardware_event, handle_grid_press, update_screen functions
+#     * src/grid_osc.rs: new, discover_devices, connect_to_device, set_led functions  
+#     * src/sequencer.rs: set_tempo, toggle_grid_position, scroll_pattern, set_row_states functions
+# FORMAT CHANGES:
+#   - Prepended function names: info!("run says: Starting application")
+#   - Removed emojis and decorative characters from critical debugging messages
+#   - Maintained readability for Row 2 LED debugging output
+# RESULT: Debug output now clearly shows which function generated each log message
+# STATUS: Ready for Row 2 debugging with cleaner, function-identified log output
+
 ## 2025-08-10 22:19:00 Tempo Successfully Reduced - User Confirmed
 # USER CONFIRMATION: "yes i can confirm the tempo is now slower"
 # ROOT CAUSE FOUND: Existing config file ~/.config/simon-says-seeq/config.toml had tempo = 120.0

@@ -68,33 +68,33 @@ impl SimonSaysSeeq {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        info!("Starting SimonSaysSeeq Rust application");
+        info!("run says: Starting SimonSaysSeeq Rust application");
         
         // List connected devices for debugging
         #[cfg(feature = "hardware")]
         {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() {
-                info!("🔍 No monome grid devices found");
-                info!("💡 Connect a monome grid device to use grid functionality");
-                info!("📋 Available HID devices are listed above - none match monome VID/PID");
+                info!("run says: No monome grid devices found");
+                info!("run says: Connect a monome grid device to use grid functionality");
+                info!("run says: Available HID devices are listed above - none match monome VID/PID");
             } else {
-                info!("🔍 Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
+                info!("run says: Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
             }
         }
         
         #[cfg(not(feature = "hardware"))]
         {
-            info!("🔍 Simulation mode - no actual hardware detection");
+            info!("run says: Simulation mode - no actual hardware detection");
         }
         
         // Show control instructions
-        info!("🎮 Controls:");
-        info!("  Ctrl+C: Stop application");
+        info!("run says: Controls:");
+        info!("run says:   Ctrl+C: Stop application");
         #[cfg(not(feature = "hardware"))]
-        info!("  Space+Enter: Start/Stop sequencer (simulation mode)");
+        info!("run says:   Space+Enter: Start/Stop sequencer (simulation mode)");
         #[cfg(not(feature = "hardware"))]
-        info!("  1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
+        info!("run says:   1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
         
         self.running.store(true, Ordering::SeqCst);
         
@@ -117,18 +117,18 @@ impl SimonSaysSeeq {
         });
         
         // Auto-start the sequencer for desktop testing (no hardware required)
-        info!("🚀 Auto-starting sequencer for desktop testing");
-        info!("🎵 Setting tempo to: {:.1} BPM", self.tempo);
+        info!("run says: Auto-starting sequencer for desktop testing");
+        info!("run says: Setting tempo to: {:.1} BPM", self.tempo);
         self.sequencer.set_tempo(self.tempo);
-        info!("🎵 Current sequencer tempo: {:.1} BPM", self.sequencer.get_tempo());
+        info!("run says: Current sequencer tempo: {:.1} BPM", self.sequencer.get_tempo());
         self.sequencer.start();
         
         // Show grid connection status
         let connected_grids = self.grid.get_connected_grids();
-        info!("🎹 Connected grids: {:?}", connected_grids);
+        info!("run says: Connected grids: {:?}", connected_grids);
         for grid_id in &connected_grids {
             if let Some((cols, rows)) = self.grid.get_dimensions(grid_id) {
-                info!("  Grid {}: {}x{}", grid_id, cols, rows);
+                info!("run says:   Grid {}: {}x{}", grid_id, cols, rows);
             }
         }
         
@@ -159,7 +159,7 @@ impl SimonSaysSeeq {
         self.running.store(false, Ordering::SeqCst);
         
         // Give threads a chance to exit gracefully
-        info!("Shutting down threads...");
+        info!("run says: Shutting down threads...");
         
         // Try to join with timeout
         let hw_result = std::thread::spawn(move || hw_thread.join()).join();
@@ -169,11 +169,11 @@ impl SimonSaysSeeq {
         thread::sleep(Duration::from_millis(500));
         
         if hw_result.is_err() || seq_result.is_err() {
-            warn!("Threads did not exit cleanly, forcing shutdown");
+            warn!("run says: Threads did not exit cleanly, forcing shutdown");
             std::process::exit(0);
         }
         
-        info!("SimonSaysSeeq shut down successfully");
+        info!("run says: SimonSaysSeeq shut down successfully");
         Ok(())
     }
     
@@ -240,7 +240,7 @@ impl SimonSaysSeeq {
             
             // Check for shutdown
             if !self.running.load(Ordering::SeqCst) {
-                info!("Main loop detected shutdown signal, breaking");
+                info!("main_loop says: Main loop detected shutdown signal, breaking");
                 break;
             }
             
@@ -344,9 +344,9 @@ impl SimonSaysSeeq {
                         _ => "?",
                     };
                     if pressed {
-                        info!("🔥 Grid button {} PRESSED: ({}, {})", button_name, x, y);
+                        info!("handle_hardware_event says: Grid button {} PRESSED: ({}, {})", button_name, x, y);
                     } else {
-                        info!("💨 Grid button {} released: ({}, {})", button_name, x, y);
+                        info!("handle_hardware_event says: Grid button {} released: ({}, {})", button_name, x, y);
                     }
                     
                     // Update grid display
@@ -462,7 +462,7 @@ impl SimonSaysSeeq {
         let seq_x = x + 1;
         let seq_y = y + 1;
         
-        info!("🕒 Button press: grid {} at ({}, {})", grid_id, x, y);
+        info!("handle_grid_press says: Button press: grid {} at ({}, {})", grid_id, x, y);
         
         // Should only get main grid events now due to filtering, but double-check
         let connected_grids = self.grid.get_connected_grids();
@@ -483,7 +483,7 @@ impl SimonSaysSeeq {
                         let new_value = if current_value > 0 { 0 } else { 1 }; // Simple on/off toggle
                         
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
-                        info!("🔄 Toggle: grid[{}][{}] {} -> {}", seq_x, seq_y, current_value, new_value);
+        info!("handle_grid_press says: Toggle: grid[{}][{}] {} -> {}", seq_x, seq_y, current_value, new_value);
                         
                         // Update only this specific LED for immediate response
                         #[cfg(feature = "hardware")]
@@ -671,7 +671,7 @@ impl SimonSaysSeeq {
             // Simulation mode - display info to console
             let (step, bar) = self.sequencer.get_position();
             let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            info!("🎵 Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
+            info!("update_screen says: Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
         }
         
         Ok(())
