@@ -425,3 +425,122 @@ kill 14815 16252 16404 16463
 # Problem: All rows have same current_step values but visual behavior differs
 # Investigation needed: Display logic issue for rows 2-7 vs row 1
 # This is the next major issue to resolve
+
+## 2025-01-10 03:05:42 Observation Attempt - No Debug Output
+# Issue: Cannot see row advancement debug logs when running sequencer
+# Problem: Debug logs not appearing in output, either suppressed or not generating
+# Attempted: Multiple timeout runs with grep filtering for step advancement logs
+# Result: No debug output visible, need to investigate logging configuration
+# Next: Check if debug logs are disabled or need different log level
+
+## 2025-01-10 02:56:15 Continuing Rows 2-7 Investigation
+# Task: Debug why rows 2-7 behave differently from row 1 despite identical settings
+# Status: Row 1 working perfectly, rows 2-7 have display or interaction issues
+# Need to investigate grid display logic and button press handling for all rows
+
+## 2025-01-10 03:01:32 Found Root Cause - Synchronization Issue
+# IDENTIFIED PROBLEM: All rows advance current_step together in advance_step() function
+# Location: src/sequencer.rs line 854-859 - loop advances ALL rows simultaneously
+# Issue: for (row_idx, row_settings) in state.row_settings.iter_mut().enumerate() {
+#        row_settings.current_step += 1; // ALL rows increment together
+# Result: All rows have identical current_step values because they advance in lockstep
+# Expected: Each row should advance independently based on individual timing/division settings
+# This explains why Row 1 "works" - it's the reference behavior, other rows should be independent
+# Fix needed: Implement per-row timing/division so rows can advance at different rates
+
+## 2025-01-10 03:10:15 Detailed Structure Analysis Complete
+# SEQUENCER STRUCTURE CONFIRMED:
+# - Grid: 16 columns (steps) x 8 rows total
+# - Sequence rows: Only rows 1-7 used for sequencing (row 8 = control)
+# - Row settings: 8 MainRowStates initialized (covers all rows including unused row 8)
+# - All 7 sequence rows should have identical behavior with independent patterns
+# 
+# SYNCHRONIZATION CONFIRMED AS INTENDED DESIGN:
+# - All rows advance together at same BPM (not a bug - this is the intended design)
+# - Each row has independent: first_step, last_step, current_step, patterns
+# - Issue is NOT synchronization but display/interaction differences between rows
+#
+# NEXT INVESTIGATION: Why Row 1 works but Rows 2-7 have "display or interaction issues"
+# Focus areas: Grid coordinate conversion, button handling, LED display logic
+# All rows should behave identically - need to find what makes Row 1 special
+
+## 2025-01-10 03:15:33 Test Results - Grid Display Working Correctly
+# Created examples/test_rows_issue.rs to isolate the row issue
+# RESULT: All rows 1-7 display correctly with graduated brightness pattern
+# - Row 1: least bright (brightness 2)
+# - Row 7: most bright (brightness 14)  
+# - All rows responsive and accessible
+# CONCLUSION: Basic grid functionality works for all rows
+# - Grid coordinate conversion correct
+# - LED display logic correct
+# - All 7 sequencer rows accessible
+# Issue must be in sequencer-specific behavior, not basic grid operations
+# Need to test actual sequencer button press behavior vs test program
+
+## 2025-01-10 03:18:47 Bug Analysis - Display Logic Issue Identified
+# Created examples/debug_sequencer_rows.rs diagnostic test
+# Visual test results:
+# - Row 1: Shows all 4 patterns correctly (steps 1,5,9,13 lit)
+# - Row 2: Shows only 1 pattern (step 1 lit)  
+# - Rows 3-7: Show no patterns (completely dark)
+# 
+# Initial hypothesis: Pattern storage broken for rows 2-7
+# Created examples/test_grid_storage.rs to verify sequencer storage functions
+# Test results: All storage operations work correctly for all rows 1-7
+# - Pattern set/get functions working properly
+# - Multiple patterns per row stored correctly
+# - Boundary conditions handled properly
+# 
+# Root cause identified: Pattern storage works correctly, display rendering does not
+# Bug location: Grid display pipeline - patterns stored but not rendered for rows 2-7
+# Next investigation: Grid LED command execution and coordinate conversion in display logic
+
+## 2025-01-10 03:25:12 Test Fix Applied - Set Patterns for All Rows
+# Hypothesis: Main sequencer only sets test patterns for Row 1 during startup
+# Original startup code only called set_grid_value() for row 1:
+#   self.sequencer.set_grid_value(1, 1, 1);  // Row 1 only
+#   self.sequencer.set_grid_value(5, 1, 2);  // Row 1 only
+# Modified startup code to set identical patterns for all rows 1-7
+# Test: Run main sequencer and check if all rows now display patterns correctly
+# If fix works: Issue was initialization, not display pipeline
+# If still broken: Display rendering bug confirmed
+
+## 2025-01-10 03:27:45 Initialization Fix Successful - Responsiveness Issue Remains
+# TEST RESULT: All rows now start with identical patterns (4 LEDs at steps 1,5,9,13)
+# SUCCESS: Pattern display pipeline works correctly for all rows
+# CONFIRMED: Original issue was startup initialization only setting patterns for Row 1
+# 
+# NEW ISSUE IDENTIFIED: Row 1 more responsive than other rows during button presses
+# All rows display patterns correctly but button press responsiveness varies by row
+# Row 1: Fast, immediate response to button presses
+# Rows 2-7: Slower or less responsive to button presses
+# 
+# ROOT CAUSE: Likely button press handling or coordinate filtering in main loop
+# NEXT INVESTIGATION: Button event processing pipeline for different rows
+# Check: Grid event filtering, coordinate conversion, button press timing per row
+
+## 2025-01-10 03:30:15 Responsiveness Optimization Applied
+# HYPOTHESIS: Button responsiveness difference caused by full grid refresh overhead
+# Original: Button press -> update_grid_display() -> refresh all 112 LEDs -> delay
+# Optimization: Button press -> update_single_led() -> refresh only 1 LED -> immediate
+# 
+# Applied changes:
+# - Created update_single_led() function for immediate LED response
+# - Modified handle_grid_press() to call update_single_led() instead of update_grid_display()
+# - Single LED update calculates correct brightness (pattern + position state)
+# 
+# TEST: Run optimized sequencer and compare button responsiveness across rows
+# Expected: All rows should now have equal responsiveness, no Row 1 advantage
+# If still unequal: Need to investigate other causes (event filtering, coordinate conversion)
+
+## 2025-01-10 03:33:22 Responsiveness Fix Successful - Next Task Scrolling Brightness
+# SUCCESS: Button responsiveness optimization fixed the issue
+# Result: All rows now respond equally fast to button presses
+# Confirmed: Issue was full grid refresh overhead causing delays for rows 2-7
+# Solution: Single LED updates instead of 112-LED grid refresh per button press
+# 
+# NEXT TASK: Check and tweak brightness of position scrolling
+# Issue: Position scrolling brightness levels may need adjustment for better visibility
+# Current brightness levels: 0 (off), 4 (position only), 8 (pattern only), 12 (pattern+position)
+# Investigation needed: Verify scrolling position indicator visibility and timing
+# Goal: Ensure position scrolling is clearly visible and appropriately bright across all rows

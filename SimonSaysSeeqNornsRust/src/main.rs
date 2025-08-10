@@ -136,11 +136,13 @@ impl SimonSaysSeeq {
         // Initialize main grid with some default pattern for testing
         #[cfg(feature = "hardware")]
         {
-            // Set some test pattern on main sequencer
-            self.sequencer.set_grid_value(1, 1, 1);
-            self.sequencer.set_grid_value(5, 1, 2);
-            self.sequencer.set_grid_value(9, 1, 1);
-            self.sequencer.set_grid_value(13, 1, 2);
+            // Set test patterns for all rows to verify display pipeline
+            for row in 1..=7 {
+                self.sequencer.set_grid_value(1, row, 1);   // Step 1
+                self.sequencer.set_grid_value(5, row, 2);   // Step 5  
+                self.sequencer.set_grid_value(9, row, 1);   // Step 9
+                self.sequencer.set_grid_value(13, row, 2);  // Step 13
+            }
             
             // Update main grid initially
             self.update_grid_display()?;
@@ -476,9 +478,9 @@ impl SimonSaysSeeq {
                         self.sequencer.set_grid_value(seq_x, seq_y, new_value);
                         info!("🔄 Toggle: grid[{}][{}] {} -> {}", seq_x, seq_y, current_value, new_value);
                         
-                        // Update grid display to show new pattern with position info
+                        // Update only this specific LED for immediate response
                         #[cfg(feature = "hardware")]
-                        self.update_grid_display()?;
+                        self.update_single_led(grid_id, seq_x, seq_y)?;
                     }
                 }
             } else {
@@ -711,6 +713,28 @@ impl SimonSaysSeeq {
             } else {
                 warn!("No row settings found for row {}", seq_y);
             }
+        }
+        
+        Ok(())
+    }
+    
+    /// Update single LED with current pattern and position state
+    #[cfg(feature = "hardware")]
+    fn update_single_led(&mut self, grid_id: &str, seq_x: usize, seq_y: usize) -> Result<()> {
+        if let Some(row_state) = self.sequencer.get_row_settings(seq_y) {
+            let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
+            let is_current_step = seq_x == row_state.current_step;
+            
+            // Same brightness logic as main display
+            let brightness = match (pattern_value > 0, is_current_step) {
+                (false, false) => 0,     // No pattern, not current position
+                (false, true) => 4,      // No pattern, but current position  
+                (true, false) => 8,      // Has pattern, not current position
+                (true, true) => 12,      // Has pattern AND current position
+            };
+            
+            // Convert to 0-based grid coordinates and update immediately
+            self.grid.set_led(grid_id, seq_x - 1, seq_y - 1, brightness)?;
         }
         
         Ok(())
