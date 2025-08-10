@@ -291,15 +291,9 @@ impl GridManager {
             return Ok(());
         }
 
-        //debug!("✅ LED update row {}: ({}, {}) -> grid({}, {}) brightness={} (reason: {}, caller: {})", seq_y, seq_x, seq_y, x, y, brightness, reason, caller);
 
-        debug!("set_led says: LED update row {}: ({}, {}) brightness={} (caller: {})", seq_y, seq_x, seq_y, brightness, caller);
+        //debug!("set_led says: LED update row {}: ({}, {}) brightness={} (caller: {})", seq_y, seq_x, seq_y, brightness, caller);
 
-
-        // Debug logging for row 2 (y=1 in 0-based coordinates)
-        if y == 1 {
-            info!("set_led says: Row 2 LED update: x={}, y={}, brightness={}", x, y, brightness);
-        }
 
         #[cfg(not(feature = "rosc"))]
         {
@@ -353,14 +347,14 @@ impl GridManager {
             }
         };
 
-        debug!("set_led says: Sending OSC command: {} to {}", osc_msg.addr, device_addr);
-        debug!("set_led says: OSC args: {:?}", osc_msg.args);
+        //debug!("set_led says: Sending OSC command: {} to {}", osc_msg.addr, device_addr);
+        //debug!("set_led says: OSC args: {:?}", osc_msg.args);
 
         let packet = OscPacket::Message(osc_msg);
         let msg_buf = rosc::encoder::encode(&packet)?;
         self.socket.send_to(&msg_buf, &device_addr)?;
 
-        debug!("Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
+        debug!("set_led says: After socket.send_to Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
 
         Ok(())
         }
