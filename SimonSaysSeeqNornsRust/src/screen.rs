@@ -5,7 +5,7 @@
 use anyhow::Result;
 #[cfg(feature = "framebuffer-support")]
 use framebuffer::Framebuffer;
-use log::{info, debug, warn};
+use log::info;
 
 /// Font data for simple 6x8 pixel font
 const FONT_6X8: &[&[u8]] = &[
@@ -401,8 +401,8 @@ impl ScreenManager {
         // Background
         self.draw_rect(bar_x, bar_y, bar_width, bar_height);
         
-        // Fill based on tempo (60-200 BPM range)
-        let tempo_normalized = ((tempo - 60.0) / 140.0).clamp(0.0, 1.0);
+        // Fill based on tempo (20-200 BPM range)
+        let tempo_normalized = ((tempo - 20.0) / 180.0).clamp(0.0, 1.0);
         let fill_width = (bar_width as f32 * tempo_normalized) as usize;
         
         if fill_width > 0 {
@@ -429,14 +429,12 @@ impl ScreenManager {
                 
                 // Write the converted buffer to framebuffer
                 fb.write_frame(&self.fb_buffer[..copy_length]);
-            } else {
-                debug!("Screen update (no framebuffer available)");
             }
         }
         
         #[cfg(not(feature = "framebuffer-support"))]
         {
-            debug!("Screen update (simulation mode)");
+            // Screen update in simulation mode (no logging to reduce noise)
         }
         
         Ok(())

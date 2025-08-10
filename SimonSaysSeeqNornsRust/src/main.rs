@@ -49,6 +49,7 @@ pub struct SimonSaysSeeq {
 impl SimonSaysSeeq {
     pub fn new() -> Result<Self> {
         let config = Config::load_or_default()?;
+        let initial_tempo = config.sequencer.default_tempo;
         
         Ok(Self {
             hardware: NornsHardware::new()?,
@@ -61,7 +62,7 @@ impl SimonSaysSeeq {
             co2: Co2Manager::new(config.co2.clone())?,
             config,
             running: Arc::new(AtomicBool::new(false)),
-            tempo: 120.0,
+            tempo: initial_tempo,
             main_grid_preference: Some("m2949672".to_string()), // Default main grid
         })
     }
@@ -117,6 +118,9 @@ impl SimonSaysSeeq {
         
         // Auto-start the sequencer for desktop testing (no hardware required)
         info!("🚀 Auto-starting sequencer for desktop testing");
+        info!("🎵 Setting tempo to: {:.1} BPM", self.tempo);
+        self.sequencer.set_tempo(self.tempo);
+        info!("🎵 Current sequencer tempo: {:.1} BPM", self.sequencer.get_tempo());
         self.sequencer.start();
         
         // Show grid connection status
@@ -267,7 +271,7 @@ impl SimonSaysSeeq {
                     }
                     3 => {
                         // Right encoder controls tempo
-                        self.tempo = (self.tempo + delta as f32).clamp(60.0, 200.0);
+                        self.tempo = (self.tempo + delta as f32).clamp(20.0, 200.0);
                         self.sequencer.set_tempo(self.tempo);
                         info!("Tempo changed to: {:.1} BPM", self.tempo);
                     }
@@ -633,7 +637,7 @@ impl SimonSaysSeeq {
             self.screen.clear();
             
             // Display tempo
-            self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.tempo));
+            self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
             
             // Display current step/bar
             let (step, bar) = self.sequencer.get_position();
@@ -656,7 +660,7 @@ impl SimonSaysSeeq {
             
             // Show tempo visualization if enabled
             if self.config.display.show_tempo_viz {
-                self.screen.draw_tempo_viz(self.tempo);
+                self.screen.draw_tempo_viz(self.sequencer.get_tempo());
             }
             
             self.screen.update()?;
@@ -667,7 +671,7 @@ impl SimonSaysSeeq {
             // Simulation mode - display info to console
             let (step, bar) = self.sequencer.get_position();
             let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            info!("🎵 Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.tempo, step, bar);
+            info!("🎵 Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
         }
         
         Ok(())

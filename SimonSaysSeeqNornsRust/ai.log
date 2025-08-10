@@ -1253,3 +1253,60 @@ kill 14815 16252 16404 16463
 #   - Used sed for batch updating example files
 # RESULT: Project compiles successfully with warnings only
 # STATUS: set_led method simplified, ready for Row 2 debugging
+
+## 2025-08-10 22:02:00 User Question: Remove Noisy Screen Debug Messages
+# USER OBSERVATION: Screen update debug messages are noisy during debug sessions
+# IDENTIFIED: Two debug messages firing every 33ms (30 FPS):
+#   - "Screen update (simulation mode)" 
+#   - "Screen update (no framebuffer available)"
+# LOCATION: src/screen.rs lines ~433 and ~439
+# OPTIONS: 1) Remove entirely, 2) Change to trace! level, 3) Add counter for occasional logging
+# STATUS: Awaiting user decision on how to handle noisy screen updates
+#
+# EXPLANATION OF SCREEN UPDATE CONTEXT:
+# - "Screen update" refers to the Norns OLED display (128x64 monochrome)
+# - Shows sequencer info: tempo, step/bar, transport state, MIDI activity
+# - Hardware mode: Updates physical screen every ~33ms (30 FPS)
+# - Simulation mode: Just logs debug message every 33ms instead
+# - UNRELATED to grid LED debugging - pure visual noise for Row 2 investigation
+# - Should be removed/downgraded since it clutters grid debugging output
+
+## 2025-08-10 22:06:00 Removed Noisy Screen Update Debug Messages
+# USER REQUEST: Remove the screen update simulation mode messages
+# CHANGES:
+#   - Removed debug!("Screen update (simulation mode)") from screen.rs
+#   - Removed debug!("Screen update (no framebuffer available)") from screen.rs  
+#   - Cleaned up unused debug/warn imports from screen.rs
+# RESULT: Debug output now clean of 30 FPS screen update noise
+# STATUS: Row 2 LED debugging output no longer cluttered by screen messages
+
+## 2025-08-10 22:11:00 Sequencer Tempo Significantly Reduced for Row 2 Debugging
+# USER REQUEST: Slow down the sequencer further to help observe Row 2 LED scrolling issues
+# CHANGES:
+#   - Fixed tempo initialization: main.rs now uses config.sequencer.default_tempo instead of hardcoded 120.0
+#   - Reduced default tempo: config.rs from 60.0 to 30.0 BPM (half speed)
+#   - Lowered minimum tempo clamp: sequencer.rs and main.rs from 60.0 to 20.0 BPM
+#   - Added explicit set_tempo() call on sequencer startup to ensure config is applied
+# RESULT: Sequencer now runs at 30 BPM (2 seconds per step) making LED scrolling much easier to observe
+# BENEFIT: Row 2 jumping behavior from steps 1→2 to 5,6,7 should be clearly visible at this slow speed
+# STATUS: Ready for slow-motion Row 2 debugging session
+#
+## 2025-08-10 22:14:00 Corrected Command Usage - Continue with cargo
+# CORRECTION: Should continue using cargo commands as we have been throughout session
+# COMMANDS TO USE:
+#   - Main app: RUST_LOG=debug cargo run --features desktop
+#   - Row 2 specific: RUST_LOG=debug cargo run --example test_rows_1_and_2 --features desktop
+#   - Sequencer test: RUST_LOG=debug cargo run --example test_main_sequencer_scrolling --features desktop
+# NOTE: dev_with_grid.sh is just a wrapper - stick with direct cargo for consistency
+# STATUS: Ready for Row 2 debugging with 30 BPM tempo using cargo commands
+
+## 2025-08-10 22:19:00 Tempo Successfully Reduced - User Confirmed
+# USER CONFIRMATION: "yes i can confirm the tempo is now slower"
+# ROOT CAUSE FOUND: Existing config file ~/.config/simon-says-seeq/config.toml had tempo = 120.0
+# FIXES APPLIED:
+#   - Updated existing config file: default_tempo from 120.0 to 30.0 BPM
+#   - Fixed config validation: minimum tempo from 60.0 to 20.0 BPM  
+#   - Fixed screen visualization: tempo range from 60-200 to 20-200 BPM
+#   - Fixed multiple tempo display inconsistencies to use sequencer.get_tempo()
+# RESULT: Sequencer now running at 30 BPM (2 seconds per step)
+# STATUS: Ready for Row 2 LED scrolling debugging at slow, observable speed

@@ -289,7 +289,7 @@ impl Default for SequencerState {
             current_bar: 1,
             current_lane: 1,
             is_running: false,
-            tempo: 120.0,
+            tempo: 30.0,
             swing_amount: 0.0,
             ticks_per_step: 12,
             first_step: 1,
@@ -385,7 +385,7 @@ impl Sequencer {
     /// Set tempo
     pub fn set_tempo(&self, tempo: f32) {
         let mut state = self.state.lock().unwrap();
-        state.tempo = tempo.clamp(60.0, 200.0);
+        state.tempo = tempo.clamp(20.0, 200.0);
         debug!("Tempo set to: {:.1} BPM", state.tempo);
     }
 
