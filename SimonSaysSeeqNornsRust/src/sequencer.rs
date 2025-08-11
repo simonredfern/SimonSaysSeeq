@@ -51,7 +51,9 @@ pub struct NoteEvent {
 pub struct MainRowStates {
     pub current_step: usize,
     pub first_step: usize,
-    pub last_step: usize,
+    pub euclidean_length: usize,
+    pub euclidean_events: usize,
+    pub euclidean_rotation: usize,
     pub midi_note: u8,
     pub midi_velocity: u8,
     pub midi_channel: u8,
@@ -131,7 +133,9 @@ impl Default for MainRowStates {
         Self {
             current_step: 0,
             first_step: 0,
-            last_step: 15,
+            euclidean_length: 15,
+            euclidean_events: 5,
+            euclidean_rotation: 0,
             midi_note: 60, // Middle C
             midi_velocity: 100,
             midi_channel: 1,
@@ -615,7 +619,7 @@ impl Sequencer {
         let row_state = &state.row_states[row];
 
         // Check if this step is within the row's range
-        if step < row_state.first_step || step > row_state.last_step {
+        if step < row_state.first_step || step > row_state.euclidean_length {
             return None;
         }
 
@@ -824,15 +828,14 @@ impl Sequencer {
         for (row_idx, row_state) in state.row_states.iter_mut().enumerate() {
             let old_step = row_state.current_step;
             row_state.current_step += 1;
-            if row_state.current_step > row_state.last_step {
+            if row_state.current_step > row_state.euclidean_length {
                 row_state.current_step = row_state.first_step;
             }
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                 // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
                 //       row_idx, old_step, row_state.current_step,
-                //       row_state.first_step, row_state.last_step);
+                //       row_state.first_step, row_state.euclidean_length);
             }
-
         }
 
         // Update CO2 counters if we have data
@@ -1436,6 +1439,11 @@ impl Sequencer {
 
         let mut state = self.state.lock().unwrap();
         let row_idx = row;
+
+        // Update the row's Euclidean parameters
+        state.row_states[row_idx].euclidean_events = pulses;
+        state.row_states[row_idx].euclidean_length = steps;
+        state.row_states[row_idx].euclidean_rotation = rotation;
 
         // Clear the row first
         for col in 0..16 {

@@ -806,8 +806,8 @@ impl SimonSaysSeeq {
                 unsafe {
                     DEBUG_COUNTER += 1;
                     if DEBUG_COUNTER % 20 == 0 && seq_y <= 6 { // Debug all 7 sequencer rows, every 20 updates
-                        // info!("🎯 Row {} current_step = {} (first_step={}, last_step={}) [display: row {}]",
-                        //       seq_y, row_state.current_step, row_state.first_step, row_state.last_step, seq_y + 1);
+                        // info!("🎯 Row {} current_step = {} (first_step={}, euclidean_length={}) [display: row {}]",
+                        //       seq_y, row_state.current_step, row_state.first_step, row_state.euclidean_length, seq_y + 1);
                     }
                 }
 

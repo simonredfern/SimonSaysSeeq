@@ -2087,3 +2087,23 @@ kill 14815 16252 16404 16463
 # EXPLANATION: Function now expects 0-based step indexing, so no -1 conversion needed
 # RESULT: Direct 0-based array access prevents underflow when step = 0
 # STATUS: Integer underflow bug resolved - all step indexing now properly 0-based
+
+## 2025-08-11 23:00:00 Implemented Euclidean Parameter Storage in Row States
+# REQUEST: Rename last_step to euclidean_length and add euclidean_events and euclidean_rotation
+# PURPOSE: Store Euclidean parameters per row and use euclidean_length for sequence looping
+# CHANGES TO MainRowStates STRUCT:
+#   - Renamed: last_step -> euclidean_length (controls row loop length)
+#   - Added: euclidean_events (number of pulses/beats in Euclidean rhythm)
+#   - Added: euclidean_rotation (rotation offset for Euclidean pattern)
+# DEFAULT VALUES:
+#   - euclidean_length: 15 (16-step sequence, 0-based)
+#   - euclidean_events: 5 (moderate density rhythm)
+#   - euclidean_rotation: 0 (no rotation offset)
+# UPDATED FUNCTIONS:
+#   1. get_step_events: Uses row_state.euclidean_length instead of last_step
+#   2. advance_step: Row loops use euclidean_length for individual row timing
+#   3. generate_euclidean_rhythm: Stores parameters in row state when generating
+# LOOPING BEHAVIOR: Each row now loops according to its euclidean_length value
+# PARAMETER PERSISTENCE: Euclidean settings are saved with row state and patterns
+# BENEFIT: Each row maintains its own Euclidean configuration and loop length
+# STATUS: Euclidean parameters now persistent per row - sequences loop at euclidean_length
