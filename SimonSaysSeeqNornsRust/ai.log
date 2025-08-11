@@ -1929,3 +1929,31 @@ kill 14815 16252 16404 16463
 # BENEFIT: Zero noise logging - perfect for debugging ARM/Euclidean workflow
 # COMPILATION: Successful with warnings only (expected unused variables)
 # STATUS: System ready for clean ARM/Euclidean testing with minimal log output
+
+## 2025-08-11 02:27:12 Grid Identification Debug Message Cleanup
+# ISSUE: Repetitive ARM DEBUG messages about grid identification creating noise
+# MESSAGES: "ARM DEBUG: get_main_grid_id called with X grids", "GRID_ONE (lowest ID)", "GRID_TWO (second lowest ID)"
+# LOCATION: src/main.rs get_main_grid_id function (lines 872-894)
+# ACTION: Silenced 5 grid identification debug messages by commenting them out
+# MESSAGES SILENCED:
+#   - "ARM DEBUG: get_main_grid_id called with {} grids: {:?}"
+#   - "ARM DEBUG: GRID_ONE preference set to: {}"
+#   - "ARM DEBUG: GRID_ONE found: {}"
+#   - "ARM DEBUG: Preferred GRID_ONE {} not found, using lowest ID"
+#   - "ARM DEBUG: GRID_ONE (lowest ID): {:?}"
+#   - "ARM DEBUG: GRID_TWO (second lowest ID): {:?}"
+# COMPILATION: Successful with warnings only (expected unused variables)
+# RESULT: Even cleaner log output - eliminated repetitive grid identification noise
+# STATUS: Ultra-minimal ARM/Euclidean debug logging ready for testing
+
+## 2025-08-11 02:27:45 Next Step - Investigate Euclidean Row Sequence Issue
+# TASK: Debug why Euclidean functions don't change the row sequence
+# CURRENT STATUS: ARM buttons and Euclidean rhythm generation debug messages are clean
+# NEXT INVESTIGATION: 
+#   - Check if generate_euclidean_rhythm function is being called correctly
+#   - Verify rhythm generation parameters (events, length, rotation) calculation
+#   - Confirm rhythm is being applied to the correct row
+#   - Check if sequencer row data is actually being updated
+#   - Verify grid LED refresh shows the new pattern
+# APPROACH: Add focused debug messages to track rhythm generation and application flow
+# GOAL: Ensure Euclidean rhythm generation properly updates row sequences and grid display

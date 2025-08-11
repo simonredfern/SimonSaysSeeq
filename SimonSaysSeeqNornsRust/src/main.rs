@@ -870,15 +870,15 @@ impl SimonSaysSeeq {
 
     /// Get GRID_ONE ID (lowest ID) and GRID_TWO ID (second lowest ID)
     fn get_main_grid_id(&self, connected_grids: &[String]) -> Option<String> {
-        info!("ARM DEBUG: get_main_grid_id called with {} grids: {:?}", connected_grids.len(), connected_grids);
+        // info!("ARM DEBUG: get_main_grid_id called with {} grids: {:?}", connected_grids.len(), connected_grids);
         
         if let Some(preferred_id) = &self.main_grid_preference {
-            info!("ARM DEBUG: GRID_ONE preference set to: {}", preferred_id);
+            // info!("ARM DEBUG: GRID_ONE preference set to: {}", preferred_id);
             if connected_grids.contains(preferred_id) {
-                info!("ARM DEBUG: GRID_ONE found: {}", preferred_id);
+                // info!("ARM DEBUG: GRID_ONE found: {}", preferred_id);
                 return Some(preferred_id.clone());
             } else {
-                warn!("ARM DEBUG: Preferred GRID_ONE {} not found, using lowest ID", preferred_id);
+                // warn!("ARM DEBUG: Preferred GRID_ONE {} not found, using lowest ID", preferred_id);
             }
         }
 
@@ -889,8 +889,8 @@ impl SimonSaysSeeq {
         let grid_one = sorted_grids.first().cloned();
         let grid_two = if sorted_grids.len() > 1 { sorted_grids.get(1).cloned() } else { None };
         
-        info!("ARM DEBUG: GRID_ONE (lowest ID): {:?}", grid_one);
-        info!("ARM DEBUG: GRID_TWO (second lowest ID): {:?}", grid_two);
+        // info!("ARM DEBUG: GRID_ONE (lowest ID): {:?}", grid_one);
+        // info!("ARM DEBUG: GRID_TWO (second lowest ID): {:?}", grid_two);
         
         grid_one
     }
