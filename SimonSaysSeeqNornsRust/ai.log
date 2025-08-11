@@ -2076,3 +2076,14 @@ kill 14815 16252 16404 16463
 # RESULT: Complete 0-based indexing system throughout entire sequencer
 # RANGES: Steps 0-15, Bars 0-3, Rows 0-6, Grid coordinates 0-15 x 0-7
 # STATUS: Fully consistent 0-based indexing achieved - no more index conversions needed
+
+## 2025-08-11 22:57:00 Fixed Integer Underflow Bug in get_step_events
+# BUG: Panic "index out of bounds: the len is 16 but the index is 18446744073709551615" at sequencer.rs:610
+# ROOT CAUSE: Missed step - 1 operation in get_step_events causing integer underflow
+# ISSUE: When step = 0 (0-based), step - 1 = usize::MAX (18446744073709551615) due to underflow
+# LOCATION: src/sequencer.rs line 610, get_step_events function
+# ORIGINAL CODE: let grid_value = state.grid[step - 1][row];
+# FIXED CODE: let grid_value = state.grid[step][row];
+# EXPLANATION: Function now expects 0-based step indexing, so no -1 conversion needed
+# RESULT: Direct 0-based array access prevents underflow when step = 0
+# STATUS: Integer underflow bug resolved - all step indexing now properly 0-based

@@ -607,7 +607,7 @@ impl Sequencer {
             return None; // Only sequence rows 0-6
         }
 
-        let grid_value = state.grid[step - 1][row];
+        let grid_value = state.grid[step][row];
         if grid_value == 0 {
             return None; // No trigger
         }
@@ -982,7 +982,7 @@ impl Sequencer {
 
         if lane >= state.min_lane && lane <= state.max_lane
             && bar >= state.min_bar && bar <= state.max_bar
-            && step <= MAX_STEP {
+            && step <= state.max_step {
 
             let lane_idx = lane - 1;
             let bar_idx = bar;
