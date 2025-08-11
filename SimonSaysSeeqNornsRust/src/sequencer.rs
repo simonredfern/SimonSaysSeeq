@@ -1427,14 +1427,14 @@ impl Sequencer {
 
     /// Euclidean rhythm generation
     pub fn generate_euclidean_rhythm(&self, row: usize, pulses: usize, steps: usize, rotation: usize) {
-        if row == 0 || row > 8 || pulses > steps || steps > 16 {
+        if row > 6 || pulses > steps || steps > 16 {
             return;
         }
 
         self.push_undo_snapshot(format!("Euclidean rhythm R{}: {} pulses in {} steps", row, pulses, steps));
 
         let mut state = self.state.lock().unwrap();
-        let row_idx = row - 1;
+        let row_idx = row;
 
         // Clear the row first
         for col in 0..16 {

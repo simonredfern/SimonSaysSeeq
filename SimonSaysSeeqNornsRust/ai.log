@@ -1976,3 +1976,15 @@ kill 14815 16252 16404 16463
 # APPEARS AFTER: "ARM EUCLIDIAN_EVENTS: Successfully generated N events on row X"
 # ACTION REQUIRED: Restart application to load newly compiled code with binary pattern logging
 # STATUS: Code ready - waiting for application restart to verify pattern logging works
+
+## 2025-08-11 22:33:00 Root Cause Found - Row Indexing Mismatch
+# ISSUE: Binary pattern logging still not appearing after restart
+# ROOT CAUSE: generate_euclidean_rhythm() function had early return for row == 0
+# PROBLEM: Function expected 1-indexed rows (1-8) but caller passes 0-indexed rows (0-6)
+# EVIDENCE: Log shows "row 0" but function returned early when row == 0
+# ORIGINAL CODE: if row == 0 || row > 8 || pulses > steps || steps > 16 { return; }
+# ANALYSIS: Codebase uses 0-indexed coordinates throughout (seq_y 0-6 for sequence rows)
+# FIX 1: Removed row == 0 condition to allow row 0
+# FIX 2: Changed row > 8 to row > 6 (for 0-indexed rows 0-6)  
+# FIX 3: Changed row_idx = row - 1 to row_idx = row (direct 0-indexed access)
+# STATUS: Function now accepts 0-indexed rows - needs recompilation and restart
