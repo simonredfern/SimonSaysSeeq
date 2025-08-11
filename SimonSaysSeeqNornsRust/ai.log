@@ -1949,7 +1949,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-11 02:27:45 Next Step - Investigate Euclidean Row Sequence Issue
 # TASK: Debug why Euclidean functions don't change the row sequence
 # CURRENT STATUS: ARM buttons and Euclidean rhythm generation debug messages are clean
-# NEXT INVESTIGATION: 
+# NEXT INVESTIGATION:
 #   - Check if generate_euclidean_rhythm function is being called correctly
 #   - Verify rhythm generation parameters (events, length, rotation) calculation
 #   - Confirm rhythm is being applied to the correct row
@@ -1957,3 +1957,22 @@ kill 14815 16252 16404 16463
 #   - Verify grid LED refresh shows the new pattern
 # APPROACH: Add focused debug messages to track rhythm generation and application flow
 # GOAL: Ensure Euclidean rhythm generation properly updates row sequences and grid display
+
+## 2025-08-11 22:23:57 Added Binary Rhythm Pattern Logging
+# REQUEST: Add logging to show Euclidean rhythm results in binary format (1=beat, 0=rest)
+# LOCATION: src/sequencer.rs, generate_euclidean_rhythm function (lines 1457-1464)
+# CHANGE: Enhanced existing info! message to include binary pattern display
+# FORMAT: Pattern shows as "101001" where 1 is beat, 0 is rest, up to 16 steps
+# IMPLEMENTATION: Loop through generated grid pattern and build binary string
+# LOG MESSAGE: "generate_euclidean_rhythm says: Generated euclidean rhythm for row X: Y pulses in Z steps, rotation W, pattern: 101001"
+# PURPOSE: Visual verification that rhythm generation is working and patterns are correct
+# STATUS: Ready for testing - rhythm patterns now visible in logs for debugging
+
+## 2025-08-11 22:23:57 Compilation and Restart Required
+# COMPILATION: Successfully compiled with warnings (cargo build --features desktop)
+# ISSUE: New binary pattern logging not appearing in runtime logs
+# CAUSE: Application still running old code - requires restart to see new log messages
+# EXPECTED LOG: "generate_euclidean_rhythm says: Generated euclidean rhythm for row X: Y pulses in Z steps, rotation W, pattern: 101001"
+# APPEARS AFTER: "ARM EUCLIDIAN_EVENTS: Successfully generated N events on row X"
+# ACTION REQUIRED: Restart application to load newly compiled code with binary pattern logging
+# STATUS: Code ready - waiting for application restart to verify pattern logging works

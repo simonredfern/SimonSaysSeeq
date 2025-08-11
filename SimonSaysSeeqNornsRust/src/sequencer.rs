@@ -1454,8 +1454,14 @@ impl Sequencer {
             }
         }
 
-        info!("Generated euclidean rhythm for row {}: {} pulses in {} steps, rotation {}",
-              row, pulses, steps, rotation);
+        // Create binary pattern string for logging
+        let mut pattern = String::new();
+        for i in 0..steps.min(16) {
+            pattern.push(if state.grid[i][row_idx] == 1 { '1' } else { '0' });
+        }
+        
+        info!("generate_euclidean_rhythm says: Generated euclidean rhythm for row {}: {} pulses in {} steps, rotation {}, pattern: {}",
+              row, pulses, steps, rotation, pattern);
     }
 
     /// Copy pattern section
