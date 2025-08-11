@@ -827,9 +827,9 @@ impl Sequencer {
                 row_state.current_step = row_state.first_step;
             }
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
-                debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
-                      row_idx, old_step, row_state.current_step,
-                      row_state.first_step, row_state.last_step);
+                // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
+                //       row_idx, old_step, row_state.current_step,
+                //       row_state.first_step, row_state.last_step);
             }
 
         }
@@ -867,7 +867,7 @@ impl Sequencer {
 
                     if grid_value > 0 {
                         // This step is active - trigger would happen here
-                        debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
+                        // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
                         // MIDI output disabled - patterns are visual only
                         // Here we would send MIDI/CV if enabled

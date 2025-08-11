@@ -937,8 +937,11 @@ impl SimonSaysSeeq {
     /// Refresh all pattern LEDs on the grid (used after operations that change multiple positions)
     #[cfg(feature = "hardware")]
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
+        info!("ARM DEBUG: refresh_all_pattern_leds() called");
         let connected_grids = self.grid.get_connected_grids();
+        info!("ARM DEBUG: Found {} connected grids", connected_grids.len());
         if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            info!("ARM DEBUG: Using main grid: {}", main_grid_id);
             // Update all LEDs using the same logic as update_single_led
             for seq_y in 0..=6 {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
@@ -954,11 +957,19 @@ impl SimonSaysSeeq {
                             (true, true) => 14,      // Has pattern AND current position
                         };
                         
+                        if brightness > 0 {
+                            info!("ARM DEBUG: Setting LED ({}, {}) = {} (pattern_value={}, is_current={})", seq_x, seq_y, brightness, pattern_value, is_current_step);
+                        }
+                        
                         self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "refresh_all_pattern_leds")?;
                     }
                 }
             }
+            info!("ARM DEBUG: Calling grid.refresh()");
             self.grid.refresh()?;
+            info!("ARM DEBUG: refresh_all_pattern_leds() completed successfully");
+        } else {
+            info!("ARM DEBUG: No main grid found!");
         }
         Ok(())
     }

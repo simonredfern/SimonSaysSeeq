@@ -354,7 +354,7 @@ impl GridManager {
         let msg_buf = rosc::encoder::encode(&packet)?;
         self.socket.send_to(&msg_buf, &device_addr)?;
 
-        debug!("set_led says: After socket.send_to Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
+        // debug!("set_led says: After socket.send_to Set LED grid {} ({}, {}) = {}", grid_id, x, y, brightness);
 
         Ok(())
         }
