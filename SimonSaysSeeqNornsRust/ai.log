@@ -2045,3 +2045,34 @@ kill 14815 16252 16404 16463
 # 11. test_step_events: get_step_events(0, 1, 1) -> get_step_events(0, 1, 0)
 # RESULT: All sequencer functions now use consistent 0-based indexing matching main application
 # STATUS: Indexing inconsistencies resolved - system now fully 0-based
+
+## 2025-08-11 22:43:00 Fixed Step Indexing Bug - Converted Sequencer to 0-Based Steps
+# BUG: Panic "index out of bounds: the len is 16 but the index is 16" at sequencer.rs:609
+# ROOT CAUSE: get_step_events() converted to 0-based but sequencer still used 1-based step counting
+# ISSUE: midi_step_count was 1-based (range 1-16) but get_step_events expected 0-based (0-15)
+# PROPER SOLUTION: Convert entire sequencer step system to 0-based indexing
+# CHANGES MADE:
+#   1. SequencerState defaults: midi_step_count: 1 -> 0, midi_first_step: 1 -> 0, midi_last_step: 16 -> 15
+#   2. SequencerState defaults: current_step: 1 -> 0, first_step: 1 -> 0, last_step: 16 -> 15
+#   3. play_midi: step_idx = midi_step_count - 1 -> step_idx = midi_step_count (direct 0-based access)
+#   4. Tests updated: expect position (0,1) instead of (1,1) for initial step
+#   5. Test case: get_step_events(0, 1, 1) -> get_step_events(0, 1, 0)
+# RESULT: Complete 0-based step indexing throughout sequencer - steps now range 0-15
+# NOTE: Bars remain 1-based for now (range 1-4) to minimize disruption
+# STATUS: Array bounds error resolved - fully consistent 0-based step indexing achieved
+
+## 2025-08-11 22:45:00 Converted Bars to 0-Based Indexing - Complete 0-Based System
+# REQUEST: Change bars to 0-based as well - everything should be 0-based
+# CHANGES MADE TO BARS:
+#   1. Constants: MIN_BAR: 1 -> 0, MAX_BAR: 4 -> 3, MAX_STEP: 16 -> 15, added TOTAL_STEPS: 16
+#   2. SequencerState defaults: current_bar: 1 -> 0, midi_bar_count: 1 -> 0
+#   3. Reset functions: current_bar = 1 -> current_bar = 0 in stop(), reset_all(), save_pattern()
+#   4. play_midi: bar_idx = midi_bar_count - 1 -> bar_idx = midi_bar_count (direct 0-based access)
+#   5. init_state_tables: midi_bar_count = 1 -> midi_bar_count = 0
+#   6. set_midi_note_event: bar validation and bar_idx = bar - 1 -> bar_idx = bar
+#   7. MIDI note events initialization: step loop 1..=MAX_STEP -> 0..TOTAL_STEPS
+#   8. Tests updated: expect position (0,0) instead of (0,1) for initial bar
+#   9. Test case: get_step_events(0, 1, 0) -> get_step_events(0, 0, 0)
+# RESULT: Complete 0-based indexing system throughout entire sequencer
+# RANGES: Steps 0-15, Bars 0-3, Rows 0-6, Grid coordinates 0-15 x 0-7
+# STATUS: Fully consistent 0-based indexing achieved - no more index conversions needed

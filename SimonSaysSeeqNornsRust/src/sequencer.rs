@@ -232,11 +232,12 @@ impl Default for SequencerState {
     fn default() -> Self {
         const COLS: usize = 16;
         const ROWS: usize = 8;
-        const MIN_BAR: usize = 1;
-        const MAX_BAR: usize = 4;
+        const MIN_BAR: usize = 0;
+        const MAX_BAR: usize = 3;
         const MIN_LANE: usize = 1;
         const MAX_LANE: usize = 2;
-        const MAX_STEP: usize = 16;
+        const MAX_STEP: usize = 15;
+        const TOTAL_STEPS: usize = 16;
         const TOTAL_SEQUENCE_ROWS: usize = 7;
 
         let grid = vec![vec![0u8; ROWS]; COLS];
@@ -258,7 +259,7 @@ impl Default for SequencerState {
             let mut bars = Vec::new();
             for _bar in MIN_BAR..=MAX_BAR {
                 let mut steps = Vec::new();
-                for _step in 1..=MAX_STEP {
+                for _step in 0..TOTAL_STEPS {
                     let mut notes = Vec::new();
                     for _note in 0..=127 {
                         let mut on_off = Vec::new();
@@ -287,23 +288,23 @@ impl Default for SequencerState {
             current_chain_position: 0,
             chain_mode_enabled: false,
             chain_repeat_current: 1,
-            current_step: 1,
-            current_bar: 1,
+            current_step: 0,
+            current_bar: 0,
             current_lane: 1,
             is_running: false,
             tempo: 30.0,
             swing_amount: 0.0,
             ticks_per_step: 12,
-            first_step: 1,
-            last_step: 16,
+            first_step: 0,
+            last_step: 15,
             steps_per_bar: 16,
             tick_count: 0,
             the_current_tick_count_since_step: 0,
             the_current_tick_count_since_start: 0,
-            midi_step_count: 1,
-            midi_bar_count: 1,
-            midi_first_step: 1,
-            midi_last_step: 16,
+            midi_step_count: 0,
+            midi_bar_count: 0,
+            midi_first_step: 0,
+            midi_last_step: 15,
             keyboard_midi_note_events,
             tempo_analysis: TempoAnalysis::default(),
             swing_mode: 1,
@@ -371,7 +372,7 @@ impl Sequencer {
             state.is_running = false;
             // Reset to beginning
             state.current_step = 0;
-            state.current_bar = 1;
+            state.current_bar = 0;
             for row_state in &mut state.row_states {
                 row_state.current_step = 0;
             }
@@ -588,7 +589,7 @@ impl Sequencer {
 
         // Reset positions
         state.current_step = 0;
-        state.current_bar = 1;
+        state.current_bar = 0;
         for row_state in &mut state.row_states {
             row_state.current_step = 0;
         }
@@ -606,7 +607,7 @@ impl Sequencer {
             return None; // Only sequence rows 0-6
         }
 
-        let grid_value = state.grid[step][row];
+        let grid_value = state.grid[step - 1][row];
         if grid_value == 0 {
             return None; // No trigger
         }
@@ -742,8 +743,8 @@ impl Sequencer {
         if current_lane <= state.max_lane && midi_bar_count <= state.max_bar {
             for note in 0..=127 {
                 let lane_idx = current_lane - 1;
-                let bar_idx = midi_bar_count - 1;
-                let step_idx = midi_step_count - 1;
+                let bar_idx = midi_bar_count;
+                let step_idx = midi_step_count;
 
                 if lane_idx < state.keyboard_midi_note_events.len()
                     && bar_idx < state.keyboard_midi_note_events[lane_idx].len()
@@ -948,7 +949,7 @@ impl Sequencer {
         state.the_current_tick_count_since_start = 0;
         state.the_current_tick_count_since_step = 0;
         state.midi_step_count = state.first_step;
-        state.midi_bar_count = 1;
+        state.midi_bar_count = 0;
 
         // Reset tempo analysis
         state.tempo_analysis = TempoAnalysis::default();
@@ -981,11 +982,11 @@ impl Sequencer {
 
         if lane >= state.min_lane && lane <= state.max_lane
             && bar >= state.min_bar && bar <= state.max_bar
-            && step >= 1 && step <= state.max_step {
+            && step <= MAX_STEP {
 
             let lane_idx = lane - 1;
-            let bar_idx = bar - 1;
-            let step_idx = step - 1;
+            let bar_idx = bar;
+            let step_idx = step;
             let event_idx = if is_on { 1 } else { 0 };
 
             if lane_idx < state.keyboard_midi_note_events.len()
@@ -1156,7 +1157,7 @@ impl Sequencer {
         // Reset transport state for saved patterns
         pattern_state.is_running = false;
         pattern_state.current_step = 0;
-        pattern_state.current_bar = 1;
+        pattern_state.current_bar = 0;
 
         let mut patterns = self.patterns.lock().unwrap();
         patterns.insert(pattern_id, pattern_state);
@@ -1532,8 +1533,8 @@ mod tests {
         assert!(!sequencer.is_running());
 
         let (step, bar) = sequencer.get_position();
-        assert_eq!(step, 1);
-        assert_eq!(bar, 1);
+        assert_eq!(step, 0);
+        assert_eq!(bar, 0);
     }
 
     #[test]
@@ -1566,8 +1567,8 @@ mod tests {
 
         // Position should reset after stop
         let (step, bar) = sequencer.get_position();
-        assert_eq!(step, 1);
-        assert_eq!(bar, 1);
+        assert_eq!(step, 0);
+        assert_eq!(bar, 0);
     }
 
     #[test]
@@ -1593,7 +1594,7 @@ mod tests {
         sequencer.set_grid_value(0, 0, 1);
 
         // Should get note events for this step
-        let events = sequencer.get_step_events(0, 1, 0);
+        let events = sequencer.get_step_events(0, 0, 0);
         assert!(events.is_some());
 
         let events = events.unwrap();

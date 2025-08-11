@@ -41,3 +41,14 @@
 - The prefered grid, original grid is m2949672
 - Use examples/debug_osc.rs for isolated grid testing
 - Comprehensive tests may give false negatives due to timing
+
+## 0-Based Indexing Requirements
+- ALL indexing in this codebase MUST be 0-based throughout
+- Steps: 0-15 (16 total steps)
+- Bars: 0-3 (4 total bars)
+- Rows: 0-6 (7 sequence rows)
+- Grid coordinates: 0-15 x 0-7 (16x8 grid)
+- No index conversions (no "- 1" operations) should be needed
+- All array access should use direct 0-based indices
+- Any new functions must follow 0-based indexing consistently
+- When fixing bugs, verify indexing is 0-based throughout the call chain
