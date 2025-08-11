@@ -470,7 +470,7 @@ impl Sequencer {
         let mut rng = rand::thread_rng();
         let mut state = self.state.lock().unwrap();
 
-        if y <= 7 && x <= 16 {
+        if y < 8 && x < 16 {
             // Randomize based on position - left side creates denser patterns
             let density = (x as f32) / 16.0;
             let new_value = if rng.gen::<f32>() < density {
@@ -478,7 +478,7 @@ impl Sequencer {
             } else {
                 0
             };
-            state.grid[x - 1][y - 1] = new_value;
+            state.grid[x][y] = new_value;
         }
     }
 
@@ -486,10 +486,10 @@ impl Sequencer {
     pub fn clear_section(&self, start_x: usize, start_y: usize, width: usize, height: usize) {
         let mut state = self.state.lock().unwrap();
 
-        for x in start_x..=(start_x + width - 1).min(16) {
-            for y in start_y..=(start_y + height - 1).min(8) {
-                if x > 0 && y > 0 && x <= 16 && y <= 8 {
-                    state.grid[x - 1][y - 1] = 0;
+        for x in start_x..=(start_x + width - 1).min(15) {
+            for y in start_y..=(start_y + height - 1).min(7) {
+                if x < 16 && y < 8 {
+                    state.grid[x][y] = 0;
                 }
             }
         }
@@ -506,8 +506,8 @@ impl Sequencer {
             for x in 0..width {
                 let sx = src_x + x;
                 let sy = src_y + y;
-                if sx > 0 && sy > 0 && sx <= 16 && sy <= 8 {
-                    row.push(state.grid[sx - 1][sy - 1]);
+                if sx < 16 && sy < 8 {
+                    row.push(state.grid[sx][sy]);
                 } else {
                     row.push(0);
                 }
@@ -542,8 +542,8 @@ impl Sequencer {
     /// Get row data for display
     pub fn get_row_data(&self, row: usize) -> Vec<u8> {
         let state = self.state.lock().unwrap();
-        if row > 0 && row <= 8 {
-            (0..16).map(|x| state.grid[x][row - 1]).collect()
+        if row < 8 {
+            (0..16).map(|x| state.grid[x][row]).collect()
         } else {
             vec![0; 16]
         }
@@ -602,16 +602,16 @@ impl Sequencer {
         let state = self.state.lock().unwrap();
         let _note_events = self.note_events.lock().unwrap();
 
-        if row > 7 || row == 0 {
-            return None; // Only sequence rows 1-7
+        if row > 6 {
+            return None; // Only sequence rows 0-6
         }
 
-        let grid_value = state.grid[step - 1][row - 1];
+        let grid_value = state.grid[step][row];
         if grid_value == 0 {
             return None; // No trigger
         }
 
-        let row_state = &state.row_states[row - 1];
+        let row_state = &state.row_states[row];
 
         // Check if this step is within the row's range
         if step < row_state.first_step || step > row_state.last_step {
@@ -1593,7 +1593,7 @@ mod tests {
         sequencer.set_grid_value(0, 0, 1);
 
         // Should get note events for this step
-        let events = sequencer.get_step_events(0, 1, 1);
+        let events = sequencer.get_step_events(0, 1, 0);
         assert!(events.is_some());
 
         let events = events.unwrap();

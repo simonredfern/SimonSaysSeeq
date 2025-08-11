@@ -1988,3 +1988,60 @@ kill 14815 16252 16404 16463
 # FIX 2: Changed row > 8 to row > 6 (for 0-indexed rows 0-6)  
 # FIX 3: Changed row_idx = row - 1 to row_idx = row (direct 0-indexed access)
 # STATUS: Function now accepts 0-indexed rows - needs recompilation and restart
+
+## 2025-08-11 22:35:28 Euclidean Pattern Generation Fixed for Row 0
+# RESULT: Binary pattern logging now working after row indexing fix
+# CONFIRMATION: User reports "euclidian pattern generation seems to be better now"
+# SPECIFIC FIX: generate_euclidean_rhythm function now processes row 0 correctly
+# BINARY LOGGING: Pattern display in format 101001 (1=beat, 0=rest) now functional
+# GRID DISPLAY: Euclidean rhythms updating grid LEDs for tested cases
+# ROOT CAUSE RESOLVED: Early return condition for row == 0 eliminated
+# NOTE: Fixed one specific indexing issue - other indexing inconsistencies may still exist
+# STATUS: Euclidean rhythm generation working for current test cases
+
+## 2025-08-11 22:37:00 Indexing Inconsistencies Found in Sequencer
+# SEARCH: Looked for "- 1" patterns to find remaining 1-based indexing
+# LOCATIONS: Found several functions in src/sequencer.rs with mixed indexing:
+# 1. copy_grid_section (line 509-511):
+#    - Uses 1-based coordinate validation (sx > 0 && sy > 0)
+#    - But 0-based array access (state.grid[sx - 1][sy - 1])
+# 2. get_row_data (lines 545-547):
+#    - Expects 1-based row numbers (row > 0 && row <= 8)
+#    - Converts to 0-based for array access (state.grid[x][row - 1])
+# 3. get_step_events (lines 605-616):
+#    - Expects 1-based row/step (row == 0 check, step - 1, row - 1)
+#    - Comment says "Only sequence rows 1-7" but uses 0-based arrays
+# PATTERN: Functions expect 1-based input but use 0-based internal arrays
+# IMPACT: Potential source of future indexing bugs and confusion
+# STATUS: Mixed indexing system confirmed - not fully consistent 0-based indexing
+
+## 2025-08-11 22:40:00 Fixed All Indexing Inconsistencies in Sequencer Functions
+# APPLIED FIXES: Updated all found functions to use consistent 0-based indexing
+# 1. copy_grid_section (lines 509-511):
+#    - Changed validation: sx > 0 && sy > 0 && sx <= 16 && sy <= 8 -> sx < 16 && sy < 8
+#    - Changed array access: state.grid[sx - 1][sy - 1] -> state.grid[sx][sy]
+# 2. get_row_data (lines 545-547):
+#    - Changed validation: row > 0 && row <= 8 -> row < 8
+#    - Changed array access: state.grid[x][row - 1] -> state.grid[x][row]
+# 3. get_step_events (lines 605-616):
+#    - Changed validation: row > 7 || row == 0 -> row > 6
+#    - Changed array access: state.grid[step - 1][row - 1] -> state.grid[step][row]
+#    - Changed array access: state.row_states[row - 1] -> state.row_states[row]
+#    - Updated comment: "Only sequence rows 1-7" -> "Only sequence rows 0-6"
+# 4. randomize_section (lines 470-480):
+#    - Changed validation: y <= 7 && x <= 16 -> y < 8 && x < 16
+#    - Changed array access: state.grid[x - 1][y - 1] -> state.grid[x][y]
+# 5. clear_section (lines 489-493):
+#    - Changed validation: x > 0 && y > 0 && x <= 16 && y <= 8 -> x < 16 && y < 8
+#    - Changed array access: state.grid[x - 1][y - 1] -> state.grid[x][y]
+#    - Changed bounds: .min(16) -> .min(15), .min(8) -> .min(7)
+# MAIN.RS FIXES: Updated callers to use 0-based indexing
+# 6. handle_sequencer_event: for row in 1..=7 -> for row in 0..=6
+# 7. get_first_held_row: for y in 1..=8 -> for y in 0..=7, for x in 1..=16 -> for x in 0..=15
+# 8. handle_advanced_grid_operation: first_row.unwrap_or(1) -> first_row.unwrap_or(0)
+# 9. copy_grid_section calls: (1, first_row, 1, y, 16, 1) -> (0, first_row, 0, y, 16, 1)
+# 10. randomize_section calls: rows 1 and 2 -> rows 0 and 1
+# TEST FIXES: Updated test to use 0-based step indexing
+# 11. test_step_events: get_step_events(0, 1, 1) -> get_step_events(0, 1, 0)
+# RESULT: All sequencer functions now use consistent 0-based indexing matching main application
+# STATUS: Indexing inconsistencies resolved - system now fully 0-based

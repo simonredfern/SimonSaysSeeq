@@ -425,7 +425,7 @@ impl SimonSaysSeeq {
                 let step_co2_value = self.co2.advance_step();
 
                 // Process step for all active rows
-                for row in 1..=7 { // Rows 1-7 are sequence rows
+                for row in 0..=6 { // Rows 0-6 are sequence rows
                     if let Some(note_events) = self.sequencer.get_step_events(row, bar, step) {
                         for note_event in note_events {
                             #[cfg(feature = "midi")]
@@ -923,8 +923,8 @@ impl SimonSaysSeeq {
     }
 
     fn get_first_held_row(&self) -> Option<usize> {
-        for y in 1..=8 {
-            for x in 1..=16 {
+        for y in 0..=7 {
+            for x in 0..=15 {
                 if self.sequencer.is_held(x, y) {
                     return Some(y);
                 }
@@ -1063,9 +1063,9 @@ impl SimonSaysSeeq {
                     // Control row held - special functions
                     if x <= 8 {
                         // Randomize column
-                        // Only randomize rows 1 and 2
+                        // Only randomize rows 0 and 1
+                        self.sequencer.randomize_section(x, 0);
                         self.sequencer.randomize_section(x, 1);
-                        self.sequencer.randomize_section(x, 2);
                         info!("Randomized column {}", x);
                     } else {
                         // Clear column
@@ -1090,10 +1090,10 @@ impl SimonSaysSeeq {
             }
         } else if held_rows.len() > 1 {
             // Multiple rows held - advanced operations
-            let first_row = self.get_first_held_row().unwrap_or(1);
+            let first_row = self.get_first_held_row().unwrap_or(0);
 
             // Copy pattern from first held row to current position
-            self.sequencer.copy_grid_section(1, first_row, 1, y, 16, 1);
+            self.sequencer.copy_grid_section(0, first_row, 0, y, 16, 1);
             info!("Copied pattern from row {} to row {}", first_row, y);
         }
 
