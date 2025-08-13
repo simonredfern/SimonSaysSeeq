@@ -817,8 +817,18 @@ impl Sequencer {
         // Reset tick count since step
         state.the_current_tick_count_since_step = 0;
 
+        // Store current step values BEFORE increment for MIDI synchronization
+        let current_midi_step = state.midi_step_count;
+        let current_midi_bar = state.midi_bar_count;
+
         // Process current step for all sequence rows
         self.process_step(&*state, sender)?;
+
+        // Send step event with CURRENT step values (before increment) for MIDI sync
+        let _ = sender.send(SequencerEvent::Step {
+            step: current_midi_step,
+            bar: current_midi_bar
+        });
 
         // Advance MIDI step
         state.midi_step_count += 1;
@@ -857,12 +867,6 @@ impl Sequencer {
             // Implementation would depend on CO2 data structure
         }
 
-        // Send step event
-        let _ = sender.send(SequencerEvent::Step {
-            step: state.midi_step_count,
-            bar: state.midi_bar_count
-        });
-
         Ok(())
     }
 
@@ -883,11 +887,24 @@ impl Sequencer {
                     let grid_value = state.grid[current_step][row_idx];
 
                     if grid_value > 0 {
-                        // This step is active - trigger would happen here
-                        // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
+                        // This step is active - send MIDI note
+                        debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
-                        // MIDI output disabled - patterns are visual only
-                        // Here we would send MIDI/CV if enabled
+                        // Send MIDI note ON event for this row
+                        if let Some(row_state) = state.row_states.get(row_idx) {
+                            let midi_event = MidiEvent {
+                                note: row_state.midi_note,
+                                velocity: 100, // Default velocity
+                                channel: (row_idx + 1) as u8, // Row-based channel 1-7
+                                note_on: true,
+                                step: current_step,
+                                bar: state.midi_bar_count,
+                            };
+
+                            if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                                warn!("Failed to send MIDI note ON event: {}", e);
+                            }
+                        }
                     }
                 }
                 
