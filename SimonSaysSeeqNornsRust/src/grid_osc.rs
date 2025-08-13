@@ -77,8 +77,35 @@ impl GridManager {
         #[cfg(not(feature = "rosc"))]
         {
             info!("new says: OSC grid support disabled (rosc feature not enabled)");
+            info!("Creating mock grids for simulation mode...");
+            
+            let mut devices = HashMap::new();
+            
+            // Create two mock grid devices for testing
+            devices.insert("mock_grid_one".to_string(), GridDevice {
+                id: "mock_grid_one".to_string(),
+                device_type: "monome 128".to_string(),
+                cols: 16,
+                rows: 8,
+                port: 12345,
+                prefix: "/mock_grid_one".to_string(),
+                is_varibright: true,
+            });
+            
+            devices.insert("mock_grid_two".to_string(), GridDevice {
+                id: "mock_grid_two".to_string(),
+                device_type: "monome 128".to_string(),
+                cols: 16,
+                rows: 8,
+                port: 12346,
+                prefix: "/mock_grid_two".to_string(),
+                is_varibright: true,
+            });
+            
+            info!("Created mock grids: mock_grid_one, mock_grid_two");
+            
             Ok(Self {
-                devices: HashMap::new(),
+                devices,
                 assumed_led_states: HashMap::new(),
             })
         }
@@ -297,7 +324,10 @@ impl GridManager {
 
         #[cfg(not(feature = "rosc"))]
         {
-            return Err(anyhow!("OSC feature not enabled"));
+            // In simulation mode, just log the LED state and store it
+            info!("💡 SIMULATION: Grid {} LED ({},{}) = brightness {} ({})", grid_id, x, y, brightness, caller);
+            self.assumed_led_states.insert((grid_id.to_string(), x, y), brightness);
+            return Ok(());
         }
 
         #[cfg(feature = "rosc")]
@@ -369,7 +399,10 @@ impl GridManager {
     pub fn clear_all(&mut self, grid_id: &str) -> Result<()> {
         #[cfg(not(feature = "rosc"))]
         {
-            return Err(anyhow!("OSC feature not enabled"));
+            info!("💡 SIMULATION: Clearing all LEDs on grid {}", grid_id);
+            // Clear all LED states for this grid
+            self.assumed_led_states.retain(|(grid, _, _), _| grid != grid_id);
+            return Ok(());
         }
 
         #[cfg(feature = "rosc")]
@@ -506,7 +539,9 @@ impl GridManager {
 
     /// Get list of connected grid IDs
     pub fn get_connected_grids(&self) -> Vec<String> {
-        self.devices.keys().cloned().collect()
+        let mut grids: Vec<String> = self.devices.keys().cloned().collect();
+        grids.sort(); // Ensure consistent ordering
+        grids
     }
 
     /// Read button events from grids
@@ -694,17 +729,42 @@ impl GridManager {
 
     /// Flash all connected grids
     pub fn flash_all_grids(&mut self) -> Result<()> {
-        for grid_id in self.get_connected_grids() {
-            self.flash_grid(&grid_id)?;
+        let connected_grids = self.get_connected_grids();
+        
+        if connected_grids.len() >= 2 {
+            // Sort grids to get consistent GRID_ONE and GRID_TWO assignment
+            let mut sorted_grids = connected_grids.clone();
+            sorted_grids.sort();
+            
+            let grid_one = &sorted_grids[0]; // GRID_ONE (lowest ID)
+            let grid_two = &sorted_grids[1]; // GRID_TWO (second lowest ID)
+            
+            info!("Flashing GRID_ONE ({}) once", grid_one);
+            self.flash_grid(grid_one, 1)?; // Flash once
+            
+            info!("Flashing GRID_TWO ({}) twice", grid_two);
+            self.flash_grid(grid_two, 2)?; // Flash twice
+        } else {
+            // Single grid or no grids - flash normally
+            for grid_id in &connected_grids {
+                self.flash_grid(grid_id, 2)?; // Default flash twice
+            }
         }
         Ok(())
     }
 
     /// Flash a specific grid
-    pub fn flash_grid(&mut self, grid_id: &str) -> Result<()> {
+    pub fn flash_grid(&mut self, grid_id: &str, flash_count: usize) -> Result<()> {
         #[cfg(not(feature = "rosc"))]
         {
-            return Err(anyhow!("OSC feature not enabled"));
+            info!("💡 SIMULATION: Flashing grid {} {} time(s)", grid_id, flash_count);
+            for i in 0..flash_count {
+                info!("💡 SIMULATION: Grid {} flash {} - ON", grid_id, i + 1);
+                thread::sleep(Duration::from_millis(400));
+                info!("💡 SIMULATION: Grid {} flash {} - OFF", grid_id, i + 1);
+                thread::sleep(Duration::from_millis(400));
+            }
+            return Ok(());
         }
 
         #[cfg(feature = "rosc")]
@@ -717,12 +777,18 @@ impl GridManager {
 
         let device_addr = format!("127.0.0.1:{}", device_port);
 
-        // Flash sequence
-        let brightness_levels = if is_varibright {
-            vec![8, 0, 8, 0]
+        // Flash sequence - create pattern based on flash count
+        let mut brightness_levels = Vec::new();
+        let (on_brightness, off_brightness) = if is_varibright {
+            (8, 0)
         } else {
-            vec![1, 0, 1, 0]
+            (1, 0)
         };
+        
+        for _ in 0..flash_count {
+            brightness_levels.push(on_brightness);  // ON
+            brightness_levels.push(off_brightness); // OFF
+        }
 
         for brightness in brightness_levels {
             let flash_msg = if is_varibright {
@@ -744,7 +810,7 @@ impl GridManager {
             let msg_buf = rosc::encoder::encode(&packet)?;
             self.socket.send_to(&msg_buf, &device_addr)?;
 
-            thread::sleep(Duration::from_millis(150));
+            thread::sleep(Duration::from_millis(400));
         }
 
         debug!("Flashed grid {}", grid_id);

@@ -193,9 +193,6 @@ impl SimonSaysSeeq {
 
             // Update main grid initially
             self.update_grid_display()?;
-            
-            // Flash grids for identification
-            self.flash_grids_for_identification()?;
         }
 
         // Main event loop
@@ -1140,51 +1137,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// Flash grids for startup identification - GRID_ONE once, GRID_TWO twice
-    #[cfg(feature = "hardware")]
-    fn flash_grids_for_identification(&mut self) -> Result<()> {
-        let connected_grids = self.grid.get_connected_grids();
-        
-        if connected_grids.len() >= 2 {
-            let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            let grid_one_id = grid_one.as_ref().unwrap();
-            let grid_two_id = grid_two.as_ref().unwrap();
-            
-            info!("GRID FLASH: Flashing GRID_ONE ({}) once", grid_one_id);
-            
-            // Flash GRID_ONE once
-            self.grid.set_led(grid_one_id, 0, 0, 15, "startup_flash")?;
-            self.grid.refresh()?;
-            thread::sleep(Duration::from_millis(200));
-            self.grid.set_led(grid_one_id, 0, 0, 0, "startup_flash")?;
-            self.grid.refresh()?;
-            thread::sleep(Duration::from_millis(300));
-            
-            info!("GRID FLASH: Flashing GRID_TWO ({}) twice", grid_two_id);
-            
-            // Flash GRID_TWO twice
-            for _ in 0..2 {
-                self.grid.set_led(grid_two_id, 0, 0, 15, "startup_flash")?;
-                self.grid.refresh()?;
-                thread::sleep(Duration::from_millis(200));
-                self.grid.set_led(grid_two_id, 0, 0, 0, "startup_flash")?;
-                self.grid.refresh()?;
-                thread::sleep(Duration::from_millis(200));
-            }
-            
-            // Restore the normal display after flashing
-            thread::sleep(Duration::from_millis(300));
-            self.update_grid_display()?;
-            
-            info!("GRID FLASH: Identification flashing complete");
-        } else if connected_grids.len() == 1 {
-            info!("GRID FLASH: Only one grid connected - no identification needed");
-        } else {
-            info!("GRID FLASH: No grids connected");
-        }
-        
-        Ok(())
-    }
+
 
     /// Set GRID_ONE preference (optional - defaults to lowest ID)
     pub fn set_main_grid_preference(&mut self, grid_id: String) {
