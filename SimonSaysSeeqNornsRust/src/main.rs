@@ -69,7 +69,6 @@ use sequencer::{Sequencer, SequencerEvent};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
 use simon_says_seeq_rust::grid_osc::GridManager;
-#[cfg(feature = "hardware")]
 use screen::ScreenManager;
 use config::Config;
 use co2::Co2Manager;
@@ -81,7 +80,6 @@ pub struct SimonSaysSeeq {
     #[cfg(feature = "midi")]
     midi: MidiManager,
     grid: GridManager,
-    #[cfg(feature = "hardware")]
     screen: ScreenManager,
     co2: Co2Manager,
     config: Config,
@@ -103,7 +101,6 @@ impl SimonSaysSeeq {
             #[cfg(feature = "midi")]
             midi: MidiManager::new(&config.midi)?,
             grid: GridManager::new()?,
-            #[cfg(feature = "hardware")]
             screen: ScreenManager::new()?,
             co2: Co2Manager::new(config.co2.clone())?,
             config,
@@ -118,28 +115,16 @@ impl SimonSaysSeeq {
         // info!("run says: Starting SimonSaysSeeq Rust application");
 
         // List connected devices for debugging
-        #[cfg(feature = "hardware")]
-        {
-            let connected_grids = self.grid.get_connected_grids();
-            if connected_grids.is_empty() {
-                // info!("No monome grid devices found - connect grid for hardware functionality");
-            } else {
-                // info!("Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
-            }
-        }
-
-        #[cfg(not(feature = "hardware"))]
-        {
-            // info!("run says: Simulation mode - no actual hardware detection");
+        let connected_grids = self.grid.get_connected_grids();
+        if connected_grids.is_empty() {
+            // info!("No monome grid devices found - connect grid for hardware functionality");
+        } else {
+            // info!("Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
         }
 
         // Show control instructions
         // info!("run says: Controls:");
         // info!("run says:   Ctrl+C: Stop application");
-        // #[cfg(not(feature = "hardware"))]
-        // info!("run says:   Space+Enter: Start/Stop sequencer (simulation mode)");
-        // #[cfg(not(feature = "hardware"))]
-        // info!("run says:   1-4/QWER/ASDF/ZXCV+Enter: Simulate grid press");
 
         self.running.store(true, Ordering::SeqCst);
 
@@ -181,19 +166,16 @@ impl SimonSaysSeeq {
         }
 
         // Initialize main grid with some default pattern for testing
-        #[cfg(feature = "hardware")]
-        {
-            // Set test patterns for all rows to verify display pipeline (0-indexed)
-            for row in 0..=6 {
-                self.sequencer.set_grid_value(0, row, 1);   // Step 0 (display: step 1)
-                self.sequencer.set_grid_value(4, row, 2);   // Step 4 (display: step 5)
-                self.sequencer.set_grid_value(8, row, 1);   // Step 8 (display: step 9)
-                self.sequencer.set_grid_value(12, row, 2);  // Step 12 (display: step 13)
-            }
-
-            // Update main grid initially
-            self.update_grid_display()?;
+        // Set test patterns for all rows to verify display pipeline (0-indexed)
+        for row in 0..=6 {
+            self.sequencer.set_grid_value(0, row, 1);   // Step 0 (display: step 1)
+            self.sequencer.set_grid_value(4, row, 2);   // Step 4 (display: step 5)
+            self.sequencer.set_grid_value(8, row, 1);   // Step 8 (display: step 9)
+            self.sequencer.set_grid_value(12, row, 2);  // Step 12 (display: step 13)
         }
+
+        // Update main grid initially
+        self.update_grid_display()?;
 
         // Main event loop
         self.main_loop(hw_rx, seq_rx)?;
@@ -233,9 +215,7 @@ impl SimonSaysSeeq {
             }
 
             // Poll grid for button events
-            #[cfg(feature = "hardware")]
-            {
-                let poll_start = Instant::now();
+            let poll_start = Instant::now();
                 match self.grid.read_button_events() {
                     Ok(grid_events) => {
                         // Process events from both grids - each should only report its own presses
@@ -272,7 +252,6 @@ impl SimonSaysSeeq {
                         }
                     }
                 }
-            }
 
             // Handle sequencer events (non-blocking)
             while let Ok(event) = seq_rx.try_recv() {
@@ -381,33 +360,7 @@ impl SimonSaysSeeq {
             }
 
             HardwareEvent::GridPress { grid_id, x, y, pressed } => {
-                #[cfg(feature = "hardware")]
                 self.handle_grid_press(&grid_id, x, y, pressed)?;
-                #[cfg(not(feature = "hardware"))]
-                {
-                    let button_name = match (x, y) {
-                        (0, 0) => "1", (1, 0) => "2", (2, 0) => "3", (3, 0) => "4",
-                        (0, 1) => "Q", (1, 1) => "W", (2, 1) => "E", (3, 1) => "R",
-                        (0, 2) => "A", (1, 2) => "S", (2, 2) => "D", (3, 2) => "F",
-                        (0, 3) => "Z", (1, 3) => "X", (2, 3) => "C", (3, 3) => "V",
-                        _ => "?",
-                    };
-                    // if pressed {
-                    //     info!("handle_hardware_event says: Grid button {} PRESSED: ({}, {})", button_name, x, y);
-                    // } else {
-                    //     info!("handle_hardware_event says: Grid button {} released: ({}, {})", button_name, x, y);
-                    // }
-
-                    // Update grid display
-                    // Use native 0-based grid coordinates directly
-                    let seq_x = x;
-                    let seq_y = y;
-                    if pressed {
-                        self.grid.set_led(grid_id, x, y, 15, "handle_hardware_event")?;
-                    } else {
-                        self.grid.set_led(grid_id, x, y, 0, "handle_hardware_event")?;
-                    }
-                }
             }
 
             HardwareEvent::Shutdown => {
@@ -468,15 +421,11 @@ impl SimonSaysSeeq {
 
             SequencerEvent::Beat { beat } => {
                 // Update any beat-based visual indicators
-                #[cfg(feature = "hardware")]
                 self.screen.set_beat_indicator(beat);
-                #[cfg(not(feature = "hardware"))]
-                debug!("Beat indicator: {}", beat);
             }
 
             SequencerEvent::GridUpdate { row, old_step, new_step } => {
                 // Selective grid update - only update changed LEDs
-                #[cfg(feature = "hardware")]
                 self.handle_grid_update(row, old_step, new_step)?;
             }
 
@@ -510,7 +459,6 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    #[cfg(feature = "hardware")]
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
         // Check if Mozart mode is active
         if let Some(arm_action) = self.active_arm_action {
@@ -564,7 +512,6 @@ impl SimonSaysSeeq {
                             info!("ARM EUCLIDIAN_EVENTS: Generating rhythm on row {} with {} events (step {})", seq_y, events, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
                             info!("ARM EUCLIDIAN_EVENTS: Successfully generated {} events on row {}", events, seq_y);
-                            #[cfg(feature = "hardware")]
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::EuclidianLength => {
@@ -573,7 +520,6 @@ impl SimonSaysSeeq {
                             info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
                             info!("ARM EUCLIDIAN_LENGTH: Successfully generated length {} on row {}", length, seq_y);
-                            #[cfg(feature = "hardware")]
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::EuclidianRotation => {
@@ -581,7 +527,6 @@ impl SimonSaysSeeq {
                             info!("ARM EUCLIDIAN_ROTATION: Generating rhythm on row {} with rotation {} (step {})", seq_y, rotation, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
                             info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
-                            #[cfg(feature = "hardware")]
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         _ => {
@@ -604,20 +549,14 @@ impl SimonSaysSeeq {
                         if let Some(prev_action) = self.active_arm_action {
                             let prev_column = prev_action.to_column();
                             info!("ARM CONTROL: Deactivating previous ARM action {:?} (column {})", prev_action, prev_column);
-                            #[cfg(feature = "hardware")]
-                            {
-                                self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
-                            }
+                            self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
                         }
 
                         // Set new active ARM action and light it up
                         self.active_arm_action = Some(arm_action);
                         info!("ARM CONTROL: Activated ARM action {:?} (column {}) - waiting for sequence row press", arm_action, seq_x);
-                        #[cfg(feature = "hardware")]
-                        {
-                            self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_action_press")?;
-                            self.grid.refresh()?;
-                        }
+                        self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_action_press")?;
+                        self.grid.refresh()?;
 
                         // Handle ARM action function
                         self.handle_arm_action(arm_action)?;
@@ -747,64 +686,44 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    #[cfg(not(feature = "hardware"))]
-    fn handle_mozart_grid_press(&mut self, x: usize, y: usize) -> Result<()> {
-        // Simulation mode
-        let base_note = 60;
-        let note = base_note + (7 - y) * 5 + x;
-        self.sequencer.set_mozart_value(x + 1, y + 1, note as u8);
-        info!("Mozart grid (sim): Set [{}][{}] = note {}", x + 1, y + 1, note);
-        Ok(())
-    }
+
 
     fn update_screen(&mut self) -> Result<()> {
-        #[cfg(feature = "hardware")]
-        {
-            self.screen.clear();
+        self.screen.clear();
 
-            // Display tempo
-            self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
+        // Display tempo
+        self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
 
-            // Display current step/bar
-            let (step, bar) = self.sequencer.get_position();
-            self.screen.draw_text(1, 21, &format!("Step: {} Bar: {}", step, bar));
+        // Display current step/bar
+        let (step, bar) = self.sequencer.get_position();
+        self.screen.draw_text(1, 21, &format!("Step: {} Bar: {}", step, bar));
 
-            // Display transport state
-            let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            self.screen.draw_text(1, 35, transport_text);
+        // Display transport state
+        let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
+        self.screen.draw_text(1, 35, transport_text);
 
-            // Display MIDI activity
-            #[cfg(feature = "midi")]
-            if let Some(last_note) = self.midi.get_last_note() {
-                self.screen.draw_text(1, 49, &format!("MIDI: {}", last_note));
-            }
-
-            // Show beat indicators if enabled
-            if self.config.display.show_beat_indicators {
-                self.screen.draw_beat_indicator();
-            }
-
-            // Show tempo visualization if enabled
-            if self.config.display.show_tempo_viz {
-                self.screen.draw_tempo_viz(self.sequencer.get_tempo());
-            }
-
-            self.screen.update()?;
+        // Display MIDI activity
+        #[cfg(feature = "midi")]
+        if let Some(last_note) = self.midi.get_last_note() {
+            self.screen.draw_text(1, 49, &format!("MIDI: {}", last_note));
         }
 
-        #[cfg(not(feature = "hardware"))]
-        {
-            // Simulation mode - display info to console
-            let (step, bar) = self.sequencer.get_position();
-            let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };
-            // info!("update_screen says: Sequencer: {} | Tempo: {:.1} BPM | Step: {} | Bar: {}", transport_text, self.sequencer.get_tempo(), step, bar);
+        // Show beat indicators if enabled
+        if self.config.display.show_beat_indicators {
+            self.screen.draw_beat_indicator();
         }
+
+        // Show tempo visualization if enabled
+        if self.config.display.show_tempo_viz {
+            self.screen.draw_tempo_viz(self.sequencer.get_tempo());
+        }
+
+        self.screen.update()?;
 
         Ok(())
     }
 
     /// Selective grid update - only update specific LEDs that changed
-    #[cfg(feature = "hardware")]
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
         let connected_grids = self.grid.get_connected_grids();
         
@@ -1555,7 +1474,7 @@ fn main() -> Result<()> {
         println!("    -h, --help           Print help information");
         println!("    -v, --version        Print version information");
         println!("    --config <FILE>      Use custom configuration file");
-        println!("    --no-hardware        Disable hardware features (simulation mode)");
+        println!("    --no-hardware        Disable hardware features");
         println!("    --no-midi            Disable MIDI features");
         println!("    --main-grid <ID>     Specify which grid to use as main sequencer (default: m2949672)");
 

@@ -72,7 +72,7 @@ default = ["hardware", "midi"]
 hardware = ["evdev", "serialport"]
 hardware-audio = ["cpal"]
 midi = ["midir"]
-simulation = []
+
 norns = ["hardware", "hardware-audio", "midi", "framebuffer-support"]
 cross-compile = ["midi"]  # Safe features for cross-compilation
 desktop = ["midi", "serialport", "rosc"]  # Development on laptop with grid

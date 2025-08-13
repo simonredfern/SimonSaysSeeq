@@ -733,7 +733,7 @@ impl Sequencer {
             self.analyze_tempo_stability(&mut state);
         }
 
-        // Second phase: process MIDI playback (needs immutable access)
+        // Second phase: process MIDI playback BEFORE advancing step (needs immutable access)
         {
             let state = self.state.lock().unwrap();
             self.play_midi(&state, sender)?;

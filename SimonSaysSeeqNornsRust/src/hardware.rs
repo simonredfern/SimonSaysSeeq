@@ -30,30 +30,16 @@ pub enum HardwareEvent {
 /// Norns hardware interface
 #[derive(Clone)]
 pub struct NornsHardware {
-    #[cfg(feature = "hardware")]
     devices: Arc<std::sync::Mutex<std::collections::HashMap<String, Device>>>,
-    #[cfg(not(feature = "hardware"))]
-    _phantom: std::marker::PhantomData<()>,
 }
 
 impl NornsHardware {
     pub fn new() -> Result<Self> {
-        #[cfg(feature = "hardware")]
-        {
-            let hardware = Self {
-                devices: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
-            };
-            hardware.discover_devices()?;
-            Ok(hardware)
-        }
-        
-        #[cfg(not(feature = "hardware"))]
-        {
-            info!("Hardware simulation mode - no actual device access");
-            Ok(Self {
-                _phantom: std::marker::PhantomData,
-            })
-        }
+        let hardware = Self {
+            devices: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+        };
+        hardware.discover_devices()?;
+        Ok(hardware)
     }
     
     /// Discover and initialize input devices
@@ -158,79 +144,7 @@ impl NornsHardware {
             }
         }
         
-        #[cfg(not(feature = "hardware"))]
-        {
-            // Simulation mode with keyboard input
-            info!("Grid simulation mode active!");
-            info!("Use keys 1-9, a-g to simulate 4x4 grid presses:");
-            info!("  1 2 3 4  ->  (0,0) (1,0) (2,0) (3,0)");
-            info!("  q w e r  ->  (0,1) (1,1) (2,1) (3,1)");
-            info!("  a s d f  ->  (0,2) (1,2) (2,2) (3,2)");
-            info!("  z x c v  ->  (0,3) (1,3) (2,3) (3,3)");
-            info!("Press 'space' then Enter to run/stop sequencer");
-            info!("Press 'p' then Enter to quit");
-            info!("Press any grid key then Enter to simulate button press");
-            
-            // Spawn keyboard input thread
-            let sender_clone = sender.clone();
-            let running_clone = running.clone();
-            
-            thread::spawn(move || {
-                use std::io::{self, BufRead};
-                let stdin = io::stdin();
-                
-                for line in stdin.lock().lines() {
-                    if !running_clone.load(Ordering::SeqCst) {
-                        break;
-                    }
-                    
-                    if let Ok(input) = line {
-                        let input = input.trim();
-                        if input == "p" {
-                            info!("Quit requested from keyboard");
-                            let _ = sender_clone.send(HardwareEvent::Shutdown);
-                            break;
-                        }
-                        
-                        if input == " " {
-                            info!("Run/stop toggle requested from keyboard");
-                            let _ = sender_clone.send(HardwareEvent::StartStopToggle);
-                            continue;
-                        }
-                        
-                        if let Some(key_char) = input.chars().next() {
-                            if let Some((x, y)) = Self::key_to_grid_coords(key_char) {
-                                info!("🔥 Grid button press: ({}, {}) - Button {}", x, y, Self::coords_to_button_name(x, y));
-                                
-                                // Send press event
-                                let _ = sender_clone.send(HardwareEvent::GridPress {
-                                    grid_id: "simulation".to_string(),
-                                    x,
-                                    y,
-                                    pressed: true,
-                                });
-                                
-                                // Small delay, then send release event
-                                thread::sleep(Duration::from_millis(50));
-                                let _ = sender_clone.send(HardwareEvent::GridPress {
-                                    grid_id: "simulation".to_string(),
-                                    x,
-                                    y,
-                                    pressed: false,
-                                });
-                            } else {
-                                warn!("Unknown key '{}'. Use grid keys 1-4/qwer/asdf/zxcv, 'space' to run/stop, or 'p' to quit", key_char);
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // Main simulation loop
-            while running.load(Ordering::SeqCst) {
-                thread::sleep(Duration::from_millis(100));
-            }
-        }
+
         
         // Send shutdown event
         let _ = sender.send(HardwareEvent::Shutdown);
@@ -238,82 +152,11 @@ impl NornsHardware {
         Ok(())
     }
 
-    /// Map keyboard keys to grid coordinates for simulation
-    #[cfg(not(feature = "hardware"))]
-    fn key_to_grid_coords(key: char) -> Option<(usize, usize)> {
-        match key {
-            // Top row: 1 2 3 4
-            '1' => Some((0, 0)), '2' => Some((1, 0)), '3' => Some((2, 0)), '4' => Some((3, 0)),
-            // Second row: q w e r
-            'q' => Some((0, 1)), 'w' => Some((1, 1)), 'e' => Some((2, 1)), 'r' => Some((3, 1)),
-            // Third row: a s d f
-            'a' => Some((0, 2)), 's' => Some((1, 2)), 'd' => Some((2, 2)), 'f' => Some((3, 2)),
-            // Bottom row: z x c v
-            'z' => Some((0, 3)), 'x' => Some((1, 3)), 'c' => Some((2, 3)), 'v' => Some((3, 3)),
-            _ => None,
-        }
-    }
 
-    /// Convert grid coordinates to button name for display
-    #[cfg(not(feature = "hardware"))]
-    fn coords_to_button_name(x: usize, y: usize) -> String {
-        match (x, y) {
-            (0, 0) => "1".to_string(), (1, 0) => "2".to_string(), (2, 0) => "3".to_string(), (3, 0) => "4".to_string(),
-            (0, 1) => "Q".to_string(), (1, 1) => "W".to_string(), (2, 1) => "E".to_string(), (3, 1) => "R".to_string(),
-            (0, 2) => "A".to_string(), (1, 2) => "S".to_string(), (2, 2) => "D".to_string(), (3, 2) => "F".to_string(),
-            (0, 3) => "Z".to_string(), (1, 3) => "X".to_string(), (2, 3) => "C".to_string(), (3, 3) => "V".to_string(),
-            _ => format!("({},{})", x, y),
-        }
-    }
 
-    /// Execute grid flash sequence
-    #[cfg(not(feature = "hardware"))]
-    pub fn execute_flash_sequence(sender: &Sender<HardwareEvent>) {
-        use std::thread;
-        use std::time::Duration;
-        
-        // Spawn thread to avoid blocking main loop
-        let sender_clone = sender.clone();
-        thread::spawn(move || {
-            info!("🌈 Starting grid flash sequence!");
-            
-            // Flash all 16 buttons in order: 1,2,3,4,Q,W,E,R,A,S,D,F,Z,X,C,V
-            let sequence = [
-                (0, 0), (1, 0), (2, 0), (3, 0),  // 1 2 3 4
-                (0, 1), (1, 1), (2, 1), (3, 1),  // Q W E R
-                (0, 2), (1, 2), (2, 2), (3, 2),  // A S D F  
-                (0, 3), (1, 3), (2, 3), (3, 3),  // Z X C V
-            ];
 
-            for (step, &(x, y)) in sequence.iter().enumerate() {
-                info!("💡 Flash step {}/16: Button ({}, {})", step + 1, x, y);
-                
-                // Send press event
-                let _ = sender_clone.send(HardwareEvent::GridPress {
-                    grid_id: "flash".to_string(),
-                    x,
-                    y,
-                    pressed: true,
-                });
-                
-                // Hold briefly
-                thread::sleep(Duration::from_millis(100));
-                
-                // Send release event
-                let _ = sender_clone.send(HardwareEvent::GridPress {
-                    grid_id: "flash".to_string(),
-                    x,
-                    y,
-                    pressed: false,
-                });
-                
-                // Brief pause between buttons
-                thread::sleep(Duration::from_millis(50));
-            }
-            
-            info!("✨ Flash sequence complete!");
-        });
-    }
+
+
     
     /// Process a single input event
     #[cfg(feature = "hardware")]
