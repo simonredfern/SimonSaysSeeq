@@ -1538,6 +1538,24 @@ kill 14815 16252 16404 16463
 # SCOPE: Check info!, debug!, warn!, error! messages in MIDI code
 # PRIORITY: Ensure logging standards are consistently applied across codebase
 
+## 2025-08-13 19:04:37 MIDI Note Mapping Fixed to Match Lua Version
+# ISSUE: Rust version was sending only C4 (MIDI note 60) from all rows
+# ROOT CAUSE: All row_states initialized with same default midi_note value (60)
+# ANALYSIS: Lua version uses LOWEST_MIDI_NOTE_NUMBER_FOR_GATE (47) + sequence_row (1-indexed)
+# MAPPING COMPARISON:
+#   Lua (1-indexed rows 1-7): sends notes 48, 49, 50, 51, 52, 53, 54
+#   Rust (0-indexed rows 0-6): was sending 60, 60, 60, 60, 60, 60, 60
+# SOLUTION: Fixed Rust to match Lua mapping exactly
+# CHANGES MADE:
+#   1. Added LOWEST_MIDI_NOTE_NUMBER_FOR_GATE constant = 47
+#   2. Fixed SequencerState::default() row initialization:
+#      row_state.midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8
+#   3. Updated init_state_tables() for consistency
+#   4. Updated MainRowStates::default() midi_note value
+# RESULT: Rust now sends different MIDI notes per row matching Lua exactly:
+#   Row 0 → MIDI note 48, Row 1 → 49, Row 2 → 50, Row 3 → 51, Row 4 → 52, Row 5 → 53, Row 6 → 54
+# STATUS: MIDI note mapping issue resolved - each row now sends unique notes
+
 ## 2025-08-11 00:26:32 MIDI Log Message Format Successfully Fixed
 # PROBLEMS FOUND: Multiple MIDI log messages violated ai_instructions.txt standards
 # VIOLATIONS CORRECTED:

@@ -12,6 +12,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+/// MIDI gate base note - matches Lua version
+/// This works well with Flame MGTV factory default settings.
+/// http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
+const LOWEST_MIDI_NOTE_NUMBER_FOR_GATE: u8 = 47;
+
 /// MIDI event for hardware output
 #[derive(Debug, Clone)]
 pub struct MidiEvent {
@@ -138,7 +143,7 @@ impl Default for MainRowStates {
             euclidean_events: 5,
             euclidean_rotation: 0,
             previous_step: 31,
-            midi_note: 60, // Middle C
+            midi_note: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + 1, // Default to first gate note (48)
             midi_velocity: 100,
             midi_channel: 1,
             ratchet_count: 1,
@@ -255,8 +260,13 @@ impl Default for SequencerState {
         let held = vec![vec![0u8; ROWS]; COLS];
 
         let mut row_states = Vec::new();
-        for _ in 0..ROWS {
-            row_states.push(MainRowStates::default());
+        for i in 0..ROWS {
+            let mut row_state = MainRowStates::default();
+            // Match Lua version: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + sequence_row (1-based)
+            // Lua uses sequence_row 1-7, Rust uses i 0-6, so add 1 to convert
+            row_state.midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8;
+            row_state.midi_channel = (i + 1) as u8;
+            row_states.push(row_state);
         }
 
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
@@ -965,7 +975,7 @@ impl Sequencer {
         for (i, row_state) in state.row_states.iter_mut().enumerate() {
             row_state.current_step = row_state.first_step;
             row_state.previous_step = row_state.euclidean_length;
-            row_state.midi_note = 60 + i as u8; // Start from middle C
+            row_state.midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8; // Match Lua version
             row_state.midi_velocity = 100;
             row_state.midi_channel = (i + 1) as u8;
         }
