@@ -563,7 +563,7 @@ impl SimonSaysSeeq {
                 if let Some(arm_action) = self.active_arm_action {
                     match arm_action {
                         ArmAction::EuclidianEvents => {
-                            let events = (seq_x % 16) + 1; // Use grid column + 1 for events
+                            let events = (seq_x % 32) + 1; // Use full 32-step column + 1 for events (1-32)
                             info!("ARM EUCLIDIAN_EVENTS: Generating rhythm on row {} with {} events (step {})", seq_y, events, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
                             info!("ARM EUCLIDIAN_EVENTS: Successfully generated {} events on row {}", events, seq_y);
@@ -571,7 +571,8 @@ impl SimonSaysSeeq {
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::EuclidianLength => {
-                            let length = (seq_x % 16) + 1; // Use grid column + 1 for length
+                            let length = seq_x + 1; // Use full 32-step coordinate + 1 for length (1-32)
+                            let length = length.clamp(1, 32); // Ensure valid range 1-32
                             info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
                             info!("ARM EUCLIDIAN_LENGTH: Successfully generated length {} on row {}", length, seq_y);
@@ -579,7 +580,7 @@ impl SimonSaysSeeq {
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::EuclidianRotation => {
-                            let rotation = seq_x % 16; // Use grid column for rotation
+                            let rotation = seq_x % 32; // Use full 32-step coordinate for rotation (0-31)
                             info!("ARM EUCLIDIAN_ROTATION: Generating rhythm on row {} with rotation {} (step {})", seq_y, rotation, seq_x);
                             self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
                             info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
@@ -681,15 +682,18 @@ impl SimonSaysSeeq {
             }
             ArmAction::EuclidianEvents => {
                 // Euclidean Events ARM button activated - waiting for sequence row press
-                info!("ARM EUCLIDIAN_EVENTS: ARM button activated - press sequence row at column N for N+1 events");
+                info!("ARM EUCLIDIAN_EVENTS: ARM button activated - press sequence row at column N for N+1 events (max 32)");
+                info!("ARM EUCLIDIAN_EVENTS: GRID_ONE columns 0-15 = events 1-16, GRID_TWO columns 0-15 = events 17-32");
             }
             ArmAction::EuclidianLength => {
                 // Euclidean Length ARM button activated - waiting for sequence row press
-                info!("ARM EUCLIDIAN_LENGTH: ARM button activated - press sequence row at column N for length N+1");
+                info!("ARM EUCLIDIAN_LENGTH: ARM button activated - press sequence row at column N for length N+1 (max 32)");
+                info!("ARM EUCLIDIAN_LENGTH: GRID_ONE columns 0-15 = lengths 1-16, GRID_TWO columns 0-15 = lengths 17-32");
             }
             ArmAction::EuclidianRotation => {
                 // Euclidean Rotation ARM button activated - waiting for sequence row press
-                info!("ARM EUCLIDIAN_ROTATION: ARM button activated - press sequence row at column N for rotation N");
+                info!("ARM EUCLIDIAN_ROTATION: ARM button activated - press sequence row at column N for rotation N (0-31)");
+                info!("ARM EUCLIDIAN_ROTATION: GRID_ONE columns 0-15 = rotation 0-15, GRID_TWO columns 0-15 = rotation 16-31");
             }
             ArmAction::Ratchet => {
                 // Ratchet functionality - placeholder

@@ -2347,6 +2347,40 @@ kill 14815 16252 16404 16463
 # Grid coordinate mapping, OSC communication, and LED updates all working correctly
 # STATUS: Grid button press functionality fully restored and working
 
+## 2025-08-13 08:54:12 Euclidean Function 32-Step Dual-Grid Enhancement Request
+# USER REQUEST: Make Euclidean functions operate over both grids with 32-step maximum range
+# REQUIREMENTS:
+#   - ARM Euclidean Length button should only be on GRID_ONE
+#   - When ARM + row 0 column 15 on GRID_TWO pressed: set euclidean length to 32
+#   - Euclidean operations should work across full 32-step range (both grids)
+#   - Current behavior: Limited to 16-step range on single grid
+# IMPLEMENTATION NEEDED:
+#   1. Ensure ARM buttons only appear on GRID_ONE
+#   2. Modify Euclidean Length calculation to use 32-step range (0-31)
+#   3. Update coordinate mapping to handle GRID_TWO column presses for length setting
+#   4. Column 15 on GRID_TWO (step 31) should set length to 32
+#   5. Euclidean pattern generation should span both grids when length > 16
+# CURRENT STATE: ARM actions use (seq_x % 16) + 1 for length calculation
+# TARGET STATE: ARM actions should use full 32-step coordinate mapping
+# STATUS: Euclidean 32-step dual-grid enhancement - ready to implement
+
+## 2025-08-13 08:54:12 Euclidean 32-Step Dual-Grid Implementation Complete
+# IMPLEMENTATION: Updated Euclidean ARM functions for full 32-step dual-grid operation
+# CHANGES APPLIED:
+#   1. EuclidianEvents: Changed (seq_x % 16) + 1 to (seq_x % 32) + 1 for events 1-32
+#   2. EuclidianLength: Changed (seq_x % 16) + 1 to seq_x + 1 with clamp(1, 32) for length 1-32
+#   3. EuclidianRotation: Changed seq_x % 16 to seq_x % 32 for rotation 0-31
+#   4. Updated info messages to explain dual-grid column mapping
+# FUNCTIONALITY:
+#   - ARM buttons remain on GRID_ONE only (row 7, 0-indexed)
+#   - GRID_ONE columns 0-15: Events/Length 1-16, Rotation 0-15
+#   - GRID_TWO columns 0-15: Events/Length 17-32, Rotation 16-31
+#   - Example: ARM Length + GRID_TWO column 15 = length 32 (max)
+#   - Full 32-step coordinate mapping preserves dual-grid button press logic
+# RESULT: Euclidean functions now operate over full 32-step range across both grids
+# ARM button press on GRID_ONE + sequence row press on either grid = full range operation
+# STATUS: Euclidean 32-step dual-grid implementation complete and ready for testing
+
 ## 2025-08-13 08:28:22 Grid LED Refresh Bug Diagnosed - Pattern LEDs Only Show When Current Step Passes
 # BUG CONFIRMED: "the LED does change but only when the scroll head passes by"
 # DETAILED LOG ANALYSIS: User provided complete debug log showing the actual issue
