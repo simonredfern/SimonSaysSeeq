@@ -2381,6 +2381,34 @@ kill 14815 16252 16404 16463
 # ARM button press on GRID_ONE + sequence row press on either grid = full range operation
 # STATUS: Euclidean 32-step dual-grid implementation complete and ready for testing
 
+## 2025-08-13 08:59:23 Euclidean Pattern Looping Bug - Loops at euclidean_length + 1
+# BUG REPORT: "pattern is looping at euclidian length + 1"
+# ISSUE: Euclidean patterns are looping one step too late
+# ANALYSIS: Euclidean length setting working correctly, but loop boundary is off by one
+# POSSIBLE CAUSES:
+#   1. Loop condition using > instead of >= in step advancement
+#   2. euclidean_length stored as 0-based but used as 1-based (or vice versa)
+#   3. Boundary check in advance_step() may be incorrect
+# INVESTIGATION NEEDED:
+#   - Check advance_step() loop condition: if current_step > euclidean_length
+#   - Verify euclidean_length storage format (0-based vs 1-based indexing)
+#   - Ensure consistent indexing between setting and checking euclidean_length
+# LOCATION: Likely in sequencer.rs advance_step() function
+# STATUS: Euclidean loop boundary bug - pattern loops one step too late
+
+## 2025-08-13 08:59:23 Euclidean Loop Boundary Bug Fixed
+# BUG IDENTIFIED: euclidean_length stored as step count (1-based) but used as step index in loop
+# ROOT CAUSE: Loop condition "if current_step > euclidean_length" was off by one
+# EXAMPLE: euclidean_length = 16 should loop at steps 0-15 (16 steps total)
+#   - Old behavior: loops when current_step > 16, so goes 0,1,2...16 (17 steps!)
+#   - Fixed behavior: loops when current_step > 15, so goes 0,1,2...15 (16 steps)
+# FIX APPLIED: Changed euclidean_length storage to last valid step index (0-based)
+#   - generate_euclidean_rhythm(): euclidean_length = steps - 1 (store as 0-based index)
+#   - Loop condition unchanged: current_step > euclidean_length (now correct)
+# RESULT: Euclidean patterns now loop at exactly the specified length
+# Example: ARM Length + column 15 on GRID_TWO = 32 steps, loops after step 31 back to 0
+# STATUS: Euclidean loop boundary bug fixed - patterns loop at correct length
+
 ## 2025-08-13 08:28:22 Grid LED Refresh Bug Diagnosed - Pattern LEDs Only Show When Current Step Passes
 # BUG CONFIRMED: "the LED does change but only when the scroll head passes by"
 # DETAILED LOG ANALYSIS: User provided complete debug log showing the actual issue

@@ -1453,7 +1453,7 @@ impl Sequencer {
 
         // Update the row's Euclidean parameters
         state.row_states[row_idx].euclidean_events = pulses;
-        state.row_states[row_idx].euclidean_length = steps;
+        state.row_states[row_idx].euclidean_length = steps - 1; // Store as last valid step index (0-based)
         state.row_states[row_idx].euclidean_rotation = rotation;
 
         // Clear the row first
