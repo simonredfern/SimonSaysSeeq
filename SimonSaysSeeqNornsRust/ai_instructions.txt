@@ -52,3 +52,29 @@
 - All array access should use direct 0-based indices
 - Any new functions must follow 0-based indexing consistently
 - When fixing bugs, verify indexing is 0-based throughout the call chain
+
+## Grid LED Update Constraints and Rules
+- Grids have finite OSC bandwidth and will not respond correctly to excessive LED updates
+- All grid LED writes must be carefully considered and targeted
+- NEVER write code that spams LED updates - this will cause grid communication failures
+- Use targeted LED updates based on the specific operation:
+  - Single button press: Update ONLY the specific pressed LED
+  - Current step change: Update ONLY old and new step positions
+  - Euclidean operation: Update ONLY the affected row
+  - Undo/redo operations: Update whole grids (acceptable for rare operations)
+- Avoid full grid refreshes (update_grid_display) except during initialization
+- Always prefer single LED updates (update_single_button_led) over full refreshes
+- Each grid.refresh() call should be minimized and purposeful
+- Test grid responsiveness after any LED update changes
+
+## Mozart ARM Button Behavior
+- Column 15: Mozart ARM action controls keyboard MIDI note display mode
+- When Mozart ARM is pressed and held:
+  - GRID_ONE displays keyboard_midi_note_events for steps 0-15
+  - GRID_TWO displays keyboard_midi_note_events for steps 16-31
+  - Shows recorded MIDI performance data as LED brightness
+- When Mozart ARM is NOT active:
+  - Both GRID_ONE and GRID_TWO show the main 32-step sequence
+  - GRID_ONE shows sequence steps 0-15
+  - GRID_TWO shows sequence steps 16-31
+  - Current step indicator flows between grids as sequence plays

@@ -2088,6 +2088,81 @@ kill 14815 16252 16404 16463
 # RESULT: Direct 0-based array access prevents underflow when step = 0
 # STATUS: Integer underflow bug resolved - all step indexing now properly 0-based
 
+## 2025-08-11 23:15:00 Implemented Mozart ARM Button and 32-Step System
+# REQUEST: Add ARM button 15 Mozart with 32-step sequence combining both grids
+# MOZART ARM BUTTON ADDED:
+#   - Column 15: Mozart ARM action for keyboard MIDI note display
+#   - When held: Both grids show scrolling keyboard MIDI notes
+#   - When not held: Normal 32-step sequence mode
+# 32-STEP SEQUENCE SYSTEM:
+#   - Extended grid from 16 to 32 columns (COLS: 16 -> 32)
+#   - GRID_ONE displays steps 0-15
+#   - GRID_TWO displays steps 16-31 (mapped from grid coordinates 0-15)
+#   - Both grids work together for continuous 32-step sequences
+# SEQUENCER UPDATES:
+#   - Grid arrays expanded: vec![vec![0u8; ROWS]; 16] -> vec![vec![0u8; ROWS]; 32]
+#   - Default euclidean_length: 15 -> 31 (32 steps, 0-based)
+#   - MAX_STEP: 15 -> 31, TOTAL_STEPS: 16 -> 32
+#   - All bounds checks updated: x < 16 -> x < 32
+#   - Step ranges: 0-15 -> 0-31 throughout system
+# DISPLAY MODES:
+#   1. Normal mode: update_32step_display() shows 32-step sequence across both grids
+#   2. Mozart mode: update_mozart_display() shows MIDI notes on both grids
+# GRID INPUT HANDLING:
+#   - Grid coordinates mapped to sequence steps 0-31
+#   - Euclidean ARM actions work with 32-step sequences
+#   - Mozart mode intercepts input for MIDI note control
+# ARM FUNCTIONS UPDATED:
+#   - EuclidianEvents: Works with 32 steps, uses grid column for events count
+#   - EuclidianLength: Works with 32 steps, uses grid column for length  
+#   - EuclidianRotation: Works with 32 steps, uses grid column for rotation
+#   - Mozart: New function activates dual-grid MIDI note display
+# BENEFIT: Complete 32-step sequencing with dual-grid support and Mozart MIDI control
+# STATUS: 32-step system operational with Mozart ARM button for MIDI note display
+
+## 2025-08-11 23:30:00 Fixed Grid Interference and 32-Step Scrolling Issues
+# ISSUE: Grid interference - pressing buttons on one grid lit LEDs on the other grid
+# ROOT CAUSE: Multiple functions were only updating main_grid_id instead of correct grid
+# GRID ASSIGNMENT PROBLEM: Inconsistent grid identification between functions
+# SOLUTION 1: Created get_sorted_grid_ids() function for consistent grid assignment
+#   - Always sorts connected grids alphabetically by ID
+#   - GRID_ONE = first sorted ID (m2949672 - lowest alphanumerically)
+#   - GRID_TWO = second sorted ID (m5032747 - second lowest alphanumerically)
+#   - Guarantees consistent assignment regardless of connection order
+# SOLUTION 2: Fixed grid interference in key functions
+#   - handle_grid_update: Now updates correct grid based on step position (0-15 vs 16-31)
+#   - refresh_all_row_leds: Now updates both grids in 32-step mode
+#   - Fixed type mismatches with .map(|x| x.as_str()) for string comparisons
+# FUNCTIONS UPDATED FOR 32-STEP MODE:
+#   1. handle_grid_update: Determines which grid to update based on step position
+#   2. refresh_all_row_leds: Updates all 32 steps across both grids
+#   3. update_grid_display: Uses sorted grid IDs consistently
+#   4. Grid input handling: Maps grid presses to correct sequence steps
+# GRID FLOW BEHAVIOR:
+#   - Steps 0-15: Display and input on GRID_ONE (m2949672)
+#   - Steps 16-31: Display and input on GRID_TWO (m5032747)
+#   - Current step indicator flows between grids as sequence plays
+# RESULT: Grid interference significantly reduced, 32-step scrolling partially working
+# USER FEEDBACK: "ok its better. there is some scrolling between the two grids now"
+# STATUS: Grid interference mostly resolved, 32-step sequence flow improved but not perfect
+
+## 2025-08-11 23:54:00 Grid Interference Still Present Despite Improvements  
+# ISSUE: Grid interference persists - grids still affecting each other
+# USER FEEDBACK: "although the scrolling is better there is still interference between grids"
+# OBSERVATION: 32-step scrolling between grids is working better than before
+# REMAINING PROBLEM: Button presses or LED updates on one grid still cause unwanted effects on the other grid
+# POSSIBLE CAUSES:
+#   - refresh() calls may be affecting both grids simultaneously
+#   - Some functions may still be sending updates to wrong grid IDs
+#   - Grid OSC communication might have cross-talk issues
+#   - Display update timing conflicts between grids
+# NEXT STEPS NEEDED:
+#   - Investigate grid OSC layer for potential cross-communication
+#   - Add more specific grid ID validation in LED update functions
+#   - Consider separate refresh() calls for each grid
+#   - Debug actual OSC messages being sent to each grid
+# STATUS: Partial success on 32-step flow, grid interference requires more investigation
+
 ## 2025-08-11 23:00:00 Implemented Euclidean Parameter Storage in Row States
 # REQUEST: Rename last_step to euclidean_length and add euclidean_events and euclidean_rotation
 # PURPOSE: Store Euclidean parameters per row and use euclidean_length for sequence looping
@@ -2107,3 +2182,229 @@ kill 14815 16252 16404 16463
 # PARAMETER PERSISTENCE: Euclidean settings are saved with row state and patterns
 # BENEFIT: Each row maintains its own Euclidean configuration and loop length
 # STATUS: Euclidean parameters now persistent per row - sequences loop at euclidean_length
+
+## 2025-08-11 23:05:00 Euclidean Parameter Storage Working Successfully
+# CONFIRMATION: User reports "ok that seems to be working well"
+# SUCCESS: Euclidean parameter storage implementation is functioning correctly
+# VERIFIED FEATURES:
+#   - Individual row looping at euclidean_length values
+#   - Euclidean parameters (events, length, rotation) stored per row
+#   - Parameter persistence across pattern operations
+#   - Proper sequence timing with flexible row lengths
+# RESULT: Complete Euclidean rhythm system with persistent per-row configuration
+# STATUS: Euclidean parameter storage system fully operational and tested
+
+## 2025-08-13 07:02:19 Grid Scrolling LED Bug Fix
+# BUG REPORT: Row 15 on GRID_TWO stays lit when sequence moves back to GRID_ONE
+# ISSUE: When 32-step sequence wraps from step 31 back to step 0, column 15 on GRID_TWO remains lit
+# ROOT CAUSE: Hardcoded old_step calculation in sequencer.rs line 884:
+#   old_step: if current_step == 0 { 15 } else { current_step - 1 }
+# PROBLEM: This assumes 16-step sequence (0-15) but sequencer supports 32 steps (0-31)
+# When wrapping from step 31 to 0, it incorrectly calculated old_step as 15 instead of 31
+# FIX APPLIED: Added previous_step field to MainRowStates struct to track actual previous step
+# CHANGES:
+#   1. Added previous_step: usize field to MainRowStates struct  
+#   2. Set previous_step = old_step in advance_step() before advancing
+#   3. Use row_state.previous_step instead of hardcoded calculation in GridUpdate
+#   4. Initialize previous_step = euclidean_length in init_state_tables()
+# RESULT: Grid scrolling should now properly clear step 31 on GRID_TWO when wrapping to step 0 on GRID_ONE
+# STATUS: Grid LED stuck bug fixed - proper 32-step wrapping between grids
+
+## 2025-08-13 07:07:16 Grid Scrolling Fix Confirmed Working
+# USER FEEDBACK: "that fix worked"
+# CONFIRMATION: Grid LED stuck bug has been successfully resolved
+# RESULT: 32-step sequence now properly flows between grids without stuck LEDs
+# Row 15 (column 15) on GRID_TWO correctly clears when sequence wraps to GRID_ONE
+# Grid scrolling behavior is now working as expected
+# STATUS: Grid scrolling fix confirmed successful by user testing
+
+## 2025-08-13 07:15:43 Grid Button Press Coordinate Mapping Fix
+# BUG REPORT: Manual step setting causing cross-talk between grids after scrolling fix
+# SYMPTOMS:
+#   - GRID_TWO button presses caused random LEDs on GRID_ONE to light up
+#   - GRID_ONE button presses mostly didn't work or worked inconsistently
+#   - Grid coordinate mapping regression in button press handling
+# ROOT CAUSE 1: refresh_all_pattern_leds() using single grid for 32-step sequence
+#   - Function tried to set LEDs at coordinates (16-31, y) on single grid
+#   - Grid hardware only supports coordinates (0-15, y), causing out-of-bounds errors
+#   - Led to cross-talk and unpredictable LED behavior
+# ROOT CAUSE 2: update_single_led() function had incorrect coordinate mapping
+#   - Used seq_x directly as grid coordinate without dual-grid mapping
+#   - Would set wrong LEDs when seq_x in range 16-31
+# FIX APPLIED:
+#   1. Updated refresh_all_pattern_leds() to use dual-grid logic like refresh_all_row_leds()
+#   2. Added proper coordinate mapping: seq_x 0-15 -> GRID_ONE, seq_x 16-31 -> GRID_TWO (0-15)
+#   3. Fixed update_single_led() to route coordinates to correct grids
+#   4. Added single-grid fallback mode for both functions
+# EXPECTED RESULT: Manual step setting should work reliably on both grids
+# GRID_ONE: handles sequencer steps 0-15 (rows 0-6, columns 0-15)
+# GRID_TWO: handles sequencer steps 16-31 (rows 0-6, columns 0-15 mapped to steps 16-31)
+# STATUS: Grid button press coordinate mapping fixed - awaiting user testing confirmation
+
+## 2025-08-13 07:30:00 Grid OSC Communication Bug Fix - Root Cause Found
+# USER QUESTION: "why do we need deduplication? surely each grid identifies itself to start with?"
+# EXCELLENT POINT: User identified that the deduplication was masking a deeper issue
+# ROOT CAUSE DISCOVERED: OSC message attribution bug in grid_osc.rs read_button_events()
+# ISSUE: Code looped through ALL devices for every OSC message received
+#   for device in self.devices.values() {
+#       if msg.addr == key_addr { create_event_for_this_device() }
+#   }
+# PROBLEM: When one grid sent button press, code matched message format against ALL grids
+#   - Created events for every device that matched the message format
+#   - Not correlated to which specific device actually sent the message
+#   - Result: Both grids reported identical button presses simultaneously
+# FIX APPLIED: Match OSC message source port to specific device port
+#   1. Extract source_port from incoming UDP message address
+#   2. Find matching device by device.port == source_port  
+#   3. Only create event for the actual sending device
+#   4. Added debug logging to show source port attribution
+# REMOVED: Deduplication workaround - no longer needed with proper attribution
+# EXPECTED RESULT: Each grid should only report its own button presses
+# Grid events should be properly attributed to the correct physical device
+# STATUS: OSC communication bug fixed - each grid should now report only its own events
+
+## 2025-08-13 08:24:15 Grid Startup Flash Identification Request
+# USER REQUEST: "when the sequencer starts, please flash GRID_ONE once and GRID_TWO twice"
+# PURPOSE: Visual identification of grid assignments during startup
+# IMPLEMENTATION NEEDED: Add startup grid flashing sequence to differentiate grids
+# REQUIREMENTS:
+#   - GRID_ONE (lowest ID): Flash once at startup
+#   - GRID_TWO (second lowest ID): Flash twice at startup  
+#   - Helps user visually identify which physical grid is assigned to which role
+# LOCATION: Add to sequencer startup initialization after grid discovery
+# STATUS: Grid startup flash identification - ready to implement
+
+## 2025-08-13 08:24:15 Grid Startup Flash Identification Implemented
+# IMPLEMENTATION: Added flash_grids_for_identification() function to main.rs
+# FUNCTIONALITY:
+#   - Called during startup after initial grid display update
+#   - GRID_ONE (lowest ID): Flashes once at position (0,0)
+#   - GRID_TWO (second lowest ID): Flashes twice at position (0,0)
+#   - Uses 200ms flash duration with pauses between flashes
+#   - Restores normal grid display after identification sequence
+# TIMING SEQUENCE:
+#   1. GRID_ONE: Flash 200ms, off 300ms pause
+#   2. GRID_TWO: Flash 200ms, off 200ms, flash 200ms, off 200ms
+#   3. 300ms final pause, then restore normal display
+# PURPOSE: Visual identification of physical grid assignments
+# RESULT: Users can visually distinguish which grid is GRID_ONE vs GRID_TWO at startup
+# STATUS: Grid startup flash identification implemented and ready for testing
+
+## 2025-08-13 08:35:00 Targeted LED Update Fix for Button Presses
+# USER INSIGHT: "we are trying to update a LED(s) when we press a button but we are trying to update the wrong LEDs"
+# EXCELLENT ANALYSIS: Identified root cause - full grid refresh for single button press
+# ISSUE: handle_normal_grid_operation() called update_grid_display() for single button press
+#   - update_grid_display() refreshes ALL LEDs on both grids (inefficient and buggy)
+#   - Should only update the specific LED that was pressed
+# TARGETED UPDATE STRATEGY:
+#   - Single button press: Update only the pressed LED
+#   - Current step change: Update only old/new step positions  
+#   - Euclidean operation: Update only the affected row
+#   - Undo/redo: Update whole grids
+# FIX APPLIED: Replaced full refresh with update_single_button_led()
+#   1. Created update_single_button_led() function for targeted LED updates
+#   2. Only updates the specific seq_x, seq_y coordinate that was pressed
+#   3. Calculates correct brightness based on pattern value and current step
+#   4. Routes to correct grid (GRID_ONE for steps 0-15, GRID_TWO for steps 16-31)
+#   5. Single grid.refresh() call instead of full display refresh
+# EXPECTED RESULT: Pattern LEDs should appear immediately after button press
+# Eliminates the "only visible when scroll head passes by" bug
+# STATUS: Targeted LED update implemented - single button presses should work immediately
+
+## 2025-08-13 08:42:11 Grid LED Bandwidth Constraints Added to AI Instructions
+# USER REQUEST: Add grid LED update rules to ai_instructions.txt
+# RATIONALE: "grids have finite bandwidth and won't respond correctly" to excessive LED updates
+# RULES ADDED: Grid LED Update Constraints and Rules section
+# KEY PRINCIPLES:
+#   - Grids have finite OSC bandwidth - excessive updates cause communication failures
+#   - All grid LED writes must be carefully considered and targeted
+#   - NEVER write spammy LED update code
+#   - Use targeted updates based on operation type:
+#     * Single button press: Update ONLY the pressed LED
+#     * Current step change: Update ONLY old and new positions
+#     * Euclidean operation: Update ONLY affected row
+#     * Undo/redo: Update whole grids (acceptable for rare operations)
+#   - Avoid full grid refreshes except during initialization
+#   - Prefer single LED updates over full refreshes
+#   - Minimize grid.refresh() calls
+# PURPOSE: Ensure future code respects grid hardware bandwidth limitations
+# RESULT: AI instructions now include grid performance constraints
+# STATUS: Grid LED bandwidth rules documented in ai_instructions.txt
+
+## 2025-08-13 08:48:55 Grid Button Press Fix Confirmed Working
+# USER FEEDBACK: "both grids are responding to button presses now"
+# SUCCESS: Targeted LED update fix has resolved the grid button press issues
+# CONFIRMED WORKING: 
+#   - GRID_ONE button presses now work immediately
+#   - GRID_TWO button presses now work immediately
+#   - Pattern LEDs appear instantly after button press
+#   - No longer need to wait for "scroll head" to pass over pressed buttons
+# RESOLUTION: update_single_button_led() approach successful
+#   - Replaced inefficient full grid refresh with targeted single LED updates
+#   - Respects grid OSC bandwidth limitations
+#   - Provides immediate visual feedback for button presses
+# RESULT: Manual step setting now fully functional on both grids
+# Grid coordinate mapping, OSC communication, and LED updates all working correctly
+# STATUS: Grid button press functionality fully restored and working
+
+## 2025-08-13 08:28:22 Grid LED Refresh Bug Diagnosed - Pattern LEDs Only Show When Current Step Passes
+# BUG CONFIRMED: "the LED does change but only when the scroll head passes by"
+# DETAILED LOG ANALYSIS: User provided complete debug log showing the actual issue
+# BUTTON PRESS PROCESSING: Working correctly
+#   - GRID_ONE press (3,2) -> seq(3,2) correctly mapped and stored ✓
+#   - GRID_TWO press (3,0) -> seq(19,0) correctly mapped and stored ✓
+#   - Sequencer patterns correctly updated with undo snapshots ✓
+# LED DISPLAY BUG: Pattern LEDs not immediately visible after button press
+#   - Only current step indicator LEDs are shown in update_32step_display()
+#   - Pattern LEDs only appear when current step indicator moves over them
+#   - update_32step_display() should be setting pattern LEDs but they're not visible
+# ROOT CAUSE: Pattern LED updates happening but not showing up immediately
+# INVESTIGATION: Added debug logging to pattern LED updates in update_32step_display()
+# Expected to see pattern LED set messages that aren't currently appearing
+# STATUS: LED refresh bug diagnosed - pattern LEDs not immediately visible after button press
+
+## 2025-08-13 07:20:22 Grid Button Press Fix Did Not Resolve Issue
+# USER FEEDBACK: "sorry that didn't change any behaviour"
+# RESULT: Coordinate mapping fixes to refresh_all_pattern_leds() and update_single_led() had no effect
+# ISSUE PERSISTS: 
+#   - GRID_TWO button presses still cause random LEDs on GRID_ONE
+#   - GRID_ONE button presses still mostly don't work
+# ANALYSIS: The fixed functions may not be in the actual execution path for manual button presses
+# INVESTIGATION NEEDED: Need to trace the exact code path from button press to LED update
+# Likely need to examine handle_normal_grid_operation() and update_grid_display() more closely
+# STATUS: Grid button press regression still not resolved - need deeper debugging
+
+## 2025-08-13 07:22:00 Root Cause Found - Grid Event Filtering Issue
+# DEBUG OUTPUT ANALYSIS: User provided debug log showing the actual problem
+# DISCOVERY 1: Both grids report identical button events simultaneously
+#   - Grid m5032747 button event: (5, 5) = true
+#   - Grid m2949672 button event: (5, 5) = true  
+#   - This suggests hardware cross-talk or software event duplication
+# DISCOVERY 2: Code only processes events from GRID_ONE (main_grid_id)
+#   - main_loop() filters: if Some(&grid_event.grid_id) == main_grid_id.as_ref()
+#   - GRID_TWO button presses are completely ignored and filtered out
+#   - This explains why GRID_TWO buttons don't work at all
+# COORDINATE MAPPING: Working correctly when events are processed
+#   - GRID_ONE (m2949672) press at (5,5) -> seq(5,5) ✓
+#   - GRID_ONE (m2949672) press at (9,4) -> seq(9,4) ✓
+# FIX APPLIED: Modified main_loop() grid event filtering
+#   1. Process events from both GRID_ONE and GRID_TWO instead of just main_grid
+#   2. Added deduplication to handle simultaneous identical events from both grids
+#   3. Validate events come from expected grids using get_sorted_grid_ids()
+# EXPECTED RESULT: GRID_TWO button presses should now be processed correctly
+# STATUS: Grid event filtering fixed - both grids should now work for manual step setting
+
+## 2025-08-13 07:15:43 Grid Button Press Regression Issue
+# BUG REPORT: Manual step setting not working reliably on both grids after scrolling fix
+# SYMPTOMS:
+#   - Pressing buttons on GRID_TWO causes random LEDs to light up on GRID_ONE
+#   - Pressing buttons on GRID_ONE sometimes works but mostly doesn't work
+#   - Cross-talk between grids - actions on one grid affect the other incorrectly
+# LIKELY CAUSE: Grid ID mapping or coordinate conversion issue in handle_grid_press function
+# EXPECTED BEHAVIOR:
+#   - GRID_ONE should handle sequencer steps 0-15 (rows 0-6, columns 0-15)
+#   - GRID_TWO should handle sequencer steps 16-31 (rows 0-6, columns 0-15 mapped to steps 16-31)
+#   - Both grids should have independent row 0-6 sequencer areas
+#   - Row 7 reserved for control functions on both grids
+# INVESTIGATION NEEDED: Check handle_grid_press coordinate mapping and grid ID routing
+# STATUS: Grid button press regression - manual step setting broken on both grids

@@ -524,11 +524,16 @@ impl GridManager {
         loop {
             let mut buf = [0u8; rosc::decoder::MTU];
             match self.socket.recv_from(&mut buf) {
-                Ok((size, _addr)) => {
+                Ok((size, addr)) => {
                     if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                         if let OscPacket::Message(msg) = packet {
-                            // Parse grid key events
-                            for device in self.devices.values() {
+                            // Parse grid key events - match by source port to specific device
+                            let source_port = addr.port();
+                            
+                            // Find the device that matches this source port
+                            let matching_device = self.devices.values().find(|device| device.port == source_port);
+                            
+                            if let Some(device) = matching_device {
                                 let key_addr = format!("{}/grid/key", device.prefix);
                                 if msg.addr == key_addr && msg.args.len() >= 3 {
                                     if let (Some(OscType::Int(x)), Some(OscType::Int(y)), Some(OscType::Int(state))) =
@@ -539,10 +544,12 @@ impl GridManager {
                                             y: *y as usize,
                                             pressed: *state != 0,
                                         });
-                                        debug!("Grid {} button event: ({}, {}) = {}",
-                                               device.id, x, y, *state != 0);
+                                        debug!("Grid {} button event: ({}, {}) = {} (from port {})",
+                                               device.id, x, y, *state != 0, source_port);
                                     }
                                 }
+                            } else {
+                                debug!("Received OSC message from unknown port: {}", source_port);
                             }
                         }
                     }
