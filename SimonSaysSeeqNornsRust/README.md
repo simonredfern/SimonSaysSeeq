@@ -263,7 +263,7 @@ AGPL-3.0 - See LICENSE file for details
 
 For hardware testing, ensure you have access to:
 - Norns or compatible hardware
-- Monome grid (optional)  
+- Monome grid (optional)
 - Framework Laptop 16 RGB Macropad (optional)
 - MIDI devices (optional)
 
@@ -287,3 +287,19 @@ Then reload udev rules:
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
+
+
+# To check midi is being sent on linux
+
+See the ports
+
+$ aseqdump -l
+ Port    Client name                      Port name
+  0:0    System                           Timer
+  0:1    System                           Announce
+ 14:0    Midi Through                     Midi Through Port-0
+128:0    SimonSaysSeeq                    SimonSaysSeeq Output
+
+then use the port thus:
+
+aseqdump -p 128:0 | awk 'function nn(n, i,o,a){split("C C# D D# E F F# G G# A A# B",a," "); i=n%12; o=int(n/12)-1; return a[i+1] "" o} /Note on/ {match($0,/note[ =]*([0-9]+)/,n); match($0,/velocity[ =]*([0-9]+)/,v); if(n[1]!="") {cmd="date +%s%3N"; cmd | getline ts; close(cmd); printf "%s Note ON  %-4s Vel=%-3s\n", ts, nn(n[1]), v[1]}} /Note off/ {match($0,/note[ =]*([0-9]+)/,n); if(n[1]!="") {cmd="date +%s%3N"; cmd | getline ts; close(cmd); printf "%s Note OFF %-4s\n", ts, nn(n[1])}}'

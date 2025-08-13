@@ -193,9 +193,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                // info!("note_on says: MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                info!("note_on says: MIDI Note ON (simulation): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                // debug!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                info!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
@@ -216,7 +216,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            // info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -391,9 +391,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} OFF", note_name));
                 
-                // debug!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+                info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
             } else {
-                // debug!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
+                info!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
             }
         }
         
@@ -407,7 +407,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF (sim)", note_name));
             
-            // debug!("note_off says: MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
+            info!("note_off says: MIDI Note OFF (simulation): {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())
