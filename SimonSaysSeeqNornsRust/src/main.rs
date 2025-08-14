@@ -538,12 +538,59 @@ impl SimonSaysSeeq {
                     // No ARM action active - handle normal grid operation
                     self.handle_normal_grid_operation(seq_x, seq_y)?;
                 }
-            } else if seq_y == 7 && (connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str())) {
+            } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
-                info!("ARM CONTROL: Row 7 button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
+                
+                // Check if this is GRID_TWO tempo controls (columns 14-15)
+                if connected_grids.len() >= 2 {
+                    let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x == 14 || x == 15) {
+                        // GRID_TWO tempo controls - handle both press and release
+                        if pressed {
+                            // Button press - light LED and change tempo
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.set_led(grid_id, x, seq_y, 10, "tempo_button_press")?;
+                                self.grid.refresh()?;
+                            }
+                            
+                            if !self.midi.is_external_clock_running() {
+                                let current_tempo = self.sequencer.get_tempo();
+                                let new_tempo = if x == 14 {
+                                    // Column 14: Decrease tempo
+                                    (current_tempo - 5.0).clamp(20.0, 200.0)
+                                } else {
+                                    // Column 15: Increase tempo
+                                    (current_tempo + 5.0).clamp(20.0, 200.0)
+                                };
+                                
+                                if new_tempo != current_tempo {
+                                    self.sequencer.set_tempo(new_tempo);
+                                    self.tempo = new_tempo; // Keep main tempo in sync
+                                    info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM via GRID_TWO column {}", 
+                                          current_tempo, new_tempo, x);
+                                }
+                            } else {
+                                info!("handle_grid_press says: Tempo control ignored - external MIDI clock is active");
+                            }
+                        } else {
+                            // Button release - turn off LED
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.set_led(grid_id, x, seq_y, 0, "tempo_button_release")?;
+                                self.grid.refresh()?;
+                            }
+                        }
+                        return Ok(());
+                    }
+                }
+                
+                // Regular ARM control handling for main grid or other buttons
+                if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
+                    info!("ARM CONTROL: Row 7 button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
 
-                // Check if this column corresponds to a valid ARM action
-                if let Some(arm_action) = ArmAction::from_column(seq_x) {
+                    // Check if this column corresponds to a valid ARM action
+                    if let Some(arm_action) = ArmAction::from_column(seq_x) {
                     if pressed {
                         // Turn off previous ARM button if any
                         if let Some(prev_action) = self.active_arm_action {
@@ -577,8 +624,12 @@ impl SimonSaysSeeq {
                             }
                         }
                     }
+                    } else {
+                        // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", seq_x);
+                    }
                 } else {
-                    // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", seq_x);
+                    // Non-main grid, non-tempo button - ignore
+                    info!("ARM CONTROL: Ignoring row 7 button {} on non-main grid {}", seq_x, grid_id);
                 }
             }
         } else {

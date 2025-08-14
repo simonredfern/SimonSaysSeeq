@@ -2710,3 +2710,41 @@ kill 14815 16252 16404 16463
 #   - Row 7 reserved for control functions on both grids
 # INVESTIGATION NEEDED: Check handle_grid_press coordinate mapping and grid ID routing
 # STATUS: Grid button press regression - manual step setting broken on both grids
+
+## 2025-08-14 21:42:34 GRID_TWO Tempo Controls Implemented
+# USER REQUEST: Add tempo controls to GRID_TWO row 7 columns 14-15 (0-indexed)
+# IMPLEMENTATION COMPLETED:
+#   - Column 14: Decrease tempo by 5 BPM (only if no external MIDI clock)
+#   - Column 15: Increase tempo by 5 BPM (only if no external MIDI clock)
+#   - Tempo range: 20.0 to 200.0 BPM (existing clamp maintained)
+#   - MIDI clock detection: Uses midi.is_external_clock_running() to prevent conflicts
+#   - Visual feedback: Brief LED flash on tempo change (brightness 15)
+#   - Logging: "handle_grid_press says: Tempo changed from X.X to Y.Y BPM via GRID_TWO column Z"
+# TECHNICAL DETAILS:
+#   - Modified handle_grid_press() function in src/main.rs
+#   - Added GRID_TWO-specific logic before existing ARM control handling
+#   - Only responds to button presses, not releases
+#   - Maintains sync between sequencer.set_tempo() and self.tempo
+#   - Uses get_sorted_grid_ids() to correctly identify GRID_TWO
+# SAFETY FEATURES:
+#   - External MIDI clock detection prevents tempo conflicts
+#   - Tempo clamping prevents invalid values
+#   - Only affects GRID_TWO columns 14-15, preserves ARM functionality on other columns
+# STATUS: Tempo controls ready for testing - GRID_TWO row 7 columns 14-15 active
+# COMPILATION: Successful with warnings only - no errors
+# TESTING READY: Implementation complete and ready for user testing
+
+## 2025-08-14 21:47:51 Tempo Control LED Behavior Fixed
+# USER FEEDBACK: Tempo control LEDs should only light when pressed, turn off on release
+# PROBLEM: Tempo control LEDs were staying lit after button release
+# SOLUTION IMPLEMENTED:
+#   - Added proper press/release handling for tempo control buttons (columns 14-15)
+#   - Press: LED brightness 10, perform tempo change if no external MIDI clock
+#   - Release: LED brightness 0 (turn off)
+#   - Both press and release trigger grid.refresh() for immediate visual feedback
+# BEHAVIOR NOW MATCHES: Other control row buttons (ARM actions) - LED on during press only
+# TECHNICAL CHANGES:
+#   - Modified handle_grid_press() tempo control logic
+#   - Removed single tempo change flash, now uses consistent press/release pattern
+#   - Maintains same tempo change functionality and MIDI clock safety
+# STATUS: Tempo control LED behavior fixed - buttons now behave like other control row buttons
