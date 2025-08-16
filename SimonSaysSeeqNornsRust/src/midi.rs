@@ -707,6 +707,7 @@ impl MidiManager {
                     info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
                 }
             }
+        }
         
         /// Set snap to whole tempo preference
         pub fn set_snap_to_whole_tempo(&self, enabled: bool) {
