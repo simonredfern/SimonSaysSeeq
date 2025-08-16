@@ -64,6 +64,9 @@ dirs = "5.0"
 # Random number generation
 rand = "0.8"
 
+# DateTime handling for timestamps
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 tempfile = "3.8"
 

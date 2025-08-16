@@ -186,16 +186,17 @@ impl ClockGenerator {
                         if tick_count % 24 == 0 {
                             beat_count = beat_count.wrapping_add(1);
                             match beat_count % 4 {
-                                1 => print!("♩"), // Beat 1 (downbeat)
-                                2 => print!("♪"), // Beat 2
-                                3 => print!("♫"), // Beat 3
-                                0 => print!("♬"), // Beat 4
+                                1 => print!("1"), // Beat 1 (downbeat)
+                                2 => print!("2"), // Beat 2
+                                3 => print!("3"), // Beat 3
+                                0 => print!("4"), // Beat 4
                                 _ => print!("·"),
                             }
                             
                             // New line every 4 beats (1 measure)
                             if beat_count % 4 == 0 {
-                                println!(" | {:.1} BPM", current_bpm);
+                                let now = chrono::Utc::now();
+                                println!(" | {} {:.1} BPM", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm);
                             }
                             
                             io::stdout().flush().ok();
