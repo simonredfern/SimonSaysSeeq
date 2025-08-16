@@ -139,7 +139,8 @@ impl ClockGenerator {
 
         thread::spawn(move || {
             let mut tick_count = 0u32;
-            let start_time = Instant::now();
+            let mut start_time = Instant::now();
+            let mut last_bpm = *bpm.lock().unwrap();
             let mut test_start_time = Instant::now();
 
             println!("Clock generation thread started");
@@ -187,6 +188,13 @@ impl ClockGenerator {
                 }
                 if is_running.load(Ordering::Relaxed) {
                     let mut current_bpm = *bpm.lock().unwrap();
+                    
+                    // Reset timing reference if BPM changed to prevent timing disruption
+                    if (current_bpm - last_bpm).abs() > 0.1 {
+                        start_time = Instant::now();
+                        tick_count = 0;
+                        last_bpm = current_bpm;
+                    }
                     
                     // Test mode: discrete tempo changes with stop/start cycles
                     if test_mode.load(Ordering::Relaxed) {
@@ -449,7 +457,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 show_help();
             }
             _ => {
-                println!("Unknown command. Type 'h' for help.");
+                if !input.trim().is_empty() {
+                    println!("Unknown command. Type 'h' for help.");
+                }
             }
         }
     }
