@@ -8,6 +8,9 @@ use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
+use termion::raw::IntoRawMode;
+use termion::input::TermRead;
+use termion::event::Key;
 use midir::{MidiOutput, MidiOutputConnection};
 
 #[derive(Debug, Clone)]
@@ -223,10 +226,10 @@ impl ClockGenerator {
 fn show_help() {
     println!("Commands:");
     println!("  s, start      - Start/stop clock");
-    println!("  +             - Increase BPM by 5");
-    println!("  -             - Decrease BPM by 5");
-    println!("  ++            - Increase BPM by 1");
-    println!("  --            - Decrease BPM by 1");
+    println!("  ↑ (Up Arrow) - Increase BPM by 1");
+    println!("  ↓ (Down Arrow) - Decrease BPM by 1");
+    println!("  → (Right Arrow) - Increase BPM by 5");
+    println!("  ← (Left Arrow) - Decrease BPM by 5");
     println!("  <number>      - Set specific BPM (e.g., '140')");
     println!("  status        - Show current status");
     println!("  q, quit, exit - Quit program");
@@ -318,31 +321,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start the clock generation thread
     let clock_thread = generator.spawn_clock_thread(connection);
 
-    // Main command loop
-    loop {
-        print!("🎛 Command: ");
-        io::stdout().flush()?;
-        
-        let mut input = String::new();
-        match io::stdin().read_line(&mut input) {
-            Ok(_) => {
-                let command = input.trim().to_lowercase();
-                if command.is_empty() {
-                    continue;
-                }
-
-                match handle_command(&generator, &command) {
-                    Ok(true) => break, // User wants to quit
-                    Ok(false) => continue,
-                    Err(e) => {
-                        eprintln!("❌ Error: {}", e);
-                        continue;
-                    }
-                }
+    // Enable raw mode for arrow key detection
+    let _stdout = io::stdout().into_raw_mode()?;
+    let stdin = io::stdin();
+    
+    println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 'q' to quit\r");
+    
+    // Main input loop with arrow key support
+    for key in stdin.keys() {
+        match key? {
+            Key::Up => {
+                let new_bpm = generator.get_bpm() + 1.0;
+                generator.set_bpm(new_bpm);
+                print!("\r🎛 BPM: {:.1} (↑+1)    \r", generator.get_bpm());
+                io::stdout().flush()?;
             }
-            Err(e) => {
-                eprintln!("❌ Input error: {}", e);
+            Key::Down => {
+                let new_bpm = generator.get_bpm() - 1.0;
+                generator.set_bpm(new_bpm);
+                print!("\r🎛 BPM: {:.1} (↓-1)    \r", generator.get_bpm());
+                io::stdout().flush()?;
+            }
+            Key::Right => {
+                let new_bpm = generator.get_bpm() + 5.0;
+                generator.set_bpm(new_bpm);
+                print!("\r🎛 BPM: {:.1} (→+5)    \r", generator.get_bpm());
+                io::stdout().flush()?;
+            }
+            Key::Left => {
+                let new_bpm = generator.get_bpm() - 5.0;
+                generator.set_bpm(new_bpm);
+                print!("\r🎛 BPM: {:.1} (←-5)    \r", generator.get_bpm());
+                io::stdout().flush()?;
+            }
+            Key::Char('s') | Key::Char('S') => {
+                if generator.is_running.load(Ordering::Relaxed) {
+                    generator.stop()?;
+                    print!("\r🛑 Stopped          \r");
+                } else {
+                    generator.start()?;
+                    print!("\r▶️  Started          \r");
+                }
+                io::stdout().flush()?;
+            }
+            Key::Char('q') | Key::Char('Q') => {
+                println!("\r\n👋 Exiting...");
                 break;
+            }
+            Key::Char('h') | Key::Char('H') => {
+                println!("\r\n");
+                show_help();
+                println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 'q' to quit\r");
+            }
+            _ => {
+                // Ignore other keys
             }
         }
     }
