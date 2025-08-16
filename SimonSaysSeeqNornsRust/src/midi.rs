@@ -398,6 +398,12 @@ impl MidiManager {
                             let beats_per_second = beat_count / time_span;
                             let bpm = beats_per_second * 60.0; // Convert to BPM
                             
+                            // REGRESSION DEBUGGING
+                            debug!("handle_midi_input_message says: REGRESSION DEBUG - Raw calculation: {} beats / {:.6}s = {:.6} beats/sec = {:.1} BPM", 
+                                   beat_count, time_span, beats_per_second, bpm);
+                            debug!("handle_midi_input_message says: REGRESSION DEBUG - Expected for 120 BPM: {} beats should take {:.3}s, actually took {:.3}s", 
+                                   beat_count, beat_count * 60.0 / 120.0, time_span);
+                            
                             // Tempo stability validation - reject readings that differ too much from recent history
                             let is_stable = if let Some(prev_tempo) = clock.external_tempo {
                                 let tempo_change = (bpm - prev_tempo).abs();

@@ -3967,3 +3967,36 @@ kill 14815 16252 16404 16463
 # Need to verify MIDI clock standard: 24 ticks per quarter note relationship to BPM
 # 
 # STATUS: Critical tempo detection bug identified, diagnostic code added, ready for fix implementation
+
+## 2025-08-16 21:52:00 Tempo Detection Regression - 2x BPM Error Returned
+# CRITICAL ISSUE: Tempo detection accuracy regression - 2x BPM error has returned
+# SYMPTOMS:
+#   - MIDI Clock Generator: Stable 120 BPM output
+#   - Sequencer Detection: 251.8 BPM → snapped to 252.0 BPM (~2.1x error)
+#   - Pattern: Same fundamental bug as before, just different multiplier
+#   - Constant tempo window resets and "tempo change detected" messages
+#   - Phase correction chaos: drift corrections of 192, -240, 120, -312 ticks
+#
+# REGRESSION ANALYSIS:
+# Previously working correctly with:
+#   - Generator: 121 BPM → Sequencer: 120.1-120.2 BPM (accurate)
+#   - Now: Generator: 120 BPM → Sequencer: 251.8 BPM (2.1x error)
+#
+# ROOT CAUSE THEORIES:
+# 1. Beat-based tempo calculation algorithm still fundamentally flawed
+# 2. State accumulation or timing drift causing calculation errors
+# 3. MIDI clock timing changes affecting beat interval measurements
+# 4. Averaging window logic corrupted by previous tempo changes
+#
+# DIAGNOSTIC ACTIONS:
+#   - Added REGRESSION DEBUG logging to tempo calculation in src/midi.rs
+#   - Will show raw beat_count, time_span, and expected vs actual timing
+#   - Need to identify if issue is in beat counting or time measurement
+#
+# INVESTIGATION NEEDED:
+#   - Check if beat_count or time_span calculation is incorrect
+#   - Verify MIDI 24 PPQ standard implementation
+#   - Test with fresh sequencer/generator restart to eliminate state issues
+#   - May need fundamental rewrite of beat-based tempo detection algorithm
+#
+# STATUS: Tempo detection regression confirmed, diagnostic debugging active
