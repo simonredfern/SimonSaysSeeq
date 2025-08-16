@@ -88,6 +88,8 @@ pub struct SimonSaysSeeq {
     main_grid_preference: Option<String>,
     // Active ARM action for row 7 (control row) - only one can be active at a time
     active_arm_action: Option<ArmAction>,
+    // Beat LED flashing state for external MIDI clock
+    beat_led_flash_until: Option<Instant>,
 }
 
 impl SimonSaysSeeq {
@@ -108,6 +110,7 @@ impl SimonSaysSeeq {
             tempo: initial_tempo,
             main_grid_preference: None, // GRID_ONE will be auto-selected as lowest ID
             active_arm_action: None, // No ARM action initially active
+            beat_led_flash_until: None,
         })
     }
 
@@ -257,6 +260,17 @@ impl SimonSaysSeeq {
             while let Ok(event) = seq_rx.try_recv() {
                 if let Err(e) = self.handle_sequencer_event(event) {
                     // error!("Error handling sequencer event: {}", e);
+                }
+            }
+
+            // Handle MIDI input events (non-blocking)
+            #[cfg(feature = "midi")]
+            {
+                let midi_events = self.midi.get_input_events();
+                for event in midi_events {
+                    if let Err(e) = self.handle_midi_input_event(event) {
+                        // error!("Error handling MIDI input event: {}", e);
+                    }
                 }
             }
 
@@ -819,6 +833,10 @@ impl SimonSaysSeeq {
                 self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
             }
         }
+        
+        // Update beat LEDs before final refresh
+        self.update_beat_leds()?;
+        
         self.grid.refresh()?;
         Ok(())
     }
@@ -856,6 +874,9 @@ impl SimonSaysSeeq {
             info!("DEBUG: No grids available for display");
         }
 
+        // Update beat LEDs before final refresh
+        self.update_beat_leds()?;
+        
         self.grid.refresh()?;
         Ok(())
     }
@@ -985,6 +1006,9 @@ impl SimonSaysSeeq {
             }
         }
         
+        // Update beat LEDs before final refresh
+        self.update_beat_leds()?;
+        
         // Add a final debug to confirm grid refresh
         info!("DEBUG: Calling grid.refresh() for both grids");
         self.grid.refresh()?;
@@ -1081,6 +1105,9 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_two_id, grid_x, seq_y, brightness, "single_button_grid2")?;
                 }
                 
+                // Update beat LEDs before refresh
+                self.update_beat_leds()?;
+                
                 self.grid.refresh()?;
             }
         } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
@@ -1099,6 +1126,10 @@ impl SimonSaysSeeq {
                     
                     info!("GRID DEBUG: Setting single LED (single grid) seq_x={}, seq_y={}, brightness={}", seq_x, seq_y, brightness);
                     self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "single_button_single")?;
+                    
+                    // Update beat LEDs before refresh
+                    self.update_beat_leds()?;
+                    
                     self.grid.refresh()?;
                 }
             }
@@ -1455,6 +1486,9 @@ impl SimonSaysSeeq {
             }
         }
         
+        // Update beat LEDs before refresh
+        self.update_beat_leds()?;
+        
         self.grid.refresh()?;
         Ok(())
     }
@@ -1475,6 +1509,64 @@ impl SimonSaysSeeq {
 
         // TODO: Add actual Crow CV output when hardware support is added
 
+        Ok(())
+    }
+
+    /// Handle MIDI input events
+    #[cfg(feature = "midi")]
+    fn handle_midi_input_event(&mut self, event: crate::midi::MidiInputEvent) -> Result<()> {
+        use crate::midi::MidiInputEvent;
+        
+        match event {
+            MidiInputEvent::ClockBeat => {
+                // Flash LEDs 14 and 15 on GRID_TWO for 150ms
+                self.beat_led_flash_until = Some(Instant::now() + Duration::from_millis(150));
+                info!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
+            }
+            MidiInputEvent::ClockStart => {
+                info!("handle_midi_input_event says: MIDI Clock Start received");
+            }
+            MidiInputEvent::ClockStop => {
+                info!("handle_midi_input_event says: MIDI Clock Stop received");
+                // Clear beat LEDs when clock stops
+                self.beat_led_flash_until = None;
+            }
+            MidiInputEvent::ClockTick => {
+                // Don't log every tick - too verbose
+            }
+            _ => {
+                // Handle other MIDI events if needed
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Update beat LEDs on GRID_TWO to flash with external MIDI clock beats
+    fn update_beat_leds(&mut self) -> Result<()> {
+        let connected_grids = self.grid.get_connected_grids();
+        if connected_grids.len() >= 2 {
+            let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+            if let Some(grid_two_id) = grid_two {
+                let brightness = if let Some(flash_until) = self.beat_led_flash_until {
+                    if Instant::now() < flash_until {
+                        15 // Bright flash
+                    } else {
+                        self.beat_led_flash_until = None;
+                        0  // Turn off
+                    }
+                } else {
+                    0  // Off by default
+                };
+                
+                #[cfg(feature = "hardware")]
+                {
+                    self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
+                    self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
+                }
+            }
+        }
+        
         Ok(())
     }
 }

@@ -2825,3 +2825,36 @@ kill 14815 16252 16404 16463
 #   - sequencer.set_tempo() and self.tempo synchronization maintained
 # PROJECT STATUS: Tempo control feature fully implemented and user-validated
 # NEXT: Ready for normal sequencer operation with tempo controls active
+# 
+# USER REQUEST: Flash LEDs 14 and 15 on GRID_TWO every time MIDI clock beat is received
+# IMPLEMENTATION COMPLETED:
+# 
+# BEAT LED FLASHING FEATURE:
+#   - Added ClockBeat event to MidiInputEvent enum in midi.rs
+#   - Modified handle_midi_input_message() to send ClockBeat every 24 MIDI clock ticks (1 beat)
+#   - Added beat_led_flash_until: Option<Instant> field to SimonSaysSeeq struct for flash timing
+#   - Created handle_midi_input_event() method to process MIDI input events including ClockBeat
+#   - Created update_beat_leds() method to manage LED flashing with 150ms flash duration
+#   - Integrated MIDI input event processing into main loop with get_input_events()
+# 
+# LED BEHAVIOR:
+#   - Beat detection: Every 24 MIDI clock ticks triggers ClockBeat event
+#   - Flash duration: 150ms bright flash (brightness 15) then off
+#   - Target LEDs: Columns 14 and 15, row 7 on GRID_TWO only
+#   - Auto-clear: LEDs turn off when MIDI clock stops (ClockStop event)
+#   - No interference: Uses existing grid refresh cycle, doesn't call extra refresh()
+# 
+# INTEGRATION APPROACH:
+#   - Real-time processing: MIDI callback immediately detects beats
+#   - Event-driven: Uses existing MidiInputEvent channel system
+#   - Grid-safe: update_beat_leds() called before all grid.refresh() calls
+#   - Non-blocking: Main loop processes MIDI events with try_recv()
+# 
+# TIMING ACCURACY:
+#   - Beat detection: Hardware-accurate (24 PPQ standard)
+#   - Visual feedback: Immediate response to external clock beats
+#   - Flash timing: Consistent 150ms duration regardless of BPM
+#   - Grid update: Synchronized with existing refresh cycles
+# 
+# COMPILATION: Successful with warnings only
+# RESULT: LEDs 14 and 15 on GRID_TWO now flash with each beat when external MIDI clock is active

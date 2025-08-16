@@ -29,6 +29,7 @@ pub enum MidiInputEvent {
     NoteOff { note: u8, channel: u8 },
     ControlChange { controller: u8, value: u8, channel: u8 },
     ClockTick,
+    ClockBeat,
     ClockStart,
     ClockStop,
     ClockContinue,
@@ -342,6 +343,11 @@ impl MidiManager {
                     }
                 }
                 clock.last_clock_time = Some(Instant::now());
+                
+                // Send beat event every 24 ticks (once per quarter note)
+                if clock.clock_ticks % 24 == 0 {
+                    let _ = sender.send(MidiInputEvent::ClockBeat);
+                }
                 
                 let _ = sender.send(MidiInputEvent::ClockTick);
             }
