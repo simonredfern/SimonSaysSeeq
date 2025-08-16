@@ -558,40 +558,68 @@ impl SimonSaysSeeq {
                 // Check if this is GRID_TWO tempo controls (columns 14-15)
                 if connected_grids.len() >= 2 {
                     let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x == 14 || x == 15) {
-                        // GRID_TWO tempo controls - handle both press and release
+                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x >= 12 && x <= 15) {
+                        // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
-                            // Button press - light LED and change tempo
+                            // Button press - light LED and perform action
                             #[cfg(feature = "hardware")]
                             {
-                                self.grid.set_led(grid_id, x, seq_y, 10, "tempo_button_press")?;
+                                self.grid.set_led(grid_id, x, seq_y, 10, "transport_button_press")?;
                                 self.grid.refresh()?;
                             }
                             
-                            if !self.midi.is_external_clock_running() {
-                                let current_tempo = self.sequencer.get_tempo();
-                                let new_tempo = if x == 14 {
-                                    // Column 14: Decrease tempo
-                                    (current_tempo - 5.0).clamp(20.0, 200.0)
-                                } else {
-                                    // Column 15: Increase tempo
-                                    (current_tempo + 5.0).clamp(20.0, 200.0)
-                                };
-                                
-                                if new_tempo != current_tempo {
-                                    self.sequencer.set_tempo(new_tempo);
-                                    self.tempo = new_tempo; // Keep main tempo in sync
-                                    info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM via GRID_TWO column {}", 
-                                          current_tempo, new_tempo, x);
+                            match x {
+                                12 => {
+                                    // Stop button - always works regardless of external clock
+                                    self.sequencer.stop();
+                                    info!("handle_grid_press says: Sequencer stopped via GRID_TWO column 12");
                                 }
-                            } else {
-                                info!("handle_grid_press says: Tempo control ignored - external MIDI clock is active");
+                                13 => {
+                                    // Start button - always works regardless of external clock
+                                    self.sequencer.start();
+                                    info!("handle_grid_press says: Sequencer started via GRID_TWO column 13");
+                                }
+                                14 | 15 => {
+                                    // Tempo controls - only work when external clock is not active
+                                    if !self.midi.is_external_clock_running() {
+                                        let current_tempo = self.sequencer.get_tempo();
+                                        let new_tempo = if x == 14 {
+                                            // Column 14: Decrease tempo
+                                            (current_tempo - 5.0).clamp(20.0, 200.0)
+                                        } else {
+                                            // Column 15: Increase tempo
+                                            (current_tempo + 5.0).clamp(20.0, 200.0)
+                                        };
+                                        
+                                        if new_tempo != current_tempo {
+                                            self.sequencer.set_tempo(new_tempo);
+                                            self.tempo = new_tempo; // Keep main tempo in sync
+                                            info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM via GRID_TWO column {}", 
+                                                  current_tempo, new_tempo, x);
+                                        }
+                                    } else {
+                                        info!("handle_grid_press says: Tempo control ignored - external MIDI clock is active");
+                                    }
+                                }
+                                _ => {}
                             }
                         } else {
                             // Button release - turn off LED
                             #[cfg(feature = "hardware")]
                             {
-                                self.grid.set_led(grid_id, x, seq_y, 0, "tempo_button_release")?;
+                                let brightness = match x {
+                                    12 | 13 => 0, // Transport buttons always turn off
+                                    14 | 15 => {
+                                        // Tempo LEDs stay off if external clock active (beat LEDs will handle them)
+                                        if self.midi.is_external_clock_running() {
+                                            return Ok(()); // Don't interfere with beat LED flashing
+                                        } else {
+                                            0
+                                        }
+                                    }
+                                    _ => 0,
+                                };
+                                self.grid.set_led(grid_id, x, seq_y, brightness, "transport_button_release")?;
                                 self.grid.refresh()?;
                             }
                         }
@@ -1524,10 +1552,12 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
             }
             MidiInputEvent::ClockStart => {
-                info!("handle_midi_input_event says: MIDI Clock Start received");
+                info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
+                self.sequencer.start();
             }
             MidiInputEvent::ClockStop => {
-                info!("handle_midi_input_event says: MIDI Clock Stop received");
+                info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
+                self.sequencer.stop();
                 // Clear beat LEDs when clock stops
                 self.beat_led_flash_until = None;
             }

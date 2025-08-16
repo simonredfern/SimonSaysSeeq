@@ -2858,3 +2858,63 @@ kill 14815 16252 16404 16463
 # 
 # COMPILATION: Successful with warnings only
 # RESULT: LEDs 14 and 15 on GRID_TWO now flash with each beat when external MIDI clock is active
+# 
+# USER REQUEST: Transport sync with MIDI clock start/stop + dedicated Start/Stop buttons on GRID_TWO
+# IMPLEMENTATION COMPLETED:
+# 
+# MIDI TRANSPORT SYNC:
+#   - Modified handle_midi_input_event() to handle ClockStart and ClockStop events
+#   - ClockStart event: Automatically calls self.sequencer.start()
+#   - ClockStop event: Automatically calls self.sequencer.stop() and clears beat LEDs
+#   - Transport sync works regardless of internal tempo settings
+#   - Logs: "MIDI Clock Start/Stop received - starting/stopping sequencer"
+# 
+# DEDICATED TRANSPORT BUTTONS ON GRID_TWO ROW 7:
+#   - Column 12 (0-indexed): Stop button - always functional regardless of external clock
+#   - Column 13 (0-indexed): Start button - always functional regardless of external clock
+#   - Columns 14-15: Tempo controls (existing) - only work when external clock inactive
+#   - Extended grid press handler to cover columns 12-15 instead of just 14-15
+# 
+# BUTTON BEHAVIOR:
+#   - Press: Light LED at brightness 10, perform action (start/stop/tempo change)
+#   - Release: Turn LED off (brightness 0) with smart handling for beat LEDs
+#   - Transport buttons (12-13): Always respond to user input
+#   - Tempo buttons (14-15): Disabled when external MIDI clock active
+#   - Beat LED preservation: Tempo button releases don't interfere with beat flashing
+# 
+# TRANSPORT CONTROL LOGIC:
+#   - Manual control: Grid buttons 12 (stop) and 13 (start) always work
+#   - External sync: MIDI clock start/stop automatically controls sequencer
+#   - Dual control: Both manual and MIDI clock control can operate simultaneously
+#   - State consistency: All methods use sequencer.start()/stop() for unified behavior
+# 
+# GRID LAYOUT ON GRID_TWO ROW 7:
+#   - Column 12: ⏹ Stop (manual control)
+#   - Column 13: ▶️ Start (manual control) 
+#   - Column 14: ⬇️ Tempo Down (disabled during external clock)
+#   - Column 15: ⬆️ Tempo Up (disabled during external clock)
+#   - Columns 14-15 also flash with beats when external clock active
+# 
+# COMPILATION: Successful with warnings only
+# RESULT: Complete transport sync - sequencer follows MIDI clock start/stop + dedicated manual controls
+# 
+# READY FOR USER TESTING:
+# MIDI CLOCK TRANSPORT SYNC + BEAT LED FLASHING + MANUAL TRANSPORT CONTROLS
+# 
+# EXPECTED BEHAVIOR:
+#   1. MIDI Clock Generator Start → Sequencer starts automatically
+#   2. MIDI Clock Generator Stop → Sequencer stops automatically + beat LEDs clear
+#   3. Grid Button 12 (GRID_TWO row 7) → Manual Stop (always works)
+#   4. Grid Button 13 (GRID_TWO row 7) → Manual Start (always works)
+#   5. LEDs 14 & 15 flash with beats when external MIDI clock active
+#   6. Tempo buttons 14-15 disabled when external clock active
+# 
+# TEST SEQUENCE:
+#   - Terminal 1: cd utils && cargo run --release --bin midi_clock_generator
+#   - Terminal 2: cargo run --release
+#   - Test MIDI transport: Use 's' in clock generator → sequencer should follow
+#   - Test manual transport: Use grid buttons 12 (stop) and 13 (start)
+#   - Test beat LEDs: Should flash on columns 14-15 when clock running
+#   - Test tempo controls: Should be disabled when external clock active
+# 
+# STATUS: IMPLEMENTATION COMPLETE - AWAITING USER VALIDATION
