@@ -3533,6 +3533,35 @@ kill 14815 16252 16404 16463
 # RESULT: Match statement now exhaustive, compilation successful
 # STATUS: External tempo preservation feature fully implemented and ready for testing
 
+## 2025-08-16 19:19:03 Tempo Tracking Overshoot Issue Identified
+# ISSUE: Sequencer tempo detection overshoots significantly during MIDI clock tempo changes
+# PROBLEM: Even small tempo changes in clock generator cause large temporary tempo errors in sequencer
+# BEHAVIOR OBSERVED:
+#   - Clock generator changes tempo by small amount (e.g., 120 → 121 BPM)
+#   - Sequencer tempo detection spikes to much higher values temporarily
+#   - Eventually settles to correct stable tempo but with unacceptable overshoot period
+#   - Overshoot makes sequencer unusable during tempo transitions
+#
+# ROOT CAUSE ANALYSIS NEEDED:
+#   - Beat-based averaging algorithm may be sensitive to timing discontinuities
+#   - 16-beat rolling window might not handle sudden tempo changes gracefully
+#   - Mixed timing data from old and new tempos in same calculation window
+#   - Algorithm assumes smooth tempo progression, not discrete jumps
+#
+# IMPACT:
+#   - Sequencer tempo becomes unstable during any clock tempo adjustment
+#   - Large temporary errors affect musical performance quality
+#   - Makes real-time tempo changes impractical
+#   - Undermines confidence in external MIDI clock sync reliability
+#
+# REQUIREMENTS FOR SOLUTION:
+#   - Tempo changes should be tracked smoothly without large overshoots
+#   - Small tempo adjustments (±1-5 BPM) should not cause dramatic spikes
+#   - Response time vs stability balance needs optimization
+#   - May need tempo change rate limiting or improved averaging algorithm
+#
+# STATUS: Critical tempo tracking stability issue identified, solution needed before deployment
+
 ## 2025-08-16 15:16:14 Syntax Error Fix in midi.rs
 # ISSUE: Compilation error due to unclosed delimiter in midi.rs
 # ERROR: "this file contains an unclosed delimiter" at line 830
