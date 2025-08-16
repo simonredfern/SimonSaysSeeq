@@ -411,6 +411,8 @@ impl MidiManager {
                             let actual_beat_interval = time_span / beat_count;
                             debug!("handle_midi_input_message says: TEMPO DEBUG - Raw data: {} timestamps, span {:.6}s", 
                                    clock.beat_timestamps.len(), time_span);
+                            debug!("handle_midi_input_message says: TEMPO DEBUG - Expected for 121 BPM: beat_count={:.1}, span={:.3}s should give {:.1} BPM", 
+                                   beat_count, 60.0 * beat_count / 121.0, 121.0);
                             debug!("handle_midi_input_message says: TEMPO DEBUG - First beat: {:?}, Last beat: {:?}", 
                                    first_beat, last_beat);
                             debug!("handle_midi_input_message says: TEMPO DEBUG - Beat count: {}, Time span: {:.6}s", 
@@ -419,6 +421,10 @@ impl MidiManager {
                                    beats_per_second, bpm);
                             debug!("handle_midi_input_message says: Tempo calculation: {} beats over {:.3}s = {:.3} beats/sec = {:.1} BPM", 
                                    beat_count, time_span, beats_per_second, bpm);
+                            debug!("handle_midi_input_message says: DIAGNOSTIC - If generator sends 121 BPM, expected beat interval = {:.3}s, actual = {:.3}s", 
+                                   60.0 / 121.0, actual_beat_interval);
+                            debug!("handle_midi_input_message says: DIAGNOSTIC - Clock ticks per beat = 24, so tick interval should be {:.3}s", 
+                                   (60.0 / 121.0) / 24.0);
                             debug!("handle_midi_input_message says: Beat timing: expected {:.3}s/beat, actual {:.3}s/beat, diff {:.3}s", 
                                    expected_beat_interval, actual_beat_interval, actual_beat_interval - expected_beat_interval);
                             

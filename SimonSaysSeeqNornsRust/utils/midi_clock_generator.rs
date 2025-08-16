@@ -139,8 +139,6 @@ impl ClockGenerator {
 
         thread::spawn(move || {
             let mut tick_count = 0u32;
-            let mut beat_count = 0u32;
-            let mut last_measure_time: Option<chrono::DateTime<chrono::Utc>> = None;
             let start_time = Instant::now();
             let mut test_start_time = Instant::now();
 
@@ -260,52 +258,11 @@ impl ClockGenerator {
 
                         tick_count = tick_count.wrapping_add(1);
 
-                        // Print visual beat indicator every 24 ticks (1 beat at 24 PPQ)
-                        if tick_count % 24 == 0 {
-                            beat_count = beat_count.wrapping_add(1);
-                            match beat_count % 4 {
-                                1 => print!("\r1"), // Beat 1 (downbeat)
-                                2 => print!("2"), // Beat 2
-                                3 => print!("3"), // Beat 3
-                                0 => print!("4"), // Beat 4
-                                _ => print!("·"),
-                            }
-                            
-                            // New line every 4 beats (1 measure)
-                            if beat_count % 4 == 0 {
-                                let now = chrono::Utc::now();
-                                let measure_time = now;
-                                
-                                // Calculate actual timing accuracy with drift correction
-                                if beat_count >= 8 {
-                                    let expected_measure_duration = 240.0 / current_bpm; // 4 beats in seconds
-                                    let actual_duration = measure_time.signed_duration_since(last_measure_time.unwrap_or(measure_time)).num_milliseconds() as f32 / 1000.0;
-                                    let timing_error = actual_duration - expected_measure_duration;
-                                    
-                                    // Calculate drift correction effectiveness
-                                    let ticks_per_second_calc = (current_bpm * 24.0) / 60.0;
-                                    let tick_interval_secs_calc = 1.0 / ticks_per_second_calc;
-                                    let expected_tick_time = start_time + Duration::from_secs_f32(tick_count as f32 * tick_interval_secs_calc);
-                                    let actual_now = Instant::now();
-                                    let drift_correction = if actual_now > expected_tick_time {
-                                        actual_now.duration_since(expected_tick_time).as_millis() as f32 / 1000.0
-                                    } else {
-                                        -(expected_tick_time.duration_since(actual_now).as_millis() as f32 / 1000.0)
-                                    };
-                                    
-                                    let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST MODE]" } else { "" };
-                                    println!(" | {} {:.1} BPM{} (timing: expected {:.3}s, actual {:.3}s, error {:.3}s, drift {:.3}s)", 
-                                             now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix,
-                                             expected_measure_duration, actual_duration, timing_error, drift_correction);
-                                    last_measure_time = Some(measure_time);
-                                } else {
-                                    let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST MODE]" } else { "" };
-                                    println!(" | {} {:.1} BPM{}", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix);
-                                    last_measure_time = Some(measure_time);
-                                }
-                            }
-                            
-                            io::stdout().flush().ok();
+                        // Print BPM with timestamp every 96 ticks (1 measure at 24 PPQ)
+                        if tick_count % 96 == 0 {
+                            let now = chrono::Utc::now();
+                            let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST]" } else { "" };
+                            println!("{} | {:.1} BPM{}", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix);
                         }
                     }
                 }

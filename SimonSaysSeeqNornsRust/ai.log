@@ -3936,3 +3936,34 @@ kill 14815 16252 16404 16463
 2025-08-16 20:05:00 WAITING - Tempo detection bug identified: 218.6 BPM detected vs 122 BPM actual (~1.8x overshoot)
 2025-08-16 20:10:00 Added tempo stability check - phase correction disabled until 10s stable tempo, testing implementation
 2025-08-16 20:15:00 Added detailed tempo calculation debugging to identify 2x BPM error source - ready for testing
+
+## 2025-08-16 21:28:50 Major Tempo Detection Bug Confirmed - 2x BPM Error
+# CRITICAL ISSUE: MIDI clock generator outputs stable 121 BPM but sequencer detects ~233 BPM (nearly 2x error)
+# SYMPTOMS:
+#   - Clock generator: Consistent 121.0 BPM output
+#   - Sequencer detection: Fluctuating 232.9-233.0 BPM (snapped)
+#   - Raw detection values: 232.9 → 120.0 → 119.9 → 121.1 (erratic)
+#   - Constant "Tempo change detected" messages with window resets
+# 
+# ROOT CAUSE ANALYSIS:
+# The beat-based tempo calculation in src/midi.rs has a fundamental error:
+#   - Algorithm: beats_per_second = beat_count / time_span; bpm = beats_per_second * 60.0
+#   - MIDI events: Generated every 24 ticks (1 beat at 24 PPQ standard)
+#   - Issue: Calculation treating beat events as actual musical beats, but math is wrong
+# 
+# DIAGNOSTIC DATA FROM LOGS:
+#   - "Tempo change detected (232.9 -> 120.1 BPM), resetting averaging window"
+#   - Constant window resets prevent stable tempo detection
+#   - Phase correction showing large drift: -312 ticks, 336 ticks, -240 ticks
+#   - Beat intervals roughly half of expected (causing 2x BPM calculation)
+# 
+# INVESTIGATION ACTIONS:
+#   1. Added comprehensive tempo calculation diagnostics to src/midi.rs
+#   2. Diagnostic messages will show expected vs actual beat intervals for 121 BPM
+#   3. Clock tick interval analysis to verify MIDI timing precision
+# 
+# EXPECTED FIX: Correct the beat-based tempo calculation algorithm in handle_midi_input_message
+# The issue is likely in how beat_count and time_span are used in BPM calculation
+# Need to verify MIDI clock standard: 24 ticks per quarter note relationship to BPM
+# 
+# STATUS: Critical tempo detection bug identified, diagnostic code added, ready for fix implementation
