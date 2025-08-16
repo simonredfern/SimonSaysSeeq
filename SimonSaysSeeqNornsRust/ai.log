@@ -3142,3 +3142,26 @@ kill 14815 16252 16404 16463
 # CLOCK FORMAT: "1234 | 2025-08-16T14:31:20.381Z 128.0 BPM" on new lines
 # CONTROL FORMAT: "🎛 BPM: 128.0 (↑+1)" on separate lines without interference
 # STATUS: Clock generation log should now be readable during tempo testing
+
+## 2025-08-16 14:36:52 MIDI Tempo Detection Algorithm Fix
+# ISSUE: Major tempo discrepancy - clock generator outputs 121.0 BPM but sequencer detects 116-118 BPM
+# ROOT CAUSE: Tempo detection algorithm calculated BPM from individual MIDI tick intervals
+# PROBLEM: Individual tick timing susceptible to system jitter, USB latency, scheduling delays
+# ALGORITHM FLAW: Single-tick calculation with no averaging or filtering
+#
+# FIX IMPLEMENTED: Beat-based tempo detection with rolling average
+# NEW ALGORITHM:
+#   1. Collect beat timestamps (every 24 MIDI clock ticks)
+#   2. Maintain rolling window of last 8 beats (2 measures)
+#   3. Calculate BPM from time span across multiple beats: BPM = (beat_count / time_span) * 60
+#   4. Much more stable and accurate than tick-based calculation
+#
+# CHANGES MADE:
+#   1. Updated ClockState struct to include beat_timestamps Vec<Instant> and last_beat_time
+#   2. Modified handle_midi_input_message to use beat-based calculation instead of tick-based
+#   3. Added rolling average over 8 beats for stable tempo detection
+#   4. Reset beat timestamps in reset_clock() function
+#
+# EXPECTED RESULT: Sequencer should now detect 121.0 BPM matching clock generator output
+# ACCURACY: Beat-based averaging eliminates individual tick jitter and system timing variations
+# STATUS: Ready for compilation and testing - should resolve 3-5 BPM tempo discrepancy

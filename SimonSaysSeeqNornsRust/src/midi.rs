@@ -49,6 +49,8 @@ pub struct ClockState {
     pub external_tempo: Option<f32>,
     pub clock_ticks: u32,
     pub last_clock_time: Option<Instant>,
+    pub last_beat_time: Option<Instant>,
+    pub beat_timestamps: Vec<Instant>,
     pub running: bool,
     pub last_external_activity: Option<Instant>,
 }
@@ -60,6 +62,8 @@ impl Default for ClockState {
             external_tempo: None,
             clock_ticks: 0,
             last_clock_time: None,
+            last_beat_time: None,
+            beat_timestamps: Vec::new(),
             running: false,
             last_external_activity: None,
         }
@@ -337,28 +341,41 @@ impl MidiManager {
                 
                 clock.clock_ticks = clock.clock_ticks.wrapping_add(1);
                 
-                // Calculate tempo from clock ticks
-                if let Some(last_time) = clock.last_clock_time {
-                    let now = Instant::now();
-                    let time_diff = now.duration_since(last_time).as_secs_f32();
-                    
-                    // MIDI clock sends 24 ticks per quarter note
-                    // BPM = 60 / (time_per_tick * 24)
-                    if time_diff > 0.0 {
-                        let ticks_per_minute = 60.0 / time_diff;
-                        let bpm = ticks_per_minute / 24.0;
-                        
-                        // Filter out unreasonable tempos
-                        if bpm >= 20.0 && bpm <= 300.0 {
-                            clock.external_tempo = Some(bpm);
-                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM", bpm);
-                        }
-                    }
-                }
                 clock.last_clock_time = Some(Instant::now());
                 
                 // Send beat event every 24 ticks (once per quarter note)
                 if clock.clock_ticks % 24 == 0 {
+                    // Beat-based tempo detection (more accurate than tick-based)
+                    let now = Instant::now();
+                    
+                    // Add current beat timestamp
+                    clock.beat_timestamps.push(now);
+                    
+                    // Keep only last 8 beats for rolling average (2 measures at 4/4)
+                    if clock.beat_timestamps.len() > 8 {
+                        clock.beat_timestamps.remove(0);
+                    }
+                    
+                    // Calculate tempo from beat intervals (need at least 2 beats)
+                    if clock.beat_timestamps.len() >= 2 {
+                        let first_beat = clock.beat_timestamps[0];
+                        let last_beat = clock.beat_timestamps[clock.beat_timestamps.len() - 1];
+                        let time_span = last_beat.duration_since(first_beat).as_secs_f32();
+                        let beat_count = (clock.beat_timestamps.len() - 1) as f32;
+                        
+                        if time_span > 0.0 {
+                            let beats_per_second = beat_count / time_span;
+                            let bpm = beats_per_second * 60.0; // Convert to BPM
+                            
+                            // Filter out unreasonable tempos
+                            if bpm >= 20.0 && bpm <= 300.0 {
+                                clock.external_tempo = Some(bpm);
+                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (averaged over {} beats)", bpm, beat_count);
+                            }
+                        }
+                    }
+                    
+                    clock.last_beat_time = Some(now);
                     let _ = sender.send(MidiInputEvent::ClockBeat);
                 }
                 
@@ -563,6 +580,8 @@ impl MidiManager {
         let mut clock = self.clock_state.lock().unwrap();
         clock.clock_ticks = 0;
         clock.last_clock_time = None;
+        clock.last_beat_time = None;
+        clock.beat_timestamps.clear();
         clock.external_tempo = None;
         debug!("reset_clock says: Clock state reset");
     }
