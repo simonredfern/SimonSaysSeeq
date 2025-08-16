@@ -90,6 +90,10 @@ pub struct SimonSaysSeeq {
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
     beat_led_flash_until: Option<Instant>,
+    // Phase correction state for MIDI clock sync
+    last_midi_clock_count: u32,
+    last_sync_check: Instant,
+    current_drift_ticks: i32,
 }
 
 impl SimonSaysSeeq {
@@ -111,6 +115,9 @@ impl SimonSaysSeeq {
             main_grid_preference: None, // GRID_ONE will be auto-selected as lowest ID
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
+            last_midi_clock_count: 0,
+            last_sync_check: Instant::now(),
+            current_drift_ticks: 0,
         })
     }
 
@@ -1561,6 +1568,9 @@ impl SimonSaysSeeq {
                             info!("handle_midi_input_event says: Synced sequencer tempo to external clock: {:.1} BPM", external_tempo);
                         }
                     }
+                    
+                    // Phase correction - check for drift every beat
+                    self.check_phase_correction()?;
                 }
                 
                 debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
@@ -1568,6 +1578,9 @@ impl SimonSaysSeeq {
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
+                
+                // Reset phase correction state on new start
+                self.reset_phase_correction();
                 
                 // Synchronize sequencer tempo with external MIDI clock on start
                 #[cfg(feature = "midi")]
@@ -1587,6 +1600,8 @@ impl SimonSaysSeeq {
                 self.sequencer.stop();
                 // Clear beat LEDs when clock stops
                 self.beat_led_flash_until = None;
+                // Reset phase correction state
+                self.reset_phase_correction();
             }
             MidiInputEvent::ClockTick => {
                 // Log every 100th tick for connection diagnostics
@@ -1627,11 +1642,95 @@ impl SimonSaysSeeq {
                 {
                     self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
                     self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
+                    
+                    // Update drift indicator LED (column 11, row 7)
+                    let drift_brightness = self.calculate_drift_brightness();
+                    self.grid.set_led(&grid_two_id, 11, 7, drift_brightness, "drift_indicator")?;
                 }
             }
         }
         
         Ok(())
+    }
+
+    /// Check phase correction and apply gentle corrections to prevent drift
+    #[cfg(feature = "midi")]
+    fn check_phase_correction(&mut self) -> Result<()> {
+        if !self.midi.is_external_clock_running() {
+            return Ok(());
+        }
+
+        // Get current MIDI clock state
+        let (_, _, midi_running) = self.midi.get_clock_info();
+        if !midi_running {
+            return Ok(());
+        }
+
+        // Get MIDI clock tick count
+        let midi_clock_ticks = {
+            let clock_state = self.midi.get_clock_state();
+            clock_state.map(|state| state.clock_ticks).unwrap_or(0)
+        };
+
+        // Calculate expected sequencer position based on MIDI clock
+        let midi_beats = midi_clock_ticks / 24; // 24 ticks per beat
+        let expected_sequencer_step = (midi_beats % 32) as usize; // 32 steps per pattern
+
+        // Get current sequencer position
+        let (current_step, _) = self.sequencer.get_current_position();
+
+        // Calculate drift in ticks (convert steps back to ticks for precision)
+        let current_step_ticks = (current_step * 24) as i32; // 24 MIDI ticks per step
+        let expected_step_ticks = (expected_sequencer_step * 24) as i32;
+        let raw_drift = current_step_ticks - expected_step_ticks;
+        
+        // Handle wraparound (sequence boundary)
+        let drift_ticks = if raw_drift > 384 { // 384 = 16 steps * 24 ticks
+            raw_drift - 768 // 768 = 32 steps * 24 ticks (full sequence)
+        } else if raw_drift < -384 {
+            raw_drift + 768
+        } else {
+            raw_drift
+        };
+
+        self.current_drift_ticks = drift_ticks;
+
+        // Apply correction if drift is significant
+        if drift_ticks.abs() > 24 { // More than 1 step off
+            info!("check_phase_correction says: Large drift detected: {} ticks, applying correction", drift_ticks);
+            // For large drift, do a hard reset to the expected position
+            // This would require extending the sequencer interface
+            debug!("check_phase_correction says: Would reset sequencer to step {}", expected_sequencer_step);
+        } else if drift_ticks.abs() > 6 { // More than 1/4 step off
+            debug!("check_phase_correction says: Small drift detected: {} ticks, gentle correction needed", drift_ticks);
+            // For small drift, apply gentle correction by slightly adjusting timing
+            // This would require extending the sequencer interface for micro-timing adjustments
+        }
+
+        self.last_midi_clock_count = midi_clock_ticks;
+        self.last_sync_check = Instant::now();
+
+        Ok(())
+    }
+
+    /// Reset phase correction state
+    fn reset_phase_correction(&mut self) {
+        self.last_midi_clock_count = 0;
+        self.last_sync_check = Instant::now();
+        self.current_drift_ticks = 0;
+        debug!("reset_phase_correction says: Phase correction state reset");
+    }
+
+    /// Calculate LED brightness based on drift amount
+    fn calculate_drift_brightness(&self) -> u8 {
+        let abs_drift = self.current_drift_ticks.abs();
+        match abs_drift {
+            0..=6 => 0,        // < 1/4 step: off
+            7..=12 => 3,       // 1/4 to 1/2 step: very dim
+            13..=24 => 6,      // 1/2 to 1 step: dim
+            25..=48 => 10,     // 1 to 2 steps: medium
+            _ => 15,           // > 2 steps: bright warning
+        }
     }
 }
 

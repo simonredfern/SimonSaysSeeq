@@ -646,6 +646,15 @@ impl MidiManager {
         (clock.source.clone(), clock.external_tempo, clock.running)
     }
     
+    /// Get clock state for phase correction
+    pub fn get_clock_state(&self) -> Option<ClockState> {
+        if let Ok(clock) = self.clock_state.try_lock() {
+            Some(clock.clone())
+        } else {
+            None
+        }
+    }
+    
     /// Check if external clock has timed out and switch back to internal
     fn check_external_clock_timeout(&self) {
         let mut clock = self.clock_state.lock().unwrap();
