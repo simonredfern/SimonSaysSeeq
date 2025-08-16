@@ -189,7 +189,7 @@ impl ClockGenerator {
                         if tick_count % 24 == 0 {
                             beat_count = beat_count.wrapping_add(1);
                             match beat_count % 4 {
-                                1 => print!("1"), // Beat 1 (downbeat)
+                                1 => print!("\r1"), // Beat 1 (downbeat)
                                 2 => print!("2"), // Beat 2
                                 3 => print!("3"), // Beat 3
                                 0 => print!("4"), // Beat 4
@@ -333,36 +333,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Key::Up => {
                 let new_bpm = generator.get_bpm() + 1.0;
                 generator.set_bpm(new_bpm);
-                print!("\r🎛 BPM: {:.1} (↑+1)    \r", generator.get_bpm());
-                io::stdout().flush()?;
+                println!("\r🎛 BPM: {:.1} (↑+1)", generator.get_bpm());
             }
             Key::Down => {
                 let new_bpm = generator.get_bpm() - 1.0;
                 generator.set_bpm(new_bpm);
-                print!("\r🎛 BPM: {:.1} (↓-1)    \r", generator.get_bpm());
-                io::stdout().flush()?;
+                println!("\r🎛 BPM: {:.1} (↓-1)", generator.get_bpm());
             }
             Key::Right => {
                 let new_bpm = generator.get_bpm() + 5.0;
                 generator.set_bpm(new_bpm);
-                print!("\r🎛 BPM: {:.1} (→+5)    \r", generator.get_bpm());
-                io::stdout().flush()?;
+                println!("\r🎛 BPM: {:.1} (→+5)", generator.get_bpm());
             }
             Key::Left => {
                 let new_bpm = generator.get_bpm() - 5.0;
                 generator.set_bpm(new_bpm);
-                print!("\r🎛 BPM: {:.1} (←-5)    \r", generator.get_bpm());
-                io::stdout().flush()?;
+                println!("\r🎛 BPM: {:.1} (←-5)", generator.get_bpm());
             }
             Key::Char('s') | Key::Char('S') => {
                 if generator.is_running.load(Ordering::Relaxed) {
                     generator.stop()?;
-                    print!("\r🛑 Stopped          \r");
+                    println!("\r🛑 Stopped");
                 } else {
                     generator.start()?;
-                    print!("\r▶️  Started          \r");
+                    println!("\r▶️  Started");
                 }
-                io::stdout().flush()?;
             }
             Key::Char('q') | Key::Char('Q') => {
                 println!("\r\n👋 Exiting...");
