@@ -3073,3 +3073,13 @@ kill 14815 16252 16404 16463
 # 
 # COMPILATION: Successful with warnings only
 # RESULT: Professional phase correction system with real-time visual drift monitoring implemented
+
+## 2025-08-16 14:02:15 Drift Indicator LED Behavior Update
+# CHANGE: Modified drift indication LED brightness thresholds
+# Updated: calculate_drift_brightness() function in src/main.rs
+# CHANGE DETAILS:
+#   - OLD: 0-6 ticks = brightness 0, 7-12 ticks = brightness 3
+#   - NEW: 0 ticks = brightness 0, 1-12 ticks = brightness 3
+# RESULT: More sensitive drift detection - LED lights up with any drift (1+ ticks)
+# RATIONALE: Earlier visual feedback for sync monitoring, better drift awareness
+# STATUS: Code updated successfully, ready for compilation and testing

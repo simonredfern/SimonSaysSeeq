@@ -1725,8 +1725,8 @@ impl SimonSaysSeeq {
     fn calculate_drift_brightness(&self) -> u8 {
         let abs_drift = self.current_drift_ticks.abs();
         match abs_drift {
-            0..=6 => 0,        // < 1/4 step: off
-            7..=12 => 3,       // 1/4 to 1/2 step: very dim
+            0 => 0,            // Perfect sync: off
+            1..=12 => 3,       // 1 tick to 1/2 step: very dim
             13..=24 => 6,      // 1/2 to 1 step: dim
             25..=48 => 10,     // 1 to 2 steps: medium
             _ => 15,           // > 2 steps: bright warning
