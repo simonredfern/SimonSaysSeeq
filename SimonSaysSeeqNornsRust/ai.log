@@ -3165,3 +3165,95 @@ kill 14815 16252 16404 16463
 # EXPECTED RESULT: Sequencer should now detect 121.0 BPM matching clock generator output
 # ACCURACY: Beat-based averaging eliminates individual tick jitter and system timing variations
 # STATUS: Ready for compilation and testing - should resolve 3-5 BPM tempo discrepancy
+
+## 2025-08-16 14:43:00 Tempo Discrepancy Diagnostic Logging
+# ISSUE: Tempo discrepancy persists - clock generator sends 120.0 BPM but sequencer detects 118.1 BPM
+# OBSERVATION: Beat-based averaging still shows 2 BPM error despite improved algorithm
+# HYPOTHESIS: Either clock generator timing drift OR sequencer calculation issue
+# 
+# DIAGNOSTIC LOGGING ADDED:
+#   1. Added detailed tempo calculation logging in handle_midi_input_message:
+#      - Shows exact beat count, time span, and BPM calculation steps
+#      - Compares expected vs actual beat intervals
+#      - Reveals timing accuracy at beat level
+#   2. Added timing accuracy logging in clock generator:
+#      - Measures actual vs expected measure duration (4 beats)
+#      - Calculates timing error for each measure
+#      - Shows if clock generator maintains precise timing
+#
+# PURPOSE: Identify whether discrepancy is in:
+#   - Clock generation timing accuracy (systematic drift)
+#   - MIDI transmission timing (USB/system latency)  
+#   - Sequencer calculation logic (algorithmic error)
+#
+# NEXT STEPS: Run with diagnostic logging to pinpoint root cause
+# STATUS: Enhanced diagnostics ready for tempo discrepancy analysis
+
+## 2025-08-16 14:49:00 Chrono Duration Method Fix
+# ISSUE: Compilation error in clock generator - chrono::DateTime doesn't have duration_since method
+# ERROR: "no method named `duration_since` found for struct `DateTime`"
+# FIX: Changed from duration_since() to signed_duration_since().num_milliseconds() / 1000.0
+# CHANGE: measure_time.duration_since() → measure_time.signed_duration_since().num_milliseconds() as f32 / 1000.0
+# RESULT: Clock generator timing diagnostics should now compile successfully
+# STATUS: Ready for compilation and tempo discrepancy analysis with working diagnostics
+
+## 2025-08-16 14:52:26 MIDI Note Logging Suppression
+# CHANGE: Commented out MIDI note logging messages to focus on clock/tempo diagnostics
+# PURPOSE: Reduce log noise to better observe MIDI clock and tempo detection messages
+# CHANGES MADE:
+#   1. Commented out info!("🎹 MIDI Note ON/OFF: ...") messages in handle_sequencer_event
+#   2. Commented out info!("MIDI Note ON/OFF: ...") messages for MidiEvent handling
+#   3. Both #[cfg(feature = "midi")] and #[cfg(not(feature = "midi"))] variants silenced
+# RESULT: Cleaner log output focused on tempo discrepancy diagnostic messages
+# STATUS: Ready for tempo testing with reduced log noise - clock/tempo messages will be visible
+
+## 2025-08-16 14:55:18 MIDI Module Note Logging Suppression
+# CHANGE: Commented out MIDI note ON/OFF logging messages in midi.rs module
+# PURPOSE: Remove additional MIDI note spam from logs to focus on tempo diagnostics
+# MESSAGES SILENCED:
+#   - info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}")
+#   - info!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}")
+#   - info!("note_off says: MIDI Note OFF: {} ({}), ch: {}")
+#   - info!("note_off says: MIDI Note OFF (no device): {} ch: {}")
+# LOCATIONS: All note_on() and note_off() functions in src/midi.rs
+# RESULT: Complete MIDI note logging suppression - only clock/tempo messages remain
+# STATUS: Log output now clean for tempo discrepancy analysis
+
+## 2025-08-16 14:57:16 Sequencer Trigger Message Suppression
+# CHANGE: Commented out trigger debug message in sequencer.rs
+# PURPOSE: Remove additional sequencer trigger logging noise for cleaner tempo analysis
+# MESSAGE SILENCED:
+#   - debug!("Trigger: row={}, step={}, value={}")
+# LOCATION: src/sequencer.rs line 891 in process_step() function
+# RESULT: Sequencer trigger events no longer spam debug log
+# STATUS: Log output further cleaned - focus on clock/tempo diagnostics only
+
+## 2025-08-16 15:01:45 Drift-Corrected Clock Generator Implementation
+# ISSUE: Clock generator timing drift causing 1.8 BPM error (120 BPM → 118.1 BPM detection)
+# ROOT CAUSE: Cumulative timing errors in relative tick scheduling algorithm
+# PROBLEM ANALYSIS:
+#   - Expected: 2.000s per measure (4 beats at 120 BPM)
+#   - Actual: 2.030-2.057s per measure (consistently 1.5% slow)
+#   - Cause: thread::sleep() overhead + tick scheduling drift + processing delays
+#
+# DRIFT-CORRECTED ALGORITHM IMPLEMENTED:
+#   1. Absolute timing: Calculate target time for each tick from start_time
+#   2. Removed relative timing: No more duration_since(last_tick) comparisons
+#   3. Drift compensation: Compare actual time vs expected tick schedule
+#   4. Adaptive sleep: Sleep until just before next tick time for precision
+#
+# NEW TIMING LOGIC:
+#   - target_time = start_time + (tick_count * tick_interval)
+#   - Send tick when now >= target_time
+#   - Adaptive sleep: sleep for 80% of remaining time, wake early to avoid overshoot
+#   - Behind schedule: minimal microsleep to yield CPU
+#
+# ENHANCED DIAGNOSTICS:
+#   - Shows expected vs actual measure duration
+#   - Displays timing error per measure
+#   - Reports drift correction effectiveness
+#   - Format: "timing: expected 2.000s, actual 2.001s, error 0.001s, drift 0.000s"
+#
+# EXPECTED RESULT: Clock generator should now maintain precise 120.0 BPM
+# SEQUENCER DETECTION: Should now see 120.0 BPM instead of 118.1 BPM
+# STATUS: Drift-corrected clock generator ready for testing - should eliminate tempo discrepancy

@@ -131,9 +131,10 @@ impl ClockGenerator {
         let should_exit = self.should_exit.clone();
 
         thread::spawn(move || {
-            let mut last_tick = Instant::now();
             let mut tick_count = 0u32;
             let mut beat_count = 0u32;
+            let mut last_measure_time: Option<chrono::DateTime<chrono::Utc>> = None;
+            let start_time = Instant::now();
 
             println!("🎵 Clock generation thread started");
 
@@ -169,13 +170,16 @@ impl ClockGenerator {
                 if is_running.load(Ordering::Relaxed) {
                     let current_bpm = *bpm.lock().unwrap();
                     
-                    // Calculate time between MIDI clock ticks
+                    // Drift-corrected timing: calculate absolute target time for each tick
                     // MIDI clock sends 24 ticks per quarter note (24 PPQ)
                     let ticks_per_second = (current_bpm * 24.0) / 60.0;
-                    let tick_interval = Duration::from_secs_f32(1.0 / ticks_per_second);
-
+                    let tick_interval_secs = 1.0 / ticks_per_second;
+                    
+                    // Calculate when this tick should occur (absolute time)
+                    let target_time = start_time + Duration::from_secs_f32(tick_count as f32 * tick_interval_secs);
                     let now = Instant::now();
-                    if now.duration_since(last_tick) >= tick_interval {
+                    
+                    if now >= target_time {
                         // Send MIDI clock tick
                         if let Err(e) = connection.send(&[0xF8]) {
                             eprintln!("Error sending MIDI clock: {}", e);
@@ -183,7 +187,6 @@ impl ClockGenerator {
                         }
 
                         tick_count = tick_count.wrapping_add(1);
-                        last_tick = now;
 
                         // Print visual beat indicator every 24 ticks (1 beat at 24 PPQ)
                         if tick_count % 24 == 0 {
@@ -199,7 +202,33 @@ impl ClockGenerator {
                             // New line every 4 beats (1 measure)
                             if beat_count % 4 == 0 {
                                 let now = chrono::Utc::now();
-                                println!(" | {} {:.1} BPM", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm);
+                                let measure_time = now;
+                                
+                                // Calculate actual timing accuracy with drift correction
+                                if beat_count >= 8 {
+                                    let expected_measure_duration = 240.0 / current_bpm; // 4 beats in seconds
+                                    let actual_duration = measure_time.signed_duration_since(last_measure_time.unwrap_or(measure_time)).num_milliseconds() as f32 / 1000.0;
+                                    let timing_error = actual_duration - expected_measure_duration;
+                                    
+                                    // Calculate drift correction effectiveness
+                                    let ticks_per_second_calc = (current_bpm * 24.0) / 60.0;
+                                    let tick_interval_secs_calc = 1.0 / ticks_per_second_calc;
+                                    let expected_tick_time = start_time + Duration::from_secs_f32(tick_count as f32 * tick_interval_secs_calc);
+                                    let actual_now = Instant::now();
+                                    let drift_correction = if actual_now > expected_tick_time {
+                                        actual_now.duration_since(expected_tick_time).as_millis() as f32 / 1000.0
+                                    } else {
+                                        -(expected_tick_time.duration_since(actual_now).as_millis() as f32 / 1000.0)
+                                    };
+                                    
+                                    println!(" | {} {:.1} BPM (timing: expected {:.3}s, actual {:.3}s, error {:.3}s, drift {:.3}s)", 
+                                             now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, 
+                                             expected_measure_duration, actual_duration, timing_error, drift_correction);
+                                    last_measure_time = Some(measure_time);
+                                } else {
+                                    println!(" | {} {:.1} BPM", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm);
+                                    last_measure_time = Some(measure_time);
+                                }
                             }
                             
                             io::stdout().flush().ok();
@@ -207,8 +236,22 @@ impl ClockGenerator {
                     }
                 }
 
-                // Small sleep to prevent busy waiting
-                thread::sleep(Duration::from_millis(1));
+                // Adaptive sleep based on time until next tick
+                let current_bpm = *bpm.lock().unwrap();
+                let ticks_per_second = (current_bpm * 24.0) / 60.0;
+                let tick_interval_secs = 1.0 / ticks_per_second;
+                let next_tick_time = start_time + Duration::from_secs_f32((tick_count + 1) as f32 * tick_interval_secs);
+                let now = Instant::now();
+                
+                if next_tick_time > now {
+                    let sleep_duration = next_tick_time.duration_since(now);
+                    // Sleep for most of the time, but wake up slightly early to avoid overshooting
+                    let sleep_ms = (sleep_duration.as_millis() as f32 * 0.8).max(0.1) as u64;
+                    thread::sleep(Duration::from_millis(sleep_ms.min(10))); // Cap at 10ms
+                } else {
+                    // We're behind, minimal sleep to yield CPU
+                    thread::sleep(Duration::from_micros(100));
+                }
             }
 
             // Send stop message when exiting

@@ -200,9 +200,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                // info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                info!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                // info!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
@@ -223,7 +223,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            info!("note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            // info!("note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -367,6 +367,14 @@ impl MidiManager {
                             let beats_per_second = beat_count / time_span;
                             let bpm = beats_per_second * 60.0; // Convert to BPM
                             
+                            // Diagnostic logging for tempo calculation
+                            let expected_beat_interval = 60.0 / bpm;
+                            let actual_beat_interval = time_span / beat_count;
+                            debug!("handle_midi_input_message says: Tempo calculation: {} beats over {:.3}s = {:.3} beats/sec = {:.1} BPM", 
+                                   beat_count, time_span, beats_per_second, bpm);
+                            debug!("handle_midi_input_message says: Beat timing: expected {:.3}s/beat, actual {:.3}s/beat, diff {:.3}s", 
+                                   expected_beat_interval, actual_beat_interval, actual_beat_interval - expected_beat_interval);
+                            
                             // Filter out unreasonable tempos
                             if bpm >= 20.0 && bpm <= 300.0 {
                                 clock.external_tempo = Some(bpm);
@@ -436,9 +444,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} OFF", note_name));
                 
-                info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+                // info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
             } else {
-                info!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
+                // info!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
             }
         }
         
@@ -452,7 +460,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF", note_name));
             
-            info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+            // info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())

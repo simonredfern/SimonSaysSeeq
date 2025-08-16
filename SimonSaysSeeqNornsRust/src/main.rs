@@ -422,9 +422,9 @@ impl SimonSaysSeeq {
                             #[cfg(not(feature = "midi"))]
                             {
                                 if note_event.note_on {
-                                    info!("🎹 MIDI Note ON: {} vel:{} ch:{}", note_event.note, note_event.velocity, note_event.channel);
+                                    // info!("🎹 MIDI Note ON: {} vel:{} ch:{}", note_event.note, note_event.velocity, note_event.channel);
                                 } else {
-                                    info!("🎹 MIDI Note OFF: {} ch:{}", note_event.note, note_event.channel);
+                                    // info!("🎹 MIDI Note OFF: {} ch:{}", note_event.note, note_event.channel);
                                 }
                             }
                         }
@@ -456,12 +456,12 @@ impl SimonSaysSeeq {
                 {
                     if midi_event.note_on {
                         self.midi.note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
-                        info!("MIDI Note ON: {} vel:{} ch:{} step:{}",
-                              midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                        // info!("MIDI Note ON: {} vel:{} ch:{} step:{}",
+                        //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
                     } else {
                         self.midi.note_off(midi_event.note, midi_event.channel)?;
-                        info!("MIDI Note OFF: {} ch:{} step:{}",
-                              midi_event.note, midi_event.channel, midi_event.step);
+                        // info!("MIDI Note OFF: {} ch:{} step:{}",
+                        //       midi_event.note, midi_event.channel, midi_event.step);
                     }
                 }
                 #[cfg(not(feature = "midi"))]

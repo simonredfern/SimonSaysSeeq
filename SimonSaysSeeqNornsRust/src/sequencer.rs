@@ -888,7 +888,7 @@ impl Sequencer {
 
                     if grid_value > 0 {
                         // This step is active - send MIDI note
-                        debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
+                        // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
                         // Send MIDI note ON event for this row
                         if let Some(row_state) = state.row_states.get(row_idx) {
