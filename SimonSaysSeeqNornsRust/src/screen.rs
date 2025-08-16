@@ -401,8 +401,8 @@ impl ScreenManager {
         // Background
         self.draw_rect(bar_x, bar_y, bar_width, bar_height);
         
-        // Fill based on tempo (20-200 BPM range)
-        let tempo_normalized = ((tempo - 20.0) / 180.0).clamp(0.0, 1.0);
+        // Fill based on tempo (20-300 BPM range)
+        let tempo_normalized = ((tempo - 20.0) / 280.0).clamp(0.0, 1.0);
         let fill_width = (bar_width as f32 * tempo_normalized) as usize;
         
         if fill_width > 0 {

@@ -404,7 +404,7 @@ impl Sequencer {
     /// Set tempo
     pub fn set_tempo(&self, tempo: f32) {
         let mut state = self.state.lock().unwrap();
-        state.tempo = tempo.clamp(20.0, 200.0);
+        state.tempo = tempo.clamp(20.0, 300.0);
         debug!("set_tempo says: Tempo set to: {:.1} BPM", state.tempo);
     }
 
@@ -1638,9 +1638,9 @@ mod tests {
 
         // Test clamping
         drop(state);
-        sequencer.set_tempo(300.0);
+        sequencer.set_tempo(350.0);
         let state = sequencer.state.lock().unwrap();
-        assert_eq!(state.tempo, 200.0); // Should be clamped to max
+        assert_eq!(state.tempo, 300.0); // Should be clamped to max
     }
 
     #[test]

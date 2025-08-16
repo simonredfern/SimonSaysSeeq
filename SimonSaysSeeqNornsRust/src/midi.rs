@@ -349,7 +349,7 @@ impl MidiManager {
                         let bpm = ticks_per_minute / 24.0;
                         
                         // Filter out unreasonable tempos
-                        if bpm >= 60.0 && bpm <= 300.0 {
+                        if bpm >= 20.0 && bpm <= 300.0 {
                             clock.external_tempo = Some(bpm);
                             debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM", bpm);
                         }
