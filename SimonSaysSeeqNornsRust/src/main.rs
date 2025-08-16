@@ -1633,8 +1633,35 @@ impl SimonSaysSeeq {
                     }
                 }
             }
-            _ => {
-                // Handle other MIDI events if needed
+            MidiInputEvent::ExternalClockTimeout => {
+                // External MIDI clock timed out - preserve the last known external tempo
+                #[cfg(feature = "midi")]
+                {
+                    if let Some(last_external_tempo) = self.midi.get_external_tempo() {
+                        self.sequencer.set_tempo(last_external_tempo);
+                        self.tempo = last_external_tempo; // Keep main tempo in sync
+                        let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                        info!("handle_midi_input_event says: External clock timeout - preserving last tempo: {:.1} BPM{}", last_external_tempo, snap_suffix);
+                    } else {
+                        info!("handle_midi_input_event says: External clock timeout - no previous external tempo to preserve");
+                    }
+                }
+            }
+            MidiInputEvent::NoteOn { .. } => {
+                // Note On events - currently not handled in main app
+                // Could be used for MIDI input recording in future
+            }
+            MidiInputEvent::NoteOff { .. } => {
+                // Note Off events - currently not handled in main app
+                // Could be used for MIDI input recording in future
+            }
+            MidiInputEvent::ControlChange { .. } => {
+                // Control Change events - currently not handled in main app
+                // Could be used for MIDI CC mapping in future
+            }
+            MidiInputEvent::ClockContinue => {
+                // MIDI Clock Continue - currently not handled
+                // Similar to ClockStart but resumes from current position
             }
         }
         

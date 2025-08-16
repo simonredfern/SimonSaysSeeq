@@ -33,10 +33,11 @@ pub enum MidiInputEvent {
     ClockStart,
     ClockStop,
     ClockContinue,
+    ExternalClockTimeout,
 }
 
 /// External clock sync state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ClockSource {
     Internal,
     MidiExternal,
@@ -87,6 +88,8 @@ pub struct MidiManager {
     clock_state: Arc<Mutex<ClockState>>,
     /// Snap to whole number tempo setting
     snap_to_whole_tempo: Arc<Mutex<bool>>,
+    /// Previous clock source to detect transitions
+    previous_clock_source: Arc<Mutex<ClockSource>>,
 }
 
 impl MidiManager {
@@ -107,6 +110,7 @@ impl MidiManager {
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
             snap_to_whole_tempo: Arc::new(Mutex::new(true)), // Default ON
+            previous_clock_source: Arc::new(Mutex::new(ClockSource::Internal)),
         };
         
         #[cfg(feature = "midi")]
@@ -354,8 +358,8 @@ impl MidiManager {
                     // Add current beat timestamp
                     clock.beat_timestamps.push(now);
                     
-                    // Keep only last 8 beats for rolling average (2 measures at 4/4)
-                    if clock.beat_timestamps.len() > 8 {
+                    // Keep only last 16 beats for rolling average (4 measures at 4/4)
+                    if clock.beat_timestamps.len() > 16 {
                         clock.beat_timestamps.remove(0);
                     }
                     
@@ -590,6 +594,11 @@ impl MidiManager {
         // Check for external clock timeout (5 seconds without activity)
         self.check_external_clock_timeout();
         
+        // Check for clock source transitions
+        if let Some(transition_event) = self.check_clock_source_transition() {
+            events.push(transition_event);
+        }
+        
         if let Some(ref receiver) = self.input_receiver {
             while let Ok(event) = receiver.try_recv() {
                 events.push(event);
@@ -705,10 +714,16 @@ impl MidiManager {
         if matches!(clock.source, ClockSource::MidiExternal) {
             if let Some(last_activity) = clock.last_external_activity {
                 if last_activity.elapsed() > Duration::from_secs(5) {
+                    // Preserve the last external tempo when switching to internal clock
+                    let last_external_tempo = clock.external_tempo;
                     clock.source = ClockSource::Internal;
                     clock.running = false;
-                    clock.external_tempo = None;
-                    info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
+                    // Keep external_tempo available so sequencer can maintain the last known tempo
+                    if let Some(tempo) = last_external_tempo {
+                        info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock, preserving tempo {:.1} BPM", tempo);
+                    } else {
+                        info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
+                    }
                 }
             }
         }
@@ -723,6 +738,34 @@ impl MidiManager {
     /// Get snap to whole tempo preference
     pub fn get_snap_to_whole_tempo(&self) -> bool {
         *self.snap_to_whole_tempo.lock().unwrap()
+    }
+    
+    /// Check for clock source transitions and generate appropriate events
+    fn check_clock_source_transition(&self) -> Option<MidiInputEvent> {
+        let current_source = {
+            let clock = self.clock_state.lock().unwrap();
+            clock.source.clone()
+        };
+        
+        let mut previous_source = self.previous_clock_source.lock().unwrap();
+        
+        if *previous_source != current_source {
+            // Clock source has changed
+            let transition_event = match (&*previous_source, &current_source) {
+                (ClockSource::MidiExternal, ClockSource::Internal) => {
+                    // External to internal transition - preserve last external tempo
+                    Some(MidiInputEvent::ExternalClockTimeout)
+                }
+                _ => None
+            };
+            
+            // Update previous source
+            *previous_source = current_source;
+            
+            transition_event
+        } else {
+            None
+        }
     }
 }
 

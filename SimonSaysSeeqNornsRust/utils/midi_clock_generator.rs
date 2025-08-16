@@ -18,6 +18,7 @@ pub enum ClockCommand {
     Start,
     Stop,
     SetBpm(f32),
+    ToggleTestMode,
     Exit,
 }
 
@@ -27,6 +28,7 @@ pub struct ClockGenerator {
     is_running: Arc<AtomicBool>,
     should_exit: Arc<AtomicBool>,
     command_sender: Option<Sender<ClockCommand>>,
+    test_mode: Arc<AtomicBool>,
 }
 
 impl ClockGenerator {
@@ -36,6 +38,7 @@ impl ClockGenerator {
             is_running: Arc::new(AtomicBool::new(false)),
             should_exit: Arc::new(AtomicBool::new(false)),
             command_sender: None,
+            test_mode: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -129,12 +132,14 @@ impl ClockGenerator {
         let bpm = self.bpm.clone();
         let is_running = self.is_running.clone();
         let should_exit = self.should_exit.clone();
+        let test_mode = self.test_mode.clone();
 
         thread::spawn(move || {
             let mut tick_count = 0u32;
             let mut beat_count = 0u32;
             let mut last_measure_time: Option<chrono::DateTime<chrono::Utc>> = None;
             let start_time = Instant::now();
+            let mut test_start_time = Instant::now();
 
             println!("🎵 Clock generation thread started");
 
@@ -161,6 +166,16 @@ impl ClockGenerator {
                         ClockCommand::SetBpm(_) => {
                             // BPM is already updated in the shared state
                         }
+                        ClockCommand::ToggleTestMode => {
+                            let new_test_mode = !test_mode.load(Ordering::Relaxed);
+                            test_mode.store(new_test_mode, Ordering::Relaxed);
+                            if new_test_mode {
+                                println!("🧪 Test mode enabled: Stepped tempo changes (120→125→121→140→130→122→110, 100s cycle)");
+                                test_start_time = Instant::now();
+                            } else {
+                                println!("🧪 Test mode disabled");
+                            }
+                        }
                         ClockCommand::Exit => {
                             should_exit.store(true, Ordering::Relaxed);
                             break;
@@ -168,7 +183,36 @@ impl ClockGenerator {
                     }
                 }
                 if is_running.load(Ordering::Relaxed) {
-                    let current_bpm = *bpm.lock().unwrap();
+                    let mut current_bpm = *bpm.lock().unwrap();
+                    
+                    // Test mode: discrete tempo changes at realistic intervals
+                    if test_mode.load(Ordering::Relaxed) {
+                        let elapsed_secs = test_start_time.elapsed().as_secs_f32();
+                        
+                        // Test sequence: 120→125→121→140→130→122→110 (then repeat)
+                        // Total cycle: 10+10+10+10+20+20+20 = 100 seconds
+                        let cycle_duration = 100.0;
+                        let cycle_position = elapsed_secs % cycle_duration;
+                        
+                        current_bpm = if cycle_position < 10.0 {
+                            120.0  // 0-10s: 120 BPM
+                        } else if cycle_position < 20.0 {
+                            125.0  // 10-20s: 125 BPM
+                        } else if cycle_position < 30.0 {
+                            121.0  // 20-30s: 121 BPM
+                        } else if cycle_position < 40.0 {
+                            140.0  // 30-40s: 140 BPM
+                        } else if cycle_position < 60.0 {
+                            130.0  // 40-60s: 130 BPM
+                        } else if cycle_position < 80.0 {
+                            122.0  // 60-80s: 122 BPM
+                        } else {
+                            110.0  // 80-100s: 110 BPM
+                        };
+                        
+                        // Update the shared BPM state so it's visible in status
+                        *bpm.lock().unwrap() = current_bpm;
+                    }
                     
                     // Drift-corrected timing: calculate absolute target time for each tick
                     // MIDI clock sends 24 ticks per quarter note (24 PPQ)
@@ -221,12 +265,14 @@ impl ClockGenerator {
                                         -(expected_tick_time.duration_since(actual_now).as_millis() as f32 / 1000.0)
                                     };
                                     
-                                    println!(" | {} {:.1} BPM (timing: expected {:.3}s, actual {:.3}s, error {:.3}s, drift {:.3}s)", 
-                                             now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, 
+                                    let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST MODE]" } else { "" };
+                                    println!(" | {} {:.1} BPM{} (timing: expected {:.3}s, actual {:.3}s, error {:.3}s, drift {:.3}s)", 
+                                             now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix,
                                              expected_measure_duration, actual_duration, timing_error, drift_correction);
                                     last_measure_time = Some(measure_time);
                                 } else {
-                                    println!(" | {} {:.1} BPM", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm);
+                                    let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST MODE]" } else { "" };
+                                    println!(" | {} {:.1} BPM{}", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix);
                                     last_measure_time = Some(measure_time);
                                 }
                             }
@@ -273,6 +319,7 @@ fn show_help() {
     println!("  ↓ (Down Arrow) - Decrease BPM by 1");
     println!("  → (Right Arrow) - Increase BPM by 5");
     println!("  ← (Left Arrow) - Decrease BPM by 5");
+    println!("  t             - Toggle test mode (stepped tempo: 120→125→121→140→130→122→110)");
     println!("  <number>      - Set specific BPM (e.g., '140')");
     println!("  status        - Show current status");
     println!("  q, quit, exit - Quit program");
@@ -368,7 +415,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _stdout = io::stdout().into_raw_mode()?;
     let stdin = io::stdin();
     
-    println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 'q' to quit\r");
+    println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 't' for test mode, 'q' to quit\r");
     
     // Main input loop with arrow key support
     for key in stdin.keys() {
@@ -406,10 +453,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("\r\n👋 Exiting...");
                 break;
             }
+            Key::Char('t') | Key::Char('T') => {
+                if let Some(ref sender) = generator.command_sender {
+                    let _ = sender.send(ClockCommand::ToggleTestMode);
+                }
+            }
             Key::Char('h') | Key::Char('H') => {
                 println!("\r\n");
                 show_help();
-                println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 'q' to quit\r");
+                println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 't' for test mode, 'q' to quit\r");
             }
             _ => {
                 // Ignore other keys
