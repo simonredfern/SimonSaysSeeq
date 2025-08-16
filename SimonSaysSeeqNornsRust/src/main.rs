@@ -628,7 +628,7 @@ impl SimonSaysSeeq {
                                 let brightness = match x {
                                     10 => {
                                         // Snap tempo button - show state (ON/OFF)
-                                        if self.snap_to_whole_tempo { 8 } else { 2 }
+                                        if self.snap_to_whole_tempo { 8 } else { 0 }
                                     }
                                     12 | 13 => 0, // Transport buttons always turn off
                                     14 | 15 => {
@@ -1580,7 +1580,8 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock: {:.1} BPM", external_tempo);
+                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock: {:.1} BPM{}", external_tempo, snap_suffix);
                         }
                     }
                     
@@ -1606,7 +1607,8 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock on start: {:.1} BPM", external_tempo);
+                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock on start: {:.1} BPM{}", external_tempo, snap_suffix);
                         }
                     }
                 }
@@ -1660,7 +1662,7 @@ impl SimonSaysSeeq {
                     self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
                     
                     // Update snap tempo button LED (column 10, row 7)
-                    let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 2 };
+                    let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 0 };
                     self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
                     
                     // Update drift indicator LED (column 11, row 7)

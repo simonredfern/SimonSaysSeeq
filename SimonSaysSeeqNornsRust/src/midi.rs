@@ -564,7 +564,11 @@ impl MidiManager {
         if let Some(tempo) = clock.external_tempo {
             let snap_enabled = *self.snap_to_whole_tempo.lock().unwrap();
             if snap_enabled {
-                Some(tempo.round())
+                let snapped_tempo = tempo.round();
+                if (snapped_tempo - tempo).abs() > 0.01 {
+                    debug!("get_external_tempo says: Snapping {:.1} BPM to {:.1} BPM", tempo, snapped_tempo);
+                }
+                Some(snapped_tempo)
             } else {
                 Some(tempo)
             }

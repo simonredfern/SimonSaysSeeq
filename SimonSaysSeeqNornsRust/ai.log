@@ -3313,7 +3313,35 @@ kill 14815 16252 16404 16463
 #   2. Moved set_snap_to_whole_tempo() and get_snap_to_whole_tempo() to proper impl block level
 #   3. Corrected indentation to match other methods in impl MidiManager block
 # RESULT: Methods now properly positioned as impl MidiManager methods
-# STATUS: Method structure corrected, compilation should now succeed
+# RESULT: Method structure corrected, compilation should now succeed
+
+## 2025-08-16 15:23:38 Snap Tempo Logging and LED Brightness Fixes
+# ISSUE 1: Logging discrepancy between detected tempo (120.1) and displayed tempo (120.0)
+# ISSUE 2: Snap tempo LED brightness bug - OFF state showed dim (brightness 2) instead of off (0)
+# REQUIREMENTS: Always log honest detected tempo, indicate when snapping applied
+#
+# FIXES APPLIED:
+#   1. HONEST TEMPO LOGGING:
+#      - Modified get_external_tempo() to show snap conversion with debug message
+#      - Added snap indication to tempo sync messages: "120.0 BPM (snapped)"
+#      - Original detected tempo always logged first, then snap conversion shown
+#
+#   2. LED BRIGHTNESS CORRECTION:
+#      - Fixed snap tempo button LED: OFF state now brightness 0 (was 2)
+#      - Applied fix in both button release handler and beat LED update
+#      - ON state: brightness 8, OFF state: brightness 0
+#
+#   3. ENHANCED TEMPO SYNC LOGGING:
+#      - Added "(snapped)" suffix to tempo sync messages when snap is enabled
+#      - Applied to both ClockBeat and ClockStart tempo synchronization
+#      - Shows clear indication when displayed tempo differs from detected tempo
+#
+# EXPECTED LOG OUTPUT:
+#   - Detected: "External tempo detected: 120.1 BPM (averaged over 7 beats)"
+#   - Snapped: "Snapping 120.1 BPM to 120.0 BPM"
+#   - Applied: "Synced sequencer tempo to external clock: 120.0 BPM (snapped)"
+#
+# STATUS: Honest tempo logging implemented, LED brightness corrected
 
 ## 2025-08-16 15:16:14 Syntax Error Fix in midi.rs
 # ISSUE: Compilation error due to unclosed delimiter in midi.rs
