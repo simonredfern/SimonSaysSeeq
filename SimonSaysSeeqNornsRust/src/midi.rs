@@ -708,17 +708,17 @@ impl MidiManager {
                 }
             }
         }
-        
-        /// Set snap to whole tempo preference
-        pub fn set_snap_to_whole_tempo(&self, enabled: bool) {
-            *self.snap_to_whole_tempo.lock().unwrap() = enabled;
-            debug!("set_snap_to_whole_tempo says: Snap to whole tempo {}", if enabled { "enabled" } else { "disabled" });
-        }
+    }
+    
+    /// Set snap to whole tempo preference
+    pub fn set_snap_to_whole_tempo(&self, enabled: bool) {
+        *self.snap_to_whole_tempo.lock().unwrap() = enabled;
+        debug!("set_snap_to_whole_tempo says: Snap to whole tempo {}", if enabled { "enabled" } else { "disabled" });
+    }
 
-        /// Get snap to whole tempo preference
-        pub fn get_snap_to_whole_tempo(&self) -> bool {
-            *self.snap_to_whole_tempo.lock().unwrap()
-        }
+    /// Get snap to whole tempo preference
+    pub fn get_snap_to_whole_tempo(&self) -> bool {
+        *self.snap_to_whole_tempo.lock().unwrap()
     }
 }
 
