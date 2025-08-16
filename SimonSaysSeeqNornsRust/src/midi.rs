@@ -54,6 +54,8 @@ pub struct ClockState {
     pub beat_timestamps: Vec<Instant>,
     pub running: bool,
     pub last_external_activity: Option<Instant>,
+    pub last_tempo_update: Option<Instant>,
+    pub previous_tempo: Option<f32>,
 }
 
 impl Default for ClockState {
@@ -67,6 +69,8 @@ impl Default for ClockState {
             beat_timestamps: Vec::new(),
             running: false,
             last_external_activity: None,
+            last_tempo_update: None,
+            previous_tempo: None,
         }
     }
 }
@@ -358,13 +362,31 @@ impl MidiManager {
                     // Add current beat timestamp
                     clock.beat_timestamps.push(now);
                     
-                    // Keep only last 16 beats for rolling average (4 measures at 4/4)
-                    if clock.beat_timestamps.len() > 16 {
+                    // Keep only last 6 beats for rolling average (faster response to tempo changes)
+                    if clock.beat_timestamps.len() > 6 {
                         clock.beat_timestamps.remove(0);
                     }
                     
-                    // Calculate tempo from beat intervals (need at least 2 beats)
-                    if clock.beat_timestamps.len() >= 2 {
+                    // Reset averaging window if significant tempo change detected
+                    if let Some(prev_tempo) = clock.external_tempo {
+                        // Quick check with last 3 beats to detect tempo changes
+                        if clock.beat_timestamps.len() >= 3 {
+                            let recent_beats = &clock.beat_timestamps[clock.beat_timestamps.len()-3..];
+                            let recent_span = recent_beats[2].duration_since(recent_beats[0]).as_secs_f32();
+                            let recent_bpm = (2.0 / recent_span) * 60.0;
+                            
+                            // If recent tempo differs significantly from previous, reset window
+                            if (recent_bpm - prev_tempo).abs() > 5.0 {
+                                debug!("handle_midi_input_message says: Tempo change detected ({:.1} -> {:.1} BPM), resetting averaging window", prev_tempo, recent_bpm);
+                                clock.beat_timestamps.clear();
+                                clock.beat_timestamps.push(now);
+                                return; // Skip this beat's calculation to let window rebuild
+                            }
+                        }
+                    }
+                    
+                    // Calculate tempo from beat intervals (need at least 3 beats for stability)
+                    if clock.beat_timestamps.len() >= 3 {
                         let first_beat = clock.beat_timestamps[0];
                         let last_beat = clock.beat_timestamps[clock.beat_timestamps.len() - 1];
                         let time_span = last_beat.duration_since(first_beat).as_secs_f32();
@@ -374,6 +396,14 @@ impl MidiManager {
                             let beats_per_second = beat_count / time_span;
                             let bpm = beats_per_second * 60.0; // Convert to BPM
                             
+                            // Tempo stability validation - reject readings that differ too much from recent history
+                            let is_stable = if let Some(prev_tempo) = clock.external_tempo {
+                                let tempo_change = (bpm - prev_tempo).abs();
+                                tempo_change <= 30.0 // Reject readings >30 BPM different from previous
+                            } else {
+                                true // First reading, accept it
+                            };
+                            
                             // Diagnostic logging for tempo calculation
                             let expected_beat_interval = 60.0 / bpm;
                             let actual_beat_interval = time_span / beat_count;
@@ -382,10 +412,13 @@ impl MidiManager {
                             debug!("handle_midi_input_message says: Beat timing: expected {:.3}s/beat, actual {:.3}s/beat, diff {:.3}s", 
                                    expected_beat_interval, actual_beat_interval, actual_beat_interval - expected_beat_interval);
                             
-                            // Filter out unreasonable tempos
-                            if bpm >= 20.0 && bpm <= 300.0 {
+                            // Filter out unreasonable tempos and unstable readings
+                            if bpm >= 20.0 && bpm <= 300.0 && is_stable {
                                 clock.external_tempo = Some(bpm);
                                 debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (averaged over {} beats)", bpm, beat_count);
+                            } else if !is_stable {
+                                debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (too different from previous {:.1} BPM)", 
+                                       bpm, clock.external_tempo.unwrap_or(0.0));
                             }
                         }
                     }
@@ -562,20 +595,52 @@ impl MidiManager {
         clock.source.clone()
     }
     
-    /// Get external tempo (if available)
+    /// Get external tempo (if available) with rate limiting
     pub fn get_external_tempo(&self) -> Option<f32> {
-        let clock = self.clock_state.lock().unwrap();
-        if let Some(tempo) = clock.external_tempo {
-            let snap_enabled = *self.snap_to_whole_tempo.lock().unwrap();
-            if snap_enabled {
-                let snapped_tempo = tempo.round();
-                if (snapped_tempo - tempo).abs() > 0.01 {
-                    debug!("get_external_tempo says: Snapping {:.1} BPM to {:.1} BPM", tempo, snapped_tempo);
+        let mut clock = self.clock_state.lock().unwrap();
+        if let Some(raw_tempo) = clock.external_tempo {
+            let now = Instant::now();
+            
+            // Apply rate limiting: max ±2 BPM per second
+            let rate_limited_tempo = if let (Some(prev_tempo), Some(last_update)) = 
+                (clock.previous_tempo, clock.last_tempo_update) {
+                
+                let time_delta = now.duration_since(last_update).as_secs_f32();
+                let max_change = 2.0 * time_delta; // 2 BPM per second max
+                let tempo_change = raw_tempo - prev_tempo;
+                
+                if tempo_change.abs() > max_change {
+                    // Limit the change to maximum allowed
+                    let limited_change = if tempo_change > 0.0 { max_change } else { -max_change };
+                    let limited_tempo = prev_tempo + limited_change;
+                    debug!("get_external_tempo says: Rate limiting {:.1} BPM change to {:.1} BPM (max {:.1} BPM/s)", 
+                           tempo_change, limited_change, 2.0);
+                    limited_tempo
+                } else {
+                    raw_tempo
                 }
-                Some(snapped_tempo)
             } else {
-                Some(tempo)
-            }
+                // First tempo reading, no rate limiting needed
+                raw_tempo
+            };
+            
+            // Update tracking for next rate limiting calculation
+            clock.previous_tempo = Some(rate_limited_tempo);
+            clock.last_tempo_update = Some(now);
+            
+            // Apply snapping if enabled
+            let snap_enabled = *self.snap_to_whole_tempo.lock().unwrap();
+            let final_tempo = if snap_enabled {
+                let snapped_tempo = rate_limited_tempo.round();
+                if (snapped_tempo - rate_limited_tempo).abs() > 0.01 {
+                    debug!("get_external_tempo says: Snapping {:.1} BPM to {:.1} BPM", rate_limited_tempo, snapped_tempo);
+                }
+                snapped_tempo
+            } else {
+                rate_limited_tempo
+            };
+            
+            Some(final_tempo)
         } else {
             None
         }
@@ -616,6 +681,8 @@ impl MidiManager {
         clock.last_beat_time = None;
         clock.beat_timestamps.clear();
         clock.external_tempo = None;
+        clock.last_tempo_update = None;
+        clock.previous_tempo = None;
         debug!("reset_clock says: Clock state reset");
     }
     

@@ -59,23 +59,28 @@ impl ClockGenerator {
             }
         }
 
-        // Auto-select first port or let user choose
+        // Port selection with default to 0
         let selected_port = if out_ports.len() == 1 {
             println!("Auto-selecting port 0");
             &out_ports[0]
         } else {
-            print!("Select MIDI output port (0-{}): ", out_ports.len() - 1);
+            print!("Select MIDI output port (default 0): ");
             io::stdout().flush()?;
             
             let mut input = String::new();
             io::stdin().read_line(&mut input)?;
-            let port_idx: usize = input.trim().parse().unwrap_or(0);
+            let port_idx: usize = if input.trim().is_empty() {
+                0 // Default to port 0
+            } else {
+                input.trim().parse().unwrap_or(0)
+            };
             
             if port_idx >= out_ports.len() {
-                return Err("Invalid port selection".into());
+                println!("Invalid port selection, defaulting to port 0");
+                &out_ports[0]
+            } else {
+                &out_ports[port_idx]
             }
-            
-            &out_ports[port_idx]
         };
 
         let port_name = midi_out.port_name(selected_port)?;
@@ -170,7 +175,9 @@ impl ClockGenerator {
                             let new_test_mode = !test_mode.load(Ordering::Relaxed);
                             test_mode.store(new_test_mode, Ordering::Relaxed);
                             if new_test_mode {
-                                println!("🧪 Test mode enabled: Stepped tempo changes (120→125→121→140→130→122→110, 100s cycle)");
+                                println!("🧪 Test mode enabled: Stepped tempo changes with stop/start cycles (120→125→121→140→130→122→110, 120s cycle)");
+                                println!("🧪 Auto-starting clock for test mode");
+                                is_running.store(true, Ordering::Relaxed);
                                 test_start_time = Instant::now();
                             } else {
                                 println!("🧪 Test mode disabled");
@@ -185,33 +192,56 @@ impl ClockGenerator {
                 if is_running.load(Ordering::Relaxed) {
                     let mut current_bpm = *bpm.lock().unwrap();
                     
-                    // Test mode: discrete tempo changes at realistic intervals
+                    // Test mode: discrete tempo changes with stop/start cycles
                     if test_mode.load(Ordering::Relaxed) {
                         let elapsed_secs = test_start_time.elapsed().as_secs_f32();
                         
-                        // Test sequence: 120→125→121→140→130→122→110 (then repeat)
-                        // Total cycle: 10+10+10+10+20+20+20 = 100 seconds
-                        let cycle_duration = 100.0;
+                        // Extended test sequence with stop/start cycles
+                        // Total cycle: 10+10+10+10+20+20+20+10+10 = 120 seconds
+                        let cycle_duration = 120.0;
                         let cycle_position = elapsed_secs % cycle_duration;
                         
-                        current_bpm = if cycle_position < 10.0 {
-                            120.0  // 0-10s: 120 BPM
-                        } else if cycle_position < 20.0 {
-                            125.0  // 10-20s: 125 BPM
-                        } else if cycle_position < 30.0 {
-                            121.0  // 20-30s: 121 BPM
-                        } else if cycle_position < 40.0 {
-                            140.0  // 30-40s: 140 BPM
-                        } else if cycle_position < 60.0 {
-                            130.0  // 40-60s: 130 BPM
-                        } else if cycle_position < 80.0 {
-                            122.0  // 60-80s: 122 BPM
+                        // Check if we should be stopped (stop for 10s at end of tempo sequence, then restart for 10s)
+                        let should_run = if cycle_position >= 100.0 && cycle_position < 110.0 {
+                            // 100-110s: Stop clock for 10 seconds
+                            if is_running.load(Ordering::Relaxed) {
+                                is_running.store(false, Ordering::Relaxed);
+                                println!("🧪 Test mode: Stopping clock for 10 seconds");
+                            }
+                            false
+                        } else if cycle_position >= 110.0 && cycle_position < 120.0 {
+                            // 110-120s: Restart clock for 10 seconds before next cycle
+                            if !is_running.load(Ordering::Relaxed) {
+                                is_running.store(true, Ordering::Relaxed);
+                                println!("🧪 Test mode: Restarting clock for next cycle");
+                            }
+                            true
                         } else {
-                            110.0  // 80-100s: 110 BPM
+                            true
                         };
                         
-                        // Update the shared BPM state so it's visible in status
-                        *bpm.lock().unwrap() = current_bpm;
+                        if should_run {
+                            current_bpm = if cycle_position < 10.0 {
+                                120.0  // 0-10s: 120 BPM
+                            } else if cycle_position < 20.0 {
+                                125.0  // 10-20s: 125 BPM
+                            } else if cycle_position < 30.0 {
+                                121.0  // 20-30s: 121 BPM
+                            } else if cycle_position < 40.0 {
+                                140.0  // 30-40s: 140 BPM
+                            } else if cycle_position < 60.0 {
+                                130.0  // 40-60s: 130 BPM
+                            } else if cycle_position < 80.0 {
+                                122.0  // 60-80s: 122 BPM
+                            } else if cycle_position < 100.0 {
+                                110.0  // 80-100s: 110 BPM
+                            } else {
+                                current_bpm  // During stop/restart period, maintain current BPM
+                            };
+                            
+                            // Update the shared BPM state so it's visible in status
+                            *bpm.lock().unwrap() = current_bpm;
+                        }
                     }
                     
                     // Drift-corrected timing: calculate absolute target time for each tick
@@ -314,16 +344,14 @@ impl ClockGenerator {
 /// Display help information
 fn show_help() {
     println!("Commands:");
-    println!("  s, start      - Start/stop clock");
+    println!("  s             - Start/stop clock");
     println!("  ↑ (Up Arrow) - Increase BPM by 1");
     println!("  ↓ (Down Arrow) - Decrease BPM by 1");
     println!("  → (Right Arrow) - Increase BPM by 5");
     println!("  ← (Left Arrow) - Decrease BPM by 5");
-    println!("  t             - Toggle test mode (stepped tempo: 120→125→121→140→130→122→110)");
-    println!("  <number>      - Set specific BPM (e.g., '140')");
-    println!("  status        - Show current status");
-    println!("  q, quit, exit - Quit program");
-    println!("  h, help       - Show this help");
+    println!("  t             - Toggle test mode (stepped tempo + stop/start: 120→125→121→140→130→122→110)");
+    println!("  q             - Quit program");
+    println!("  h             - Show this help");
 }
 
 /// Handle user input commands
@@ -384,20 +412,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🎵 MIDI Clock Generator");
     println!("======================");
 
-    // Get initial BPM from user or use default
-    print!("Enter BPM (default 120): ");
-    io::stdout().flush()?;
-    
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    let bpm = input.trim().parse::<f32>().unwrap_or(120.0);
-
-    let mut generator = ClockGenerator::new(bpm);
+    // Start with default 120 BPM - no user input needed
+    let mut generator = ClockGenerator::new(120.0);
     
     // Connect to MIDI output
     let connection = generator.connect_midi_output()?;
     
     println!("✅ MIDI Clock Generator initialized at {:.1} BPM", generator.get_bpm());
+    println!("🚀 Auto-starting clock");
+    generator.start()?;
     show_help();
     println!();
 
@@ -415,7 +438,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _stdout = io::stdout().into_raw_mode()?;
     let stdin = io::stdin();
     
-    println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 't' for test mode, 'q' to quit\r");
+    println!("🎛 Use arrow keys for BPM, 's' start/stop, 't' test mode, 'q' quit\r");
     
     // Main input loop with arrow key support
     for key in stdin.keys() {
@@ -461,7 +484,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Key::Char('h') | Key::Char('H') => {
                 println!("\r\n");
                 show_help();
-                println!("🎛 Use arrow keys for BPM control, 's' to start/stop, 't' for test mode, 'q' to quit\r");
+                println!("🎛 Use arrow keys for BPM, 's' start/stop, 't' test mode, 'q' quit\r");
             }
             _ => {
                 // Ignore other keys
