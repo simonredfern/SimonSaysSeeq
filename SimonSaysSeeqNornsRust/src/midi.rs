@@ -358,6 +358,8 @@ impl MidiManager {
                 if clock.clock_ticks % 24 == 0 {
                     // Beat-based tempo detection (more accurate than tick-based)
                     let now = Instant::now();
+                    debug!("handle_midi_input_message says: BEAT DEBUG - Clock tick {}, beat detected at {:?}", 
+                           clock.clock_ticks, now);
                     
                     // Add current beat timestamp
                     clock.beat_timestamps.push(now);
@@ -404,9 +406,17 @@ impl MidiManager {
                                 true // First reading, accept it
                             };
                             
-                            // Diagnostic logging for tempo calculation
+                            // Detailed diagnostic logging for tempo calculation debugging
                             let expected_beat_interval = 60.0 / bpm;
                             let actual_beat_interval = time_span / beat_count;
+                            debug!("handle_midi_input_message says: TEMPO DEBUG - Raw data: {} timestamps, span {:.6}s", 
+                                   clock.beat_timestamps.len(), time_span);
+                            debug!("handle_midi_input_message says: TEMPO DEBUG - First beat: {:?}, Last beat: {:?}", 
+                                   first_beat, last_beat);
+                            debug!("handle_midi_input_message says: TEMPO DEBUG - Beat count: {}, Time span: {:.6}s", 
+                                   beat_count, time_span);
+                            debug!("handle_midi_input_message says: TEMPO DEBUG - Beats per second: {:.6}, BPM: {:.6}", 
+                                   beats_per_second, bpm);
                             debug!("handle_midi_input_message says: Tempo calculation: {} beats over {:.3}s = {:.3} beats/sec = {:.1} BPM", 
                                    beat_count, time_span, beats_per_second, bpm);
                             debug!("handle_midi_input_message says: Beat timing: expected {:.3}s/beat, actual {:.3}s/beat, diff {:.3}s", 

@@ -3935,3 +3935,4 @@ kill 14815 16252 16404 16463
 2025-08-16 20:00:00 Clock generator timing analysis - large errors during startup and BPM changes observed
 2025-08-16 20:05:00 WAITING - Tempo detection bug identified: 218.6 BPM detected vs 122 BPM actual (~1.8x overshoot)
 2025-08-16 20:10:00 Added tempo stability check - phase correction disabled until 10s stable tempo, testing implementation
+2025-08-16 20:15:00 Added detailed tempo calculation debugging to identify 2x BPM error source - ready for testing

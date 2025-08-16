@@ -8,9 +8,7 @@ use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
-use termion::raw::IntoRawMode;
-use termion::input::TermRead;
-use termion::event::Key;
+
 use midir::{MidiOutput, MidiOutputConnection};
 
 #[derive(Debug, Clone)]
@@ -113,7 +111,7 @@ impl ClockGenerator {
         if let Some(ref sender) = self.command_sender {
             let _ = sender.send(ClockCommand::SetBpm(clamped_bpm));
         }
-        println!("♩ BPM set to: {:.1}", clamped_bpm);
+        println!("BPM set to: {:.1}", clamped_bpm);
     }
 
     /// Get current BPM
@@ -146,7 +144,7 @@ impl ClockGenerator {
             let start_time = Instant::now();
             let mut test_start_time = Instant::now();
 
-            println!("🎵 Clock generation thread started");
+            println!("Clock generation thread started");
 
             while !should_exit.load(Ordering::Relaxed) {
                 // Handle commands from main thread
@@ -157,7 +155,7 @@ impl ClockGenerator {
                             if let Err(e) = connection.send(&[0xFA]) {
                                 eprintln!("Error sending MIDI Start: {}", e);
                             } else {
-                                println!("♪ MIDI Clock Started");
+                                println!("MIDI Clock Started");
                             }
                         }
                         ClockCommand::Stop => {
@@ -165,7 +163,7 @@ impl ClockGenerator {
                             if let Err(e) = connection.send(&[0xFC]) {
                                 eprintln!("Error sending MIDI Stop: {}", e);
                             } else {
-                                println!("⏹ MIDI Clock Stopped");
+                                println!("MIDI Clock Stopped");
                             }
                         }
                         ClockCommand::SetBpm(_) => {
@@ -175,12 +173,12 @@ impl ClockGenerator {
                             let new_test_mode = !test_mode.load(Ordering::Relaxed);
                             test_mode.store(new_test_mode, Ordering::Relaxed);
                             if new_test_mode {
-                                println!("🧪 Test mode enabled: Stepped tempo changes with stop/start cycles (120→125→121→140→130→122→110, 120s cycle)");
-                                println!("🧪 Auto-starting clock for test mode");
+                                println!("Test mode enabled: Stepped tempo changes with stop/start cycles (120->125->121->140->130->122->110, 120s cycle)");
+                                println!("Auto-starting clock for test mode");
                                 is_running.store(true, Ordering::Relaxed);
                                 test_start_time = Instant::now();
                             } else {
-                                println!("🧪 Test mode disabled");
+                                println!("Test mode disabled");
                             }
                         }
                         ClockCommand::Exit => {
@@ -206,14 +204,14 @@ impl ClockGenerator {
                             // 100-110s: Stop clock for 10 seconds
                             if is_running.load(Ordering::Relaxed) {
                                 is_running.store(false, Ordering::Relaxed);
-                                println!("🧪 Test mode: Stopping clock for 10 seconds");
+                                println!("Test mode: Stopping clock for 10 seconds");
                             }
                             false
                         } else if cycle_position >= 110.0 && cycle_position < 120.0 {
                             // 110-120s: Restart clock for 10 seconds before next cycle
                             if !is_running.load(Ordering::Relaxed) {
                                 is_running.store(true, Ordering::Relaxed);
-                                println!("🧪 Test mode: Restarting clock for next cycle");
+                                println!("Test mode: Restarting clock for next cycle");
                             }
                             true
                         } else {
@@ -333,10 +331,10 @@ impl ClockGenerator {
             // Send stop message when exiting
             if is_running.load(Ordering::Relaxed) {
                 let _ = connection.send(&[0xFC]); // MIDI Stop
-                println!("\n⏹ Clock stopped on exit");
+                println!("\nClock stopped on exit");
             }
 
-            println!("🎵 Clock generation thread ended");
+            println!("Clock generation thread ended");
         })
     }
 }
@@ -344,14 +342,14 @@ impl ClockGenerator {
 /// Display help information
 fn show_help() {
     println!("Commands:");
-    println!("  s             - Start/stop clock");
-    println!("  ↑ (Up Arrow) - Increase BPM by 1");
-    println!("  ↓ (Down Arrow) - Decrease BPM by 1");
-    println!("  → (Right Arrow) - Increase BPM by 5");
-    println!("  ← (Left Arrow) - Decrease BPM by 5");
-    println!("  t             - Toggle test mode (stepped tempo + stop/start: 120→125→121→140→130→122→110)");
-    println!("  q             - Quit program");
-    println!("  h             - Show this help");
+    println!("  s       - Start/stop clock");
+    println!("  +       - Increase BPM by 1");
+    println!("  -       - Decrease BPM by 1");
+    println!("  ++      - Increase BPM by 5");
+    println!("  --      - Decrease BPM by 5");
+    println!("  t       - Toggle test mode (stepped tempo + stop/start: 120->125->121->140->130->122->110)");
+    println!("  q       - Quit program");
+    println!("  h       - Show this help");
 }
 
 /// Handle user input commands
@@ -409,7 +407,7 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🎵 MIDI Clock Generator");
+    println!("MIDI Clock Generator");
     println!("======================");
 
     // Start with default 120 BPM - no user input needed
@@ -418,8 +416,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Connect to MIDI output
     let connection = generator.connect_midi_output()?;
     
-    println!("✅ MIDI Clock Generator initialized at {:.1} BPM", generator.get_bpm());
-    println!("🚀 Auto-starting clock");
+    println!("MIDI Clock Generator initialized at {:.1} BPM", generator.get_bpm());
+    println!("Auto-starting clock");
     generator.start()?;
     show_help();
     println!();
@@ -434,60 +432,67 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start the clock generation thread
     let clock_thread = generator.spawn_clock_thread(connection);
 
-    // Enable raw mode for arrow key detection
-    let _stdout = io::stdout().into_raw_mode()?;
-    let stdin = io::stdin();
+    println!("Enter commands: s(start/stop), +(+1 BPM), -(−1 BPM), ++(+5 BPM), --(−5 BPM), t(test), q(quit), h(help)");
     
-    println!("🎛 Use arrow keys for BPM, 's' start/stop, 't' test mode, 'q' quit\r");
-    
-    // Main input loop with arrow key support
-    for key in stdin.keys() {
-        match key? {
-            Key::Up => {
-                let new_bpm = generator.get_bpm() + 1.0;
-                generator.set_bpm(new_bpm);
-                println!("\r🎛 BPM: {:.1} (↑+1)", generator.get_bpm());
-            }
-            Key::Down => {
-                let new_bpm = generator.get_bpm() - 1.0;
-                generator.set_bpm(new_bpm);
-                println!("\r🎛 BPM: {:.1} (↓-1)", generator.get_bpm());
-            }
-            Key::Right => {
-                let new_bpm = generator.get_bpm() + 5.0;
-                generator.set_bpm(new_bpm);
-                println!("\r🎛 BPM: {:.1} (→+5)", generator.get_bpm());
-            }
-            Key::Left => {
-                let new_bpm = generator.get_bpm() - 5.0;
-                generator.set_bpm(new_bpm);
-                println!("\r🎛 BPM: {:.1} (←-5)", generator.get_bpm());
-            }
-            Key::Char('s') | Key::Char('S') => {
+    // Simple line-based input loop
+    loop {
+        print!("> ");
+        io::stdout().flush()?;
+        
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_err() {
+            break;
+        }
+        let input = input.trim();
+        
+        if input.is_empty() {
+            continue;
+        }
+        
+        match input {
+            "s" | "S" => {
                 if generator.is_running.load(Ordering::Relaxed) {
                     generator.stop()?;
-                    println!("\r🛑 Stopped");
+                    println!("Stopped");
                 } else {
                     generator.start()?;
-                    println!("\r▶️  Started");
+                    println!("Started");
                 }
             }
-            Key::Char('q') | Key::Char('Q') => {
-                println!("\r\n👋 Exiting...");
-                break;
+            "+" => {
+                let new_bpm = generator.get_bpm() + 1.0;
+                generator.set_bpm(new_bpm);
+                println!("BPM: {:.1} (+1)", generator.get_bpm());
             }
-            Key::Char('t') | Key::Char('T') => {
+            "-" => {
+                let new_bpm = generator.get_bpm() - 1.0;
+                generator.set_bpm(new_bpm);
+                println!("BPM: {:.1} (-1)", generator.get_bpm());
+            }
+            "++" => {
+                let new_bpm = generator.get_bpm() + 5.0;
+                generator.set_bpm(new_bpm);
+                println!("BPM: {:.1} (+5)", generator.get_bpm());
+            }
+            "--" => {
+                let new_bpm = generator.get_bpm() - 5.0;
+                generator.set_bpm(new_bpm);
+                println!("BPM: {:.1} (-5)", generator.get_bpm());
+            }
+            "t" | "T" => {
                 if let Some(ref sender) = generator.command_sender {
                     let _ = sender.send(ClockCommand::ToggleTestMode);
                 }
             }
-            Key::Char('h') | Key::Char('H') => {
-                println!("\r\n");
+            "q" | "Q" => {
+                println!("Exiting...");
+                break;
+            }
+            "h" | "H" => {
                 show_help();
-                println!("🎛 Use arrow keys for BPM, 's' start/stop, 't' test mode, 'q' quit\r");
             }
             _ => {
-                // Ignore other keys
+                println!("Unknown command. Type 'h' for help.");
             }
         }
     }
@@ -496,10 +501,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generator.exit();
 
     // Wait for clock thread to finish
-    println!("⏳ Waiting for clock thread to finish...");
+    println!("Waiting for clock thread to finish...");
     clock_thread.join().unwrap();
 
-    println!("👋 MIDI Clock Generator stopped.");
+    println!("MIDI Clock Generator stopped.");
     Ok(())
 }
 

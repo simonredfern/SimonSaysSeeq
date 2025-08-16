@@ -18,7 +18,6 @@ path = "src/bench.rs"
 midir = "0.9"
 ctrlc = "3.4"
 chrono = { version = "0.4", features = ["serde"] }
-termion = "2.0"
 
 [profile.release]
 opt-level = 3
