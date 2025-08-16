@@ -85,6 +85,8 @@ pub struct MidiManager {
     input_receiver: Option<Receiver<MidiInputEvent>>,
     /// Clock synchronization
     clock_state: Arc<Mutex<ClockState>>,
+    /// Snap to whole number tempo setting
+    snap_to_whole_tempo: Arc<Mutex<bool>>,
 }
 
 impl MidiManager {
@@ -104,6 +106,7 @@ impl MidiManager {
             input_sender: Some(input_sender),
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
+            snap_to_whole_tempo: Arc::new(Mutex::new(true)), // Default ON
         };
         
         #[cfg(feature = "midi")]
@@ -558,7 +561,16 @@ impl MidiManager {
     /// Get external tempo (if available)
     pub fn get_external_tempo(&self) -> Option<f32> {
         let clock = self.clock_state.lock().unwrap();
-        clock.external_tempo
+        if let Some(tempo) = clock.external_tempo {
+            let snap_enabled = *self.snap_to_whole_tempo.lock().unwrap();
+            if snap_enabled {
+                Some(tempo.round())
+            } else {
+                Some(tempo)
+            }
+        } else {
+            None
+        }
     }
     
     /// Check if external clock is running
@@ -695,6 +707,16 @@ impl MidiManager {
                     info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
                 }
             }
+        
+        /// Set snap to whole tempo preference
+        pub fn set_snap_to_whole_tempo(&self, enabled: bool) {
+            *self.snap_to_whole_tempo.lock().unwrap() = enabled;
+            debug!("set_snap_to_whole_tempo says: Snap to whole tempo {}", if enabled { "enabled" } else { "disabled" });
+        }
+
+        /// Get snap to whole tempo preference
+        pub fn get_snap_to_whole_tempo(&self) -> bool {
+            *self.snap_to_whole_tempo.lock().unwrap()
         }
     }
 }

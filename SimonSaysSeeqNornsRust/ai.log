@@ -3258,6 +3258,51 @@ kill 14815 16252 16404 16463
 # SEQUENCER DETECTION: Should now see 120.0 BPM instead of 118.1 BPM
 # STATUS: Drift-corrected clock generator ready for testing - should eliminate tempo discrepancy
 
+## 2025-08-16 15:13:51 Snap-to-Whole-Tempo Feature Implementation
+# FEATURE: Added snap-to-whole-number tempo button for cleaner tempo values
+# LOCATION: GRID_TWO column 10, row 7 (left of drift indicator LED at column 11)
+# DEFAULT STATE: ON (enabled by default)
+# 
+# FUNCTIONALITY:
+#   - Toggle button: Press to enable/disable snap-to-whole-tempo
+#   - When enabled: 120.1 BPM → snapped to 120.0 BPM
+#   - When disabled: Shows original detected tempo (e.g., 120.1 BPM)
+#   - Visual feedback: LED brightness 8 (ON) vs 2 (OFF)
+# 
+# IMPLEMENTATION:
+#   1. Added snap_to_whole_tempo: bool field to SimonSaysSeeq struct (default true)
+#   2. Added snap_to_whole_tempo: Arc<Mutex<bool>> field to MidiManager (default true)
+#   3. Extended GRID_TWO control handling to include column 10
+#   4. Applied snapping in MidiManager::get_external_tempo() method using tempo.round()
+#   5. Added set_snap_to_whole_tempo() and get_snap_to_whole_tempo() methods to MidiManager
+#   6. Button state synced between main app and MIDI manager
+# 
+# GRID LAYOUT (GRID_TWO row 7):
+#   - Column 10: 🎯 Snap Tempo (toggle ON/OFF)
+#   - Column 11: 📊 Drift Indicator (brightness = drift amount)
+#   - Column 12: ⏹ Stop (manual control)
+#   - Column 13: ▶️ Start (manual control)
+#   - Column 14: ⬇️ Tempo Down + Beat Flash (disabled during external clock)
+#   - Column 15: ⬆️ Tempo Up + Beat Flash (disabled during external clock)
+# 
+# BENEFITS:
+#   - Cleaner tempo display for musicians (whole numbers preferred)
+#   - Eliminates minor tempo fluctuations from appearing as changes
+#   - Maintains precise internal timing while showing clean values
+#   - User can toggle off for precise tempo analysis when needed
+# 
+# STATUS: Snap-to-whole-tempo feature implemented and ready for testing
+
+## 2025-08-16 15:14:45 Enhanced MIDI Clock Beat Debug Message
+# CHANGE: Added current tempo to MIDI Clock Beat debug message for better diagnostics
+# PURPOSE: Show current sequencer tempo alongside beat flash notification
+# MODIFICATION:
+#   - OLD: "MIDI Clock Beat - flashing tempo LEDs"
+#   - NEW: "MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM"
+# LOCATION: src/main.rs handle_midi_input_event() function
+# BENEFIT: Easier correlation between beat events and current tempo during testing
+# STATUS: Enhanced debug message ready for tempo analysis
+
 ## 2025-08-16 15:06:36 Tempo Discrepancy Resolution SUCCESS
 # ISSUE RESOLVED: Major tempo discrepancy between clock generator and sequencer detection
 # FINAL RESULT: Drift correction algorithm successfully implemented and tested

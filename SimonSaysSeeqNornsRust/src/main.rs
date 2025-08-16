@@ -94,6 +94,8 @@ pub struct SimonSaysSeeq {
     last_midi_clock_count: u32,
     last_sync_check: Instant,
     current_drift_ticks: i32,
+    // Snap to whole number tempo setting (default ON)
+    snap_to_whole_tempo: bool,
 }
 
 impl SimonSaysSeeq {
@@ -118,6 +120,7 @@ impl SimonSaysSeeq {
             last_midi_clock_count: 0,
             last_sync_check: Instant::now(),
             current_drift_ticks: 0,
+            snap_to_whole_tempo: true, // Default ON
         })
     }
 
@@ -562,10 +565,10 @@ impl SimonSaysSeeq {
             } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
                 
-                // Check if this is GRID_TWO tempo controls (columns 14-15)
+                // Check if this is GRID_TWO tempo controls (columns 10, 12-15)
                 if connected_grids.len() >= 2 {
                     let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x >= 12 && x <= 15) {
+                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x == 10 || (x >= 12 && x <= 15)) {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
@@ -576,6 +579,14 @@ impl SimonSaysSeeq {
                             }
                             
                             match x {
+                                10 => {
+                                    // Snap to whole tempo toggle button
+                                    self.snap_to_whole_tempo = !self.snap_to_whole_tempo;
+                                    #[cfg(feature = "midi")]
+                                    self.midi.set_snap_to_whole_tempo(self.snap_to_whole_tempo);
+                                    info!("handle_grid_press says: Snap to whole tempo {} via GRID_TWO column 10", 
+                                          if self.snap_to_whole_tempo { "enabled" } else { "disabled" });
+                                }
                                 12 => {
                                     // Stop button - always works regardless of external clock
                                     self.sequencer.stop();
@@ -611,10 +622,14 @@ impl SimonSaysSeeq {
                                 _ => {}
                             }
                         } else {
-                            // Button release - turn off LED
+                            // Button release - turn off LED (except for toggle buttons)
                             #[cfg(feature = "hardware")]
                             {
                                 let brightness = match x {
+                                    10 => {
+                                        // Snap tempo button - show state (ON/OFF)
+                                        if self.snap_to_whole_tempo { 8 } else { 2 }
+                                    }
                                     12 | 13 => 0, // Transport buttons always turn off
                                     14 | 15 => {
                                         // Tempo LEDs stay off if external clock active (beat LEDs will handle them)
@@ -1573,7 +1588,8 @@ impl SimonSaysSeeq {
                     self.check_phase_correction()?;
                 }
                 
-                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
+                let current_tempo = self.sequencer.get_tempo();
+                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM", current_tempo);
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
@@ -1642,6 +1658,10 @@ impl SimonSaysSeeq {
                 {
                     self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
                     self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
+                    
+                    // Update snap tempo button LED (column 10, row 7)
+                    let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 2 };
+                    self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
                     
                     // Update drift indicator LED (column 11, row 7)
                     let drift_brightness = self.calculate_drift_brightness();
