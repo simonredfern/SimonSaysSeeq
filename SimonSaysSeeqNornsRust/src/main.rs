@@ -94,6 +94,9 @@ pub struct SimonSaysSeeq {
     last_midi_clock_count: u32,
     last_sync_check: Instant,
     current_drift_ticks: i32,
+    // Tempo stability tracking for phase correction
+    tempo_stable_since: Option<Instant>,
+    last_stable_tempo: Option<f32>,
     // Snap to whole number tempo setting (default ON)
     snap_to_whole_tempo: bool,
 }
@@ -120,6 +123,8 @@ impl SimonSaysSeeq {
             last_midi_clock_count: 0,
             last_sync_check: Instant::now(),
             current_drift_ticks: 0,
+            tempo_stable_since: None,
+            last_stable_tempo: None,
             snap_to_whole_tempo: true, // Default ON
         })
     }
@@ -1717,6 +1722,34 @@ impl SimonSaysSeeq {
             return Ok(());
         }
 
+        // Check tempo stability - only apply phase correction if tempo has been stable for 10 seconds
+        if let Some(external_tempo) = self.midi.get_external_tempo() {
+            let now = Instant::now();
+            let tempo_changed = if let Some(last_tempo) = self.last_stable_tempo {
+                (external_tempo - last_tempo).abs() > 2.0 // Consider tempo stable if within 2 BPM
+            } else {
+                true // No previous tempo, consider it changed
+            };
+
+            if tempo_changed {
+                // Tempo changed, reset stability timer
+                self.tempo_stable_since = Some(now);
+                self.last_stable_tempo = Some(external_tempo);
+                debug!("check_phase_correction says: Tempo changed to {:.1} BPM, resetting stability timer", external_tempo);
+                return Ok(());
+            } else if let Some(stable_since) = self.tempo_stable_since {
+                if now.duration_since(stable_since).as_secs() < 10 {
+                    // Tempo hasn't been stable for 10 seconds yet
+                    debug!("check_phase_correction says: Tempo stable for {:.1}s, waiting for 10s before enabling phase correction", 
+                           now.duration_since(stable_since).as_secs_f32());
+                    return Ok(());
+                }
+            }
+        } else {
+            // No external tempo available, can't do phase correction
+            return Ok(());
+        }
+
         // Get MIDI clock tick count
         let midi_clock_ticks = {
             let clock_state = self.midi.get_clock_state();
@@ -1769,6 +1802,8 @@ impl SimonSaysSeeq {
         self.last_midi_clock_count = 0;
         self.last_sync_check = Instant::now();
         self.current_drift_ticks = 0;
+        self.tempo_stable_since = None;
+        self.last_stable_tempo = None;
         debug!("reset_phase_correction says: Phase correction state reset");
     }
 
