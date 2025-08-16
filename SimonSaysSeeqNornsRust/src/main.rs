@@ -1549,11 +1549,38 @@ impl SimonSaysSeeq {
             MidiInputEvent::ClockBeat => {
                 // Flash LEDs 14 and 15 on GRID_TWO for 150ms
                 self.beat_led_flash_until = Some(Instant::now() + Duration::from_millis(150));
-                info!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
+                
+                // Synchronize sequencer tempo with external MIDI clock (less frequent logging)
+                #[cfg(feature = "midi")]
+                {
+                    if let Some(external_tempo) = self.midi.get_external_tempo() {
+                        let current_tempo = self.sequencer.get_tempo();
+                        if (external_tempo - current_tempo).abs() > 0.5 {
+                            self.sequencer.set_tempo(external_tempo);
+                            self.tempo = external_tempo; // Keep main tempo in sync
+                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock: {:.1} BPM", external_tempo);
+                        }
+                    }
+                }
+                
+                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs");
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
+                
+                // Synchronize sequencer tempo with external MIDI clock on start
+                #[cfg(feature = "midi")]
+                {
+                    if let Some(external_tempo) = self.midi.get_external_tempo() {
+                        let current_tempo = self.sequencer.get_tempo();
+                        if (external_tempo - current_tempo).abs() > 0.5 {
+                            self.sequencer.set_tempo(external_tempo);
+                            self.tempo = external_tempo; // Keep main tempo in sync
+                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock on start: {:.1} BPM", external_tempo);
+                        }
+                    }
+                }
             }
             MidiInputEvent::ClockStop => {
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
@@ -1562,7 +1589,14 @@ impl SimonSaysSeeq {
                 self.beat_led_flash_until = None;
             }
             MidiInputEvent::ClockTick => {
-                // Don't log every tick - too verbose
+                // Log every 100th tick for connection diagnostics
+                static mut TICK_COUNTER: u32 = 0;
+                unsafe {
+                    TICK_COUNTER += 1;
+                    if TICK_COUNTER % 100 == 0 {
+                        debug!("handle_midi_input_event says: MIDI Clock Tick #{} - connection active", TICK_COUNTER);
+                    }
+                }
             }
             _ => {
                 // Handle other MIDI events if needed
@@ -1580,7 +1614,7 @@ impl SimonSaysSeeq {
             if let Some(grid_two_id) = grid_two {
                 let brightness = if let Some(flash_until) = self.beat_led_flash_until {
                     if Instant::now() < flash_until {
-                        15 // Bright flash
+                        8 // Dimmer flash
                     } else {
                         self.beat_led_flash_until = None;
                         0  // Turn off

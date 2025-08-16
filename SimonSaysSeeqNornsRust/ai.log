@@ -2952,3 +2952,45 @@ kill 14815 16252 16404 16463
 # 
 # COMPILATION: Successful with warnings only
 # RESULT: Fixed MIDI clock detection and automatic source switching - ready for retest
+# 
+# USER TESTING RESULTS: Transport sync works, but sequencer tempo not following MIDI clock tempo
+# ISSUE IDENTIFIED: External MIDI tempo detected but not applied to sequencer
+# ROOT CAUSE: Sequencer continues running at internal tempo despite detecting external clock BPM
+# 
+# TEMPO SYNCHRONIZATION FIXES IMPLEMENTED:
+#   - Added tempo sync in handle_midi_input_event() for ClockBeat events
+#   - Added tempo sync in handle_midi_input_event() for ClockStart events  
+#   - Sequencer tempo automatically updated when external tempo detected
+#   - Only syncs when tempo difference > 0.5 BPM to avoid constant updates
+#   - Both sequencer.set_tempo() and main self.tempo updated for consistency
+# 
+# MIDI CLOCK DIAGNOSTICS ADDED:
+#   - ClockBeat logging reduced to debug level to reduce verbosity
+#   - ClockTick counter added - logs every 100th tick for connection monitoring
+#   - Enhanced tempo sync logging on ClockStart for initial sync confirmation
+#   - Better connection stability diagnostics for intermittent LED flashing issue
+# 
+# EXPECTED BEHAVIOR AFTER TEMPO SYNC FIX:
+#   - MIDI clock generator starts at 140 BPM → Sequencer tempo changes to 140 BPM
+#   - Sequencer playback speed matches MIDI clock generator BPM exactly
+#   - Tempo sync occurs on ClockStart and periodically on ClockBeat events
+#   - Beat LEDs should flash consistently (intermittent flashing indicates connection issues)
+#   - Tempo controls remain disabled when external clock active
+# 
+# SYNCHRONIZATION LOGIC:
+#   - ClockStart: Immediate tempo sync when external clock starts
+#   - ClockBeat: Periodic tempo sync checks (every beat) with 0.5 BPM threshold
+#   - Tempo changes: Both internal sequencer and main application tempo updated
+#   - Stability: Only syncs when meaningful tempo difference detected
+# 
+# COMPILATION: Successful with warnings only
+# RESULT: Added automatic tempo synchronization - sequencer should now follow MIDI clock BPM
+# 
+# USER FEEDBACK: "that's much better" - tempo sync working, requested dimmer tempo LEDs
+# TEMPO LED BRIGHTNESS ADJUSTMENT:
+#   - Reduced beat LED flash brightness from 15 to 8 for better visual comfort
+#   - LEDs 14 and 15 on GRID_TWO now flash at brightness 8 instead of maximum brightness
+#   - Maintains clear visual indication while being less bright/distracting
+#   - Flash duration and timing unchanged (150ms flash per beat)
+# 
+# RESULT: Tempo synchronization working correctly with dimmer, more comfortable LED flashing
