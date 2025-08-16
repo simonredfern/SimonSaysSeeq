@@ -2918,3 +2918,37 @@ kill 14815 16252 16404 16463
 #   - Test tempo controls: Should be disabled when external clock active
 # 
 # STATUS: IMPLEMENTATION COMPLETE - AWAITING USER VALIDATION
+# 
+# USER TESTING RESULTS: MIDI clock detection not working reliably
+# ISSUE IDENTIFIED: Clock source never set to MidiExternal, tempo controls not properly disabled
+# ROOT CAUSE: Missing automatic clock source switching when MIDI clock messages received
+# 
+# MIDI CLOCK DETECTION FIXES IMPLEMENTED:
+#   - Modified handle_midi_input_message() to automatically set clock source to MidiExternal
+#   - MIDI Clock (0xF8): Sets source to MidiExternal on first clock tick received
+#   - MIDI Start (0xFA): Sets source to MidiExternal and running = true  
+#   - MIDI Continue (0xFB): Sets source to MidiExternal and running = true
+#   - MIDI Stop (0xFC): Keeps external source, sets running = false
+#   - Added last_external_activity timestamp to ClockState for timeout detection
+# 
+# EXTERNAL CLOCK TIMEOUT SYSTEM:
+#   - Added check_external_clock_timeout() method called from get_input_events()  
+#   - 5-second timeout: switches back to internal clock if no MIDI activity
+#   - Automatic cleanup: clears external_tempo and sets running = false on timeout
+#   - Prevents stuck external clock state when MIDI generator disconnected
+# 
+# TEMPO DETECTION IMPROVEMENTS:
+#   - Expanded BPM range from 60-200 to 60-300 BPM for wider compatibility
+#   - Added debug logging for detected external tempo
+#   - Better tempo filtering and validation
+#   - Activity timestamp updated on all MIDI clock messages
+# 
+# EXPECTED BEHAVIOR AFTER FIX:
+#   - MIDI clock generator starts → Clock source switches to MidiExternal automatically
+#   - Tempo controls (columns 14-15) become disabled when external clock detected
+#   - Beat LEDs flash consistently when external clock active
+#   - 5 seconds after MIDI generator stops → switches back to internal clock
+#   - Tempo controls become enabled again when back to internal clock
+# 
+# COMPILATION: Successful with warnings only
+# RESULT: Fixed MIDI clock detection and automatic source switching - ready for retest

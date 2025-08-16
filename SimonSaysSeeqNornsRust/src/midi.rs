@@ -50,6 +50,7 @@ pub struct ClockState {
     pub clock_ticks: u32,
     pub last_clock_time: Option<Instant>,
     pub running: bool,
+    pub last_external_activity: Option<Instant>,
 }
 
 impl Default for ClockState {
@@ -60,6 +61,7 @@ impl Default for ClockState {
             clock_ticks: 0,
             last_clock_time: None,
             running: false,
+            last_external_activity: None,
         }
     }
 }
@@ -323,6 +325,16 @@ impl MidiManager {
             0xF8 => {
                 // MIDI Clock
                 let mut clock = clock_state.lock().unwrap();
+                
+                // Set to external clock source on first clock tick
+                if !matches!(clock.source, ClockSource::MidiExternal) {
+                    clock.source = ClockSource::MidiExternal;
+                    info!("handle_midi_input_message says: MIDI Clock detected - switching to external clock");
+                }
+                
+                // Update external activity timestamp
+                clock.last_external_activity = Some(Instant::now());
+                
                 clock.clock_ticks = clock.clock_ticks.wrapping_add(1);
                 
                 // Calculate tempo from clock ticks
@@ -337,8 +349,9 @@ impl MidiManager {
                         let bpm = ticks_per_minute / 24.0;
                         
                         // Filter out unreasonable tempos
-                        if bpm >= 60.0 && bpm <= 200.0 {
+                        if bpm >= 60.0 && bpm <= 300.0 {
                             clock.external_tempo = Some(bpm);
+                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM", bpm);
                         }
                     }
                 }
@@ -354,20 +367,29 @@ impl MidiManager {
             0xFA => {
                 // MIDI Start
                 let mut clock = clock_state.lock().unwrap();
+                clock.source = ClockSource::MidiExternal; // Set to external clock
                 clock.running = true;
                 clock.clock_ticks = 0;
+                clock.last_external_activity = Some(Instant::now());
+                info!("handle_midi_input_message says: MIDI Start - switching to external clock");
                 let _ = sender.send(MidiInputEvent::ClockStart);
             }
             0xFB => {
                 // MIDI Continue
                 let mut clock = clock_state.lock().unwrap();
+                clock.source = ClockSource::MidiExternal; // Set to external clock
                 clock.running = true;
+                clock.last_external_activity = Some(Instant::now());
+                info!("handle_midi_input_message says: MIDI Continue - switching to external clock");
                 let _ = sender.send(MidiInputEvent::ClockContinue);
             }
             0xFC => {
                 // MIDI Stop
                 let mut clock = clock_state.lock().unwrap();
                 clock.running = false;
+                clock.last_external_activity = Some(Instant::now());
+                // Keep external clock source - just stop running
+                info!("handle_midi_input_message says: MIDI Stop - external clock stopped");
                 let _ = sender.send(MidiInputEvent::ClockStop);
             }
             _ => {
@@ -524,6 +546,9 @@ impl MidiManager {
     pub fn get_input_events(&self) -> Vec<MidiInputEvent> {
         let mut events = Vec::new();
         
+        // Check for external clock timeout (5 seconds without activity)
+        self.check_external_clock_timeout();
+        
         if let Some(ref receiver) = self.input_receiver {
             while let Ok(event) = receiver.try_recv() {
                 events.push(event);
@@ -619,6 +644,22 @@ impl MidiManager {
     pub fn get_clock_info(&self) -> (ClockSource, Option<f32>, bool) {
         let clock = self.clock_state.lock().unwrap();
         (clock.source.clone(), clock.external_tempo, clock.running)
+    }
+    
+    /// Check if external clock has timed out and switch back to internal
+    fn check_external_clock_timeout(&self) {
+        let mut clock = self.clock_state.lock().unwrap();
+        
+        if matches!(clock.source, ClockSource::MidiExternal) {
+            if let Some(last_activity) = clock.last_external_activity {
+                if last_activity.elapsed() > Duration::from_secs(5) {
+                    clock.source = ClockSource::Internal;
+                    clock.running = false;
+                    clock.external_tempo = None;
+                    info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
+                }
+            }
+        }
     }
 }
 
