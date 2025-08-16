@@ -612,8 +612,9 @@ impl SimonSaysSeeq {
                                         if new_tempo != current_tempo {
                                             self.sequencer.set_tempo(new_tempo);
                                             self.tempo = new_tempo; // Keep main tempo in sync
-                                            info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM via GRID_TWO column {}", 
-                                                  current_tempo, new_tempo, x);
+                                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                                            info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM{} via GRID_TWO column {}", 
+                                                  current_tempo, new_tempo, snap_suffix, x);
                                         }
                                     } else {
                                         info!("handle_grid_press says: Tempo control ignored - external MIDI clock is active");
@@ -1590,7 +1591,8 @@ impl SimonSaysSeeq {
                 }
                 
                 let current_tempo = self.sequencer.get_tempo();
-                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM", current_tempo);
+                let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM{}", current_tempo, snap_suffix);
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");

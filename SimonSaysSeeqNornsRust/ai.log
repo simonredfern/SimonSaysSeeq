@@ -3343,6 +3343,30 @@ kill 14815 16252 16404 16463
 #
 # STATUS: Honest tempo logging implemented, LED brightness corrected
 
+## 2025-08-16 15:28:12 Comprehensive Snapped Indicator for All Tempo Messages
+# ENHANCEMENT: Added "(snapped)" suffix to all remaining tempo-related log messages
+# REQUIREMENT: Every tempo message should indicate when snap-to-whole-tempo is active
+#
+# ADDITIONAL MESSAGES ENHANCED:
+#   1. MIDI Clock Beat message:
+#      - OLD: "MIDI Clock Beat - flashing tempo LEDs at 120.0 BPM"
+#      - NEW: "MIDI Clock Beat - flashing tempo LEDs at 120.0 BPM (snapped)"
+#
+#   2. Manual tempo change via GRID_TWO:
+#      - OLD: "Tempo changed from 118.0 to 125.0 BPM via GRID_TWO column 15"
+#      - NEW: "Tempo changed from 118.0 to 125.0 BPM (snapped) via GRID_TWO column 15"
+#
+# COMPREHENSIVE TEMPO MESSAGE COVERAGE:
+#   ✅ External tempo detection (already honest - shows raw detected value)
+#   ✅ Snap conversion debug message (shows conversion when applied)
+#   ✅ External clock sync messages (shows "(snapped)" when applied)
+#   ✅ MIDI Clock Beat message (shows "(snapped)" when applied)
+#   ✅ Manual tempo changes (shows "(snapped)" when applied)
+#
+# RESULT: Complete transparency - all tempo displays show snap status
+# BENEFIT: User always knows when displayed tempo differs from detected/set tempo
+# STATUS: All tempo messages now consistently indicate snap status
+
 ## 2025-08-16 15:16:14 Syntax Error Fix in midi.rs
 # ISSUE: Compilation error due to unclosed delimiter in midi.rs
 # ERROR: "this file contains an unclosed delimiter" at line 830
