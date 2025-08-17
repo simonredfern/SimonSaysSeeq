@@ -16,9 +16,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🎵 MULTI-SCALE TEMPO DETECTION (SHORT TEST)");
     println!("===========================================");
-    println!("Strategy: Multiple windows (1,2,4,6,8,10,12s) with weighted averaging");
+    println!("Strategy: Multiple windows (1,2,3,4,5s) with weighted averaging");
     println!("Formula: BPM = weighted_sum / total_weight (longer windows = more weight)");
-    println!("Test duration: 14 seconds per tempo\n");
+    println!("Test duration: 7 seconds per tempo\n");
 
     // Test different tempos
     let test_tempos = vec![60.0, 90.0, 120.0, 150.0, 180.0];
@@ -83,21 +83,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 WINDOW ANALYSIS:");
     println!("• 1s window:  Very fast response, weight=1");
     println!("• 2s window:  Fast response, weight=2");
-    println!("• 4s window:  Good accuracy, weight=4"); 
-    println!("• 6s window:  Better stability, weight=6");
-    println!("• 8s window:  High stability, weight=8");
-    println!("• 10s window: Very stable, weight=10");
-    println!("• 12s window: Maximum stability, weight=12");
+    println!("• 3s window:  Good balance, weight=3"); 
+    println!("• 4s window:  Better stability, weight=4");
+    println!("• 5s window:  Maximum stability, weight=5");
     println!("• Final reading: Weighted average favoring longer windows");
     
     println!("⏱️  MATURATION TIMELINE:");
     println!("• t=1s:  1 window active (1s, weight=1)");
     println!("• t=2s:  2 windows active (1s,2s, total_weight=3)");
-    println!("• t=4s:  3 windows active (1s,2s,4s, total_weight=7)");
-    println!("• t=6s:  4 windows active (1s,2s,4s,6s, total_weight=13)");
-    println!("• t=8s:  5 windows active (total_weight=21)");
-    println!("• t=10s: 6 windows active (total_weight=31)");
-    println!("• t=12s: 7 windows active (total_weight=43, full accuracy)");
+    println!("• t=3s:  3 windows active (1s,2s,3s, total_weight=6)");
+    println!("• t=4s:  4 windows active (1s,2s,3s,4s, total_weight=10)");
+    println!("• t=5s:  5 windows active (total_weight=15, full accuracy)");
 
     Ok(())
 }
@@ -115,7 +111,7 @@ fn test_tempo_detection(target_bpm: f32) -> Result<(f32, usize), Box<dyn std::er
     let mut final_window_count = 0;
     
     let start_time = Instant::now();
-    let test_duration = Duration::from_secs(14); // 14 second test to mature all windows
+    let test_duration = Duration::from_secs(7); // 7 second test to mature all windows
     
     // Simulate MIDI clock ticks
     while start_time.elapsed() < test_duration {

@@ -54,38 +54,48 @@ impl MultiScaleTickWindows {
     pub fn new() -> Self {
         Self {
             tick_timestamps: Vec::new(),
-            window_durations: vec![1.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0],
+            window_durations: vec![1.0, 2.0, 3.0, 4.0, 5.0],
         }
     }
     
     pub fn add_tick(&mut self, current_time: Instant) {
         self.tick_timestamps.push(current_time);
         
-        // Remove ticks older than 15 seconds to prevent unbounded growth
-        let cutoff_time = current_time - std::time::Duration::from_secs(15);
+        // Remove ticks older than 8 seconds to prevent unbounded growth
+        let cutoff_time = current_time - std::time::Duration::from_secs(8);
         self.tick_timestamps.retain(|&timestamp| timestamp >= cutoff_time);
     }
     
     pub fn calculate_weighted_bpm(&self, current_time: Instant) -> Option<f32> {
+        if self.tick_timestamps.is_empty() {
+            return None;
+        }
+        
+        let earliest_tick = self.tick_timestamps[0];
+        let elapsed_since_start = current_time.duration_since(earliest_tick).as_secs_f32();
+        
         let mut weighted_sum = 0.0;
         let mut total_weight = 0.0;
         
         for &duration in &self.window_durations {
-            let window_start = current_time - std::time::Duration::from_secs_f32(duration);
-            
-            // Count ticks within this specific window
-            let ticks_in_window = self.tick_timestamps.iter()
-                .filter(|&&timestamp| timestamp >= window_start && timestamp <= current_time)
-                .count() as f32;
-            
-            if ticks_in_window > 0.0 {
-                // BPM = (ticks / duration_seconds) / 24_ticks_per_beat * 60_seconds_per_minute
-                // Simplified: BPM = ticks * (60 / (duration * 24)) = ticks * (2.5 / duration)
-                let bpm = ticks_in_window * (2.5 / duration);
-                if bpm >= 20.0 && bpm <= 300.0 {
-                    let weight = duration; // Use duration as weight (longer windows = more weight)
-                    weighted_sum += bpm * weight;
-                    total_weight += weight;
+            // Only use windows that are "full" - where we have been collecting data for the full duration
+            if elapsed_since_start >= duration {
+                let window_start = current_time - std::time::Duration::from_secs_f32(duration);
+                
+                // Count ticks within this specific window
+                let ticks_in_window = self.tick_timestamps.iter()
+                    .filter(|&&timestamp| timestamp >= window_start && timestamp <= current_time)
+                    .count() as f32;
+                
+                if ticks_in_window > 0.0 {
+                    // BPM = (ticks / duration_seconds) / 24_ticks_per_beat * 60_seconds_per_minute
+                    // Simplified: BPM = ticks * (60 / (duration * 24)) = ticks * (2.5 / duration)
+                    let bpm = ticks_in_window * (2.5 / duration);
+                    if bpm >= 20.0 && bpm <= 300.0 {
+                        let weight = duration; // Use duration as weight (longer windows = more weight)
+                        weighted_sum += bpm * weight;
+                        total_weight += weight;
+                    }
                 }
             }
         }
@@ -416,35 +426,56 @@ impl MidiManager {
                     clock.multi_scale_window = Some(MultiScaleTickWindows::new());
                 }
                 
-                // Update the window with this tick
-                if let Some(ref mut window) = clock.multi_scale_window {
+                // Update the window with this tick and calculate tempo
+                let tempo_result = if let Some(ref mut window) = clock.multi_scale_window {
                     window.add_tick(now);
                     
-                    // Get weighted BPM from all mature windows
+                    // Calculate weighted BPM and get window info
                     if let Some(weighted_bpm) = window.calculate_weighted_bpm(now) {
-                        // Tempo stability validation  
-                        let is_stable = if let Some(prev_tempo) = clock.external_tempo {
-                            let tempo_change = (weighted_bpm - prev_tempo).abs();
-                            tempo_change <= 8.0 // Tighter validation since weighted average is more stable
-                        } else {
-                            true // First reading, accept it
-                        };
+                        // Count how many windows are actually active (full)
+                        let earliest_tick = window.tick_timestamps.first().map(|&t| t).unwrap_or(now);
+                        let elapsed_since_start = now.duration_since(earliest_tick).as_secs_f32();
+                        let active_windows = window.window_durations.iter()
+                            .filter(|&&duration| elapsed_since_start >= duration)
+                            .count();
+                        let total_windows = window.window_durations.len();
                         
-                        if is_stable {
-                            clock.external_tempo = Some(weighted_bpm);
-                            let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
-                            if snap_enabled {
-                                let snapped = weighted_bpm.round();
-                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks) -> will snap to {:.0} BPM", 
-                                       weighted_bpm, clock.clock_ticks, snapped);
-                            } else {
-                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks, no snapping)", 
-                                       weighted_bpm, clock.clock_ticks);
-                            }
+                        Some((weighted_bpm, active_windows, total_windows))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                
+                // Process tempo result outside of window borrow
+                if let Some((weighted_bpm, active_windows, total_windows)) = tempo_result {
+                    let prev_tempo = clock.external_tempo;
+                    let total_ticks = clock.clock_ticks;
+                    
+                    // Tempo stability validation  
+                    let is_stable = if let Some(prev) = prev_tempo {
+                        let tempo_change = (weighted_bpm - prev).abs();
+                        tempo_change <= 8.0 // Tighter validation since weighted average is more stable
+                    } else {
+                        true // First reading, accept it
+                    };
+                    
+                    if is_stable {
+                        clock.external_tempo = Some(weighted_bpm);
+                        let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
+                        
+                        if snap_enabled {
+                            let snapped = weighted_bpm.round();
+                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks) -> will snap to {:.0} BPM", 
+                                   weighted_bpm, active_windows, total_windows, total_ticks, snapped);
                         } else {
-                            debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (change of {:.1} BPM too large from previous {:.1} BPM)", 
-                                   weighted_bpm, (weighted_bpm - clock.external_tempo.unwrap_or(0.0)).abs(), clock.external_tempo.unwrap_or(0.0));
+                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks, no snapping)", 
+                                   weighted_bpm, active_windows, total_windows, total_ticks);
                         }
+                    } else {
+                        debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (change of {:.1} BPM too large from previous {:.1} BPM)", 
+                               weighted_bpm, (weighted_bpm - prev_tempo.unwrap_or(0.0)).abs(), prev_tempo.unwrap_or(0.0));
                     }
                 }
                 

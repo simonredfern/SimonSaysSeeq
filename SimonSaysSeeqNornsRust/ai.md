@@ -78,3 +78,14 @@
   - GRID_ONE shows sequence steps 0-15
   - GRID_TWO shows sequence steps 16-31
   - Current step indicator flows between grids as sequence plays
+
+## BPM Testing Guidelines
+- Focus tempo detection tests on the musical range: 60-150 BPM
+- This covers the majority of musical genres and use cases:
+  - 60-80 BPM: Ballads, slow songs
+  - 80-100 BPM: Mid-tempo, hip-hop
+  - 100-120 BPM: Pop, rock, dance
+  - 120-150 BPM: Uptempo dance, electronic
+- Use test cases: [60, 75, 90, 105, 120, 135, 150] BPM for comprehensive coverage
+- Higher BPMs (150-300) are edge cases and less critical for musical applications
+- Algorithm validation should prioritize accuracy in the 60-150 BPM range
