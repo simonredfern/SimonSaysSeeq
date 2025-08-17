@@ -1468,19 +1468,19 @@ impl Sequencer {
     }
 
     /// Euclidean rhythm generation
-    pub fn generate_euclidean_rhythm(&self, row: usize, pulses: usize, steps: usize, rotation: usize) {
-        if row > 6 || pulses > steps || steps > 32 {
+    pub fn generate_euclidean_rhythm(&self, row: usize, events: usize, length: usize, rotation: usize) {
+        if row > 6 || events > length || length > 32 {
             return;
         }
 
-        self.push_undo_snapshot(format!("Euclidean rhythm R{}: {} pulses in {} steps", row, pulses, steps));
+        self.push_undo_snapshot(format!("Euclidean rhythm R{}: {} events in {} length", row, events, length));
 
         let mut state = self.state.lock().unwrap();
         let row_idx = row;
 
         // Update the row's Euclidean parameters
-        state.row_states[row_idx].euclidean_events = pulses;
-        state.row_states[row_idx].euclidean_length = steps - 1; // Store as last valid step index (0-based)
+        state.row_states[row_idx].euclidean_events = events;
+        state.row_states[row_idx].euclidean_length = length - 1; // Store as last valid step index (0-based)
         state.row_states[row_idx].euclidean_rotation = rotation;
 
         // Clear the row first
@@ -1490,11 +1490,11 @@ impl Sequencer {
 
         // Generate euclidean rhythm using Bresenham's algorithm
         let mut bucket = 0;
-        for i in 0..steps {
-            bucket += pulses;
-            if bucket >= steps {
-                bucket -= steps;
-                let pos = (i + rotation) % steps;
+        for i in 0..length {
+            bucket += events;
+            if bucket >= length {
+                bucket -= length;
+                let pos = (i + rotation) % length;
                 if pos < 32 {
                     state.grid[pos][row_idx] = 1;
                 }
@@ -1504,7 +1504,7 @@ impl Sequencer {
         // Create binary pattern string for logging
         let mut pattern = String::new();
         let mut patterns_beyond_15 = Vec::new();
-        for i in 0..steps.min(32) {
+        for i in 0..length.min(32) {
             let has_pattern = state.grid[i][row_idx] == 1;
             pattern.push(if has_pattern { '1' } else { '0' });
             
@@ -1514,11 +1514,11 @@ impl Sequencer {
             }
         }
         
-        info!("generate_euclidean_rhythm says: Generated euclidean rhythm for row {}: {} pulses in {} steps, rotation {}, pattern: {}",
-              row, pulses, steps, rotation, pattern);
+        info!("generate_euclidean_rhythm says: Generated euclidean rhythm for row {}: {} events in {} length, rotation {}, pattern: {}",
+              row, events, length, rotation, pattern);
               
         if !patterns_beyond_15.is_empty() {
-            info!("DEBUG: Euclidean patterns created beyond step 15 at steps: {:?}", patterns_beyond_15);
+            info!("DEBUG: Euclidean patterns created beyond position 15 at positions: {:?}", patterns_beyond_15);
         }
     }
 

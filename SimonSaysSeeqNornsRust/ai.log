@@ -2441,6 +2441,16 @@ kill 14815 16252 16404 16463
 # LOCATION: Likely in sequencer.rs advance_step() function
 # STATUS: Euclidean loop boundary bug - pattern loops one step too late
 
+## 2025-01-18 17:15:00 Euclidean Terminology Standard Established
+# EUCLIDEAN TERMINOLOGY STANDARD: Always use the following terminology for euclidean functions:
+#   - events: The number of beats/pulses in the euclidean rhythm (e.g., 5 events out of 16 steps)
+#   - length: The total number of steps in the pattern (e.g., 16 steps total)
+#   - rotation: The offset/shift of the pattern (e.g., rotate by 3 steps)
+# DO NOT USE: pulses, steps (when referring to total length), offset, shift
+# USE INSTEAD: events, length, rotation
+# APPLIES TO: All euclidean-related code, comments, variable names, function parameters, and documentation
+# STATUS: Mandatory terminology standard for all euclidean functionality
+
 ## 2025-08-13 08:59:23 Euclidean Loop Boundary Bug Fixed
 # BUG IDENTIFIED: euclidean_length stored as step count (1-based) but used as step index in loop
 # ROOT CAUSE: Loop condition "if current_step > euclidean_length" was off by one

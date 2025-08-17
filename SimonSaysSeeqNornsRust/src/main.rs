@@ -539,7 +539,17 @@ impl SimonSaysSeeq {
                         ArmAction::EuclidianEvents => {
                             let events = (seq_x % 32) + 1; // Use full 32-step column + 1 for events (1-32)
                             info!("ARM EUCLIDIAN_EVENTS: Generating rhythm on row {} with {} events (step {})", seq_y, events, seq_x);
-                            self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
+                            
+                            // Get current euclidean parameters to preserve length and rotation
+                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_length = row_state.euclidean_length + 1; // Convert from 0-based to step count
+                                let current_rotation = row_state.euclidean_rotation;
+                                self.sequencer.generate_euclidean_rhythm(seq_y, events, current_length, current_rotation);
+                            } else {
+                                // Fallback if row_state is not available
+                                self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
+                            }
+                            
                             info!("ARM EUCLIDIAN_EVENTS: Successfully generated {} events on row {}", events, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
@@ -547,14 +557,34 @@ impl SimonSaysSeeq {
                             let length = seq_x + 1; // Use full 32-step coordinate + 1 for length (1-32)
                             let length = length.clamp(1, 32); // Ensure valid range 1-32
                             info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
-                            self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
+                            
+                            // Get current euclidean parameters to preserve events and rotation
+                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_events = row_state.euclidean_events;
+                                let current_rotation = row_state.euclidean_rotation;
+                                self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
+                            } else {
+                                // Fallback if row_state is not available
+                                self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
+                            }
+                            
                             info!("ARM EUCLIDIAN_LENGTH: Successfully generated length {} on row {}", length, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::EuclidianRotation => {
                             let rotation = seq_x % 32; // Use full 32-step coordinate for rotation (0-31)
                             info!("ARM EUCLIDIAN_ROTATION: Generating rhythm on row {} with rotation {} (step {})", seq_y, rotation, seq_x);
-                            self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
+                            
+                            // Get current euclidean parameters to preserve events and length
+                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_events = row_state.euclidean_events;
+                                let current_length = row_state.euclidean_length + 1; // Convert from 0-based to step count
+                                self.sequencer.generate_euclidean_rhythm(seq_y, current_events, current_length, rotation);
+                            } else {
+                                // Fallback if row_state is not available
+                                self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
+                            }
+                            
                             info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
