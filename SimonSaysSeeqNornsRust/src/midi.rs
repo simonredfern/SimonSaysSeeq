@@ -54,15 +54,15 @@ impl MultiScaleTickWindows {
     pub fn new() -> Self {
         Self {
             tick_timestamps: Vec::new(),
-            window_durations: vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            window_durations: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
         }
     }
     
     pub fn add_tick(&mut self, current_time: Instant) {
         self.tick_timestamps.push(current_time);
         
-        // Remove ticks older than 8 seconds to prevent unbounded growth
-        let cutoff_time = current_time - std::time::Duration::from_secs(8);
+        // Remove ticks older than 12 seconds to prevent unbounded growth
+        let cutoff_time = current_time - std::time::Duration::from_secs(12);
         self.tick_timestamps.retain(|&timestamp| timestamp >= cutoff_time);
     }
     

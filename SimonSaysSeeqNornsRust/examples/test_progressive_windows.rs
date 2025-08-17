@@ -26,13 +26,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn test_progressive_activation(target_bpm: f32) -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing progressive activation at {:.1} BPM", target_bpm);
-    println!("Windows: 1s, 2s, 3s, 4s, 5s");
+    println!("Windows: 1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s");
     println!("Expected progression:");
     println!("• t=1s:  1 window active (1s)");
     println!("• t=2s:  2 windows active (1s, 2s)");
     println!("• t=3s:  3 windows active (1s, 2s, 3s)");
     println!("• t=4s:  4 windows active (1s, 2s, 3s, 4s)");
-    println!("• t=5s:  5 windows active (ALL)\n");
+    println!("• t=5s:  5 windows active (1s, 2s, 3s, 4s, 5s)");
+    println!("• t=6s:  6 windows active (1s, 2s, 3s, 4s, 5s, 6s)");
+    println!("• t=7s:  7 windows active (1s, 2s, 3s, 4s, 5s, 6s, 7s)");
+    println!("• t=8s:  8 windows active (ALL)\n");
 
     // Calculate tick interval for the target BPM
     let ticks_per_second = (target_bpm / 60.0) * 24.0;
@@ -42,7 +45,7 @@ fn test_progressive_activation(target_bpm: f32) -> Result<(), Box<dyn std::error
     let mut window = MultiScaleTickWindows::new();
     
     let start_time = Instant::now();
-    let test_duration = Duration::from_secs(7); // Test for 7 seconds
+    let test_duration = Duration::from_secs(10); // Test for 10 seconds
     
     // Track when we've reported each stage
     let mut reported_stages = std::collections::HashSet::new();
@@ -104,7 +107,7 @@ fn test_progressive_activation(target_bpm: f32) -> Result<(), Box<dyn std::error
         
         println!("• Final BPM: {:.1} (target: {:.1})", final_bpm, target_bpm);
         println!("• Final error: {:.1} BPM ({:.2}%)", final_error, final_error_percent);
-        println!("• All 5 windows active after 5 seconds");
+        println!("• All 8 windows active after 8 seconds");
         
         if final_error_percent < 1.0 {
             println!("• 🏆 EXCELLENT: Sub-1% accuracy achieved");
@@ -119,7 +122,7 @@ fn test_progressive_activation(target_bpm: f32) -> Result<(), Box<dyn std::error
     println!("• Windows activate progressively as they become 'full'");
     println!("• Early readings use fewer, shorter windows (higher error)");
     println!("• Accuracy improves as more windows become active");
-    println!("• Full accuracy achieved when all 5 windows are active");
+    println!("• Full accuracy achieved when all 8 windows are active");
     println!("• Prevents artificially low BPM readings at startup");
     
     Ok(())
