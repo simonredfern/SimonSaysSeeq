@@ -308,10 +308,8 @@ impl ClockGenerator {
 fn show_help() {
     println!("Commands:");
     println!("  s       - Start/stop clock");
-    println!("  +       - Increase BPM by 1");
-    println!("  -       - Decrease BPM by 1");
-    println!("  ++      - Increase BPM by 5");
-    println!("  --      - Decrease BPM by 5");
+    println!("  u       - Increase BPM by 1 (uu=+2, uuu=+3, up to uuuuu=+5)");
+    println!("  d       - Decrease BPM by 1 (dd=-2, ddd=-3, up to ddddd=-5)");
     println!("  t       - Toggle test mode (stepped tempo + stop/start: 120->125->121->140->130->122->110)");
     println!("  q       - Quit program");
     println!("  h       - Show this help");
@@ -331,22 +329,7 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
                 generator.start()?;
             }
         }
-        "+" => {
-            let new_bpm = generator.get_bpm() + 5.0;
-            generator.set_bpm(new_bpm);
-        }
-        "-" => {
-            let new_bpm = generator.get_bpm() - 5.0;
-            generator.set_bpm(new_bpm);
-        }
-        "++" => {
-            let new_bpm = generator.get_bpm() + 1.0;
-            generator.set_bpm(new_bpm);
-        }
-        "--" => {
-            let new_bpm = generator.get_bpm() - 1.0;
-            generator.set_bpm(new_bpm);
-        }
+
         "status" => {
             let status = if generator.is_running.load(Ordering::Relaxed) {
                 "Running"
@@ -359,8 +342,22 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
             show_help();
         }
         cmd => {
+            // Check for "u" pattern (increase BPM)
+            if cmd.chars().all(|c| c == 'u') && !cmd.is_empty() && cmd.len() <= 5 {
+                let increment = cmd.len() as f32;
+                let new_bpm = generator.get_bpm() + increment;
+                generator.set_bpm(new_bpm);
+                println!("BPM increased by {:.0} to {:.1}", increment, new_bpm);
+            }
+            // Check for "d" pattern (decrease BPM)
+            else if cmd.chars().all(|c| c == 'd') && !cmd.is_empty() && cmd.len() <= 5 {
+                let decrement = cmd.len() as f32;
+                let new_bpm = generator.get_bpm() - decrement;
+                generator.set_bpm(new_bpm);
+                println!("BPM decreased by {:.0} to {:.1}", decrement, new_bpm);
+            }
             // Try to parse as BPM value
-            if let Ok(bpm) = cmd.parse::<f32>() {
+            else if let Ok(bpm) = cmd.parse::<f32>() {
                 generator.set_bpm(bpm);
             } else {
                 println!("Unknown command: '{}'. Type 'h' for help.", cmd);
@@ -397,7 +394,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start the clock generation thread
     let clock_thread = generator.spawn_clock_thread(connection);
 
-    println!("Enter commands: s(start/stop), +(+1 BPM), -(−1 BPM), ++(+5 BPM), --(−5 BPM), t(test), q(quit), h(help)");
+    println!("Enter commands: s(start/stop), u/uu/uuu(+1/2/3 BPM), d/dd/ddd(-1/2/3 BPM), t(test), q(quit), h(help)");
     
     // Simple line-based input loop
     loop {
@@ -424,26 +421,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Started");
                 }
             }
-            "+" => {
-                let new_bpm = generator.get_bpm() + 1.0;
-                generator.set_bpm(new_bpm);
-                println!("BPM: {:.1} (+1)", generator.get_bpm());
-            }
-            "-" => {
-                let new_bpm = generator.get_bpm() - 1.0;
-                generator.set_bpm(new_bpm);
-                println!("BPM: {:.1} (-1)", generator.get_bpm());
-            }
-            "++" => {
-                let new_bpm = generator.get_bpm() + 5.0;
-                generator.set_bpm(new_bpm);
-                println!("BPM: {:.1} (+5)", generator.get_bpm());
-            }
-            "--" => {
-                let new_bpm = generator.get_bpm() - 5.0;
-                generator.set_bpm(new_bpm);
-                println!("BPM: {:.1} (-5)", generator.get_bpm());
-            }
+
             "t" | "T" => {
                 if let Some(ref sender) = generator.command_sender {
                     let _ = sender.send(ClockCommand::ToggleTestMode);
@@ -457,7 +435,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 show_help();
             }
             _ => {
-                if !input.trim().is_empty() {
+                // Check for "u" pattern (increase BPM)
+                if input.chars().all(|c| c == 'u') && !input.is_empty() && input.len() <= 5 {
+                    let increment = input.len() as f32;
+                    let new_bpm = generator.get_bpm() + increment;
+                    generator.set_bpm(new_bpm);
+                    println!("BPM: {:.1} (+{})", new_bpm, increment);
+                }
+                // Check for "d" pattern (decrease BPM)
+                else if input.chars().all(|c| c == 'd') && !input.is_empty() && input.len() <= 5 {
+                    let decrement = input.len() as f32;
+                    let new_bpm = generator.get_bpm() - decrement;
+                    generator.set_bpm(new_bpm);
+                    println!("BPM: {:.1} (-{})", new_bpm, decrement);
+                }
+                // Try to parse as BPM value
+                else if let Ok(bpm) = input.parse::<f32>() {
+                    generator.set_bpm(bpm);
+                    println!("BPM: {:.1}", generator.get_bpm());
+                }
+                else if !input.trim().is_empty() {
                     println!("Unknown command. Type 'h' for help.");
                 }
             }

@@ -43,6 +43,61 @@ pub enum ClockSource {
     MidiExternal,
 }
 
+/// Multi-scale tick windows for tempo calculation
+#[derive(Debug, Clone)]
+pub struct MultiScaleTickWindows {
+    pub tick_timestamps: Vec<Instant>, // Store all tick timestamps
+    pub window_durations: Vec<f32>, // 1, 2, 4, 8, 16, 32 seconds
+}
+
+impl MultiScaleTickWindows {
+    pub fn new() -> Self {
+        Self {
+            tick_timestamps: Vec::new(),
+            window_durations: vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 16.0],
+        }
+    }
+    
+    pub fn add_tick(&mut self, current_time: Instant) {
+        self.tick_timestamps.push(current_time);
+        
+        // Remove ticks older than 20 seconds to prevent unbounded growth
+        let cutoff_time = current_time - std::time::Duration::from_secs(20);
+        self.tick_timestamps.retain(|&timestamp| timestamp >= cutoff_time);
+    }
+    
+    pub fn calculate_weighted_bpm(&self, current_time: Instant) -> Option<f32> {
+        let mut weighted_sum = 0.0;
+        let mut total_weight = 0.0;
+        
+        for &duration in &self.window_durations {
+            let window_start = current_time - std::time::Duration::from_secs_f32(duration);
+            
+            // Count ticks within this specific window
+            let ticks_in_window = self.tick_timestamps.iter()
+                .filter(|&&timestamp| timestamp >= window_start && timestamp <= current_time)
+                .count() as f32;
+            
+            if ticks_in_window > 0.0 {
+                // BPM = (ticks / duration_seconds) / 24_ticks_per_beat * 60_seconds_per_minute
+                // Simplified: BPM = ticks * (60 / (duration * 24)) = ticks * (2.5 / duration)
+                let bpm = ticks_in_window * (2.5 / duration);
+                if bpm >= 20.0 && bpm <= 300.0 {
+                    let weight = duration; // Use duration as weight (longer windows = more weight)
+                    weighted_sum += bpm * weight;
+                    total_weight += weight;
+                }
+            }
+        }
+        
+        if total_weight > 0.0 {
+            Some(weighted_sum / total_weight)
+        } else {
+            None
+        }
+    }
+}
+
 /// Clock sync state
 #[derive(Debug, Clone)]
 pub struct ClockState {
@@ -51,7 +106,7 @@ pub struct ClockState {
     pub clock_ticks: u32,
     pub last_clock_time: Option<Instant>,
     pub last_beat_time: Option<Instant>,
-    pub beat_timestamps: Vec<Instant>,
+    pub multi_scale_window: Option<MultiScaleTickWindows>,
     pub running: bool,
     pub last_external_activity: Option<Instant>,
     pub last_tempo_update: Option<Instant>,
@@ -66,7 +121,7 @@ impl Default for ClockState {
             clock_ticks: 0,
             last_clock_time: None,
             last_beat_time: None,
-            beat_timestamps: Vec::new(),
+            multi_scale_window: None,
             running: false,
             last_external_activity: None,
             last_tempo_update: None,
@@ -348,92 +403,45 @@ impl MidiManager {
                 }
                 
                 // Update external activity timestamp
-                clock.last_external_activity = Some(Instant::now());
+                let now = Instant::now();
+                clock.last_external_activity = Some(now);
                 
                 clock.clock_ticks = clock.clock_ticks.wrapping_add(1);
+                clock.last_clock_time = Some(now);
                 
-                clock.last_clock_time = Some(Instant::now());
+                // Multi-scale tempo detection using 1,2,4,8,16,32 second windows
+                // Initialize window if needed
+                if clock.multi_scale_window.is_none() {
+                    clock.multi_scale_window = Some(MultiScaleTickWindows::new());
+                }
                 
-                // Send beat event every 24 ticks (once per quarter note)
-                if clock.clock_ticks % 24 == 0 {
-                    // Beat-based tempo detection (more accurate than tick-based)
-                    let now = Instant::now();
-                    debug!("handle_midi_input_message says: BEAT DEBUG - Clock tick {}, beat detected at {:?}", 
-                           clock.clock_ticks, now);
+                // Update the window with this tick
+                if let Some(ref mut window) = clock.multi_scale_window {
+                    window.add_tick(now);
                     
-                    // Add current beat timestamp
-                    clock.beat_timestamps.push(now);
-                    
-                    // Keep only last 6 beats for rolling average (faster response to tempo changes)
-                    if clock.beat_timestamps.len() > 6 {
-                        clock.beat_timestamps.remove(0);
-                    }
-                    
-                    // Reset averaging window if significant tempo change detected
-                    if let Some(prev_tempo) = clock.external_tempo {
-                        // Quick check with last 3 beats to detect tempo changes
-                        if clock.beat_timestamps.len() >= 3 {
-                            let recent_beats = &clock.beat_timestamps[clock.beat_timestamps.len()-3..];
-                            let recent_span = recent_beats[2].duration_since(recent_beats[0]).as_secs_f32();
-                            let recent_bpm = (2.0 / recent_span) * 60.0;
-                            
-                            // If recent tempo differs significantly from previous, reset window
-                            if (recent_bpm - prev_tempo).abs() > 5.0 {
-                                debug!("handle_midi_input_message says: Tempo change detected ({:.1} -> {:.1} BPM), resetting averaging window", prev_tempo, recent_bpm);
-                                clock.beat_timestamps.clear();
-                                clock.beat_timestamps.push(now);
-                                return; // Skip this beat's calculation to let window rebuild
-                            }
-                        }
-                    }
-                    
-                    // Calculate tempo from beat intervals (need at least 3 beats for stability)
-                    if clock.beat_timestamps.len() >= 3 {
-                        let first_beat = clock.beat_timestamps[0];
-                        let last_beat = clock.beat_timestamps[clock.beat_timestamps.len() - 1];
-                        let time_span = last_beat.duration_since(first_beat).as_secs_f32();
-                        let beat_count = (clock.beat_timestamps.len() - 1) as f32;
+                    // Get weighted BPM from all mature windows
+                    if let Some(weighted_bpm) = window.calculate_weighted_bpm(now) {
+                        // Tempo stability validation  
+                        let is_stable = if let Some(prev_tempo) = clock.external_tempo {
+                            let tempo_change = (weighted_bpm - prev_tempo).abs();
+                            tempo_change <= 8.0 // Tighter validation since weighted average is more stable
+                        } else {
+                            true // First reading, accept it
+                        };
                         
-                        if time_span > 0.0 {
-                            let beats_per_second = beat_count / time_span;
-                            let bpm = beats_per_second * 60.0; // Convert to BPM
-                            
-                            // Tempo stability validation - reject readings that differ too much from recent history
-                            let is_stable = if let Some(prev_tempo) = clock.external_tempo {
-                                let tempo_change = (bpm - prev_tempo).abs();
-                                tempo_change <= 30.0 // Reject readings >30 BPM different from previous
-                            } else {
-                                true // First reading, accept it
-                            };
-                            
-                            // Detailed diagnostic logging for tempo calculation debugging
-                            let expected_beat_interval = 60.0 / bpm;
-                            let actual_beat_interval = time_span / beat_count;
-                            debug!("handle_midi_input_message says: TEMPO DEBUG - Raw data: {} timestamps, span {:.6}s", 
-                                   clock.beat_timestamps.len(), time_span);
-
-                            debug!("handle_midi_input_message says: TEMPO DEBUG - First beat: {:?}, Last beat: {:?}", 
-                                   first_beat, last_beat);
-                            debug!("handle_midi_input_message says: TEMPO DEBUG - Beat count: {}, Time span: {:.6}s", 
-                                   beat_count, time_span);
-                            debug!("handle_midi_input_message says: TEMPO DEBUG - Beats per second: {:.6}, BPM: {:.6}", 
-                                   beats_per_second, bpm);
-                            debug!("handle_midi_input_message says: Tempo calculation: {} beats over {:.3}s = {:.3} beats/sec = {:.1} BPM", 
-                                   beat_count, time_span, beats_per_second, bpm);
-                            debug!("handle_midi_input_message says: Beat timing: expected {:.3}s/beat, actual {:.3}s/beat, diff {:.3}s", 
-                                   expected_beat_interval, actual_beat_interval, actual_beat_interval - expected_beat_interval);
-                            
-                            // Filter out unreasonable tempos and unstable readings
-                            if bpm >= 20.0 && bpm <= 300.0 && is_stable {
-                                clock.external_tempo = Some(bpm);
-                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (averaged over {} beats)", bpm, beat_count);
-                            } else if !is_stable {
-                                debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (too different from previous {:.1} BPM)", 
-                                       bpm, clock.external_tempo.unwrap_or(0.0));
-                            }
+                        if is_stable {
+                            clock.external_tempo = Some(weighted_bpm);
+                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks)", 
+                                   weighted_bpm, clock.clock_ticks);
+                        } else {
+                            debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (change of {:.1} BPM too large from previous {:.1} BPM)", 
+                                   weighted_bpm, (weighted_bpm - clock.external_tempo.unwrap_or(0.0)).abs(), clock.external_tempo.unwrap_or(0.0));
                         }
                     }
-                    
+                }
+                
+                // Send beat event every 24 ticks for compatibility
+                if clock.clock_ticks % 24 == 0 {
                     clock.last_beat_time = Some(now);
                     let _ = sender.send(MidiInputEvent::ClockBeat);
                 }
@@ -690,7 +698,7 @@ impl MidiManager {
         clock.clock_ticks = 0;
         clock.last_clock_time = None;
         clock.last_beat_time = None;
-        clock.beat_timestamps.clear();
+        clock.multi_scale_window = None;
         clock.external_tempo = None;
         clock.last_tempo_update = None;
         clock.previous_tempo = None;
