@@ -547,6 +547,7 @@ impl SimonSaysSeeq {
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, current_length, current_rotation);
                             } else {
                                 // Fallback if row_state is not available
+                                warn!("EuclidianEvents: Could not get row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
                             }
                             
@@ -565,6 +566,7 @@ impl SimonSaysSeeq {
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
                             } else {
                                 // Fallback if row_state is not available
+                                warn!("EuclidianLength: Could not get row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
                             }
                             
@@ -582,6 +584,7 @@ impl SimonSaysSeeq {
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, current_length, rotation);
                             } else {
                                 // Fallback if row_state is not available
+                                warn!("EuclidianRotation: Could not get row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
                             }
                             
