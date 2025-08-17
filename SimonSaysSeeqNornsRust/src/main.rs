@@ -1586,8 +1586,11 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
-                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock: {:.1} BPM{}", external_tempo, snap_suffix);
+                            if self.snap_to_whole_tempo {
+                                info!("handle_midi_input_event says: Applied snapped tempo to sequencer: {:.0} BPM", external_tempo);
+                            } else {
+                                info!("handle_midi_input_event says: Applied tempo to sequencer: {:.1} BPM (no snapping)", external_tempo);
+                            }
                         }
                     }
                     
@@ -1614,8 +1617,11 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
-                            info!("handle_midi_input_event says: Synced sequencer tempo to external clock on start: {:.1} BPM{}", external_tempo, snap_suffix);
+                            if self.snap_to_whole_tempo {
+                                info!("handle_midi_input_event says: Applied snapped tempo to sequencer on start: {:.0} BPM", external_tempo);
+                            } else {
+                                info!("handle_midi_input_event says: Applied tempo to sequencer on start: {:.1} BPM (no snapping)", external_tempo);
+                            }
                         }
                     }
                 }
@@ -1645,8 +1651,11 @@ impl SimonSaysSeeq {
                     if let Some(last_external_tempo) = self.midi.get_external_tempo() {
                         self.sequencer.set_tempo(last_external_tempo);
                         self.tempo = last_external_tempo; // Keep main tempo in sync
-                        let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
-                        info!("handle_midi_input_event says: External clock timeout - preserving last tempo: {:.1} BPM{}", last_external_tempo, snap_suffix);
+                        if self.snap_to_whole_tempo {
+                            info!("handle_midi_input_event says: External clock timeout - preserving snapped tempo: {:.0} BPM", last_external_tempo);
+                        } else {
+                            info!("handle_midi_input_event says: External clock timeout - preserving tempo: {:.1} BPM (no snapping)", last_external_tempo);
+                        }
                     } else {
                         info!("handle_midi_input_event says: External clock timeout - no previous external tempo to preserve");
                     }

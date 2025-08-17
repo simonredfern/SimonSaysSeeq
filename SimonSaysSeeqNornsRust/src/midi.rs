@@ -324,9 +324,10 @@ impl MidiManager {
         // Set up input callback
         let sender = self.input_sender.as_ref().unwrap().clone();
         let clock_state = self.clock_state.clone();
+        let snap_to_whole_tempo = self.snap_to_whole_tempo.clone();
         
         match midi_in.connect(&selected_port, "SimonSaysSeeq Input", move |timestamp, message, _| {
-            Self::handle_midi_input_message(timestamp, message, &sender, &clock_state);
+            Self::handle_midi_input_message(timestamp, message, &sender, &clock_state, &snap_to_whole_tempo);
         }, ()) {
             Ok(connection) => {
                 info!("initialize_input says: Connected to MIDI input: {}", port_name);
@@ -359,7 +360,7 @@ impl MidiManager {
     
     /// Handle incoming MIDI message
     #[cfg(feature = "midi")]
-    fn handle_midi_input_message(_timestamp: u64, message: &[u8], sender: &Sender<MidiInputEvent>, clock_state: &Arc<Mutex<ClockState>>) {
+    fn handle_midi_input_message(_timestamp: u64, message: &[u8], sender: &Sender<MidiInputEvent>, clock_state: &Arc<Mutex<ClockState>>, snap_to_whole_tempo: &Arc<Mutex<bool>>) {
         if message.is_empty() {
             return;
         }
@@ -431,8 +432,15 @@ impl MidiManager {
                         
                         if is_stable {
                             clock.external_tempo = Some(weighted_bpm);
-                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks)", 
-                                   weighted_bpm, clock.clock_ticks);
+                            let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
+                            if snap_enabled {
+                                let snapped = weighted_bpm.round();
+                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks) -> will snap to {:.0} BPM", 
+                                       weighted_bpm, clock.clock_ticks, snapped);
+                            } else {
+                                debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted average from multi-scale windows, {} total ticks, no snapping)", 
+                                       weighted_bpm, clock.clock_ticks);
+                            }
                         } else {
                             debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (change of {:.1} BPM too large from previous {:.1} BPM)", 
                                    weighted_bpm, (weighted_bpm - clock.external_tempo.unwrap_or(0.0)).abs(), clock.external_tempo.unwrap_or(0.0));
@@ -654,8 +662,11 @@ impl MidiManager {
                 if (snapped_tempo - rate_limited_tempo).abs() > 0.01 {
                     debug!("get_external_tempo says: Snapping {:.1} BPM to {:.1} BPM", rate_limited_tempo, snapped_tempo);
                 }
+                debug!("get_external_tempo says: Final tempo used: {:.1} BPM (raw: {:.1}, snapped: {})", 
+                       snapped_tempo, rate_limited_tempo, snap_enabled);
                 snapped_tempo
             } else {
+                debug!("get_external_tempo says: Final tempo used: {:.1} BPM (raw, no snapping)", rate_limited_tempo);
                 rate_limited_tempo
             };
             
