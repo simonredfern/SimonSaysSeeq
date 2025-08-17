@@ -608,10 +608,10 @@ impl SimonSaysSeeq {
                                         let current_tempo = self.sequencer.get_tempo();
                                         let new_tempo = if x == 14 {
                                             // Column 14: Decrease tempo
-                                            (current_tempo - 5.0).clamp(20.0, 300.0)
+                                            (current_tempo - 1.0).clamp(20.0, 300.0)
                                         } else {
                                             // Column 15: Increase tempo
-                                            (current_tempo + 5.0).clamp(20.0, 300.0)
+                                            (current_tempo + 1.0).clamp(20.0, 300.0)
                                         };
                                         
                                         if new_tempo != current_tempo {

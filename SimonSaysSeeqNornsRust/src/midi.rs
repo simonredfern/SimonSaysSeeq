@@ -450,32 +450,19 @@ impl MidiManager {
                 
                 // Process tempo result outside of window borrow
                 if let Some((weighted_bpm, active_windows, total_windows)) = tempo_result {
-                    let prev_tempo = clock.external_tempo;
                     let total_ticks = clock.clock_ticks;
                     
-                    // Tempo stability validation  
-                    let is_stable = if let Some(prev) = prev_tempo {
-                        let tempo_change = (weighted_bpm - prev).abs();
-                        tempo_change <= 8.0 // Tighter validation since weighted average is more stable
-                    } else {
-                        true // First reading, accept it
-                    };
+                    // Always accept tempo readings - rejection logic removed
+                    clock.external_tempo = Some(weighted_bpm);
+                    let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
                     
-                    if is_stable {
-                        clock.external_tempo = Some(weighted_bpm);
-                        let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
-                        
-                        if snap_enabled {
-                            let snapped = weighted_bpm.round();
-                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks) -> will snap to {:.0} BPM", 
-                                   weighted_bpm, active_windows, total_windows, total_ticks, snapped);
-                        } else {
-                            debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks, no snapping)", 
-                                   weighted_bpm, active_windows, total_windows, total_ticks);
-                        }
+                    if snap_enabled {
+                        let snapped = weighted_bpm.round();
+                        debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks) -> will snap to {:.0} BPM", 
+                               weighted_bpm, active_windows, total_windows, total_ticks, snapped);
                     } else {
-                        debug!("handle_midi_input_message says: Tempo reading {:.1} BPM rejected (change of {:.1} BPM too large from previous {:.1} BPM)", 
-                               weighted_bpm, (weighted_bpm - prev_tempo.unwrap_or(0.0)).abs(), prev_tempo.unwrap_or(0.0));
+                        debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks, no snapping)", 
+                               weighted_bpm, active_windows, total_windows, total_ticks);
                     }
                 }
                 

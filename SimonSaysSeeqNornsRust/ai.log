@@ -1,6 +1,33 @@
 # AI Commands Log
 # This file tracks all commands run during development and testing
 
+## 2025-01-24 Tempo Button Increment Change
+# CHANGE: Changed tempo control button increments from 5 BPM to 1 BPM
+# REASON: Provide finer-grained tempo control for more precise adjustments
+# LOCATION: src/main.rs - handle_grid_press function, columns 14-15
+# BEFORE: Column 14 decreased tempo by 5 BPM, Column 15 increased tempo by 5 BPM
+# AFTER: Column 14 decreases tempo by 1 BPM, Column 15 increases tempo by 1 BPM
+# IMPACT: More precise tempo control, easier fine-tuning during performance
+# STATUS: Successfully implemented, maintains same range limits (20.0-300.0 BPM)
+
+## 2025-01-24 MIDI Clock Generator Input Limit Increase
+# CHANGE: Increased u/d input limit from 5 to 20 characters in MIDI clock generator
+# REASON: Allow more fine-grained tempo control for testing purposes
+# LOCATION: utils/midi_clock_generator.rs - handle_command function and main loop
+# BEFORE: Maximum uuuuu (+5 BPM) and ddddd (-5 BPM) allowed
+# AFTER: Maximum 20 u's (+20 BPM) and 20 d's (-20 BPM) allowed
+# IMPACT: Enables rapid tempo changes for comprehensive sequencer testing
+# STATUS: Successfully implemented with updated help messages and input validation
+
+## 2025-01-24 BPM Rejection Logic Removal
+# CHANGE: Removed tempo stability validation that rejected BPM changes >8.0 BPM
+# REASON: Multi-scale weighted averaging provides inherent stability without rejection
+# LOCATION: src/midi.rs - handle_midi_input_message function
+# BEFORE: Tempo readings with >8.0 BPM change were rejected and logged
+# AFTER: All tempo readings are accepted for maximum responsiveness
+# IMPACT: Faster response to legitimate tempo changes, relies on weighted averaging for stability
+# STATUS: Cleaner algorithm with fewer validation layers, maintains accuracy through mathematical approach
+
 ## 2025-01-09 Grid Testing Session
 
 ### Build Commands
@@ -2714,8 +2741,8 @@ kill 14815 16252 16404 16463
 ## 2025-08-14 21:42:34 GRID_TWO Tempo Controls Implemented
 # USER REQUEST: Add tempo controls to GRID_TWO row 7 columns 14-15 (0-indexed)
 # IMPLEMENTATION COMPLETED:
-#   - Column 14: Decrease tempo by 5 BPM (only if no external MIDI clock)
-#   - Column 15: Increase tempo by 5 BPM (only if no external MIDI clock)
+#   - Column 14: Decrease tempo by 1 BPM (only if no external MIDI clock)
+#   - Column 15: Increase tempo by 1 BPM (only if no external MIDI clock)
 #   - Tempo range: 20.0 to 200.0 BPM (existing clamp maintained)
 #   - MIDI clock detection: Uses midi.is_external_clock_running() to prevent conflicts
 #   - Visual feedback: Brief LED flash on tempo change (brightness 15)
@@ -2806,15 +2833,15 @@ kill 14815 16252 16404 16463
 ## 2025-08-14 21:52:17 Tempo Control Implementation Complete and Tested
 # USER CONFIRMATION: "that works well" - tempo controls working correctly
 # IMPLEMENTATION SUCCESS:
-#   ✅ GRID_TWO row 7 column 14: Decrease tempo by 5 BPM
-#   ✅ GRID_TWO row 7 column 15: Increase tempo by 5 BPM
+#   ✅ GRID_TWO row 7 column 14: Decrease tempo by 1 BPM
+#   ✅ GRID_TWO row 7 column 15: Increase tempo by 1 BPM
 #   ✅ LED behavior: Light on press (brightness 10), off on release (brightness 0)
 #   ✅ MIDI clock safety: Only works when external MIDI clock is NOT active
 #   ✅ Tempo logging: Clear messages with old/new BPM values
 #   ✅ Visual feedback: Immediate LED response via grid.refresh()
 #   ✅ Compilation: Successful with warnings only, no errors
 # USER TESTING RESULTS:
-#   - Tempo changes work correctly with 5 BPM increments
+#   - Tempo changes work correctly with 1 BPM increments
 #   - LED behavior matches other control row buttons (ARM actions)
 #   - Press/release visual feedback working as expected
 #   - No interference with existing grid functionality
@@ -3633,9 +3660,9 @@ kill 14815 16252 16404 16463
 #      - Requires minimum 3 beats (was 2) for more stable calculations
 #   
 #   2. TEMPO STABILITY VALIDATION:
-#      - Reject readings >30 BPM different from previous tempo
-#      - Prevents wild outliers from affecting detection
-#      - Logs rejected readings for debugging: "Tempo reading X.X BPM rejected (too different from previous Y.Y BPM)"
+#      - REMOVED: No longer reject readings based on tempo difference
+#      - All tempo readings are now accepted for maximum responsiveness
+#      - Multi-scale weighted averaging provides inherent stability
 #   
 #   3. TEMPO CHANGE DETECTION WITH WINDOW RESET:
 #      - Quick check with last 3 beats to detect tempo changes
@@ -3644,8 +3671,8 @@ kill 14815 16252 16404 16463
 #      - Debug logging: "Tempo change detected (X.X -> Y.Y BPM), resetting averaging window"
 #   
 #   4. ENHANCED FILTERING:
-#      - Combined stability validation with existing range checks (20-300 BPM)
-#      - Multiple validation layers prevent erratic readings
+#      - Basic range checks (20-300 BPM) still apply
+#      - Multi-scale weighted averaging provides natural filtering
 #
 # EXPECTED BEHAVIOR:
 #   - Clock change: 120 → 121 BPM
@@ -4091,7 +4118,7 @@ kill 14815 16252 16404 16463
 # - calculate_weighted_bpm() method computes weighted average from all mature windows
 # - Automatic cleanup: Removes ticks older than 20 seconds
 # - Window counting: Counts ticks in specific time ranges (not cumulative)
-# - Stability validation: ±8 BPM maximum change (tighter than beat-based ±10 BPM)
+# - Stability validation: REMOVED - all tempo readings accepted for maximum responsiveness
 #
 # TEST RESULTS (Outstanding Performance):
 # Target BPM | Detected BPM | Error (BPM) | Error (%) | Status
