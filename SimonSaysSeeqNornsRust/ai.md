@@ -15,6 +15,14 @@
 - All ai.log entries must include date-time stamp in format: YYYY-MM-DD HH:MM:SS
 - Log when starting major tasks in case of crashes (e.g. "Starting hardware mode test", "Beginning compilation", etc.)
 
+## AI Log Dating Rules
+- ALWAYS use the current date/time for new ai.log entries
+- Use the `now` tool to get the current datetime before creating log entries
+- NEVER write over or modify existing log entries
+- NEVER use past dates or estimated dates
+- Always append new entries to the end of ai.log
+- Format: ## YYYY-MM-DD HH:MM:SS Description
+
 ## Log Message Format Standards
 - Prepend each log message with "function_name says: " where function_name is the actual function making the log
 - Remove all tick boxes, emojis, and other decorative characters from log messages
