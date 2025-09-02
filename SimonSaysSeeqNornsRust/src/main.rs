@@ -1937,7 +1937,8 @@ fn main() -> Result<()> {
     // Initialize logging
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    info!("SimonSaysSeeq Rust v{}", env!("CARGO_PKG_VERSION"));
+    info!("SimonSaysSeeq Rust v{} (build-with-ctrlc-fix-2025-01-02)", env!("CARGO_PKG_VERSION"));
+    info!("Build info: Ctrl+C handler fix applied, startup output capture enabled");
 
     // Create and run application
     let mut app = SimonSaysSeeq::new()?;
