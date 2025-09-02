@@ -197,7 +197,8 @@ setup_audio() {
         log_info "JACK Audio Connection Kit available"
         
         # Create basic JACK configuration
-        mkdir -p ~/.jackdrc
+        # Remove any existing .jackdrc directory/file
+        rm -rf ~/.jackdrc
         cat > ~/.jackdrc << 'EOF'
 /usr/bin/jackd -dalsa -dhw:0 -r44100 -p1024 -n2
 EOF
