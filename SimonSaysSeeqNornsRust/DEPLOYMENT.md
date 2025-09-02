@@ -14,9 +14,14 @@ This guide will help you build, test, and deploy the Rust implementation of Simo
    ./test_local.sh
    ```
 
-3. **Deploy to Norns:**
+3. **Deploy to Norns (with Lua wrapper):**
    ```bash
    ./deploy_to_norns.sh
+   ```
+
+4. **OR Deploy Pure Rust (no Lua dependency):**
+   ```bash
+   ./deploy_pure_rust.sh
    ```
 
 ## Prerequisites
@@ -78,7 +83,24 @@ Before deploying to Norns, test the application locally:
 
 ### 3. Deploy to Norns
 
-#### Basic Deployment
+You have two deployment options:
+
+#### Option A: Pure Rust Deployment (Recommended)
+
+**Eliminates Lua dependency completely** - boots directly into Rust sequencer:
+
+```bash
+./deploy_pure_rust.sh
+```
+
+**Benefits:**
+- No Lua interpreter overhead
+- Faster boot time
+- Lower memory usage
+- More reliable operation
+- Direct hardware access
+
+#### Option B: Traditional Deployment (with Lua wrapper)
 ```bash
 ./deploy_to_norns.sh
 ```
@@ -98,9 +120,22 @@ export RUST_LOG=debug
 ./deploy_to_norns.sh
 ```
 
-## What the Deployment Does
+## Pure Rust vs Traditional Deployment
 
-The deployment script performs these steps:
+### Pure Rust Deployment (`deploy_pure_rust.sh`)
+
+**What it does:**
+1. **Builds** ARM binary for Norns hardware
+2. **Creates** systemd service for direct Rust execution
+3. **Configures** auto-start on boot (bypassing Norns menu)
+4. **Removes** any existing Lua dependencies
+5. **Sets up** management scripts for service control
+
+**Result:** SimonSaysSeeq boots directly when Norns starts, no Lua involved.
+
+### Traditional Deployment (`deploy_to_norns.sh`)
+
+**What it does:**
 
 1. **Cross-compiles** the Rust project for ARM Linux
 2. **Creates** a deployment package with:
@@ -109,6 +144,8 @@ The deployment script performs these steps:
    - Installation script (`install.sh`)
    - Documentation (`README.md`)
 3. **Transfers** files to Norns via SSH/SCP
+
+**Result:** Use Norns menu to select `SimonSaysSeeqRust.lua` which then launches the Rust binary.
 4. **Installs** the application in `/home/we/dust/code/SimonSaysSeeqRust/`
 5. **Configures** systemd service for auto-start (optional)
 
@@ -294,11 +331,14 @@ vim src/main.rs
 # Test locally
 ./test_local.sh
 
-# Deploy to Norns
-./deploy_to_norns.sh
+# Deploy to Norns (pure Rust)
+./deploy_pure_rust.sh
 
 # Check logs on Norns
 ssh we@norns.local journalctl -u simonsaysseeq-rust -f
+
+# Control service
+ssh we@norns.local 'cd /home/we/dust/code/SimonSaysSeeqRust && ./toggle_startup_mode.sh'
 ```
 
 ## Performance Notes

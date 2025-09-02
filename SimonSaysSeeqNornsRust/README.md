@@ -4,7 +4,17 @@ A high-performance sequencer for Norns hardware, written in Rust.
 
 ## Quick Start
 
-### Simulation Mode (Development/Testing)
+**New to SimonSaysSeeq? Get started in 30 seconds:**
+
+```bash
+./getting_started.sh
+```
+
+This interactive script will guide you through the deployment options and help you choose the best approach for your needs.
+
+### Manual Options
+
+#### Simulation Mode (Development/Testing)
 
 For development and testing without hardware:
 
@@ -50,29 +60,62 @@ space
 🎵 Sequencer: STOPPED | Tempo: 120.0 BPM | Step: 1 | Bar: 1
 ```
 
-### Hardware Mode (Norns)
+#### Hardware Mode (Norns)
 
-For deployment on actual Norns hardware:
+**Recommended: Use the getting started script**
+```bash
+./getting_started.sh
+```
+
+**Manual deployment options:**
 
 ```bash
 # Build for hardware
 cargo build --release --features="hardware,midi"
 
-# Or deploy directly to Norns
+# Deploy Pure Rust (recommended - uploads source & compiles on Norns)
+./deploy_pure_rust_simple.sh
+
+# OR deploy with Lua wrapper (traditional)
 ./deploy_to_norns.sh
+
+# OR advanced Pure Rust (cross-compile locally - requires ARM toolchain)
+./deploy_pure_rust.sh
 ```
+
+#### Deployment Options
+
+**Pure Rust Mode - Simple** (recommended):
+- Uploads source code and compiles natively on Norns
+- No cross-compilation issues or ARM toolchain setup
+- Boots directly into sequencer (no Norns menu)
+- Eliminates Lua interpreter overhead
+- Full hardware support guaranteed
+
+**Traditional Mode**:
+- Uses Norns menu system
+- Select `SimonSaysSeeqRust.lua` from SELECT menu
+- Lua script launches Rust binary
+- Better for mixed-use Norns systems
+
+**Pure Rust Mode - Advanced**:
+- Cross-compiles locally (requires ARM toolchain setup)
+- Faster deployment but complex setup
+- See CROSS_COMPILATION_ISSUES.md for troubleshooting
 
 ## Features
 
 - **High-Performance Sequencing**: Written in Rust for maximum performance
+- **Pure Rust Operation**: No Lua dependencies - direct hardware access
 - **Grid Support**: Monome grid integration for tactile control
 - **Framework RGB Macropad**: Native support for Framework Laptop 16 RGB Macropad
 - **MIDI I/O**: Full MIDI input/output support
-- **Real-time Display**: Visual feedback on Norns screen
+- **Real-time Display**: Direct framebuffer access for Norns screen
 - **RGB Flash Sequences**: Dynamic LED animations on sequencer start
 - **Simulation Mode**: Test without hardware using console output
 - **Pattern Management**: Save/load and chain patterns
 - **CO2 Integration**: Environmental data integration for tempo modulation
+- **systemd Integration**: Reliable service management and auto-start
 
 ## Development
 

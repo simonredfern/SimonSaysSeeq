@@ -252,36 +252,76 @@ EOF
 install_serialosc() {
     log_info "Installing serialosc for grid device support..."
     
-    # Check if serialosc is already installed
-    if systemctl is-enabled serialosc >/dev/null 2>&1; then
-        log_info "serialosc is already installed"
+    # Check if serialosc is already installed and running
+    if systemctl is-active --quiet serialosc 2>/dev/null; then
+        log_info "serialosc is already installed and running"
         return 0
     fi
     
-    # Install build dependencies
-    sudo apt-get install -y \
-        git \
-        build-essential \
-        libudev-dev \
-        liblo-dev
+    # Check if binary exists but service doesn't
+    if [ -f "/usr/local/bin/serialoscd" ] && ! systemctl is-enabled serialosc >/dev/null 2>&1; then
+        log_info "serialosc binary found, creating service..."
+    else
+        # Install build dependencies
+        log_info "Installing build dependencies..."
+        sudo apt-get update
+        sudo apt-get install -y \
+            git \
+            build-essential \
+            libudev-dev \
+            liblo-dev
+        
+        # Create temporary directory for build
+        local temp_dir=$(mktemp -d)
+        local original_dir=$(pwd)
+        cd "$temp_dir"
+        
+        log_info "Cloning serialosc repository..."
+        if ! git clone https://github.com/monome/serialosc.git; then
+            log_error "Failed to clone serialosc repository"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        cd serialosc
+        
+        log_info "Initializing submodules..."
+        if ! git submodule init && git submodule update; then
+            log_error "Failed to initialize submodules"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        log_info "Building serialosc..."
+        if ! make; then
+            log_error "Failed to build serialosc"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        log_info "Installing serialosc..."
+        if ! sudo make install; then
+            log_error "Failed to install serialosc"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        # Clean up
+        cd "$original_dir"
+        rm -rf "$temp_dir"
+    fi
     
-    # Create temporary directory for build
-    local temp_dir=$(mktemp -d)
-    cd "$temp_dir"
+    # Verify binary was installed
+    if [ ! -f "/usr/local/bin/serialoscd" ]; then
+        log_error "serialoscd binary not found at /usr/local/bin/serialoscd"
+        return 1
+    fi
     
-    log_info "Cloning serialosc repository..."
-    git clone https://github.com/monome/serialosc.git
-    cd serialosc
-    
-    log_info "Initializing submodules..."
-    git submodule init && git submodule update
-    
-    log_info "Building serialosc..."
-    make
-    
-    log_info "Installing serialosc..."
-    sudo make install
-    
+    log_info "Creating systemd service..."
     # Create systemd service file
     sudo tee /etc/systemd/system/serialosc.service > /dev/null << 'EOF'
 [Unit]
@@ -291,22 +331,43 @@ After=multi-user.target
 [Service]
 Type=forking
 ExecStart=/usr/local/bin/serialoscd
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
     
     # Enable and start the service
+    log_info "Enabling and starting serialosc service..."
     sudo systemctl daemon-reload
-    sudo systemctl enable serialosc
-    sudo systemctl start serialosc
     
-    # Clean up
-    cd /
-    rm -rf "$temp_dir"
+    if ! sudo systemctl enable serialosc; then
+        log_error "Failed to enable serialosc service"
+        return 1
+    fi
     
-    log_success "serialosc installed and started"
+    if ! sudo systemctl start serialosc; then
+        log_error "Failed to start serialosc service"
+        log_info "Checking service status..."
+        sudo systemctl status serialosc --no-pager
+        return 1
+    fi
+    
+    # Verify service is running
+    if systemctl is-active --quiet serialosc; then
+        log_success "serialosc installed and started successfully"
+        log_info "Service status:"
+        sudo systemctl status serialosc --no-pager -l
+    else
+        log_error "serialosc service failed to start properly"
+        log_info "Service logs:"
+        sudo journalctl -u serialosc --no-pager -l
+        return 1
+    fi
+    
     log_info "Grid devices will be automatically detected when connected"
+    log_info "You can check serialosc status with: sudo systemctl status serialosc"
 }
 
 # Build the project
