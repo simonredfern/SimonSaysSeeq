@@ -4,7 +4,7 @@
 //! without requiring the Norns Lua environment.
 
 use anyhow::Result;
-use log::{info, warn, debug};
+use log::{info, warn, debug, error};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
