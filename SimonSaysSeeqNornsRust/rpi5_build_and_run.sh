@@ -248,6 +248,67 @@ EOF
     log_warning "You may need to log out and back in for group changes to take effect"
 }
 
+# Install serialosc for grid support
+install_serialosc() {
+    log_info "Installing serialosc for grid device support..."
+    
+    # Check if serialosc is already installed
+    if systemctl is-enabled serialosc >/dev/null 2>&1; then
+        log_info "serialosc is already installed"
+        return 0
+    fi
+    
+    # Install build dependencies
+    sudo apt-get install -y \
+        git \
+        build-essential \
+        libudev-dev \
+        liblo-dev
+    
+    # Create temporary directory for build
+    local temp_dir=$(mktemp -d)
+    cd "$temp_dir"
+    
+    log_info "Cloning serialosc repository..."
+    git clone https://github.com/monome/serialosc.git
+    cd serialosc
+    
+    log_info "Initializing submodules..."
+    git submodule init && git submodule update
+    
+    log_info "Building serialosc..."
+    make
+    
+    log_info "Installing serialosc..."
+    sudo make install
+    
+    # Create systemd service file
+    sudo tee /etc/systemd/system/serialosc.service > /dev/null << 'EOF'
+[Unit]
+Description=serialosc daemon for monome devices
+After=multi-user.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/serialoscd
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Enable and start the service
+    sudo systemctl daemon-reload
+    sudo systemctl enable serialosc
+    sudo systemctl start serialosc
+    
+    # Clean up
+    cd /
+    rm -rf "$temp_dir"
+    
+    log_success "serialosc installed and started"
+    log_info "Grid devices will be automatically detected when connected"
+}
+
 # Build the project
 build_project() {
     log_build "Building SimonSaysSeeq for Raspberry Pi 5..."
@@ -461,7 +522,7 @@ OPTIONS:
     --update-rust       Update Rust toolchain before building
 
 EXAMPLES:
-    $0 setup                           # Install dependencies and setup environment
+    $0 setup                           # Install dependencies and setup environment (asks about grid support)
     $0 build                          # Build in release mode
     $0 --debug build                  # Build in debug mode
     $0 run                            # Build and run
@@ -469,6 +530,10 @@ EXAMPLES:
     $0 service install                # Install systemd service
     $0 service start                  # Start the service
     $0 --features "hardware,midi" run # Build and run with specific features
+    
+NOTES:
+    - Grid support requires serialosc (installed during setup if requested)
+    - Without grid support, sequencer runs in standalone mode
 
 ENVIRONMENT VARIABLES:
     BUILD_TYPE          Build type: release or debug (default: release)
@@ -549,6 +614,17 @@ main() {
             install_rust ${UPDATE_RUST:+--update}
             setup_audio
             setup_hardware_access
+            
+            # Ask if user wants grid support
+            echo
+            read -p "Install serialosc for grid device support? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                install_serialosc
+            else
+                log_info "Skipping serialosc installation. You can install it later if needed."
+            fi
+            
             log_success "Setup completed successfully!"
             log_warning "Please log out and back in for group permissions to take effect"
             ;;
