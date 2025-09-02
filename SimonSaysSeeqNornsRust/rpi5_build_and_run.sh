@@ -667,7 +667,7 @@ OPTIONS:
     --update-rust       Update Rust toolchain before building
 
 EXAMPLES:
-    $0 setup                           # Install dependencies and setup environment (asks about grid support)
+    $0 setup                           # Install dependencies and setup environment (includes grid support)
     $0 build                          # Build in release mode
     $0 --debug build                  # Build in debug mode
     $0 run                            # Build and run
@@ -677,8 +677,8 @@ EXAMPLES:
     $0 --features "hardware,midi" run # Build and run with specific features
     
 NOTES:
-    - Grid support requires serialosc (installed during setup if requested)
-    - Without grid support, sequencer runs in standalone mode
+    - Grid support requires serialosc (automatically installed during setup)
+    - Grid support is a hard requirement for SimonSaysSeeq functionality
 
 ENVIRONMENT VARIABLES:
     BUILD_TYPE          Build type: release or debug (default: release)
@@ -760,15 +760,9 @@ main() {
             setup_audio
             setup_hardware_access
             
-            # Ask if user wants grid support
-            echo
-            read -p "Install serialosc for grid device support? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                install_serialosc
-            else
-                log_info "Skipping serialosc installation. You can install it later if needed."
-            fi
+            # Install serialosc (required for grid support)
+            log_info "Installing serialosc for grid device support (required)..."
+            install_serialosc
             
             log_success "Setup completed successfully!"
             log_warning "Please log out and back in for group permissions to take effect"
