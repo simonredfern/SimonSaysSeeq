@@ -5,7 +5,7 @@
 use anyhow::Result;
 #[cfg(feature = "framebuffer-support")]
 use framebuffer::Framebuffer;
-use log::info;
+use log::{info, warn};
 
 /// Font data for simple 6x8 pixel font
 const FONT_6X8: &[&[u8]] = &[
@@ -497,6 +497,26 @@ impl ScreenManager {
                 self.draw_rect(x, indicator_y, indicator_width - 1, 6);
             }
         }
+    }
+
+    /// Minimal norns display - ONLY show tempo (deployment requirement)
+    pub fn draw_norns_tempo_only(&mut self, tempo: f32) -> Result<()> {
+        // Clear screen
+        self.clear();
+        
+        // Draw only tempo in center of screen
+        let tempo_text = format!("{:.1} BPM", tempo);
+        self.draw_text(32, 28, &tempo_text);
+        
+        // Update physical display
+        #[cfg(feature = "framebuffer-support")]
+        {
+            if let Some(ref mut fb) = self.framebuffer {
+                fb.write_frame(&self.buffer);
+            }
+        }
+        
+        Ok(())
     }
 }
 

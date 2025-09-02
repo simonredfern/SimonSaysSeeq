@@ -24,7 +24,7 @@ for arg in "$@"; do
             echo "  --help, -h  Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0                # Deploy with simulation mode (fast)"
+            echo "  $0                # Deploy with MIDI mode (fast)"
             echo "  $0 --native      # Deploy and compile with hardware features (slow)"
             echo ""
             echo "Environment variables:"
@@ -135,8 +135,8 @@ ar = "arm-linux-gnueabihf-ar"
 target = "armv7-unknown-linux-gnueabihf"
 CARGO_CONFIG
 
-# Build with simulation mode to avoid cross-compilation issues
-cross build --release --target=$LOCAL_TARGET --no-default-features --features "simulation"
+# Build with midi features to avoid cross-compilation issues
+cross build --release --target=$LOCAL_TARGET --no-default-features --features "midi"
 
 if [ $? -ne 0 ]; then
     print_error "Cross-compilation failed"
@@ -365,7 +365,7 @@ else
     echo "🎵 SimonSaysSeeq Rust is now installed on your Norns!"
     echo ""
     echo "Native Hardware Compilation:"
-    echo "  Current build: Simulation mode (cross-compiled)"
+    echo "  Current build: MIDI mode (cross-compiled)"
     echo "  For real MIDI/hardware: ./deploy_to_norns.sh --native"
     echo "  Or manually: ssh $NORNS_USER@$NORNS_IP && cd $NORNS_TARGET_DIR && ./compile_native_on_norns.sh"
 fi
