@@ -404,8 +404,13 @@ run_application() {
     echo -e "${CYAN}Press Ctrl+C to stop${NC}"
     echo
     
-    # Run the application
-    "$binary_path" "$@"
+    # Define the startup log file
+    local startup_log="ai_startup_output"
+    
+    log_run "Writing startup output to: $startup_log"
+    
+    # Run the application and capture output to file (overwriting previous content)
+    "$binary_path" "$@" 2>&1 | tee "$startup_log"
 }
 
 # Show system information
