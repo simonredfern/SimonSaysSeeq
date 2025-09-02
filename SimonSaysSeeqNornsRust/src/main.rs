@@ -1867,7 +1867,7 @@ fn main() -> Result<()> {
     let shutdown_flag = Arc::new(AtomicBool::new(false));
     let shutdown_flag_clone = shutdown_flag.clone();
 
-    ctrlc::set_handler(move || {
+    match ctrlc::set_handler(move || {
         info!("🛑 Direct Ctrl+C handler triggered - forcing exit");
         shutdown_flag_clone.store(true, Ordering::SeqCst);
         thread::spawn(|| {
@@ -1875,7 +1875,18 @@ fn main() -> Result<()> {
             warn!("🛑 Direct force exit");
             std::process::exit(0);
         });
-    }).expect("Error setting direct Ctrl-C handler");
+    }) {
+        Ok(()) => {
+            info!("Ctrl+C handler successfully registered");
+        }
+        Err(ctrlc::Error::MultipleHandlers) => {
+            warn!("Ctrl+C handler already exists, skipping registration");
+        }
+        Err(e) => {
+            error!("Failed to set Ctrl+C handler: {}", e);
+            return Err(anyhow::anyhow!("Failed to set Ctrl+C handler: {}", e));
+        }
+    }
 
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
