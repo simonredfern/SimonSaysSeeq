@@ -258,13 +258,27 @@ install_serialosc() {
         return 0
     fi
     
+    # Try package manager first
+    log_info "Trying package manager installation..."
+    sudo apt-get update
+    if sudo apt-get install -y serialosc 2>/dev/null; then
+        log_success "serialosc installed via package manager"
+        sudo systemctl enable serialosc
+        sudo systemctl start serialosc
+        if systemctl is-active --quiet serialosc; then
+            log_success "serialosc service started successfully"
+            return 0
+        fi
+    fi
+    
+    log_warning "Package manager installation failed, trying manual build..."
+    
     # Check if binary exists but service doesn't
     if [ -f "/usr/local/bin/serialoscd" ] && ! systemctl is-enabled serialosc >/dev/null 2>&1; then
         log_info "serialosc binary found, creating service..."
     else
-        # Install build dependencies
+        # Install build dependencies - focus on fixing the missing headers
         log_info "Installing build dependencies..."
-        sudo apt-get update
         sudo apt-get install -y \
             git \
             build-essential \
@@ -272,7 +286,13 @@ install_serialosc() {
             liblo-dev \
             python3 \
             pkg-config \
-            libuv1-dev
+            libuv1-dev \
+            libavahi-compat-libdnssd-dev \
+            avahi-daemon
+        
+        # Start avahi daemon (for dns_sd.h support)
+        sudo systemctl enable avahi-daemon
+        sudo systemctl start avahi-daemon
         
         # Create temporary directory for build
         local temp_dir=$(mktemp -d)
@@ -299,7 +319,8 @@ install_serialosc() {
         fi
         
         log_info "Building libmonome..."
-        if ! ./waf configure; then
+        # Configure without the problematic windows.h check
+        if ! ./waf configure --prefix=/usr/local; then
             log_error "Failed to configure libmonome"
             cd "$original_dir"
             rm -rf "$temp_dir"
@@ -346,7 +367,7 @@ install_serialosc() {
         fi
         
         log_info "Building serialosc (using waf)..."
-        if ! ./waf configure; then
+        if ! ./waf configure --prefix=/usr/local; then
             log_error "Failed to configure serialosc with waf"
             cd "$original_dir"
             rm -rf "$temp_dir"
@@ -384,7 +405,7 @@ install_serialosc() {
     sudo tee /etc/systemd/system/serialosc.service > /dev/null << 'EOF'
 [Unit]
 Description=serialosc daemon for monome devices
-After=multi-user.target
+After=multi-user.target avahi-daemon.service
 
 [Service]
 Type=forking
