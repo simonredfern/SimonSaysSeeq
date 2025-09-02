@@ -271,7 +271,8 @@ install_serialosc() {
             libudev-dev \
             liblo-dev \
             python3 \
-            pkg-config
+            pkg-config \
+            libuv1-dev
         
         # Create temporary directory for build
         local temp_dir=$(mktemp -d)
