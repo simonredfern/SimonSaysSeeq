@@ -405,13 +405,18 @@ install_serialosc() {
     sudo tee /etc/systemd/system/serialosc.service > /dev/null << 'EOF'
 [Unit]
 Description=serialosc daemon for monome devices
-After=multi-user.target avahi-daemon.service
+After=multi-user.target avahi-daemon.service udev.target
+Wants=avahi-daemon.service
 
 [Service]
-Type=forking
+Type=simple
 ExecStart=/usr/local/bin/serialoscd
-Restart=on-failure
-RestartSec=5
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=10
+User=root
+Environment=HOME=/root
 
 [Install]
 WantedBy=multi-user.target
