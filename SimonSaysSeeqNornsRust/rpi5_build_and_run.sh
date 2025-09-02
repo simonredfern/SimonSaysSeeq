@@ -269,7 +269,8 @@ install_serialosc() {
             git \
             build-essential \
             libudev-dev \
-            liblo-dev
+            liblo-dev \
+            python3
         
         # Create temporary directory for build
         local temp_dir=$(mktemp -d)
@@ -294,16 +295,23 @@ install_serialosc() {
             return 1
         fi
         
-        log_info "Building serialosc..."
-        if ! make; then
-            log_error "Failed to build serialosc"
+        log_info "Building serialosc (using waf)..."
+        if ! ./waf configure; then
+            log_error "Failed to configure serialosc with waf"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        if ! ./waf; then
+            log_error "Failed to build serialosc with waf"
             cd "$original_dir"
             rm -rf "$temp_dir"
             return 1
         fi
         
         log_info "Installing serialosc..."
-        if ! sudo make install; then
+        if ! sudo ./waf install; then
             log_error "Failed to install serialosc"
             cd "$original_dir"
             rm -rf "$temp_dir"
