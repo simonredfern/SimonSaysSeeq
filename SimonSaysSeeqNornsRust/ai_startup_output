@@ -1,0 +1,42 @@
+[2025-09-02T19:01:39Z INFO  simon_says_seeq] SimonSaysSeeq Rust v0.1.0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::config] Configuration loaded from: "/home/simonredfern/.config/simon-says-seeq/config.toml"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Discovering Norns input devices...
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: Bluetooth Keyboard at "/dev/input/event6"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Added Norns device: Bluetooth Keyboard
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: vc4-hdmi-1 HDMI Jack at "/dev/input/event5"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: vc4-hdmi-1 at "/dev/input/event4"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: vc4-hdmi-0 HDMI Jack at "/dev/input/event3"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: vc4-hdmi-0 at "/dev/input/event2"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: pwr_button at "/dev/input/event1"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Added Norns device: pwr_button
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::hardware] Found input device: Logitech USB Optical Mouse at "/dev/input/event0"
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_output says: Available MIDI output ports:
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_output says:   0: Midi Through:Midi Through Port-0 14:0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_output says: Connected to MIDI output: Midi Through:Midi Through Port-0 14:0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_input says: Available MIDI input ports:
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_input says:   0: Midi Through:Midi Through Port-0 14:0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_input says:   1: SimonSaysSeeq:SimonSaysSeeq Output 128:0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq::midi] initialize_input says: Connected to MIDI input: Midi Through:Midi Through Port-0 14:0
+[2025-09-02T19:01:39Z INFO  simon_says_seeq_rust::grid_osc] new says: Creating OSC-based grid manager...
+[2025-09-02T19:01:39Z INFO  simon_says_seeq_rust::grid_osc] new says: Created OSC socket on port 55367
+[2025-09-02T19:01:39Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says: Discovering grid devices via serialosc...
+[2025-09-02T19:01:39Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says: Sent device discovery request to serialosc
+[2025-09-02T19:01:42Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says: No serialosc devices found. Make sure:
+[2025-09-02T19:01:42Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says:   1. Your grid is connected via USB
+[2025-09-02T19:01:42Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says:   2. serialosc is running: sudo systemctl start serialosc
+[2025-09-02T19:01:42Z INFO  simon_says_seeq_rust::grid_osc] discover_devices says:   3. You're in the dialout group
+[2025-09-02T19:01:42Z INFO  simon_says_seeq::screen] Screen simulation mode - no actual framebuffer access
+[2025-09-02T19:01:42Z INFO  simon_says_seeq::co2] CO2 features disabled in configuration
+[2025-09-02T19:01:42Z INFO  simon_says_seeq::sequencer] Sequencer started
+[2025-09-02T19:01:42Z INFO  simon_says_seeq::hardware] Starting hardware input loop
+
+thread '<unnamed>' panicked at src/hardware.rs:110:12:
+Error setting Ctrl-C handler: MultipleHandlers
+stack backtrace:
+[2025-09-02T19:01:42Z INFO  simon_says_seeq::sequencer] Starting sequencer clock loop
+[2025-09-02T19:01:42Z INFO  simon_says_seeq] DEBUG: update_grid_display called - found 0 connected grids: []
+[2025-09-02T19:01:42Z INFO  simon_says_seeq] DEBUG: No grids available for display
+   0: __rustc::rust_begin_unwind
+   1: core::panicking::panic_fmt
+   2: core::result::unwrap_failed
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
