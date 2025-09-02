@@ -270,13 +270,62 @@ install_serialosc() {
             build-essential \
             libudev-dev \
             liblo-dev \
-            python3
+            python3 \
+            pkg-config
         
         # Create temporary directory for build
         local temp_dir=$(mktemp -d)
         local original_dir=$(pwd)
         cd "$temp_dir"
         
+        # First install libmonome dependency
+        log_info "Cloning and building libmonome..."
+        if ! git clone https://github.com/monome/libmonome.git; then
+            log_error "Failed to clone libmonome repository"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        cd libmonome
+        
+        log_info "Initializing libmonome submodules..."
+        if ! git submodule init && git submodule update; then
+            log_error "Failed to initialize libmonome submodules"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        log_info "Building libmonome..."
+        if ! ./waf configure; then
+            log_error "Failed to configure libmonome"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        if ! ./waf; then
+            log_error "Failed to build libmonome"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        log_info "Installing libmonome..."
+        if ! sudo ./waf install; then
+            log_error "Failed to install libmonome"
+            cd "$original_dir"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        
+        # Update library cache
+        sudo ldconfig
+        
+        cd "$temp_dir"
+        
+        # Now install serialosc
         log_info "Cloning serialosc repository..."
         if ! git clone https://github.com/monome/serialosc.git; then
             log_error "Failed to clone serialosc repository"
