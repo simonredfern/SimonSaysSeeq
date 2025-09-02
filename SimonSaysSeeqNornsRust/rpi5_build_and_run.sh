@@ -291,7 +291,7 @@ install_serialosc() {
         cd libmonome
         
         log_info "Initializing libmonome submodules..."
-        if ! git submodule init && git submodule update; then
+        if ! git submodule update --init --recursive; then
             log_error "Failed to initialize libmonome submodules"
             cd "$original_dir"
             rm -rf "$temp_dir"
@@ -338,7 +338,7 @@ install_serialosc() {
         cd serialosc
         
         log_info "Initializing submodules..."
-        if ! git submodule init && git submodule update; then
+        if ! git submodule update --init --recursive; then
             log_error "Failed to initialize submodules"
             cd "$original_dir"
             rm -rf "$temp_dir"
