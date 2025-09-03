@@ -11,7 +11,7 @@
 
 use anyhow::{anyhow, Result};
 use clap::{Arg, Command};
-use log::{error, info, warn};
+use log::{error, warn};
 use midir::{MidiInput, MidiOutput};
 use std::io::{self, Write};
 use std::time::Duration;
@@ -91,10 +91,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Force rescan if requested
-    if matches.get_flag("force-rescan") {
-        return force_rescan_and_monitor(timeout_secs);
-    }
+
 
     // Interactive mode
     if matches.get_flag("interactive") {
@@ -106,6 +103,11 @@ fn main() -> Result<()> {
         .unwrap()
         .parse()
         .map_err(|_| anyhow!("Invalid timeout value"))?;
+
+    // Force rescan if requested
+    if matches.get_flag("force-rescan") {
+        return force_rescan_and_monitor(timeout_secs);
+    }
 
     // Check if specific port was requested
     if let Some(port_name) = matches.get_one::<String>("port") {
@@ -295,7 +297,7 @@ fn scan_and_monitor(timeout_secs: u64) -> Result<()> {
 }
 
 /// Monitor a specific MIDI port for clock signals
-fn monitor_specific_port(port_name: &str, timeout_secs: u64) -> Result<()> {
+fn monitor_specific_port(port_name: &str, _timeout_secs: u64) -> Result<()> {
     println!("🎯 Monitoring MIDI port '{}' for clock signals...", port_name);
     
     // Find the specified port
@@ -383,7 +385,7 @@ fn monitor_clock_source(port_name: &str) -> Result<()> {
                 io::stdout().flush().ok();
             }
         }, ()
-    )?;
+    ).map_err(|e| anyhow!("Failed to connect to MIDI port: {}", e))?;
 
     println!("🎵 Listening for MIDI clock (♪ = beat, . = 16th note)...");
     println!("Press Enter to stop monitoring");

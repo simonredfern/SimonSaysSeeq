@@ -5,7 +5,7 @@
 use anyhow::Result;
 #[cfg(feature = "framebuffer-support")]
 use framebuffer::Framebuffer;
-use log::{info, warn};
+use log::info;
 
 /// Font data for simple 6x8 pixel font
 const FONT_6X8: &[&[u8]] = &[
@@ -144,7 +144,7 @@ pub struct ScreenManager {
 impl ScreenManager {
     /// Create a new screen manager
     pub fn new() -> Result<Self> {
-        let mut manager = Self {
+        let manager = Self {
             #[cfg(feature = "framebuffer-support")]
             framebuffer: None,
             width: 128,

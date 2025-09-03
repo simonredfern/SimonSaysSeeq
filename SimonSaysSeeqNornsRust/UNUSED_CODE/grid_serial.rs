@@ -1,7 +1,13 @@
-//! Direct Serial Grid Communication Module
+//! ⚠️ DEPRECATED: Direct Serial Grid Communication Module
 //!
+//! ⚠️ WARNING: This code is UNUSED and DEPRECATED!
+//! ⚠️ DO NOT USE - The project switched back to OSC/serialosc communication
+//! ⚠️ This file is kept for historical reference only
+//!
+//! Original description:
 //! Bypasses serialosc entirely and communicates directly with Monome grids
-//! via serial/USB FTDI devices. This is more reliable than OSC-based communication.
+//! via serial/USB FTDI devices. This approach was found to be problematic
+//! and was replaced with OSC-based communication via serialosc daemon.
 
 use anyhow::{Result, anyhow};
 use log::{info, debug, warn, error};
@@ -12,7 +18,7 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "serialport")]
-use serialport::{SerialPort, SerialPortType, UsbPortInfo};
+use serialport::{SerialPort, SerialPortType};
 
 /// Grid button event
 #[derive(Debug, Clone)]
@@ -24,7 +30,7 @@ pub struct GridButtonEvent {
 }
 
 /// Information about a connected grid device
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct GridDevice {
     id: String,
     device_path: String,
@@ -248,8 +254,10 @@ impl GridManager {
     /// Clear all LEDs on a grid
     pub fn clear_all(&mut self, grid_id: &str) -> Result<()> {
         if let Some(device) = self.devices.get(grid_id) {
-            for y in 0..device.rows {
-                for x in 0..device.cols {
+            let rows = device.rows;
+            let cols = device.cols;
+            for y in 0..rows {
+                for x in 0..cols {
                     self.set_led(grid_id, x, y, 0, "clear_all")?;
                 }
             }
@@ -258,11 +266,13 @@ impl GridManager {
     }
 
     /// Clear only sequencer rows (0-6), preserve control row (7)
-    pub fn clear_all_sequence_rows(&mut self, grid_id: &str) -> Result<()> {
+    /// Clear sequence rows (rows 0-7) on a grid
+    pub fn clear_sequence_rows(&mut self, grid_id: &str) -> Result<()> {
         if let Some(device) = self.devices.get(grid_id) {
-            let max_seq_row = (device.rows - 1).min(6); // Don't clear last row
-            for y in 0..=max_seq_row {
-                for x in 0..device.cols {
+            let rows = 8.min(device.rows);
+            let cols = device.cols;
+            for y in 0..rows {
+                for x in 0..cols {
                     self.set_led(grid_id, x, y, 0, "clear_sequence_rows")?;
                 }
             }
@@ -272,13 +282,17 @@ impl GridManager {
 
     /// Set LED map for efficient bulk updates
     pub fn set_led_map(&mut self, grid_id: &str, led_map: &[Vec<u8>]) -> Result<()> {
-        if let Some(device) = self.devices.get(grid_id) {
-            for (y, row) in led_map.iter().enumerate() {
-                if y >= device.rows { break; }
-                for (x, &brightness) in row.iter().enumerate() {
-                    if x >= device.cols { break; }
-                    self.set_led(grid_id, x, y, brightness, "set_led_map")?;
-                }
+        let (rows, cols) = if let Some(device) = self.devices.get(grid_id) {
+            (device.rows, device.cols)
+        } else {
+            return Ok(());
+        };
+
+        for (y, row) in led_map.iter().enumerate() {
+            if y >= rows { break; }
+            for (x, &brightness) in row.iter().enumerate() {
+                if x >= cols { break; }
+                self.set_led(grid_id, x, y, brightness, "set_led_map")?;
             }
         }
         Ok(())
@@ -378,24 +392,26 @@ impl GridManager {
 
     /// Flash a specific grid
     pub fn flash_grid(&mut self, grid_id: &str, flash_count: usize) -> Result<()> {
-        if let Some(device) = self.devices.get(grid_id) {
-            for _ in 0..flash_count {
-                // Turn all LEDs on
-                for y in 0..device.rows {
-                    for x in 0..device.cols {
-                        self.set_led(grid_id, x, y, 15, "flash")?;
-                    }
+        let (rows, cols) = if let Some(device) = self.devices.get(grid_id) {
+            (device.rows, device.cols)
+        } else {
+            return Ok(());
+        };
+
+        for _ in 0..flash_count {
+            // Turn all LEDs on
+            for y in 0..rows {
+                for x in 0..cols {
+                    self.set_led(grid_id, x, y, 15, "flash")?;
                 }
-                
-                thread::sleep(Duration::from_millis(100));
-                
-                // Turn all LEDs off
-                self.clear_all(grid_id)?;
-                
-                thread::sleep(Duration::from_millis(100));
             }
+            
+            thread::sleep(Duration::from_millis(100));
+            
+            // Turn all LEDs off
+            self.clear_all(grid_id)?;
+            thread::sleep(Duration::from_millis(100));
         }
-        
         Ok(())
     }
 
@@ -419,6 +435,13 @@ impl GridManager {
             self.set_led(grid_id, max_x, max_y, 0, "test")?;
         }
         
+        Ok(())
+    }
+
+    /// Refresh display (no-op for direct serial - updates are immediate)
+    pub fn refresh(&mut self) -> Result<()> {
+        // Serial grids update immediately when LEDs are set
+        // This method is provided for compatibility with other grid implementations
         Ok(())
     }
 

@@ -1,13 +1,13 @@
-//! MIDI Clock Scanner Module
-//! 
-//! This module provides functionality to automatically scan all available MIDI input ports
-//! and detect which ones are providing MIDI clock signals. It will lock onto the first
-//! reliable MIDI clock source found.
+/// MIDI Clock Scanner Module
+/// 
+/// This module provides functionality to automatically scan all available MIDI input ports
+/// and detect which ones are providing MIDI clock signals. It will lock onto the first
+/// reliable MIDI clock source found.
 
 use anyhow::{anyhow, Result};
 use crossbeam_channel::{unbounded, Receiver, Sender, TryRecvError};
 use log::{debug, error, info, warn};
-use midir::{MidiInput, MidiInputConnection, MidiInputPort};
+use midir::{MidiInput, MidiInputPort};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -97,7 +97,7 @@ pub struct MidiClockScanner {
 
 impl MidiClockScanner {
     pub fn new() -> Self {
-        let (sender, receiver) = unbounded();
+        let (_sender, receiver) = unbounded();
         
         Self {
             event_receiver: receiver,

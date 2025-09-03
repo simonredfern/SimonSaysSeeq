@@ -6,17 +6,18 @@
 
 pub mod config;
 
-pub mod grid_serial;
+pub mod grid_osc;
 pub mod hardware;
 pub mod midi;
+pub mod midi_scanner;
 pub mod screen;
 pub mod sequencer;
 pub mod co2;
 
 // Re-export commonly used types
 pub use config::Config;
-// Use direct serial grid manager to bypass serialosc
-pub use grid_serial::{GridManager, GridButtonEvent};
+// Use OSC grid manager via serialosc for reliable communication
+pub use grid_osc::{GridManager, GridButtonEvent};
 pub use sequencer::Sequencer;
 pub use midi::MidiManager;
 pub use screen::ScreenManager;

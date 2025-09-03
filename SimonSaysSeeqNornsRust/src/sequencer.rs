@@ -568,7 +568,7 @@ impl Sequencer {
 
     /// Set pattern change mode
     pub fn set_pattern_change_mode(&self, mode: bool) {
-        let mut state = self.state.lock().unwrap();
+        let _state = self.state.lock().unwrap();
         // Store pattern change mode in a custom field if needed
         // For now, just log it
         info!("Pattern change mode set to: {}", mode);
