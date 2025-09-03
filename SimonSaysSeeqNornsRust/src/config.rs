@@ -29,6 +29,8 @@ pub struct Config {
 pub struct MidiConfig {
     /// MIDI output device name (empty string = auto-detect)
     pub device: String,
+    /// Last successfully detected MIDI clock device (for faster reconnection)
+    pub last_detected_device: Option<String>,
     /// Default MIDI channel (1-16)
     pub default_channel: u8,
     /// Default velocity
@@ -39,6 +41,12 @@ pub struct MidiConfig {
     pub clock_ppq: u16,
     /// Stuck note cleanup timeout (seconds)
     pub stuck_note_timeout: u64,
+    /// Enable automatic MIDI clock detection
+    pub auto_detect_clock: bool,
+    /// Re-detection interval when no clock source (seconds)
+    pub detection_retry_interval: u64,
+    /// Timeout for clock source scanning (seconds)
+    pub detection_scan_timeout: u64,
 }
 
 /// Grid-related configuration
@@ -119,11 +127,15 @@ impl Default for MidiConfig {
     fn default() -> Self {
         Self {
             device: String::new(), // Auto-detect
+            last_detected_device: None,
             default_channel: 1,
             default_velocity: 100,
             send_clock: true,
             clock_ppq: 24,
             stuck_note_timeout: 5,
+            auto_detect_clock: true,
+            detection_retry_interval: 30,
+            detection_scan_timeout: 10,
         }
     }
 }
@@ -292,11 +304,15 @@ impl Config {
         Self {
             midi: MidiConfig {
                 device: "".to_string(),
+                last_detected_device: None,
                 default_channel: 1,
                 default_velocity: 100,
                 send_clock: false,
                 clock_ppq: 24,
                 stuck_note_timeout: 5,
+                auto_detect_clock: false, // Disabled for testing
+                detection_retry_interval: 60,
+                detection_scan_timeout: 5,
             },
             grid: GridConfig {
                 rotation: 0,

@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 mod hardware;
 mod sequencer;
 mod midi;
+mod midi_scanner;
 
 mod screen;
 mod config;
@@ -223,6 +224,8 @@ impl SimonSaysSeeq {
     fn main_loop(&mut self, hw_rx: Receiver<HardwareEvent>, seq_rx: Receiver<SequencerEvent>) -> Result<()> {
         let mut last_screen_update = Instant::now();
         let screen_update_interval = Duration::from_millis(33); // ~30 FPS
+        let mut last_midi_detection_check = Instant::now();
+        let midi_detection_check_interval = Duration::from_secs(5); // Check every 5 seconds
 
         loop {
             // Handle hardware events (non-blocking)
@@ -286,6 +289,19 @@ impl SimonSaysSeeq {
                     if let Err(e) = self.handle_midi_input_event(event) {
                         // error!("Error handling MIDI input event: {}", e);
                     }
+                }
+                
+                // Periodically check for MIDI clock re-detection
+                if last_midi_detection_check.elapsed() >= midi_detection_check_interval {
+                    if self.midi.should_retry_detection() {
+                        info!("main_loop says: Attempting MIDI clock re-detection...");
+                        match self.midi.retry_detection() {
+                            Ok(true) => info!("main_loop says: MIDI clock re-detection successful"),
+                            Ok(false) => debug!("main_loop says: MIDI clock re-detection found no new sources"),
+                            Err(e) => warn!("main_loop says: MIDI clock re-detection failed: {}", e),
+                        }
+                    }
+                    last_midi_detection_check = Instant::now();
                 }
             }
 

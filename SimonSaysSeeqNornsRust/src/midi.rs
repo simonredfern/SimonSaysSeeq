@@ -159,6 +159,14 @@ pub struct MidiManager {
     snap_to_whole_tempo: Arc<Mutex<bool>>,
     /// Previous clock source to detect transitions
     previous_clock_source: Arc<Mutex<ClockSource>>,
+    /// Auto-detect MIDI clock sources
+    auto_detect_clock: bool,
+    /// Last successful auto-detection time
+    last_detection_time: Arc<Mutex<Option<Instant>>>,
+    /// Auto-detection retry interval (seconds)
+    detection_retry_interval: u64,
+    /// Configuration reference for saving detected devices
+    config: Arc<Mutex<MidiConfig>>,
 }
 
 impl MidiManager {
@@ -180,12 +188,20 @@ impl MidiManager {
             clock_state: Arc::new(Mutex::new(ClockState::default())),
             snap_to_whole_tempo: Arc::new(Mutex::new(true)), // Default ON
             previous_clock_source: Arc::new(Mutex::new(ClockSource::Internal)),
+            auto_detect_clock: config.auto_detect_clock && config.device.is_empty(),
+            last_detection_time: Arc::new(Mutex::new(None)),
+            detection_retry_interval: config.detection_retry_interval,
+            config: Arc::new(Mutex::new(config.clone())),
         };
         
         #[cfg(feature = "midi")]
         {
             manager.initialize_output()?;
-            manager.initialize_input()?;
+            if manager.auto_detect_clock {
+                manager.auto_detect_and_connect()?;
+            } else {
+                manager.initialize_input()?;
+            }
         }
         #[cfg(not(feature = "midi"))]
         info!("new says: MIDI simulation mode - no actual MIDI I/O");
@@ -882,6 +898,271 @@ impl MidiManager {
             None
         }
     }
+
+    /// Auto-detect and connect to the first available MIDI clock source
+    #[cfg(feature = "midi")]
+    fn auto_detect_and_connect(&mut self) -> Result<()> {
+        use crate::midi_scanner::{scan_for_midi_clock};
+        
+        info!("auto_detect_and_connect says: Starting automatic MIDI clock detection...");
+        
+        // First try the last known good device if available
+        let last_detected = self.config.lock().unwrap().last_detected_device.clone();
+        if let Some(ref last_device) = last_detected {
+            info!("auto_detect_and_connect says: Trying last known device: {}", last_device);
+            self.input_device_name = last_device.clone();
+            match self.initialize_input() {
+                Ok(_) => {
+                    // Test if this device actually provides clock
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    let clock_state = self.clock_state.lock().unwrap();
+                    if matches!(clock_state.source, ClockSource::MidiExternal) {
+                        info!("auto_detect_and_connect says: Successfully reconnected to last known device");
+                        return Ok(());
+                    } else {
+                        info!("auto_detect_and_connect says: Last known device no longer provides clock, scanning for new sources");
+                    }
+                }
+                Err(e) => {
+                    warn!("auto_detect_and_connect says: Failed to connect to last known device: {}", e);
+                }
+            }
+        }
+        
+        // Fall back to full scanning
+        match scan_for_midi_clock() {
+            Ok(summary) => {
+                if let Some(selected_source) = summary.selected_source {
+                    info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
+                    self.input_device_name = selected_source.clone();
+                    self.initialize_input()?;
+                    self.save_detected_device(&selected_source)?;
+                } else if !summary.reliable_sources.is_empty() {
+                    // Use the first reliable source if none was auto-selected
+                    let first_source = summary.reliable_sources[0].clone();
+                    info!("auto_detect_and_connect says: Using first reliable source: {}", first_source);
+                    self.input_device_name = first_source.clone();
+                    self.initialize_input()?;
+                    self.save_detected_device(&first_source)?;
+                } else {
+                    warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
+                    self.initialize_input()?;
+                }
+            }
+            Err(e) => {
+                warn!("auto_detect_and_connect says: Clock detection failed: {}, falling back to normal initialization", e);
+                self.initialize_input()?;
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Schedule a re-detection attempt
+    fn schedule_redetection(&self) {
+        *self.last_detection_time.lock().unwrap() = Some(Instant::now());
+    }
+
+    /// Check if we should attempt re-detection
+    pub fn should_retry_detection(&self) -> bool {
+        if !self.auto_detect_clock {
+            return false;
+        }
+
+        let clock = self.clock_state.lock().unwrap();
+        let last_detection = self.last_detection_time.lock().unwrap();
+
+        // Only retry if we're on internal clock and enough time has passed
+        if matches!(clock.source, ClockSource::Internal) {
+            if let Some(last_time) = *last_detection {
+                last_time.elapsed().as_secs() >= self.detection_retry_interval
+            } else {
+                true // Never attempted detection
+            }
+        } else {
+            false // We have external clock, no need to retry
+        }
+    }
+
+    /// Attempt to re-detect MIDI clock sources
+    #[cfg(feature = "midi")]
+    pub fn retry_detection(&mut self) -> Result<bool> {
+        if !self.should_retry_detection() {
+            return Ok(false);
+        }
+
+        info!("retry_detection says: Attempting to re-detect MIDI clock sources...");
+        
+        // Disconnect current input if any
+        #[cfg(feature = "midi")]
+        {
+            self.input_connection = None;
+        }
+
+        // Run detection
+        match self.auto_detect_and_connect() {
+            Ok(_) => {
+                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
+                info!("retry_detection says: Re-detection completed successfully");
+                Ok(true)
+            }
+            Err(e) => {
+                warn!("retry_detection says: Re-detection failed: {}", e);
+                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
+                Ok(false)
+            }
+        }
+    }
+
+    /// Force re-detection even if clock is currently active
+    #[cfg(feature = "midi")]
+    pub fn force_redetection(&mut self) -> Result<bool> {
+        info!("force_redetection says: Forcing MIDI clock re-detection (ignoring current state)");
+        
+        // Disconnect current input
+        #[cfg(feature = "midi")]
+        {
+            self.input_connection = None;
+        }
+
+        // Reset clock state to internal to ensure fresh detection
+        {
+            let mut clock = self.clock_state.lock().unwrap();
+            clock.source = ClockSource::Internal;
+            clock.running = false;
+            clock.clock_ticks = 0;
+            clock.last_external_activity = None;
+        }
+
+        // Run detection
+        match self.auto_detect_and_connect() {
+            Ok(_) => {
+                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
+                info!("force_redetection says: Forced re-detection completed successfully");
+                Ok(true)
+            }
+            Err(e) => {
+                warn!("force_redetection says: Forced re-detection failed: {}", e);
+                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
+                Ok(false)
+            }
+        }
+    }
+
+    /// Get detection status information
+    pub fn get_detection_status(&self) -> DetectionStatus {
+        let clock = self.clock_state.lock().unwrap();
+        let last_detection = self.last_detection_time.lock().unwrap();
+        let should_retry = self.should_retry_detection();
+
+        DetectionStatus {
+            auto_detect_enabled: self.auto_detect_clock,
+            current_source: clock.source.clone(),
+            last_detection_time: *last_detection,
+            next_retry_in: if should_retry {
+                Some(0)
+            } else if let Some(last_time) = *last_detection {
+                let elapsed = last_time.elapsed().as_secs();
+                if elapsed < self.detection_retry_interval {
+                    Some(self.detection_retry_interval - elapsed)
+                } else {
+                    Some(0)
+                }
+            } else {
+                None
+            },
+            device_name: self.input_device_name.clone(),
+        }
+    }
+
+    /// Save the detected MIDI device to configuration for future use
+    fn save_detected_device(&self, device_name: &str) -> Result<()> {
+        {
+            let mut config = self.config.lock().unwrap();
+            config.last_detected_device = Some(device_name.to_string());
+        }
+        
+        // Save to file
+        let config_path = crate::config::Config::get_config_path();
+        if let Ok(mut full_config) = crate::config::Config::load_or_default() {
+            full_config.midi.last_detected_device = Some(device_name.to_string());
+            if let Err(e) = full_config.save(&config_path) {
+                warn!("save_detected_device says: Failed to save config: {}", e);
+            } else {
+                info!("save_detected_device says: Saved detected device '{}' to config", device_name);
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Clear the saved detected device from configuration
+    pub fn clear_detected_device(&self) -> Result<()> {
+        {
+            let mut config = self.config.lock().unwrap();
+            config.last_detected_device = None;
+        }
+        
+        let config_path = crate::config::Config::get_config_path();
+        if let Ok(mut full_config) = crate::config::Config::load_or_default() {
+            full_config.midi.last_detected_device = None;
+            if let Err(e) = full_config.save(&config_path) {
+                warn!("clear_detected_device says: Failed to save config: {}", e);
+            } else {
+                info!("clear_detected_device says: Cleared saved detected device from config");
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Get current clock connection health
+    pub fn get_clock_health(&self) -> ClockHealth {
+        let clock = self.clock_state.lock().unwrap();
+        
+        match clock.source {
+            ClockSource::Internal => ClockHealth::NoExternalClock,
+            ClockSource::MidiExternal => {
+                if let Some(last_activity) = clock.last_external_activity {
+                    let silence_duration = last_activity.elapsed().as_millis();
+                    if silence_duration > 2000 {
+                        ClockHealth::Lost
+                    } else if silence_duration > 500 {
+                        ClockHealth::Unstable
+                    } else {
+                        ClockHealth::Healthy
+                    }
+                } else {
+                    ClockHealth::Unknown
+                }
+            }
+        }
+    }
+}
+
+/// Status information for MIDI clock detection
+#[derive(Debug, Clone)]
+pub struct DetectionStatus {
+    pub auto_detect_enabled: bool,
+    pub current_source: ClockSource,
+    pub last_detection_time: Option<Instant>,
+    pub next_retry_in: Option<u64>, // seconds
+    pub device_name: String,
+}
+
+/// Health status of MIDI clock connection
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClockHealth {
+    /// External clock is working well
+    Healthy,
+    /// External clock detected but unstable
+    Unstable,
+    /// External clock connection lost
+    Lost,
+    /// No external clock source
+    NoExternalClock,
+    /// Clock health unknown
+    Unknown,
 }
 
 /// Convert MIDI note number to note name

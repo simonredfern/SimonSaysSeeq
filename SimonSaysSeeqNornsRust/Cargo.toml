@@ -14,6 +14,10 @@ path = "src/lib.rs"
 name = "simon_says_seeq"
 path = "src/main.rs"
 
+[[bin]]
+name = "midi_clock_detector"
+path = "src/bin/midi_clock_detector.rs"
+
 [dependencies]
 # MIDI handling (optional for development)
 midir = { version = "0.9", optional = true }
@@ -60,6 +64,9 @@ ctrlc = "3.4"
 
 # Configuration directories
 dirs = "5.0"
+
+# Command line argument parsing
+clap = "4.0"
 
 # Random number generation
 rand = "0.8"
