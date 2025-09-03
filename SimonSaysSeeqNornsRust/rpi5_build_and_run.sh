@@ -533,6 +533,90 @@ test_binary() {
     log_success "Binary test completed"
 }
 
+# Setup configuration with new MIDI detection fields
+setup_configuration() {
+    log_info "Setting up configuration with MIDI auto-detection..."
+    
+    local config_dir="$HOME/.config/simon-says-seeq"
+    local config_file="$config_dir/config.toml"
+    
+    # Create config directory
+    mkdir -p "$config_dir"
+    
+    # Check if config file exists and has new fields
+    if [ -f "$config_file" ]; then
+        if grep -q "auto_detect_clock" "$config_file"; then
+            log_info "Configuration already up to date"
+            return 0
+        else
+            log_info "Updating existing configuration with MIDI detection fields..."
+            # Backup existing config
+            cp "$config_file" "$config_file.backup.$(date +%Y%m%d_%H%M%S)"
+        fi
+    fi
+    
+    # Create or update configuration file
+    log_info "Creating configuration file: $config_file"
+    cat > "$config_file" << 'EOF'
+[midi]
+device = ""                      # Empty = auto-detect MIDI clock
+auto_detect_clock = true         # Enable automatic MIDI clock detection
+detection_retry_interval = 30    # Re-scan every 30s if no clock
+detection_scan_timeout = 10      # How long to scan each port
+last_detected_device = null      # Will be auto-populated
+default_channel = 1
+default_velocity = 100
+send_clock = true
+clock_ppq = 24
+stuck_note_timeout = 5
+
+[grid]
+rotation = 0
+default_brightness = 5
+debounce_ms = 50
+auto_detect = true
+
+[sequencer]
+default_tempo = 30.0
+steps_per_bar = 16
+ticks_per_step = 12
+default_first_step = 1
+default_last_step = 16
+auto_save_interval = 300
+
+[hardware]
+input_poll_ms = 10
+encoder_sensitivity = 1.0
+button_hold_ms = 500
+simulation_mode = false
+
+[display]
+refresh_rate = 30
+brightness = 255
+show_beat_indicators = true
+show_tempo_viz = true
+font_scale = 1
+
+[co2]
+enabled = false
+data_dir = "/tmp/co2_data"
+wow_threshold = 20.0
+flutter_threshold = 10.0
+window_size = 100
+voltage_scale = 1.0
+co2_min = 320.0
+co2_max = 450.0
+EOF
+    
+    # Set proper ownership
+    chown -R "$USER:$USER" "$config_dir"
+    chmod -R 755 "$config_dir"
+    chmod 644 "$config_file"
+    
+    log_success "Configuration file created/updated: $config_file"
+    log_info "MIDI auto-detection is enabled by default"
+}
+
 # Install systemd service
 install_service() {
     log_info "Installing systemd service..."
@@ -764,11 +848,15 @@ main() {
             log_info "Installing serialosc for grid device support (required)..."
             install_serialosc
             
+            # Setup configuration
+            setup_configuration
+            
             log_success "Setup completed successfully!"
             log_warning "Please log out and back in for group permissions to take effect"
             ;;
         "build")
             check_raspberry_pi
+            setup_configuration
             build_project
             test_binary
             log_success "Build completed successfully!"
@@ -786,8 +874,12 @@ main() {
             
             if [ ! -f "$binary_path" ]; then
                 log_info "Binary not found, building first..."
+                setup_configuration
                 build_project
                 test_binary
+            else
+                # Ensure configuration is up to date even if binary exists
+                setup_configuration
             fi
             
             run_application ${APP_ARGS}
@@ -802,6 +894,8 @@ main() {
                         log_error "No binary found. Please build first."
                         exit 1
                     fi
+                    # Ensure configuration is set up before installing service
+                    setup_configuration
                     install_service
                     ;;
                 "start")
