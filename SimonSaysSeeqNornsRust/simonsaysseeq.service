@@ -1,0 +1,61 @@
+[Unit]
+Description=SimonSaysSeeq Sequencer with MIDI Clock Detection
+Documentation=https://github.com/simonredfern/SimonSaysSeeq
+After=network.target sound.target serialosc.target
+Wants=network.target sound.target
+Conflicts=shutdown.target
+RequiresMountsFor=/home/we /usr/local
+
+[Service]
+Type=simple
+User=we
+Group=we
+WorkingDirectory=/home/we/dust/code/SimonSaysSeeqRust
+ExecStart=/home/we/dust/code/SimonSaysSeeqRust/target/release/simon_says_seeq
+ExecStartPre=/bin/mkdir -p /home/we/.config/simon-says-seeq
+ExecStartPre=/bin/chown -R we:we /home/we/.config/simon-says-seeq
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+# Environment
+Environment=HOME=/home/we
+Environment=USER=we
+Environment=RUST_LOG=info
+Environment=ALSA_PCM_CARD=0
+Environment=ALSA_PCM_DEVICE=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=simonsaysseeq
+
+# Security settings (relaxed for hardware access)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/we/.config/simon-says-seeq /tmp /var/tmp /sys/class/gpio /dev/snd /dev/midi
+PrivateTmp=false
+ProtectKernelTunables=false
+ProtectKernelModules=false
+ProtectControlGroups=false
+RestrictRealtime=false
+RestrictSUIDSGID=false
+MemoryDenyWriteExecute=false
+SystemCallFilter=@system-service
+
+# Hardware access groups
+SupplementaryGroups=audio gpio dialout input spi i2c
+
+# Resource limits
+LimitNOFILE=4096
+LimitNPROC=512
+
+# Watchdog
+WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target
