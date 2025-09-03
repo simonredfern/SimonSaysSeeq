@@ -4825,6 +4825,55 @@ kill 14815 16252 16404 16463
 
 # NO FURTHER BUILD STEPS NEEDED - APPLICATION READY FOR USE!
 
+## 2025-01-02 serialosc Timeout Issue
+# Problem: "job for serialosc.service failed because a timeout was exceeded"
+# Status: Investigating startup timeout for grid support
+
+### Debug Steps Needed:
+# 1. Check if serialoscd binary was properly built: ls -la /usr/local/bin/serialosc*
+# 2. Test manual execution: sudo /usr/local/bin/serialoscd
+# 3. Check service logs: sudo journalctl -u serialosc -f
+# 4. Verify dependencies: libmonome, avahi-daemon
+# 5. Check USB device detection: lsusb | grep -i ftdi
+
+### Possible Causes:
+# - serialoscd not properly daemonizing (Type=forking vs Type=simple)
+# - Missing runtime dependencies
+# - USB permission issues  
+# - avahi-daemon not running
+# - Build artifacts from failed compilation
+
+### Next Actions:
+# - Switch service type from forking to simple
+# - Add proper timeout settings
+# - Test manual execution before service
+# - Verify grid USB devices are detected
+
+## 2025-01-02 Direct Serial Grid Implementation
+# Solution: Bypassed serialosc entirely with direct serial communication
+# Status: Implemented grid_serial.rs module to replace grid_osc.rs
+
+### Changes Made:
+# 1. Created src/grid_serial.rs - Direct FTDI/USB serial communication
+# 2. Updated src/lib.rs - Use grid_serial instead of grid_osc
+# 3. Updated src/main.rs - Import from grid_serial module
+# 4. Leveraged existing serialport feature in Cargo.toml
+
+### Benefits:
+# - No dependency on problematic serialosc daemon
+# - Direct hardware communication via /dev/ttyUSB* devices
+# - Simplified deployment (no service timeouts)
+# - Better error handling and device discovery
+# - Same API interface for drop-in replacement
+
+### Technical Details:
+# - Uses serialport crate (already included in hardware feature)
+# - Scans for FTDI USB devices (VID=0x0403, PID=0x6001/0x6014)
+# - Implements Monome grid protocol directly
+# - Supports 16x8 grids with variable brightness
+# - Non-blocking button event reading
+# - Automatic device discovery and reconnection
+
 
 
 

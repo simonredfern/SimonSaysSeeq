@@ -68,7 +68,7 @@ use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
-use simon_says_seeq_rust::grid_osc::GridManager;
+use simon_says_seeq_rust::grid_serial::GridManager;
 use screen::ScreenManager;
 use config::Config;
 use co2::Co2Manager;
