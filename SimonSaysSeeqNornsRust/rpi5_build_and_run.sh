@@ -548,8 +548,8 @@ install_service() {
     sudo tee /etc/systemd/system/simonsaysseeq-rpi.service > /dev/null << EOF
 [Unit]
 Description=SimonSaysSeeq Sequencer for Raspberry Pi
-After=network.target sound.target
-Wants=network.target sound.target
+After=multi-user.target udev.target serialosc.service
+Wants=serialosc.service
 
 [Service]
 Type=simple
