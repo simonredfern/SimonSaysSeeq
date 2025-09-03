@@ -1,0 +1,116 @@
+  Compiling simon-says-seeq-rust v0.1.0 (/home/simonredfern/Documents/workspace_2025/SimonSaysSeeq/SimonSaysSeeqNornsRust)
+warning: unused import: `UsbPortInfo`
+  --> src/grid_serial.rs:15:46
+   |
+15 | use serialport::{SerialPort, SerialPortType, UsbPortInfo};
+   |                                              ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `warn`
+ --> src/screen.rs:8:17
+  |
+8 | use log::{info, warn};
+  |                 ^^^^
+
+error[E0277]: the trait bound `dyn SerialPort: Clone` is not satisfied
+  --> src/grid_serial.rs:36:5
+   |
+27 | #[derive(Debug, Clone)]
+   |                 ----- in this derive macro expansion
+...
+36 |     port: Option<Box<dyn SerialPort>>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `Clone` is not implemented for `dyn SerialPort`
+   |
+   = note: required for `Box<dyn SerialPort>` to implement `Clone`
+   = note: 1 redundant requirement hidden
+   = note: required for `std::option::Option<Box<dyn SerialPort>>` to implement `Clone`
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> src/grid_serial.rs:253:21
+    |
+250 |         if let Some(device) = self.devices.get(grid_id) {
+    |                               ------------ immutable borrow occurs here
+251 |             for y in 0..device.rows {
+252 |                 for x in 0..device.cols {
+    |                             ----------- immutable borrow later used here
+253 |                     self.set_led(grid_id, x, y, 0, "clear_all")?;
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> src/grid_serial.rs:266:21
+    |
+262 |         if let Some(device) = self.devices.get(grid_id) {
+    |                               ------------ immutable borrow occurs here
+...
+265 |                 for x in 0..device.cols {
+    |                             ----------- immutable borrow later used here
+266 |                     self.set_led(grid_id, x, y, 0, "clear_sequence_rows")?;
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> src/grid_serial.rs:280:21
+    |
+275 |         if let Some(device) = self.devices.get(grid_id) {
+    |                               ------------ immutable borrow occurs here
+...
+279 |                     if x >= device.cols { break; }
+    |                             ----------- immutable borrow later used here
+280 |                     self.set_led(grid_id, x, y, brightness, "set_led_map")?;
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> src/grid_serial.rs:386:25
+    |
+381 |         if let Some(device) = self.devices.get(grid_id) {
+    |                               ------------ immutable borrow occurs here
+...
+385 |                     for x in 0..device.cols {
+    |                                 ----------- immutable borrow later used here
+386 |                         self.set_led(grid_id, x, y, 15, "flash")?;
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> src/grid_serial.rs:393:17
+    |
+381 |         if let Some(device) = self.devices.get(grid_id) {
+    |                               ------------ immutable borrow occurs here
+...
+384 |                 for y in 0..device.rows {
+    |                             ----------- immutable borrow later used here
+...
+393 |                 self.clear_all(grid_id)?;
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+
+warning: variable does not need to be mutable
+   --> src/screen.rs:147:13
+    |
+147 |         let mut manager = Self {
+    |             ----^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: unused variable: `state`
+   --> src/sequencer.rs:571:17
+    |
+571 |         let mut state = self.state.lock().unwrap();
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: variable does not need to be mutable
+   --> src/sequencer.rs:571:13
+    |
+571 |         let mut state = self.state.lock().unwrap();
+    |             ----^^^^^
+    |             |
+    |             help: remove this `mut`
+
+Some errors have detailed explanations: E0277, E0502.
+For more information about an error, try `rustc --explain E0277`.
+warning: `simon-says-seeq-rust` (lib) generated 5 warnings
+error: could not compile `simon-says-seeq-rust` (lib) due to 6 previous errors; 5 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+
