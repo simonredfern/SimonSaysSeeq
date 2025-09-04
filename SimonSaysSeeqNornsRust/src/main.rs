@@ -777,38 +777,48 @@ impl SimonSaysSeeq {
                     // Check if this column corresponds to a valid ARM action
                     if let Some(arm_action) = ArmAction::from_column(seq_x) {
                     if pressed {
-                        // Turn off previous ARM button if any
-                        if let Some(prev_action) = self.active_arm_action {
-                            let prev_column = prev_action.to_column();
-                            info!("ARM CONTROL: Deactivating previous ARM action {:?} (column {})", prev_action, prev_column);
-                            self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
-                        }
-
-                        // Set new active ARM action and light it up
-                        self.active_arm_action = Some(arm_action);
-                        info!("ARM CONTROL: Activated ARM action {:?} (column {}) - waiting for sequence row press", arm_action, seq_x);
-                        self.grid.set_led(grid_id, seq_x, seq_y, 10, "arm_action_press")?;
-                        self.grid.refresh()?;
-
-                        // Handle ARM action function
-                        self.handle_arm_action(arm_action)?;
-                    } else {
-                        // Clear active ARM action and turn off LED
-                        info!("ARM CONTROL: Release detected for column {}, current active: {:?}", seq_x, self.active_arm_action);
+                        // Toggle logic: if this ARM action is already active, turn it off
                         if let Some(current_action) = self.active_arm_action {
                             if current_action.to_column() == seq_x {
+                                // Same button pressed - toggle OFF
                                 self.active_arm_action = None;
-                                info!("ARM CONTROL: Deactivated ARM action {:?} - returned to normal mode", current_action);
+                                info!("ARM CONTROL: Toggled OFF ARM action {:?} (column {})", current_action, seq_x);
                                 #[cfg(feature = "hardware")]
                                 {
-                                    self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_action_release")?;
+                                    self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_action_toggle_off")?;
                                     self.grid.refresh()?;
                                 }
                             } else {
-                                info!("ARM CONTROL: Release ignored - column {} is not the active ARM action", seq_x);
+                                // Different button pressed - switch to new ARM action
+                                let prev_column = current_action.to_column();
+                                info!("ARM CONTROL: Switching from {:?} (column {}) to {:?} (column {})", current_action, prev_column, arm_action, seq_x);
+                                
+                                // Turn off previous ARM button LED
+                                self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
+                                
+                                // Set new active ARM action and light it up
+                                self.active_arm_action = Some(arm_action);
+                                self.grid.set_led(grid_id, seq_x, seq_y, 15, "arm_action_activate")?;
+                                self.grid.refresh()?;
+                                
+                                // Handle new ARM action function
+                                self.handle_arm_action(arm_action)?;
                             }
+                        } else {
+                            // No ARM action currently active - toggle ON
+                            self.active_arm_action = Some(arm_action);
+                            info!("ARM CONTROL: Toggled ON ARM action {:?} (column {})", arm_action, seq_x);
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.set_led(grid_id, seq_x, seq_y, 15, "arm_action_toggle_on")?;
+                                self.grid.refresh()?;
+                            }
+                            
+                            // Handle ARM action function
+                            self.handle_arm_action(arm_action)?;
                         }
                     }
+                    // Ignore button release - we only toggle on press
                     } else {
                         // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", seq_x);
                     }
@@ -1005,8 +1015,9 @@ impl SimonSaysSeeq {
             }
         }
         
-        // Update beat LEDs before final refresh
+        // Update beat LEDs and ARM button LEDs before final refresh
         self.update_beat_leds()?;
+        self.update_arm_button_leds()?;
         
         self.grid.refresh()?;
         Ok(())
@@ -1045,8 +1056,9 @@ impl SimonSaysSeeq {
             info!("DEBUG: No grids available for display");
         }
 
-        // Update beat LEDs before final refresh
+        // Update beat LEDs and ARM button LEDs before final refresh
         self.update_beat_leds()?;
+        self.update_arm_button_leds()?;
         
         self.grid.refresh()?;
         Ok(())
@@ -1177,8 +1189,9 @@ impl SimonSaysSeeq {
             }
         }
         
-        // Update beat LEDs before final refresh
+        // Update beat LEDs and ARM button LEDs before final refresh
         self.update_beat_leds()?;
+        self.update_arm_button_leds()?;
         
         // Add a final debug to confirm grid refresh
         info!("DEBUG: Calling grid.refresh() for both grids");
@@ -1276,8 +1289,9 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_two_id, grid_x, seq_y, brightness, "single_button_grid2")?;
                 }
                 
-                // Update beat LEDs before refresh
+                // Update beat LEDs and ARM button LEDs before refresh
                 self.update_beat_leds()?;
+                self.update_arm_button_leds()?;
                 
                 self.grid.refresh()?;
             }
@@ -1298,8 +1312,9 @@ impl SimonSaysSeeq {
                     info!("GRID DEBUG: Setting single LED (single grid) seq_x={}, seq_y={}, brightness={}", seq_x, seq_y, brightness);
                     self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "single_button_single")?;
                     
-                    // Update beat LEDs before refresh
+                    // Update beat LEDs and ARM button LEDs before refresh
                     self.update_beat_leds()?;
+                    self.update_arm_button_leds()?;
                     
                     self.grid.refresh()?;
                 }
@@ -1657,8 +1672,9 @@ impl SimonSaysSeeq {
             }
         }
         
-        // Update beat LEDs before refresh
+        // Update beat LEDs and ARM button LEDs before refresh
         self.update_beat_leds()?;
+        self.update_arm_button_leds()?;
         
         self.grid.refresh()?;
         Ok(())
@@ -1830,6 +1846,28 @@ impl SimonSaysSeeq {
             }
         }
         
+        Ok(())
+    }
+
+    /// Update ARM button LEDs to maintain their state based on active ARM action
+    fn update_arm_button_leds(&mut self) -> Result<()> {
+        let connected_grids = self.grid.get_connected_grids();
+        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+            #[cfg(feature = "hardware")]
+            {
+                // Update ARM button LED based on active ARM action
+                if let Some(active_action) = self.active_arm_action {
+                    let active_column = active_action.to_column();
+                    // Keep active ARM button lit at full brightness
+                    self.grid.set_led(&main_grid_id, active_column, 7, 15, "arm_button_maintain")?;
+                } else {
+                    // Turn off all ARM button LEDs when no ARM action is active
+                    for column in [0, 1, 4, 5, 6, 7, 10, 15] { // All ARM action columns
+                        self.grid.set_led(&main_grid_id, column, 7, 0, "arm_button_clear")?;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
