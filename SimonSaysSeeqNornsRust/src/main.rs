@@ -101,6 +101,9 @@ pub struct SimonSaysSeeq {
     last_stable_tempo: Option<f32>,
     // Snap to whole number tempo setting (default ON)
     snap_to_whole_tempo: bool,
+    // GRID_TWO button state tracking for MIDI detection
+    grid_two_button_0_pressed: bool,
+    grid_two_button_1_pressed: bool,
 }
 
 impl SimonSaysSeeq {
@@ -140,6 +143,8 @@ impl SimonSaysSeeq {
             tempo_stable_since: None,
             last_stable_tempo: None,
             snap_to_whole_tempo: true, // Default ON
+            grid_two_button_0_pressed: false,
+            grid_two_button_1_pressed: false,
         })
     }
 
@@ -242,8 +247,6 @@ impl SimonSaysSeeq {
     fn main_loop(&mut self, hw_rx: Receiver<HardwareEvent>, seq_rx: Receiver<SequencerEvent>) -> Result<()> {
         let mut last_screen_update = Instant::now();
         let screen_update_interval = Duration::from_millis(33); // ~30 FPS
-        let mut last_midi_detection_check = Instant::now();
-        let midi_detection_check_interval = Duration::from_secs(5); // Check every 5 seconds
 
         loop {
             // Handle hardware events (non-blocking)
@@ -309,18 +312,7 @@ impl SimonSaysSeeq {
                     }
                 }
                 
-                // Periodically check for MIDI clock re-detection
-                if last_midi_detection_check.elapsed() >= midi_detection_check_interval {
-                    if self.midi.should_retry_detection() {
-                        info!("main_loop says: Attempting MIDI clock re-detection...");
-                        match self.midi.retry_detection() {
-                            Ok(true) => info!("main_loop says: MIDI clock re-detection successful"),
-                            Ok(false) => debug!("main_loop says: MIDI clock re-detection found no new sources"),
-                            Err(e) => warn!("main_loop says: MIDI clock re-detection failed: {}", e),
-                        }
-                    }
-                    last_midi_detection_check = Instant::now();
-                }
+
             }
 
             // Update screen at regular intervals
@@ -637,10 +629,65 @@ impl SimonSaysSeeq {
             } else if seq_y == 7 {
                 // Control row (7, 0-indexed) - handle both presses and releases
                 
-                // Check if this is GRID_TWO tempo controls (columns 10, 12-15)
+                // Check if this is GRID_TWO controls
                 if connected_grids.len() >= 2 {
                     let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && (x == 10 || (x >= 12 && x <= 15)) {
+                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
+                        // GRID_TWO MIDI auto-detection controls (columns 0, 1) - require both pressed
+                        if x == 0 || x == 1 {
+                            if pressed {
+                                // Track button press state
+                                if x == 0 {
+                                    self.grid_two_button_0_pressed = true;
+                                    info!("handle_grid_press says: GRID_TWO button 0 pressed for MIDI detection");
+                                } else {
+                                    self.grid_two_button_1_pressed = true;
+                                    info!("handle_grid_press says: GRID_TWO button 1 pressed for MIDI detection");
+                                }
+                                
+                                // Light up the pressed button
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 10, "midi_detection_button_press")?;
+                                    self.grid.refresh()?;
+                                }
+                                
+                                // Check if both buttons are now pressed
+                                if self.grid_two_button_0_pressed && self.grid_two_button_1_pressed {
+                                    info!("handle_grid_press says: Both GRID_TWO buttons 0 and 1 pressed - triggering MIDI detection");
+                                    #[cfg(feature = "midi")]
+                                    {
+                                        // First clear any saved device, then force detection
+                                        if let Err(e) = self.midi.clear_detected_device() {
+                                            warn!("handle_grid_press says: Failed to clear detected device: {}", e);
+                                        }
+                                        match self.midi.force_redetection() {
+                                            Ok(true) => info!("handle_grid_press says: MIDI clock detection successful (both buttons)"),
+                                            Ok(false) => warn!("handle_grid_press says: MIDI clock detection found no sources (both buttons)"),
+                                            Err(e) => warn!("handle_grid_press says: MIDI clock detection failed: {}", e),
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Button release - update state and turn off LED
+                                if x == 0 {
+                                    self.grid_two_button_0_pressed = false;
+                                    info!("handle_grid_press says: GRID_TWO button 0 released");
+                                } else {
+                                    self.grid_two_button_1_pressed = false;
+                                    info!("handle_grid_press says: GRID_TWO button 1 released");
+                                }
+                                
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 0, "midi_detection_button_release")?;
+                                    self.grid.refresh()?;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        // GRID_TWO tempo controls (columns 10, 12-15)
+                        else if x == 10 || (x >= 12 && x <= 15) {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
@@ -717,6 +764,7 @@ impl SimonSaysSeeq {
                                 self.grid.set_led(grid_id, x, seq_y, brightness, "transport_button_release")?;
                                 self.grid.refresh()?;
                             }
+                        }
                         }
                         return Ok(());
                     }
