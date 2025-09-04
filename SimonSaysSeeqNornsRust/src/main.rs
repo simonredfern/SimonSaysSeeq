@@ -515,11 +515,16 @@ impl SimonSaysSeeq {
     }
 
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
+        // DEBUG: Log ALL grid presses to trace Mozart button issue
+        info!("DEBUG MOZART: Grid press {} at ({},{}) pressed={} - Mozart active: {:?}", 
+              grid_id, x, y, pressed, self.active_arm_action);
+        
         // Handle ARM buttons first (row 7), even in Mozart mode
         if y == 7 && pressed {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
                 if ArmAction::from_column(x).is_some() {
+                    info!("DEBUG MOZART: ARM button detected at column {} - proceeding to ARM logic", x);
                     // This is an ARM button on main grid - process it directly
                     // Skip Mozart mode check and go straight to ARM button logic
                     // (ARM button logic is later in this function)
@@ -784,33 +789,34 @@ impl SimonSaysSeeq {
                 
                 // Regular ARM control handling for main grid or other buttons
                 if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
-                    info!("ARM CONTROL: Row 7 button {} {}", seq_x, if pressed { "PRESSED" } else { "RELEASED" });
+                    info!("ARM CONTROL: Row 7 button {} {} - Current Mozart: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
 
-                    // Check if this column corresponds to a valid ARM action
-                    if let Some(arm_action) = ArmAction::from_column(seq_x) {
+                    // Check if this column corresponds to a valid ARM action (use original x, not seq_x)
+                    if let Some(arm_action) = ArmAction::from_column(x) {
+                        info!("DEBUG MOZART: Found ARM action {:?} for column {}", arm_action, x);
                     if pressed {
                         // Toggle logic: if this ARM action is already active, turn it off
                         if let Some(current_action) = self.active_arm_action {
-                            if current_action.to_column() == seq_x {
+                            if current_action.to_column() == x {
                                 // Same button pressed - toggle OFF
                                 self.active_arm_action = None;
-                                info!("ARM CONTROL: Toggled OFF ARM action {:?} (column {})", current_action, seq_x);
+                                info!("ARM CONTROL: Toggled OFF ARM action {:?} (column {})", current_action, x);
                                 #[cfg(feature = "hardware")]
                                 {
-                                    self.grid.set_led(grid_id, seq_x, seq_y, 0, "arm_action_toggle_off")?;
+                                    self.grid.set_led(grid_id, x, seq_y, 0, "arm_action_toggle_off")?;
                                     self.grid.refresh()?;
                                 }
                             } else {
                                 // Different button pressed - switch to new ARM action
                                 let prev_column = current_action.to_column();
-                                info!("ARM CONTROL: Switching from {:?} (column {}) to {:?} (column {})", current_action, prev_column, arm_action, seq_x);
+                                info!("ARM CONTROL: Switching from {:?} (column {}) to {:?} (column {})", current_action, prev_column, arm_action, x);
                                 
                                 // Turn off previous ARM button LED
                                 self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
                                 
                                 // Set new active ARM action and light it up
                                 self.active_arm_action = Some(arm_action);
-                                self.grid.set_led(grid_id, seq_x, seq_y, 15, "arm_action_activate")?;
+                                self.grid.set_led(grid_id, x, seq_y, 15, "arm_action_activate")?;
                                 self.grid.refresh()?;
                                 
                                 // Handle new ARM action function
@@ -819,10 +825,10 @@ impl SimonSaysSeeq {
                         } else {
                             // No ARM action currently active - toggle ON
                             self.active_arm_action = Some(arm_action);
-                            info!("ARM CONTROL: Toggled ON ARM action {:?} (column {})", arm_action, seq_x);
+                            info!("ARM CONTROL: Toggled ON ARM action {:?} (column {})", arm_action, x);
                             #[cfg(feature = "hardware")]
                             {
-                                self.grid.set_led(grid_id, seq_x, seq_y, 15, "arm_action_toggle_on")?;
+                                self.grid.set_led(grid_id, x, seq_y, 15, "arm_action_toggle_on")?;
                                 self.grid.refresh()?;
                             }
                             
@@ -832,7 +838,7 @@ impl SimonSaysSeeq {
                     }
                     // Ignore button release - we only toggle on press
                     } else {
-                        // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", seq_x);
+                        // info!("ARM CONTROL: ROW 7 column {} is not a valid ARM action", x);
                     }
                 } else {
                     // Non-main grid, non-tempo button - ignore
