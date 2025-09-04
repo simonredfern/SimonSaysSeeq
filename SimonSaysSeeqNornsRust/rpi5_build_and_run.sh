@@ -11,6 +11,7 @@ PROJECT_NAME="SimonSaysSeeqNornsRust"
 RUST_VERSION="stable"
 BUILD_TYPE="${BUILD_TYPE:-release}"
 RPI_FEATURES="${RPI_FEATURES:-hardware,midi,desktop}"
+AI_LOG_ENABLED="false"
 
 # Colors for output
 RED='\033[0;31m'
@@ -701,13 +702,14 @@ run_application() {
     echo -e "${CYAN}Press Ctrl+C to stop${NC}"
     echo
     
-    # Define the startup log file
-    local startup_log="ai_startup_output"
-    
-    log_run "Writing startup output to: $startup_log"
-    
-    # Run the application and capture output to file (overwriting previous content)
-    "$binary_path" "$@" 2>&1 | tee "$startup_log"
+    # Run the application with optional AI logging
+    if [ "$AI_LOG_ENABLED" = "true" ]; then
+        local startup_log="ai_startup_output"
+        log_run "AI logging enabled - writing startup output to: $startup_log"
+        "$binary_path" "$@" 2>&1 | tee "$startup_log"
+    else
+        "$binary_path" "$@"
+    fi
 }
 
 # Show system information
@@ -756,6 +758,7 @@ OPTIONS:
     --debug             Build in debug mode
     --features FEATURES Specify cargo features (default: hardware,midi,desktop)
     --update-rust       Update Rust toolchain before building
+    --ai-log            Write startup output to ai_startup_output file
 
 EXAMPLES:
     $0 setup                           # Install dependencies and setup environment (includes grid support)
@@ -763,6 +766,7 @@ EXAMPLES:
     $0 --debug build                  # Build in debug mode
     $0 run                            # Build and run
     $0 run -- --simulation            # Run with simulation mode
+    $0 --ai-log run                   # Run with AI logging enabled
     $0 service install                # Install systemd service
     $0 service start                  # Start the service
     $0 --features "hardware,midi" run # Build and run with specific features
@@ -798,6 +802,10 @@ parse_args() {
                 ;;
             --update-rust)
                 UPDATE_RUST="true"
+                shift
+                ;;
+            --ai-log)
+                AI_LOG_ENABLED="true"
                 shift
                 ;;
             --help|-h)
