@@ -621,6 +621,13 @@ EOF
 install_service() {
     log_info "Installing systemd service..."
     
+    # Stop service if it's running
+    if systemctl is-active --quiet simonsaysseeq-rpi 2>/dev/null; then
+        log_info "Stopping existing service..."
+        sudo systemctl stop simonsaysseeq-rpi
+        log_info "Service stopped"
+    fi
+    
     local binary_path
     if [ "$BUILD_TYPE" = "release" ]; then
         binary_path="$(pwd)/target/release/simon_says_seeq"
