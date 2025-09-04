@@ -49,6 +49,21 @@ ls target/debug/
 ### Results Summary
 # Two grids physically connected:
 
+## 2025-09-04 Raspberry Pi 5 Auto-Start Success
+# ISSUE: SimonSaysSeeq sequencer not starting automatically on Raspberry Pi 5 boot
+# CAUSE: TOML configuration file parsing error - unquoted 'null' value in config.toml
+# LOCATION: /home/simonredfern/.config/simon-says-seeq/config.toml line 6
+# BEFORE: last_detected_device = null      # Will be auto-populated
+# AFTER: last_detected_device = ""      # Will be auto-populated
+# FIX: Fixed TOML syntax by quoting null value as empty string
+# RESULT: Service now starts successfully on boot via systemd
+# STATUS: ✅ MIDI clock detection working (132 BPM detected)
+# STATUS: ✅ Two monome grids detected and operational (m2949672, m5032747)
+# STATUS: ✅ Auto-start enabled via simonsaysseeq-rpi.service
+# STATUS: ✅ Sequencer responding to MIDI clock, MIDI start, and MIDI stop commands
+# TOOLS: Created manage_rpi_service.sh for easy service management
+# IMPACT: Fully operational auto-starting sequencer on Raspberry Pi 5 with complete MIDI transport control
+
 ## 2025-01-18 Norns Rust Deployment Attempt - Filesystem Corruption Encountered
 
 ### Initial Deployment Attempt
@@ -58,7 +73,7 @@ ls target/debug/
 # ISSUE: Settings file contained log data instead of valid TOML configuration
 
 ### Rust Installation Fix Attempts
-# COMMAND: ./fix_norns_rust_robust.sh  
+# COMMAND: ./fix_norns_rust_robust.sh
 # STATUS: SUCCESS - Rust 1.89.0 installed via rustup minimal profile
 # RESULT: rustc 1.89.0 and cargo 1.89.0 working
 # METHOD: Complete cleanup and fresh rustup installation with ARM optimizations
@@ -69,7 +84,7 @@ ls target/debug/
 # ERROR: Corrupted Cargo.toml file contained JSON-like data instead of TOML
 # FILESYSTEM: "Structure needs cleaning" errors indicating filesystem corruption
 
-### Full Project Rebuild Attempts  
+### Full Project Rebuild Attempts
 # COMMAND: ./rebuild_project_on_norns.sh
 # STATUS: FAILED - rsync errors due to filesystem corruption
 # ERROR: mkstemp failed with "Structure needs cleaning" (errno 117)
@@ -98,7 +113,7 @@ ls target/debug/
 
 ### Final Direct SSH Deployment
 # COMMAND: ./direct_ssh_deploy.sh
-# STATUS: FAILED - Permission denied on cargo binary  
+# STATUS: FAILED - Permission denied on cargo binary
 # ANALYSIS: cargo -> rustup symlink exists but not executable due to corruption
 
 ### Current Status
@@ -110,7 +125,7 @@ ls target/debug/
 ### Recommended Actions
 1. IMMEDIATE: Backup all important Norns data
 2. REPAIR: Run filesystem check and repair
-   COMMAND: ssh we@norns.local 'sudo fsck -y /dev/mmcblk0p2'  
+   COMMAND: ssh we@norns.local 'sudo fsck -y /dev/mmcblk0p2'
 3. FALLBACK: If fsck fails, reflash Norns SD card with fresh image
 4. POST-REPAIR: Re-run deployment scripts after filesystem repair
 
@@ -134,7 +149,7 @@ ls target/debug/
 # STATUS: FAILED - DNS resolution failure for sh.rustup.rs
 # ISSUE: Network connectivity problems (DNS not resolving repository hostnames)
 
-### System Package Installation Attempt  
+### System Package Installation Attempt
 # COMMAND: ssh we@norns.local 'sudo apt install -y rustc'
 # STATUS: FAILED - DNS resolution failure for package repositories
 # ISSUE: Cannot resolve raspbian.raspberrypi.org and archive.raspberrypi.org
@@ -222,7 +237,7 @@ cargo run --example single_grid_test
 # All terminal commands failing - likely from grid testing leaving file descriptors open
 # Commands attempted but failed:
 lsof | wc -l
-ulimit -n  
+ulimit -n
 echo "test"
 ls
 pwd
@@ -318,7 +333,7 @@ cargo run --release --features hardware,midi
 cargo run --release --features hardware,midi
 # Multiple sequencer instances discovered running:
 # PID 14815 (hardware,midi features) - running 15+ minutes
-# PID 16252 (hardware,midi features) - running 7+ minutes  
+# PID 16252 (hardware,midi features) - running 7+ minutes
 # PID 16404 (hardware,midi features) - running 3+ minutes
 # PID 16463 (desktop features) - running 1+ minute
 # Issue: OSC grid support disabled without 'rosc' feature (need desktop features)
@@ -424,7 +439,7 @@ kill 14815 16252 16404 16463
 # Two grids should be completely independent with different functions
 
 ## 2025-08-10 01:52:31 Grids Animating But Not Scrolling
-# Progress: Both grids now animating in time independently 
+# Progress: Both grids now animating in time independently
 # Issue: No scrolling/position display visible - current step highlighting not working
 # Problem: Either MainRowStates.current_step not updating correctly or display logic flawed
 # Clarification: Only main grid should scroll showing MainRowStates positions, Mozart grid should be static
@@ -561,7 +576,7 @@ kill 14815 16252 16404 16463
 # Goal: Add position scrolling display with brightness levels:
 #   - 0% (brightness 0): LED off - no pattern, not current position
 #   - 25% (brightness 4): Current position indicator - no pattern, but current step
-#   - 50% (brightness 8): Pattern data - has pattern, not current position  
+#   - 50% (brightness 8): Pattern data - has pattern, not current position
 #   - 75% (brightness 12): Pattern + position - has pattern AND current step
 # Need: Modify grid display logic to check MainRowStates current_step vs LED position
 # Implementation: Update update_main_grid_display() with brightness calculation
@@ -615,7 +630,7 @@ kill 14815 16252 16404 16463
 # - Sequence rows: Only rows 1-7 used for sequencing (row 8 = control)
 # - Row settings: 8 MainRowStates initialized (covers all rows including unused row 8)
 # - All 7 sequence rows should have identical behavior with independent patterns
-# 
+#
 # SYNCHRONIZATION CONFIRMED AS INTENDED DESIGN:
 # - All rows advance together at same BPM (not a bug - this is the intended design)
 # - Each row has independent: first_step, last_step, current_step, patterns
@@ -629,7 +644,7 @@ kill 14815 16252 16404 16463
 # Created examples/test_rows_issue.rs to isolate the row issue
 # RESULT: All rows 1-7 display correctly with graduated brightness pattern
 # - Row 1: least bright (brightness 2)
-# - Row 7: most bright (brightness 14)  
+# - Row 7: most bright (brightness 14)
 # - All rows responsive and accessible
 # CONCLUSION: Basic grid functionality works for all rows
 # - Grid coordinate conversion correct
@@ -642,16 +657,16 @@ kill 14815 16252 16404 16463
 # Created examples/debug_sequencer_rows.rs diagnostic test
 # Visual test results:
 # - Row 1: Shows all 4 patterns correctly (steps 1,5,9,13 lit)
-# - Row 2: Shows only 1 pattern (step 1 lit)  
+# - Row 2: Shows only 1 pattern (step 1 lit)
 # - Rows 3-7: Show no patterns (completely dark)
-# 
+#
 # Initial hypothesis: Pattern storage broken for rows 2-7
 # Created examples/test_grid_storage.rs to verify sequencer storage functions
 # Test results: All storage operations work correctly for all rows 1-7
 # - Pattern set/get functions working properly
 # - Multiple patterns per row stored correctly
 # - Boundary conditions handled properly
-# 
+#
 # Root cause identified: Pattern storage works correctly, display rendering does not
 # Bug location: Grid display pipeline - patterns stored but not rendered for rows 2-7
 # Next investigation: Grid LED command execution and coordinate conversion in display logic
@@ -670,12 +685,12 @@ kill 14815 16252 16404 16463
 # TEST RESULT: All rows now start with identical patterns (4 LEDs at steps 1,5,9,13)
 # SUCCESS: Pattern display pipeline works correctly for all rows
 # CONFIRMED: Original issue was startup initialization only setting patterns for Row 1
-# 
+#
 # NEW ISSUE IDENTIFIED: Row 1 more responsive than other rows during button presses
 # All rows display patterns correctly but button press responsiveness varies by row
 # Row 1: Fast, immediate response to button presses
 # Rows 2-7: Slower or less responsive to button presses
-# 
+#
 # ROOT CAUSE: Likely button press handling or coordinate filtering in main loop
 # NEXT INVESTIGATION: Button event processing pipeline for different rows
 # Check: Grid event filtering, coordinate conversion, button press timing per row
@@ -684,12 +699,12 @@ kill 14815 16252 16404 16463
 # HYPOTHESIS: Button responsiveness difference caused by full grid refresh overhead
 # Original: Button press -> update_grid_display() -> refresh all 112 LEDs -> delay
 # Optimization: Button press -> update_single_led() -> refresh only 1 LED -> immediate
-# 
+#
 # Applied changes:
 # - Created update_single_led() function for immediate LED response
 # - Modified handle_grid_press() to call update_single_led() instead of update_grid_display()
 # - Single LED update calculates correct brightness (pattern + position state)
-# 
+#
 # TEST: Run optimized sequencer and compare button responsiveness across rows
 # Expected: All rows should now have equal responsiveness, no Row 1 advantage
 # If still unequal: Need to investigate other causes (event filtering, coordinate conversion)
@@ -699,7 +714,7 @@ kill 14815 16252 16404 16463
 # Result: All rows now respond equally fast to button presses
 # Confirmed: Issue was full grid refresh overhead causing delays for rows 2-7
 # Solution: Single LED updates instead of 112-LED grid refresh per button press
-# 
+#
 # NEXT TASK: Check and tweak brightness of position scrolling
 # Issue: Position scrolling brightness levels may need adjustment for better visibility
 # Current brightness levels: 0 (off), 4 (position only), 8 (pattern only), 12 (pattern+position)
@@ -714,7 +729,7 @@ kill 14815 16252 16404 16463
 # NEW BRIGHTNESS SCHEME:
 #   - 0: Off (no pattern, not current position)
 #   - 6: Position only (40% - increased from 25%)
-#   - 8: Pattern only (50% - unchanged)  
+#   - 8: Pattern only (50% - unchanged)
 #   - 12: Pattern + position (75% - unchanged)
 #
 # EXPECTATION: Level 6 should provide better visibility for position scrolling
@@ -746,7 +761,7 @@ kill 14815 16252 16404 16463
 # FINAL BRIGHTNESS SCHEME COMPLETE:
 #   - 0: Off (no pattern, not current position) - 0%
 #   - 6: Position only (40% - was 25%)
-#   - 10: Pattern only (65% - was 50%)  
+#   - 10: Pattern only (65% - was 50%)
 #   - 14: Pattern + position (90% - was 75%)
 #
 # BRIGHTNESS OPTIMIZATION COMPLETE ✅
@@ -766,7 +781,7 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE IDENTIFIED: Hardware grid communication issue, NOT software scrolling bug
 #
 # TEST RESULTS:
-#   - Row 2 patterns NOT identical to Row 1 (basic LED commands failing)  
+#   - Row 2 patterns NOT identical to Row 1 (basic LED commands failing)
 #   - Individual LED tests show Row 2 consistently different from Row 1
 #   - Position scrolling fails on BOTH rows in hardware test (not row-specific)
 #   - All positions tested (1, 5, 9, 13, 16) show LED inequality between rows
@@ -777,7 +792,7 @@ kill 14815 16252 16404 16463
 #
 # HARDWARE INVESTIGATION NEEDED:
 # 1. Check grid hardware connections
-# 2. Verify LED command protocol for this grid model (VID:CAFE PID:4001)  
+# 2. Verify LED command protocol for this grid model (VID:CAFE PID:4001)
 # 3. Test with different grid or different USB connection
 # 4. Check if Row 2 LEDs are physically damaged/faulty
 #
@@ -818,13 +833,13 @@ kill 14815 16252 16404 16463
 #
 # POSSIBLE REASONS USER PERCEIVED Row 2 NOT SCROLLING:
 # 1. Row 2 has fewer/different patterns making scrolling less visually obvious
-# 2. Row 1 patterns more prominent, making its scrolling more noticeable  
+# 2. Row 1 patterns more prominent, making its scrolling more noticeable
 # 3. Visual perception - brightness levels now optimized may resolve this
 # 4. User was observing during Row 2 inactive period
 #
 # STATUS: Software confirmed working, brightness optimization complete
 
-## 2025-08-10 11:08:45 REAL BUG FOUND - Row 2 current_step Non-Sequential 
+## 2025-08-10 11:08:45 REAL BUG FOUND - Row 2 current_step Non-Sequential
 # USER CORRECTION: Row 2 advancement pattern 11→15→4→9→14→3→8→13→2→7→12→1→6→11→16 is WRONG
 # EXPECTED: Sequential advancement 1→2→3→4→5→6→7→8→9→10→11→12→13→14→15→16→1→2...
 # ACTUAL BUG: Row 2 current_step is not being updated sequentially
@@ -836,34 +851,34 @@ kill 14815 16252 16404 16463
 #
 # INVESTIGATION NEEDED:
 # 1. Check advance_step() function in sequencer
-# 2. Verify row_settings[1] current_step updates for Row 2  
+# 2. Verify row_settings[1] current_step updates for Row 2
 # 3. Compare Row 1 vs Row 2 step advancement logic
 # 4. Look for row-specific bugs in current_step calculation
 
 ## 2025-08-10 11:09:42 Row 2 Bug Analysis - Disconnect Between Advancement and Display
 # CRITICAL FINDING: Step advancement works correctly BUT grid display shows wrong values
-# 
+#
 # EVIDENCE:
 # - Sequencer advance: Row 2 steps 1→2→3→4→5→6→7→8→9→10→11 (CORRECT)
 # - Grid display shows: Row 2 step=11 (seemingly correct)
 # - Earlier showed non-sequential: 11→15→4→9→14→3→8→13→2→7→12→1→6→11→16
-# 
+#
 # HYPOTHESIS: Row 2 starting at wrong position
 # - Row 1 likely starts at step 1
 # - Row 2 might start at random step (like step 11)
 # - Both advance sequentially from their starting positions
 # - This would explain the non-sequential appearance
-# 
+#
 # ROOT CAUSE LIKELY: Different starting positions for different rows
 # - Row 1 starts: step 1, advances 1→2→3→4...
 # - Row 2 starts: step 11, advances 11→12→13→14→15→16→1→2→3→4...
-# 
+#
 # INVESTIGATION: Check row initialization or startup sequence
 
 ## 2025-08-10 11:10:51 Row 2 Investigation Complete - All Rows Have Identical current_step
 # FINAL DISCOVERY: All rows show identical current_step values [R1:4 R2:4 R3:4 R4:4 R5:4 R6:4 R7:4]
 # CONCLUSION: Row 2 scrolling logic is working correctly - software is functioning as intended
-# 
+#
 # STATUS: Investigation paused per user request
 # Row 2 current_step advances correctly and identically to all other rows
 # Brightness optimization complete with levels 0/6/10/14
@@ -872,23 +887,23 @@ kill 14815 16252 16404 16463
 # CORRECTION: I cannot see the actual grid hardware - only debug output
 # USER DIRECT OBSERVATION: Row 1 scrolling works, Row 2 scrolling does NOT work
 # DEBUG SHOWS: Software sends correct commands, but visual result is what matters
-# 
+#
 # FACTS:
 # - Software sends correct current_step values and LED commands for Row 2
 # - But user sees Row 2 scrolling not working visually on actual grid
 # - This indicates a disconnect between software commands and visual result
-# 
-# REAL INVESTIGATION NEEDED: 
+#
+# REAL INVESTIGATION NEEDED:
 # Focus on why software commands don't translate to correct visual scrolling on Row 2
 # Possible hardware/firmware issue specific to Row 2 visual display
-# 
+#
 # STATUS: Row 2 scrolling issue confirmed by user observation, root cause unknown
 
 ## 2025-08-10 11:45:12 Row 2-7 Scrolling Investigation
 # ANALYSIS: Looking for difference between Row 1 (working) vs Rows 2-7 (not working)
 # INVESTIGATION AREAS:
 #   1. Step advancement logic in advance_step() - appears correct for all rows
-#   2. Grid display logic in update_main_grid_display() - uses same logic for all rows  
+#   2. Grid display logic in update_main_grid_display() - uses same logic for all rows
 #   3. Row state access via get_row_states() - converts 1-based to 0-based correctly
 #   4. Timing: update_grid_display() called on every step event
 #
@@ -936,7 +951,7 @@ kill 14815 16252 16404 16463
 #    - CSV shows r1, r2, r3, r4, r5, r6, r7 activity during single row tests
 #    - Proves coordinate conversion sends commands to wrong rows
 #
-# 2. WRONG COLUMN POSITIONS: 
+# 2. WRONG COLUMN POSITIONS:
 #    - Expected: LEDs at columns 1, 5, 9, 13 with position at column 3
 #    - Actual: LEDs scattered at columns 6, 10, 14, 15, 16, etc.
 #    - Column coordinate conversion also broken
@@ -961,7 +976,7 @@ kill 14815 16252 16404 16463
 # Created examples/test_basic_coordinates.rs to test fundamental coordinate assumptions
 # TEST RESULTS: All basic coordinate tests passed correctly ✓
 #   - Grid (0,0) = TOP-LEFT corner ✓
-#   - Grid (15,0) = TOP-RIGHT corner ✓  
+#   - Grid (15,0) = TOP-RIGHT corner ✓
 #   - Grid (0,7) = BOTTOM-LEFT corner ✓
 #   - Grid (15,7) = BOTTOM-RIGHT corner ✓
 #   - Row 0 = TOP ROW ✓
@@ -986,7 +1001,7 @@ kill 14815 16252 16404 16463
 #
 # EVIDENCE FROM CONSOLE OUTPUT:
 # - Pattern storage: All rows store/retrieve patterns correctly at columns 1,5,9,13 ✓
-# - Coordinate conversion: All rows calculate correct grid coordinates ✓  
+# - Coordinate conversion: All rows calculate correct grid coordinates ✓
 # - Brightness calculation: All rows calculate brightness=15 identically ✓
 # - set_led() calls: All rows make identical set_led(grid_id, x, y, 15) calls ✓
 #
@@ -997,11 +1012,11 @@ kill 14815 16252 16404 16463
 # - But grid hardware responds differently to Row 1 vs Rows 2-7
 # - Issue is in OSC communication layer or grid firmware
 #
-# ROOT CAUSE LIKELY: 
+# ROOT CAUSE LIKELY:
 # - Grid OSC command routing bug affecting specific row coordinates
 # - Grid firmware bug handling certain row indices differently
 # - Hardware addressing issue where Row 1 uses different path than Rows 2-7
-# 
+#
 # NEXT INVESTIGATION: Check OSC grid communication layer (grid_osc.rs) for row-specific bugs
 # Focus on set_led() OSC message construction and transmission
 #
@@ -1022,7 +1037,7 @@ kill 14815 16252 16404 16463
 # IMPLICATION: Bug affects specific row indices (6-7) differently
 # Possible causes:
 # - Array bounds issue causing memory corruption for rows 6-7
-# - Indexing calculation bug that becomes apparent for higher row numbers  
+# - Indexing calculation bug that becomes apparent for higher row numbers
 # - OSC message formatting error for specific row coordinates
 # - Grid addressing issue for bottom rows of sequencer area
 #
@@ -1031,7 +1046,7 @@ kill 14815 16252 16404 16463
 # ROW COMPARISON TEST RESULTS:
 # - Created examples/test_row_comparison.rs to isolate row-specific differences
 # - Test 1: Row 1 pattern (columns 1,5,9,13) - user observation needed
-# - Test 2: Row 6 pattern (columns 1,5,9,13) - user observation needed  
+# - Test 2: Row 6 pattern (columns 1,5,9,13) - user observation needed
 # - Test 3: Row 7 pattern (columns 1,5,9,13) - user observation needed
 # - Console output shows identical coordinate calculations for all rows
 # - Grid coordinates: Row 1->grid(0,0), Row 6->grid(0,5), Row 7->grid(0,6)
@@ -1042,7 +1057,7 @@ kill 14815 16252 16404 16463
 # - Created examples/test_led_interference.rs to test cross-row interference
 # - TEST RESULTS: No interference detected ✓
 #   - Row 1 LEDs remained lit when Row 6 pattern was added
-#   - Row 1 and Row 6 LEDs remained lit when Row 7 pattern was added  
+#   - Row 1 and Row 6 LEDs remained lit when Row 7 pattern was added
 #   - All rows (1,6,7) displayed identical 4-LED patterns correctly
 #   - No LEDs turned off unexpectedly during multi-row operations
 #
@@ -1055,7 +1070,7 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE NARROWED TO: Main sequencer-specific logic
 # - Step advancement timing differences between rows
 # - Row state management during active scrolling
-# - Race conditions in full sequencer vs simple tests  
+# - Race conditions in full sequencer vs simple tests
 # - Main sequencer display update loop timing issues
 #
 # NEXT: Focus investigation on sequencer step advancement and row state timing
@@ -1082,7 +1097,7 @@ kill 14815 16252 16404 16463
 #
 # INVESTIGATION STATUS: Row 2-7 scrolling issue isolated to display rendering
 # - Coordinate conversion: ✓ Working correctly
-# - LED interference: ✓ No interference detected  
+# - LED interference: ✓ No interference detected
 # - Pattern storage: ✓ Working correctly for all rows
 # - Step advancement: ✓ All rows advance identically
 # - Display logic: ✗ Row 1 renders correctly, Rows 2-7 render incorrectly
@@ -1105,7 +1120,7 @@ kill 14815 16252 16404 16463
 #
 # FINAL CONCLUSION: Bug located in main sequencer grid display logic
 # - Not coordinate conversion (works perfectly in isolation)
-# - Not step advancement (all rows advance identically)  
+# - Not step advancement (all rows advance identically)
 # - Not interference (no cross-talk between rows)
 # - Must be row-specific display rendering bug in main.rs update_main_grid_display()
 
@@ -1113,10 +1128,10 @@ kill 14815 16252 16404 16463
 # CREATED: examples/test_row2_only.rs to test row 2 scrolling in complete isolation
 # TEST PURPOSE: Run only row 2 with scrolling patterns to see if issue persists without interference
 # COMPILATION: Successful after fixing imports (simon_says_seeq_rust::grid_osc::GridManager)
-# 
+#
 # EXECUTION ISSUE: serialosc not running - no grids detected
 # ERROR: "No serialosc devices found. Make sure serialosc is running: sudo systemctl start serialosc"
-# 
+#
 # NEXT: Start serialosc service and rerun isolated row 2 test
 # COMMAND READY: cargo run --example test_row2_only --features desktop
 #
@@ -1164,10 +1179,10 @@ kill 14815 16252 16404 16463
 ## 2025-08-10 18:46:00 Row 2 Only Sequencer Test - SUCCESS
 # USER CONFIRMED: "the sequencer scrolling works for row 2 only"
 # CRITICAL SUCCESS: Row 2 scrolling works perfectly in main sequencer when isolated
-# 
+#
 # ROOT CAUSE IDENTIFIED: Interference between multiple rows (1-7) in full sequencer
 # - Row 2 hardware/OSC communication: ✅ Working perfectly
-# - Row 2 scrolling logic: ✅ Working perfectly  
+# - Row 2 scrolling logic: ✅ Working perfectly
 # - Row 2 in isolation: ✅ Working perfectly
 # - Row 2 with row 1: ✅ Working perfectly
 # - Row 2 in full sequencer alone: ✅ Working perfectly
@@ -1175,18 +1190,18 @@ kill 14815 16252 16404 16463
 #
 # PROBLEM: Grid update conflicts, LED state race conditions, or OSC timing issues
 # when processing all 112 LEDs across 7 rows in full sequencer
-# 
+#
 # NEXT: Restore full sequencer and implement grid update optimization
 #
 ## 2025-08-10 18:53:13 Rows 1+2 Sequencer Test - Partial Success, New Symptoms
 # EXECUTED: cargo run (rows 1 and 2 active sequencer)
-# USER OBSERVATION: 
+# USER OBSERVATION:
 #   - Row 1: ✅ Scrolls correctly, correct LEDs lit
 #   - Row 2: ❌ No scrolling, but intermittent extra LEDs lighting up and turning off
 #
 # CRITICAL FINDING: Issue confirmed in main sequencer multi-row coordination
 # - Row 2 alone: ✅ Works perfectly
-# - Row 2 + Row 1 simple test: ✅ Works perfectly  
+# - Row 2 + Row 1 simple test: ✅ Works perfectly
 # - Row 2 + Row 1 main sequencer: ❌ Row 2 fails, Row 1 works
 #
 # NEW SYMPTOM: Intermittent LED behavior on row 2 suggests conflicting updates
@@ -1199,7 +1214,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-10 18:55:00 Centralized LED Control System Implemented
 # PROBLEM IDENTIFIED: Multiple functions calling set_led directly causing LED update chaos
 # - handle_hardware_event -> set_led (hardware button feedback)
-# - handle_mozart_grid_press -> set_led (mozart grid updates) 
+# - handle_mozart_grid_press -> set_led (mozart grid updates)
 # - update_main_grid_display -> set_led (main display updates)
 # - update_single_led -> set_led (button press feedback)
 #
@@ -1207,7 +1222,7 @@ kill 14815 16252 16404 16463
 # CREATED: update_led_controlled() function as ONLY allowed LED update method
 # FEATURES:
 #   - Enforces row restrictions (only rows 1 and 2 allowed)
-#   - Logs all LED updates with reason and coordinates  
+#   - Logs all LED updates with reason and coordinates
 #   - Blocks unauthorized updates with clear logging
 #   - Centralizes grid coordinate conversion
 #   - Provides audit trail: ✅ allowed, 🚫 blocked
@@ -1236,7 +1251,7 @@ kill 14815 16252 16404 16463
 #
 # TEST EXECUTION RESULTS (2025-08-10 18:31:48):
 # - Started serialosc successfully: systemctl --user start serialosc
-# - Connected to both grids: m2949672 (monome 128) and m5032747 (monome one)  
+# - Connected to both grids: m2949672 (monome 128) and m5032747 (monome one)
 # - Test ran successfully: 3 complete cycles of row 2 scrolling (1→16, repeated 3x)
 # - User observation: Row 2 scrolling does
 
@@ -1244,15 +1259,15 @@ kill 14815 16252 16404 16463
 # APPROACH: User observes grid directly and reports success/failure
 # ROLE: Make requested changes, avoid conclusions about visual results
 # USER will determine if Row 2 scrolling issue is resolved or not
-# 
+#
 # CURRENT STATUS: Brightness optimization complete (0/6/10/14)
 # AWAITING: User feedback on Row 2 scrolling behavior after brightness changes
 
-## 2025-08-10 11:14:30 Row 2 Investigation Continues - Not Sequential Offset Issue  
+## 2025-08-10 11:14:30 Row 2 Investigation Continues - Not Sequential Offset Issue
 # USER CLARIFICATION: Row 2 scrolling issue is NOT about sequential offset
 # Row 2 has fundamental scrolling problem compared to Row 1
 # Despite identical current_step values in debug, visual behavior differs
-# 
+#
 # INVESTIGATION FOCUS: Find disconnect between Row 2 software commands and visual result
 # Need to identify why Row 2 behaves differently than Row 1 on actual grid hardware
 
@@ -1317,10 +1332,10 @@ kill 14815 16252 16404 16463
 # USER OBSERVATION: Rows 2-7 are flickering rather than smoothly advancing position
 # Row 1 advances correctly, but rows 2-7 show flickering behavior
 # INVESTIGATION NEEDED: What else might be controlling or interfering with rows 2-7?
-# 
+#
 # POSSIBLE CAUSES:
 # 1. Different timing/threading for different rows
-# 2. Grid coordinate mapping issues for rows 2-7  
+# 2. Grid coordinate mapping issues for rows 2-7
 # 3. LED refresh conflicts or race conditions
 # 4. Row-specific processing logic differences
 # 5. Memory/state corruption affecting rows 2-7
@@ -1328,26 +1343,26 @@ kill 14815 16252 16404 16463
 
 ## 2025-08-10 11:30:16 ROOT CAUSE FOUND - Grid Update Frequency Causing Flicker
 # BREAKTHROUGH: Debug logs reveal the actual cause of Row 2-7 flickering
-# 
+#
 # DISCOVERY: All rows advance identically and correctly (11→12→13→14→15→16→1→2...)
 # REAL ISSUE: update_grid_display() called on every sequencer step = excessive refresh rate
-# 
+#
 # THE PROBLEM:
 # - Every step advance triggers full grid refresh (all 112 LEDs)
 # - Position indicators constantly turn on/off as they move
 # - Rapid LED switching creates flickering appearance
 # - Row 1 may appear less flickery due to different pattern density
-# 
+#
 # SOLUTION NEEDED: Reduce grid refresh frequency or optimize LED updates
 # - Either limit grid updates to specific intervals
 # - Or implement smarter LED update logic that minimizes flicker
-# 
+#
 # STATUS: Root cause identified - excessive grid refresh frequency
 
 ## 2025-08-10 11:32:00 Previous Analysis Incorrect - Need Simpler Approach
 # USER FEEDBACK: Previous flickering analysis doesn't make sense
 # RESET: Need to approach Row 2-7 scrolling issue more simply
-# 
+#
 # BASIC FACTS:
 # - Row 1 scrolling works correctly (position advances smoothly)
 # - Rows 2-7 are flickering instead of smooth scrolling
@@ -1357,40 +1372,40 @@ kill 14815 16252 16404 16463
 ## 2025-08-10 11:33:30 Row 2 Shows Inconsistent Steps - Race Condition or Memory Issue
 # CLARIFICATION: Row 2 showing inconsistent step values (1→2 but sometimes jumps to 5,6,7)
 # This is different from smooth scrolling - Row 2 current_step is getting corrupted
-# 
+#
 # SYMPTOMS:
 # - Row 1: Smooth sequential steps (1→2→3→4...)
 # - Row 2: Inconsistent steps (1→2 but then random 5,6,7)
-# 
+#
 # LIKELY CAUSES:
 # - Race condition in row_states access/modification
-# - Memory corruption affecting Row 2's current_step specifically  
+# - Memory corruption affecting Row 2's current_step specifically
 # - Thread safety issue with mutex locks
 # - Array bounds or indexing error affecting Row 2
-# 
+#
 # INVESTIGATION: Check row_states array access patterns
 
 ## 2025-08-10 11:35:00 Project Compiles Again - Row 2 Issue Analysis
 # RESTORED: Removed debug code, project compiles with warnings only
-# 
+#
 # ROW 2 ISSUE SUMMARY:
 # - User observes: Row 2 shows steps 1→2 normally but sometimes jumps to 5, 6, 7
 # - This suggests current_step corruption or race condition specific to Row 2
 # - Row 1 works correctly with smooth sequential advancement
-# 
+#
 # INVESTIGATION APPROACH NEEDED:
 # Since project couldn't compile during testing, need different strategy:
 # 1. Code review approach to find Row 2 specific issues
 # 2. Look for indexing bugs, race conditions, or coordinate mapping issues
 # 3. Focus on simple logical errors rather than complex debugging
-# 
+#
 # STATUS: Ready for code analysis approach to Row 2 scrolling issue
 
 ## 2025-08-10 21:46:00 Compilation Fixed - Project Ready for Testing
 # FIXED: set_led method calls missing reason and caller parameters
 # Command: Fixed 4 compilation errors in grid_osc.rs test functions
 # Result: Project now compiles with warnings only
-# 
+#
 # NEXT: Ready to investigate Row 2 scrolling issue
 # - Row 2 shows steps 1→2 normally but sometimes jumps to 5, 6, 7
 # - Need systematic approach to identify root cause
@@ -1418,7 +1433,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-10 22:02:00 User Question: Remove Noisy Screen Debug Messages
 # USER OBSERVATION: Screen update debug messages are noisy during debug sessions
 # IDENTIFIED: Two debug messages firing every 33ms (30 FPS):
-#   - "Screen update (simulation mode)" 
+#   - "Screen update (simulation mode)"
 #   - "Screen update (no framebuffer available)"
 # LOCATION: src/screen.rs lines ~433 and ~439
 # OPTIONS: 1) Remove entirely, 2) Change to trace! level, 3) Add counter for occasional logging
@@ -1436,7 +1451,7 @@ kill 14815 16252 16404 16463
 # USER REQUEST: Remove the screen update simulation mode messages
 # CHANGES:
 #   - Removed debug!("Screen update (simulation mode)") from screen.rs
-#   - Removed debug!("Screen update (no framebuffer available)") from screen.rs  
+#   - Removed debug!("Screen update (no framebuffer available)") from screen.rs
 #   - Cleaned up unused debug/warn imports from screen.rs
 # RESULT: Debug output now clean of 30 FPS screen update noise
 # STATUS: Row 2 LED debugging output no longer cluttered by screen messages
@@ -1467,7 +1482,7 @@ kill 14815 16252 16404 16463
 #   - Added logging format instruction to ai_instructions.txt
 #   - Updated key log messages in main source files:
 #     * src/main.rs: run, shutdown, main_loop, handle_hardware_event, handle_grid_press, update_screen functions
-#     * src/grid_osc.rs: new, discover_devices, connect_to_device, set_led functions  
+#     * src/grid_osc.rs: new, discover_devices, connect_to_device, set_led functions
 #     * src/sequencer.rs: set_tempo, toggle_grid_position, scroll_pattern, set_row_states functions
 # FORMAT CHANGES:
 #   - Prepended function names: info!("run says: Starting application")
@@ -1485,7 +1500,7 @@ kill 14815 16252 16404 16463
 # RESULTS:
 #   - MIDI manager connected to "Midi Through:Midi Through Port-0 14:0"
 #   - Found 0 active MIDI notes (none to clear)
-#   - Stuck note cleanup completed successfully  
+#   - Stuck note cleanup completed successfully
 #   - MIDI panic messages sent as safety measure
 # UTILITY AVAILABLE: cargo run --example clear_midi_notes --features desktop
 # STATUS: MIDI system clean, ready for Row 2 debugging
@@ -1495,7 +1510,7 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE FOUND: Existing config file ~/.config/simon-says-seeq/config.toml had tempo = 120.0
 # FIXES APPLIED:
 #   - Updated existing config file: default_tempo from 120.0 to 30.0 BPM
-#   - Fixed config validation: minimum tempo from 60.0 to 20.0 BPM  
+#   - Fixed config validation: minimum tempo from 60.0 to 20.0 BPM
 #   - Fixed screen visualization: tempo range from 60-200 to 20-200 BPM
 #   - Fixed multiple tempo display inconsistencies to use sequencer.get_tempo()
 # RESULT: Sequencer now running at 30 BPM (2 seconds per step)
@@ -1545,7 +1560,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-10 23:06:58 ROOT CAUSE DISCOVERED - Intentional Row 1-2 Only Restriction
 # CRITICAL FINDING: Both interference and Row 2 issues caused by hardcoded row restrictions
 # RESTRICTION LOCATIONS:
-#   1. GridManager set_led(): Blocks all LED updates to rows 3-8 
+#   1. GridManager set_led(): Blocks all LED updates to rows 3-8
 #   2. Main sequencer display: Only processes rows 1-2 (seq_y in 1..=2)
 #   3. Button handling: Only accepts input from rows 1-2
 #   4. Clear operations: Only clears rows 1-2
@@ -1565,7 +1580,7 @@ kill 14815 16252 16404 16463
 # LOCATIONS UPDATED:
 #   - GridManager struct field declaration
 #   - new() constructor initialization
-#   - connect_to_device() LED state initialization  
+#   - connect_to_device() LED state initialization
 #   - set_led() state cache update
 #   - get_led() state query function
 #   - clear_all() state reset operation
@@ -1726,7 +1741,7 @@ kill 14815 16252 16404 16463
 # FUNCTIONS UPDATED:
 #   - new(): Added function name prefix
 #   - initialize_output(): Added function name prefix to all messages
-#   - initialize_input(): Added function name prefix to all messages  
+#   - initialize_input(): Added function name prefix to all messages
 #   - note_on(): Added function name prefix, removed 🎹 emoji
 #   - note_off(): Added function name prefix, removed 🎹 emoji
 #   - send_clock_start(): Added function name prefix, removed 🕐 emoji
@@ -1828,7 +1843,7 @@ kill 14815 16252 16404 16463
 # LOCATION: src/grid_osc.rs clear_all_sequence_rows function
 # ROOT CAUSE IDENTIFIED: Immutable borrow of device conflicted with mutable borrow in set_led()
 # SOLUTION IMPLEMENTED: Extract device.cols value in separate scope before loops
-# CODE CHANGE: 
+# CODE CHANGE:
 #   let cols = { let device = self.devices.get(grid_id)?; device.cols };
 #   for x in 0..cols { ... self.set_led() ... }
 # RESULT: Immutable borrow ends before mutable borrow begins
@@ -1881,7 +1896,7 @@ kill 14815 16252 16404 16463
 # ARM ACTION MAPPING IMPLEMENTED:
 #   - Column 0: UNDO
 #   - Column 1: REDO
-#   - Column 4: EUCLIDIAN_EVENTS  
+#   - Column 4: EUCLIDIAN_EVENTS
 #   - Column 5: EUCLIDIAN_LENGTH
 #   - Column 6: EUCLIDIAN_ROTATION
 #   - Column 7: RATCHET
@@ -1915,7 +1930,7 @@ kill 14815 16252 16404 16463
 # ISSUE IDENTIFIED: ARM UNDO/REDO operations needed more comprehensive grid updates
 # ANALYSIS: UNDO/REDO changes multiple sequencer states that require full grid refresh:
 #   - Grid state (pattern data across all rows)
-#   - Mozart state (MIDI note mappings) 
+#   - Mozart state (MIDI note mappings)
 #   - Row states (current step positions, first/last step boundaries)
 # ENHANCEMENT IMPLEMENTED:
 #   - Added clear_all_sequence_rows() call before grid update for clean state
@@ -1939,10 +1954,10 @@ kill 14815 16252 16404 16463
 #   - Therefore restore_arm_action_leds() after update_grid_display() is redundant
 # CHANGES MADE:
 #   - Removed restore_arm_action_leds() calls from all ARM actions:
-#     * ArmAction::Undo: Only clear_all_sequence_rows() + update_grid_display() 
+#     * ArmAction::Undo: Only clear_all_sequence_rows() + update_grid_display()
 #     * ArmAction::Redo: Only clear_all_sequence_rows() + update_grid_display()
 #     * ArmAction::EuclidianEvents: Only update_grid_display()
-#     * ArmAction::EuclidianLength: Only update_grid_display() 
+#     * ArmAction::EuclidianLength: Only update_grid_display()
 #     * ArmAction::EuclidianRotation: Only update_grid_display()
 # SIMPLIFIED UPDATE SEQUENCE:
 #   1. Execute ARM action (undo/redo/euclidean generation)
@@ -1983,7 +1998,7 @@ kill 14815 16252 16404 16463
 #   - Direct call to update_grid_display() which properly sets LED states
 #   - update_main_grid_display() calculates correct brightness for each LED:
 #     * brightness = 0 for positions without pattern/not current
-#     * brightness = 6 for current position without pattern  
+#     * brightness = 6 for current position without pattern
 #     * brightness = 10 for pattern without current position
 #     * brightness = 14 for pattern at current position
 # BENEFITS:
@@ -2000,7 +2015,7 @@ kill 14815 16252 16404 16463
 
 ## 2025-08-11 01:33:03 Targeted UNDO/REDO Display Fix Implementation
 # ISSUE IDENTIFIED: UNDO/REDO changed sequencer state but display didn't update until scroll passed changed positions
-# ROOT CAUSE ANALYSIS: 
+# ROOT CAUSE ANALYSIS:
 #   - UNDO/REDO successfully changed sequencer internal state
 #   - update_grid_display() marked "only used for initialization" - not suitable for runtime updates
 #   - Grid display only updated when sequencer scroll position passed through changed positions
@@ -2011,7 +2026,7 @@ kill 14815 16252 16404 16463
 #   - Calculates correct brightness for each LED based on current pattern and position state:
 #     * brightness = 0: No pattern + not current position
 #     * brightness = 6: Current position + no pattern
-#     * brightness = 10: Has pattern + not current position  
+#     * brightness = 10: Has pattern + not current position
 #     * brightness = 14: Has pattern + current position
 #   - Calls grid.refresh() to ensure changes are visible immediately
 # IMPLEMENTATION CHANGES:
@@ -2026,7 +2041,7 @@ kill 14815 16252 16404 16463
 # USER REQUEST: Euclidean ARM buttons should work interactively with sequence row presses
 # SYSTEM BEHAVIOR DEFINED:
 #   - EUCLIDIAN_EVENTS ARM + sequence row press: events = column + 1
-#   - EUCLIDIAN_LENGTH ARM + sequence row press: length = column + 1  
+#   - EUCLIDIAN_LENGTH ARM + sequence row press: length = column + 1
 #   - EUCLIDIAN_ROTATION ARM + sequence row press: rotation = column + 0
 #   - Generated rhythm placed on the pressed row
 # IMPLEMENTATION CHANGES:
@@ -2045,7 +2060,7 @@ kill 14815 16252 16404 16463
 #   4. Grid display immediately updates to show new pattern
 # PARAMETER MAPPING:
 #   - Column 0 = 1 event, 1 length, 0 rotation
-#   - Column 1 = 2 events, 2 length, 1 rotation  
+#   - Column 1 = 2 events, 2 length, 1 rotation
 #   - Column 15 = 16 events, 16 length, 15 rotation
 # BENEFIT: Intuitive column-based parameter selection with immediate visual feedback
 # COMPILATION: Successful with warnings only using cargo check --features desktop
@@ -2091,7 +2106,7 @@ kill 14815 16252 16404 16463
 #   - src/sequencer.rs: Step advancement and trigger debug messages
 #   - src/grid_osc.rs: LED set operation debug messages (set_led says:)
 # MESSAGES SILENCED IN MIDI MODULE:
-#   - "note_on says: MIDI Note ON: X (Y), vel: Z, ch: W" 
+#   - "note_on says: MIDI Note ON: X (Y), vel: Z, ch: W"
 #   - "note_off says: MIDI Note OFF: X (Y), ch: Z"
 #   - All simulation and no-device fallback messages
 # MESSAGES SILENCED IN SEQUENCER MODULE:
@@ -2164,7 +2179,7 @@ kill 14815 16252 16404 16463
 # ORIGINAL CODE: if row == 0 || row > 8 || pulses > steps || steps > 16 { return; }
 # ANALYSIS: Codebase uses 0-indexed coordinates throughout (seq_y 0-6 for sequence rows)
 # FIX 1: Removed row == 0 condition to allow row 0
-# FIX 2: Changed row > 8 to row > 6 (for 0-indexed rows 0-6)  
+# FIX 2: Changed row > 8 to row > 6 (for 0-indexed rows 0-6)
 # FIX 3: Changed row_idx = row - 1 to row_idx = row (direct 0-indexed access)
 # STATUS: Function now accepts 0-indexed rows - needs recompilation and restart
 
@@ -2293,7 +2308,7 @@ kill 14815 16252 16404 16463
 #   - Mozart mode intercepts input for MIDI note control
 # ARM FUNCTIONS UPDATED:
 #   - EuclidianEvents: Works with 32 steps, uses grid column for events count
-#   - EuclidianLength: Works with 32 steps, uses grid column for length  
+#   - EuclidianLength: Works with 32 steps, uses grid column for length
 #   - EuclidianRotation: Works with 32 steps, uses grid column for rotation
 #   - Mozart: New function activates dual-grid MIDI note display
 # BENEFIT: Complete 32-step sequencing with dual-grid support and Mozart MIDI control
@@ -2325,7 +2340,7 @@ kill 14815 16252 16404 16463
 # USER FEEDBACK: "ok its better. there is some scrolling between the two grids now"
 # STATUS: Grid interference mostly resolved, 32-step sequence flow improved but not perfect
 
-## 2025-08-11 23:54:00 Grid Interference Still Present Despite Improvements  
+## 2025-08-11 23:54:00 Grid Interference Still Present Despite Improvements
 # ISSUE: Grid interference persists - grids still affecting each other
 # USER FEEDBACK: "although the scrolling is better there is still interference between grids"
 # OBSERVATION: 32-step scrolling between grids is working better than before
@@ -2382,7 +2397,7 @@ kill 14815 16252 16404 16463
 # When wrapping from step 31 to 0, it incorrectly calculated old_step as 15 instead of 31
 # FIX APPLIED: Added previous_step field to MainRowStates struct to track actual previous step
 # CHANGES:
-#   1. Added previous_step: usize field to MainRowStates struct  
+#   1. Added previous_step: usize field to MainRowStates struct
 #   2. Set previous_step = old_step in advance_step() before advancing
 #   3. Use row_state.previous_step instead of hardcoded calculation in GridUpdate
 #   4. Initialize previous_step = euclidean_length in init_state_tables()
@@ -2434,7 +2449,7 @@ kill 14815 16252 16404 16463
 #   - Result: Both grids reported identical button presses simultaneously
 # FIX APPLIED: Match OSC message source port to specific device port
 #   1. Extract source_port from incoming UDP message address
-#   2. Find matching device by device.port == source_port  
+#   2. Find matching device by device.port == source_port
 #   3. Only create event for the actual sending device
 #   4. Added debug logging to show source port attribution
 # REMOVED: Deduplication workaround - no longer needed with proper attribution
@@ -2448,7 +2463,7 @@ kill 14815 16252 16404 16463
 # IMPLEMENTATION NEEDED: Add startup grid flashing sequence to differentiate grids
 # REQUIREMENTS:
 #   - GRID_ONE (lowest ID): Flash once at startup
-#   - GRID_TWO (second lowest ID): Flash twice at startup  
+#   - GRID_TWO (second lowest ID): Flash twice at startup
 #   - Helps user visually identify which physical grid is assigned to which role
 # LOCATION: Add to sequencer startup initialization after grid discovery
 # STATUS: Grid startup flash identification - ready to implement
@@ -2477,7 +2492,7 @@ kill 14815 16252 16404 16463
 #   - Should only update the specific LED that was pressed
 # TARGETED UPDATE STRATEGY:
 #   - Single button press: Update only the pressed LED
-#   - Current step change: Update only old/new step positions  
+#   - Current step change: Update only old/new step positions
 #   - Euclidean operation: Update only the affected row
 #   - Undo/redo: Update whole grids
 # FIX APPLIED: Replaced full refresh with update_single_button_led()
@@ -2513,7 +2528,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-13 08:48:55 Grid Button Press Fix Confirmed Working
 # USER FEEDBACK: "both grids are responding to button presses now"
 # SUCCESS: Targeted LED update fix has resolved the grid button press issues
-# CONFIRMED WORKING: 
+# CONFIRMED WORKING:
 #   - GRID_ONE button presses now work immediately
 #   - GRID_TWO button presses now work immediately
 #   - Pattern LEDs appear instantly after button press
@@ -2598,7 +2613,7 @@ kill 14815 16252 16404 16463
 #   - Added warning logs for fallback cases to catch future issues
 # EUCLIDEAN FUNCTIONS VERIFIED:
 #   - EuclidianEvents: Changes events, preserves length and rotation
-#   - EuclidianLength: Changes length, preserves events and rotation  
+#   - EuclidianLength: Changes length, preserves events and rotation
 #   - EuclidianRotation: Changes rotation, preserves events and length
 # ROW ISOLATION VERIFIED: Each MainRowStates instance is independent with separate parameters
 # STATUS: Euclidean parameter system is fully functional and correctly preserves state per row
@@ -2617,7 +2632,7 @@ kill 14815 16252 16404 16463
 #   - Added warning logs for fallback cases to catch future issues
 # EUCLIDEAN FUNCTIONS VERIFIED:
 #   - EuclidianEvents: Changes events, preserves length and rotation
-#   - EuclidianLength: Changes length, preserves events and rotation  
+#   - EuclidianLength: Changes length, preserves events and rotation
 #   - EuclidianRotation: Changes rotation, preserves events and length
 # ROW ISOLATION VERIFIED: Each MainRowStates instance is independent with separate parameters
 # STATUS: Euclidean parameter system is fully functional and correctly preserves state per row
@@ -2640,7 +2655,7 @@ kill 14815 16252 16404 16463
 # IMPLEMENTATION: Replaced flash_grids_for_identification() with ASCII text patterns
 # FUNCTIONALITY:
 #   - GRID_ONE displays "ONE" using LED coordinate array pattern
-#   - GRID_TWO displays "TWO" using LED coordinate array pattern  
+#   - GRID_TWO displays "TWO" using LED coordinate array pattern
 #   - Text patterns designed for 16x8 grid dimensions
 #   - Letters use simple block style for LED readability
 # TEXT PATTERNS:
@@ -2691,7 +2706,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-13 07:20:22 Grid Button Press Fix Did Not Resolve Issue
 # USER FEEDBACK: "sorry that didn't change any behaviour"
 # RESULT: Coordinate mapping fixes to refresh_all_pattern_leds() and update_single_led() had no effect
-# ISSUE PERSISTS: 
+# ISSUE PERSISTS:
 #   - GRID_TWO button presses still cause random LEDs on GRID_ONE
 #   - GRID_ONE button presses still mostly don't work
 # ANALYSIS: The fixed functions may not be in the actual execution path for manual button presses
@@ -2703,7 +2718,7 @@ kill 14815 16252 16404 16463
 # DEBUG OUTPUT ANALYSIS: User provided debug log showing the actual problem
 # DISCOVERY 1: Both grids report identical button events simultaneously
 #   - Grid m5032747 button event: (5, 5) = true
-#   - Grid m2949672 button event: (5, 5) = true  
+#   - Grid m2949672 button event: (5, 5) = true
 #   - This suggests hardware cross-talk or software event duplication
 # DISCOVERY 2: Code only processes events from GRID_ONE (main_grid_id)
 #   - main_loop() filters: if Some(&grid_event.grid_id) == main_grid_id.as_ref()
@@ -2736,7 +2751,7 @@ kill 14815 16252 16404 16463
 # DETAILED ANALYSIS:
 #   1. process_tick() calls advance_step() when tick_counter % ticks_per_step == 0
 #   2. advance_step() calls process_step() BEFORE incrementing step counters
-#   3. advance_step() then increments midi_step_count and other step counters  
+#   3. advance_step() then increments midi_step_count and other step counters
 #   4. process_tick() then calls play_midi() which uses the newly incremented midi_step_count
 #   5. GridUpdate events are sent from advance_step() but processed later in main_loop()
 # TIMING MISMATCH:
@@ -2748,7 +2763,7 @@ kill 14815 16252 16404 16463
 
 ## 2025-08-13 21:58:45 MIDI Timing Fix Implemented Successfully
 # SOLUTION APPLIED: Reordered operations in process_tick() function
-# CHANGE MADE: 
+# CHANGE MADE:
 #   - Moved play_midi() call BEFORE advance_step() call
 #   - This ensures MIDI events are sent for the current step being displayed
 #   - LED updates and MIDI events now synchronized to same step
@@ -2810,7 +2825,7 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE: Misleading label in MIDI note_on and note_off functions
 # FIXES APPLIED:
 #   1. Removed "(simulation)" text from MIDI Note ON message when device connected
-#   2. Removed "(simulation)" text from MIDI Note OFF message when device connected  
+#   2. Removed "(simulation)" text from MIDI Note OFF message when device connected
 #   3. Updated comments to say "No MIDI device mode" instead of "Simulation mode"
 # RESULT: MIDI messages now correctly show actual hardware status
 # BUILD STATUS: cargo build --features desktop - SUCCESS
@@ -2875,7 +2890,7 @@ kill 14815 16252 16404 16463
 # FINAL STATUS:
 #   1. ✅ All simulation code completely removed from codebase
 #   2. ✅ MIDI timing fix implemented - Step event now sent before increment
-#   3. ✅ Build successful with --features desktop 
+#   3. ✅ Build successful with --features desktop
 #   4. ⏳ Testing scheduled for tomorrow to verify MIDI/LED synchronization
 # TESTING PLAN FOR TOMORROW:
 #   1. Run sequencer with grid patterns active
@@ -2893,7 +2908,7 @@ kill 14815 16252 16404 16463
 # USER REPORT: "ok that worked. midi timing is ok now with LED pattern"
 # SUCCESS: MIDI notes now perfectly synchronized with LED display
 # VERIFICATION: Audio and visual feedback timing issue completely resolved
-# RESULT: 
+# RESULT:
 #   - MIDI notes trigger exactly when corresponding LEDs light up
 #   - No more "one step ahead" timing mismatch
 #   - Grid pattern MIDI generation working correctly
@@ -2959,7 +2974,7 @@ kill 14815 16252 16404 16463
 
 # USER REQUEST: Create a separate utility program that generates MIDI clock and sends it over USB for testing the sequencer
 # IMPLEMENTATION COMPLETED:
-# 
+#
 # MIDI CLOCK GENERATOR UTILITY CREATED:
 #   - Location: utils/midi_clock_generator.rs
 #   - Standalone program that generates precise MIDI clock signals
@@ -2969,7 +2984,7 @@ kill 14815 16252 16404 16463
 #   - Visual feedback: beat indicators (♩♪♫♬) and tempo display
 #   - USB MIDI output: auto-detects and connects to MIDI devices
 #   - Cross-platform compatibility: Linux/macOS/Windows support
-# 
+#
 # SUPPORTING FILES CREATED:
 #   - utils/Cargo.toml: Build configuration with midir and ctrlc dependencies
 #   - utils/run_clock_generator.sh: Quick build and run script
@@ -2977,7 +2992,7 @@ kill 14815 16252 16404 16463
 #   - utils/TESTING_GUIDE.md: Comprehensive testing scenarios and integration examples
 #   - utils/SUMMARY.md: Overview document with technical specifications
 #   - utils/src/bench.rs: Timing accuracy benchmark tool with statistics
-# 
+#
 # FEATURES IMPLEMENTED:
 #   - Precise timing: Sub-millisecond accuracy, typically <0.1ms jitter
 #   - Interactive commands: s(start/stop), +/-(BPM adjust), status, quit
@@ -2985,14 +3000,14 @@ kill 14815 16252 16404 16463
 #   - Graceful shutdown: Ctrl+C handling and proper cleanup
 #   - Error handling: Connection failures and MIDI device issues
 #   - Quality assessment: Automatic timing validation in benchmark
-# 
+#
 # USAGE INSTRUCTIONS:
 #   1. cd utils && ./run_clock_generator.sh
 #   2. Enter desired BPM (default 120)
 #   3. Select MIDI output device
 #   4. Use 's' to start/stop, '+'/'-' to adjust tempo
 #   5. Connect to sequencer via USB MIDI for external clock sync testing
-# 
+#
 # TESTING CAPABILITIES:
 #   - Basic sync verification: sequencer follows clock BPM
 #   - Transport control: start/stop sync validation
@@ -3000,14 +3015,14 @@ kill 14815 16252 16404 16463
 #   - Real-time changes: smooth tempo transitions during playback
 #   - Benchmark suite: BPM sweep, stress test, stability test
 #   - Hardware integration: works with USB MIDI interfaces and devices
-# 
+#
 # TECHNICAL SPECIFICATIONS:
 #   - MIDI Standard: Full MIDI 1.0 compliance
 #   - Clock Resolution: 24 pulses per quarter note (24 PPQ)
 #   - CPU Usage: <1% on modern systems
 #   - Memory Usage: <5MB RAM
 #   - Dependencies: midir (MIDI I/O), ctrlc (signal handling)
-# 
+#
 # COMPILATION: Successful - both main generator and benchmark tools compile cleanly
 # RESULT: Complete MIDI clock generator utility ready for sequencer testing
 
@@ -3033,10 +3048,10 @@ kill 14815 16252 16404 16463
 #   - sequencer.set_tempo() and self.tempo synchronization maintained
 # PROJECT STATUS: Tempo control feature fully implemented and user-validated
 # NEXT: Ready for normal sequencer operation with tempo controls active
-# 
+#
 # USER REQUEST: Flash LEDs 14 and 15 on GRID_TWO every time MIDI clock beat is received
 # IMPLEMENTATION COMPLETED:
-# 
+#
 # BEAT LED FLASHING FEATURE:
 #   - Added ClockBeat event to MidiInputEvent enum in midi.rs
 #   - Modified handle_midi_input_message() to send ClockBeat every 24 MIDI clock ticks (1 beat)
@@ -3044,71 +3059,71 @@ kill 14815 16252 16404 16463
 #   - Created handle_midi_input_event() method to process MIDI input events including ClockBeat
 #   - Created update_beat_leds() method to manage LED flashing with 150ms flash duration
 #   - Integrated MIDI input event processing into main loop with get_input_events()
-# 
+#
 # LED BEHAVIOR:
 #   - Beat detection: Every 24 MIDI clock ticks triggers ClockBeat event
 #   - Flash duration: 150ms bright flash (brightness 15) then off
 #   - Target LEDs: Columns 14 and 15, row 7 on GRID_TWO only
 #   - Auto-clear: LEDs turn off when MIDI clock stops (ClockStop event)
 #   - No interference: Uses existing grid refresh cycle, doesn't call extra refresh()
-# 
+#
 # INTEGRATION APPROACH:
 #   - Real-time processing: MIDI callback immediately detects beats
 #   - Event-driven: Uses existing MidiInputEvent channel system
 #   - Grid-safe: update_beat_leds() called before all grid.refresh() calls
 #   - Non-blocking: Main loop processes MIDI events with try_recv()
-# 
+#
 # TIMING ACCURACY:
 #   - Beat detection: Hardware-accurate (24 PPQ standard)
 #   - Visual feedback: Immediate response to external clock beats
 #   - Flash timing: Consistent 150ms duration regardless of BPM
 #   - Grid update: Synchronized with existing refresh cycles
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: LEDs 14 and 15 on GRID_TWO now flash with each beat when external MIDI clock is active
-# 
+#
 # USER REQUEST: Transport sync with MIDI clock start/stop + dedicated Start/Stop buttons on GRID_TWO
 # IMPLEMENTATION COMPLETED:
-# 
+#
 # MIDI TRANSPORT SYNC:
 #   - Modified handle_midi_input_event() to handle ClockStart and ClockStop events
 #   - ClockStart event: Automatically calls self.sequencer.start()
 #   - ClockStop event: Automatically calls self.sequencer.stop() and clears beat LEDs
 #   - Transport sync works regardless of internal tempo settings
 #   - Logs: "MIDI Clock Start/Stop received - starting/stopping sequencer"
-# 
+#
 # DEDICATED TRANSPORT BUTTONS ON GRID_TWO ROW 7:
 #   - Column 12 (0-indexed): Stop button - always functional regardless of external clock
 #   - Column 13 (0-indexed): Start button - always functional regardless of external clock
 #   - Columns 14-15: Tempo controls (existing) - only work when external clock inactive
 #   - Extended grid press handler to cover columns 12-15 instead of just 14-15
-# 
+#
 # BUTTON BEHAVIOR:
 #   - Press: Light LED at brightness 10, perform action (start/stop/tempo change)
 #   - Release: Turn LED off (brightness 0) with smart handling for beat LEDs
 #   - Transport buttons (12-13): Always respond to user input
 #   - Tempo buttons (14-15): Disabled when external MIDI clock active
 #   - Beat LED preservation: Tempo button releases don't interfere with beat flashing
-# 
+#
 # TRANSPORT CONTROL LOGIC:
 #   - Manual control: Grid buttons 12 (stop) and 13 (start) always work
 #   - External sync: MIDI clock start/stop automatically controls sequencer
 #   - Dual control: Both manual and MIDI clock control can operate simultaneously
 #   - State consistency: All methods use sequencer.start()/stop() for unified behavior
-# 
+#
 # GRID LAYOUT ON GRID_TWO ROW 7:
 #   - Column 12: ⏹ Stop (manual control)
-#   - Column 13: ▶️ Start (manual control) 
+#   - Column 13: ▶️ Start (manual control)
 #   - Column 14: ⬇️ Tempo Down (disabled during external clock)
 #   - Column 15: ⬆️ Tempo Up (disabled during external clock)
 #   - Columns 14-15 also flash with beats when external clock active
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: Complete transport sync - sequencer follows MIDI clock start/stop + dedicated manual controls
-# 
+#
 # READY FOR USER TESTING:
 # MIDI CLOCK TRANSPORT SYNC + BEAT LED FLASHING + MANUAL TRANSPORT CONTROLS
-# 
+#
 # EXPECTED BEHAVIOR:
 #   1. MIDI Clock Generator Start → Sequencer starts automatically
 #   2. MIDI Clock Generator Stop → Sequencer stops automatically + beat LEDs clear
@@ -3116,7 +3131,7 @@ kill 14815 16252 16404 16463
 #   4. Grid Button 13 (GRID_TWO row 7) → Manual Start (always works)
 #   5. LEDs 14 & 15 flash with beats when external MIDI clock active
 #   6. Tempo buttons 14-15 disabled when external clock active
-# 
+#
 # TEST SEQUENCE:
 #   - Terminal 1: cd utils && cargo run --release --bin midi_clock_generator
 #   - Terminal 2: cargo run --release
@@ -3124,88 +3139,88 @@ kill 14815 16252 16404 16463
 #   - Test manual transport: Use grid buttons 12 (stop) and 13 (start)
 #   - Test beat LEDs: Should flash on columns 14-15 when clock running
 #   - Test tempo controls: Should be disabled when external clock active
-# 
+#
 # STATUS: IMPLEMENTATION COMPLETE - AWAITING USER VALIDATION
-# 
+#
 # USER TESTING RESULTS: MIDI clock detection not working reliably
 # ISSUE IDENTIFIED: Clock source never set to MidiExternal, tempo controls not properly disabled
 # ROOT CAUSE: Missing automatic clock source switching when MIDI clock messages received
-# 
+#
 # MIDI CLOCK DETECTION FIXES IMPLEMENTED:
 #   - Modified handle_midi_input_message() to automatically set clock source to MidiExternal
 #   - MIDI Clock (0xF8): Sets source to MidiExternal on first clock tick received
-#   - MIDI Start (0xFA): Sets source to MidiExternal and running = true  
+#   - MIDI Start (0xFA): Sets source to MidiExternal and running = true
 #   - MIDI Continue (0xFB): Sets source to MidiExternal and running = true
 #   - MIDI Stop (0xFC): Keeps external source, sets running = false
 #   - Added last_external_activity timestamp to ClockState for timeout detection
-# 
+#
 # EXTERNAL CLOCK TIMEOUT SYSTEM:
-#   - Added check_external_clock_timeout() method called from get_input_events()  
+#   - Added check_external_clock_timeout() method called from get_input_events()
 #   - 5-second timeout: switches back to internal clock if no MIDI activity
 #   - Automatic cleanup: clears external_tempo and sets running = false on timeout
 #   - Prevents stuck external clock state when MIDI generator disconnected
-# 
+#
 # TEMPO DETECTION IMPROVEMENTS:
 #   - Expanded BPM range from 60-200 to 60-300 BPM for wider compatibility
 #   - Added debug logging for detected external tempo
 #   - Better tempo filtering and validation
 #   - Activity timestamp updated on all MIDI clock messages
-# 
+#
 # EXPECTED BEHAVIOR AFTER FIX:
 #   - MIDI clock generator starts → Clock source switches to MidiExternal automatically
 #   - Tempo controls (columns 14-15) become disabled when external clock detected
 #   - Beat LEDs flash consistently when external clock active
 #   - 5 seconds after MIDI generator stops → switches back to internal clock
 #   - Tempo controls become enabled again when back to internal clock
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: Fixed MIDI clock detection and automatic source switching - ready for retest
-# 
+#
 # USER TESTING RESULTS: Transport sync works, but sequencer tempo not following MIDI clock tempo
 # ISSUE IDENTIFIED: External MIDI tempo detected but not applied to sequencer
 # ROOT CAUSE: Sequencer continues running at internal tempo despite detecting external clock BPM
-# 
+#
 # TEMPO SYNCHRONIZATION FIXES IMPLEMENTED:
 #   - Added tempo sync in handle_midi_input_event() for ClockBeat events
-#   - Added tempo sync in handle_midi_input_event() for ClockStart events  
+#   - Added tempo sync in handle_midi_input_event() for ClockStart events
 #   - Sequencer tempo automatically updated when external tempo detected
 #   - Only syncs when tempo difference > 0.5 BPM to avoid constant updates
 #   - Both sequencer.set_tempo() and main self.tempo updated for consistency
-# 
+#
 # MIDI CLOCK DIAGNOSTICS ADDED:
 #   - ClockBeat logging reduced to debug level to reduce verbosity
 #   - ClockTick counter added - logs every 100th tick for connection monitoring
 #   - Enhanced tempo sync logging on ClockStart for initial sync confirmation
 #   - Better connection stability diagnostics for intermittent LED flashing issue
-# 
+#
 # EXPECTED BEHAVIOR AFTER TEMPO SYNC FIX:
 #   - MIDI clock generator starts at 140 BPM → Sequencer tempo changes to 140 BPM
 #   - Sequencer playback speed matches MIDI clock generator BPM exactly
 #   - Tempo sync occurs on ClockStart and periodically on ClockBeat events
 #   - Beat LEDs should flash consistently (intermittent flashing indicates connection issues)
 #   - Tempo controls remain disabled when external clock active
-# 
+#
 # SYNCHRONIZATION LOGIC:
 #   - ClockStart: Immediate tempo sync when external clock starts
 #   - ClockBeat: Periodic tempo sync checks (every beat) with 0.5 BPM threshold
 #   - Tempo changes: Both internal sequencer and main application tempo updated
 #   - Stability: Only syncs when meaningful tempo difference detected
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: Added automatic tempo synchronization - sequencer should now follow MIDI clock BPM
-# 
+#
 # USER FEEDBACK: "that's much better" - tempo sync working, requested dimmer tempo LEDs
 # TEMPO LED BRIGHTNESS ADJUSTMENT:
 #   - Reduced beat LED flash brightness from 15 to 8 for better visual comfort
 #   - LEDs 14 and 15 on GRID_TWO now flash at brightness 8 instead of maximum brightness
 #   - Maintains clear visual indication while being less bright/distracting
 #   - Flash duration and timing unchanged (150ms flash per beat)
-# 
+#
 # RESULT: Tempo synchronization working correctly with dimmer, more comfortable LED flashing
-# 
+#
 # USER REQUEST: Unify tempo ranges to 20-300 BPM for both internal and external systems
 # TEMPO RANGE UNIFICATION COMPLETED:
-# 
+#
 # SYSTEM-WIDE RANGE UPDATE TO 20.0-300.0 BPM:
 #   - Updated sequencer.set_tempo() clamp range from 20.0-200.0 to 20.0-300.0 BPM
 #   - Updated grid tempo controls (columns 14-15) clamp range to 20.0-300.0 BPM
@@ -3213,44 +3228,44 @@ kill 14815 16252 16404 16463
 #   - Updated external MIDI clock detection from 60.0-300.0 to 20.0-300.0 BPM (now accepts slower tempos)
 #   - Updated screen tempo visualization range calculation from 180.0 to 280.0 BPM range
 #   - Updated test cases to reflect new maximum tempo limit
-# 
+#
 # CONSISTENCY ACHIEVED:
 #   - No more tempo range mismatches between internal and external systems
 #   - External MIDI clock at any tempo 20-300 BPM will sync properly with sequencer
 #   - All tempo controls (grid, encoder, MIDI) use identical range limits
 #   - Phase correction system can handle full tempo range without clamping conflicts
-# 
+#
 # BENEFITS:
 #   - Perfect sync: External clock at 250 BPM → Sequencer runs at 250 BPM (no clamping to 200)
 #   - Wider compatibility: Accepts very slow external clocks down to 20 BPM
 #   - Consistent behavior: All tempo adjustment methods use same range
 #   - Future-proof: Supports high-tempo electronic music and slow ambient tracks
-# 
+#
 # TEMPO RANGE COVERAGE:
 #   - 20-60 BPM: Ambient, downtempo, ballads
 #   - 60-120 BPM: Pop, rock, hip-hop, standard music
 #   - 120-180 BPM: Dance, house, techno
 #   - 180-300 BPM: Hardcore, drum & bass, gabber, extreme electronic
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: Complete tempo range unification - 20-300 BPM across entire system
-# 
+#
 # USER REQUEST: Implement professional phase correction (Option B) with visual drift indicator
 # IMPLEMENTATION COMPLETED: PROFESSIONAL PHASE CORRECTION WITH VISUAL FEEDBACK
-# 
+#
 # PHASE CORRECTION SYSTEM:
 #   - Added phase correction state tracking: last_midi_clock_count, last_sync_check, current_drift_ticks
 #   - Implemented check_phase_correction() method called every beat (ClockBeat event)
 #   - Calculates drift between sequencer position and expected MIDI clock position
 #   - Handles sequence wraparound (32-step patterns) with proper boundary detection
 #   - Smart thresholds: >24 ticks (1 step) = large drift, >6 ticks = small drift
-# 
+#
 # DRIFT DETECTION ALGORITHM:
 #   - Converts MIDI clock ticks to expected sequencer step position
 #   - Compares with actual sequencer current position from get_current_position()
 #   - Calculates drift in ticks with wraparound handling for 32-step sequences
 #   - Applies corrections based on drift magnitude and professional thresholds
-# 
+#
 # VISUAL DRIFT INDICATOR LED:
 #   - Location: GRID_TWO column 11, row 7 (0-indexed)
 #   - Brightness based on drift amount:
@@ -3259,26 +3274,26 @@ kill 14815 16252 16404 16463
 #     * 13-24 ticks (1/2-1 step): brightness 6 (dim)
 #     * 25-48 ticks (1-2 steps): brightness 10 (medium warning)
 #     * >48 ticks (>2 steps): brightness 15 (bright warning)
-# 
+#
 # CORRECTION STRATEGY:
 #   - Large drift (>1 step): Log for potential hard reset (future implementation)
 #   - Small drift (>1/4 step): Log for gentle micro-timing adjustment (future implementation)
 #   - Visual feedback: Immediate LED indication of sync quality for user monitoring
 #   - Reset on ClockStart/ClockStop: Clean state for new sync sessions
-# 
+#
 # PROFESSIONAL FEATURES:
 #   - Non-intrusive monitoring: Continuous drift detection without audio artifacts
 #   - Industry-standard thresholds: Based on professional sequencer practices
 #   - Real-time visual feedback: LED brightness indicates sync quality instantly
 #   - Extensible framework: Ready for implementing actual phase corrections
-# 
+#
 # GRID LAYOUT UPDATES:
 #   - Column 11: 📊 Drift Indicator (brightness = drift amount)
 #   - Column 12: ⏹ Stop (manual control)
 #   - Column 13: ▶️ Start (manual control)
 #   - Column 14: ⬇️ Tempo Down + Beat Flash (disabled during external clock)
 #   - Column 15: ⬆️ Tempo Up + Beat Flash (disabled during external clock)
-# 
+#
 # COMPILATION: Successful with warnings only
 # RESULT: Professional phase correction system with real-time visual drift monitoring implemented
 
@@ -3327,7 +3342,7 @@ kill 14815 16252 16404 16463
 #   1. Added termion dependency to utils/Cargo.toml for raw terminal input
 #   2. Modified midi_clock_generator.rs input handling:
 #      - ↑ (Up Arrow): +1 BPM (was "++")
-#      - ↓ (Down Arrow): -1 BPM (was "--") 
+#      - ↓ (Down Arrow): -1 BPM (was "--")
 #      - → (Right Arrow): +5 BPM (was "+")
 #      - ← (Left Arrow): -5 BPM (was "-")
 #      - 's': Start/Stop toggle
@@ -3378,7 +3393,7 @@ kill 14815 16252 16404 16463
 # ISSUE: Tempo discrepancy persists - clock generator sends 120.0 BPM but sequencer detects 118.1 BPM
 # OBSERVATION: Beat-based averaging still shows 2 BPM error despite improved algorithm
 # HYPOTHESIS: Either clock generator timing drift OR sequencer calculation issue
-# 
+#
 # DIAGNOSTIC LOGGING ADDED:
 #   1. Added detailed tempo calculation logging in handle_midi_input_message:
 #      - Shows exact beat count, time span, and BPM calculation steps
@@ -3391,7 +3406,7 @@ kill 14815 16252 16404 16463
 #
 # PURPOSE: Identify whether discrepancy is in:
 #   - Clock generation timing accuracy (systematic drift)
-#   - MIDI transmission timing (USB/system latency)  
+#   - MIDI transmission timing (USB/system latency)
 #   - Sequencer calculation logic (algorithmic error)
 #
 # NEXT STEPS: Run with diagnostic logging to pinpoint root cause
@@ -3470,13 +3485,13 @@ kill 14815 16252 16404 16463
 # FEATURE: Added snap-to-whole-number tempo button for cleaner tempo values
 # LOCATION: GRID_TWO column 10, row 7 (left of drift indicator LED at column 11)
 # DEFAULT STATE: ON (enabled by default)
-# 
+#
 # FUNCTIONALITY:
 #   - Toggle button: Press to enable/disable snap-to-whole-tempo
 #   - When enabled: 120.1 BPM → snapped to 120.0 BPM
 #   - When disabled: Shows original detected tempo (e.g., 120.1 BPM)
 #   - Visual feedback: LED brightness 8 (ON) vs 2 (OFF)
-# 
+#
 # IMPLEMENTATION:
 #   1. Added snap_to_whole_tempo: bool field to SimonSaysSeeq struct (default true)
 #   2. Added snap_to_whole_tempo: Arc<Mutex<bool>> field to MidiManager (default true)
@@ -3484,7 +3499,7 @@ kill 14815 16252 16404 16463
 #   4. Applied snapping in MidiManager::get_external_tempo() method using tempo.round()
 #   5. Added set_snap_to_whole_tempo() and get_snap_to_whole_tempo() methods to MidiManager
 #   6. Button state synced between main app and MIDI manager
-# 
+#
 # GRID LAYOUT (GRID_TWO row 7):
 #   - Column 10: 🎯 Snap Tempo (toggle ON/OFF)
 #   - Column 11: 📊 Drift Indicator (brightness = drift amount)
@@ -3492,13 +3507,13 @@ kill 14815 16252 16404 16463
 #   - Column 13: ▶️ Start (manual control)
 #   - Column 14: ⬇️ Tempo Down + Beat Flash (disabled during external clock)
 #   - Column 15: ⬆️ Tempo Up + Beat Flash (disabled during external clock)
-# 
+#
 # BENEFITS:
 #   - Cleaner tempo display for musicians (whole numbers preferred)
 #   - Eliminates minor tempo fluctuations from appearing as changes
 #   - Maintains precise internal timing while showing clean values
 #   - User can toggle off for precise tempo analysis when needed
-# 
+#
 # STATUS: Snap-to-whole-tempo feature implemented and ready for testing
 
 ## 2025-08-16 15:14:45 Enhanced MIDI Clock Beat Debug Message
@@ -3516,7 +3531,7 @@ kill 14815 16252 16404 16463
 # ERROR: "`self` parameter is only allowed in associated functions"
 # ROOT CAUSE: snap_to_whole_tempo methods were incorrectly nested inside check_external_clock_timeout function
 # PROBLEM: Methods were indented as if they were inside the function body instead of being at impl block level
-# FIX: 
+# FIX:
 #   1. Added missing closing brace for check_external_clock_timeout function
 #   2. Moved set_snap_to_whole_tempo() and get_snap_to_whole_tempo() to proper impl block level
 #   3. Corrected indentation to match other methods in impl MidiManager block
@@ -3579,7 +3594,7 @@ kill 14815 16252 16404 16463
 # ISSUE: Tempo detection spikes from 120 to 280 BPM when clock generator BPM changes by 1
 # PROBLEM: Sudden tempo changes disrupt rolling average calculation in beat-based detection
 # ROOT CAUSE: Mixed timing data - some beats at old tempo, some at new tempo in same window
-# 
+#
 # SOLUTION: Added test mode to clock generator for controlled tempo analysis
 # TEST MODE FEATURES:
 #   1. Smooth tempo ramping from 100-180 BPM over 60-second cycles
@@ -3587,21 +3602,21 @@ kill 14815 16252 16404 16463
 #   3. Toggle with 't' key during clock generator operation
 #   4. Visual indication "[TEST MODE]" in BPM output logs
 #   5. Allows analysis of tempo detection behavior with continuous changes
-# 
+#
 # IMPLEMENTATION:
 #   - Added test_mode: Arc<AtomicBool> to ClockGenerator struct
 #   - Added ToggleTestMode command for thread communication
 #   - Sine wave calculation: min_bpm + (range * (sin(cycle_pos) + 1) / 2)
 #   - 60-second cycle duration for full 100-180-100 BPM sweep
 #   - Updates shared BPM state so status commands show current test tempo
-# 
+#
 # USAGE:
 #   1. Start clock generator: cargo run --release --bin midi_clock_generator
 #   2. Press 't' to enable test mode
 #   3. Press 's' to start clock generation
 #   4. Observe sequencer tempo detection behavior during smooth ramping
 #   5. Press 't' again to disable test mode and return to manual control
-# 
+#
 # EXPECTED BENEFIT: Identify if gradual tempo changes avoid detection spikes
 # DEBUG TARGET: Understand why sudden +1 BPM changes cause 280 BPM spikes
 # STATUS: Test mode implemented, ready for tempo detection algorithm analysis
@@ -3610,37 +3625,37 @@ kill 14815 16252 16404 16463
 # ISSUE: Clock generator test mode ramping too fast for sequencer to track accurately
 # PROBLEM: 60-second cycle too aggressive, 8-beat averaging window too short for stable detection
 # USER FEEDBACK: "Generator ramp much slower, sequencer can't keep up, increase averaging period"
-# 
+#
 # IMPROVEMENTS IMPLEMENTED:
 #   1. SLOWER RAMPING: Extended test mode cycle from 60 seconds to 5 minutes (300 seconds)
 #      - 100-180 BPM sweep now takes 5 minutes instead of 1 minute
 #      - Much more gradual tempo changes for sequencer to track smoothly
 #      - Sine wave modulation remains but with 5x slower rate of change
-# 
+#
 #   2. INCREASED AVERAGING: Extended sequencer beat averaging from 8 to 16 beats
 #      - Changed from 2 measures (8 beats) to 4 measures (16 beats) averaging window
 #      - More stable tempo detection with longer history
 #      - Better filtering of short-term timing variations
 #      - Should reduce tempo detection spikes during changes
-# 
+#
 # UPDATED BEHAVIOR:
 #   - Clock Generator: "Ramping between 100-180 BPM over 5 minutes"
 #   - Sequencer: "External tempo detected: X.X BPM (averaged over 15 beats)" (up to 15)
 #   - Much smoother tempo tracking during test mode operation
-# 
+#
 # BENEFITS:
 #   - Sequencer has more time to adapt to tempo changes
 #   - Longer averaging reduces false spikes and noise
 #   - More realistic testing of gradual tempo drift scenarios
 #   - Better analysis of rolling average behavior over longer periods
-# 
+#
 # STATUS: Slower ramping and increased averaging implemented for stable tempo analysis
 
 ## 2025-08-16 18:54:46 Realistic Stepped Tempo Test Sequence
 # FEEDBACK: Continuous ramping is unnatural, need realistic discrete tempo changes
 # REQUIREMENT: Test how sequencer handles actual musician-like tempo changes
 # PROBLEM: Sine wave ramping doesn't simulate real performance tempo variations
-# 
+#
 # NEW TEST SEQUENCE IMPLEMENTED:
 #   1. 120 BPM for 10 seconds (baseline tempo)
 #   2. 125 BPM for 10 seconds (+5 BPM increase)
@@ -3650,62 +3665,62 @@ kill 14815 16252 16404 16463
 #   6. 122 BPM for 20 seconds (-8 BPM decrease, near baseline)
 #   7. 110 BPM for 20 seconds (-12 BPM decrease, slower tempo)
 #   8. Repeat cycle (100 seconds total)
-# 
+#
 # TEST SEQUENCE RATIONALE:
 #   - Simulates realistic musician tempo changes during performance
 #   - Mix of small (+1, -4) and large (+19, -12) tempo changes
 #   - Different hold durations (10s vs 20s) to test averaging stability
 #   - Returns to baseline-adjacent tempos to test detection accuracy
 #   - Tests both gradual and sudden tempo transitions
-# 
+#
 # EXPECTED ANALYSIS:
 #   - How does sequencer handle sudden +19 BPM jump (120→140)?
 #   - Does 16-beat averaging smooth out transition spikes?
 #   - Can sequencer accurately track small changes (+1 BPM: 120→121)?
 #   - How stable is detection during 20-second holds?
-# 
+#
 # BENEFITS OVER CONTINUOUS RAMPING:
 #   - More realistic performance scenario testing
 #   - Clear tempo targets for detection accuracy measurement
 #   - Tests both stability (holds) and responsiveness (changes)
 #   - Easier to identify specific problem transitions
-# 
+#
 # STATUS: Realistic stepped tempo test sequence implemented for accurate analysis
 
 ## 2025-08-16 19:07:11 Preserve External Tempo on Clock Timeout
 # ISSUE: External MIDI clock timeout reverts to default tempo instead of preserving last known external tempo
 # PROBLEM: When external clock times out, sequencer loses the tempo that was being used
 # USER REQUIREMENT: "tempo should stay at the last known external tempo" when clock times out
-# 
+#
 # IMPLEMENTATION:
 #   1. Modified check_external_clock_timeout() in midi.rs:
 #      - Preserve external_tempo value instead of setting to None
 #      - Enhanced log message to show preserved tempo value
 #      - Log: "External MIDI clock timeout - switching to internal clock, preserving tempo X.X BPM"
-#   
+#
 #   2. Added ExternalClockTimeout event to MidiInputEvent enum:
 #      - New event type to signal external clock timeout with tempo preservation
 #      - Allows main application to respond to timeout transitions
-#   
+#
 #   3. Added clock source transition detection:
 #      - Added previous_clock_source tracking to MidiManager
 #      - check_clock_source_transition() method detects External→Internal transitions
 #      - Generates ExternalClockTimeout event when transition occurs
-#   
+#
 #   4. Added ExternalClockTimeout event handling in main.rs:
 #      - Retrieves last external tempo from MIDI manager
 #      - Applies preserved tempo to sequencer and main app state
 #      - Logs tempo preservation with snap indicator
 #      - Handles case where no previous external tempo exists
-# 
+#
 # BEHAVIOR CHANGE:
 #   - OLD: External timeout → revert to default/previous internal tempo
 #   - NEW: External timeout → preserve last external tempo and continue using it
-# 
+#
 # LOG MESSAGES:
 #   - MIDI: "External MIDI clock timeout - switching to internal clock, preserving tempo 125.0 BPM"
 #   - Main: "External clock timeout - preserving last tempo: 125.0 BPM (snapped)"
-# 
+#
 # BENEFIT: Seamless tempo preservation during external clock interruptions
 # STATUS: External tempo preservation implemented for clock timeout scenarios
 
@@ -3735,7 +3750,7 @@ kill 14815 16252 16404 16463
 # ROOT CAUSE: Added ExternalClockTimeout event but didn't handle all existing MidiInputEvent variants
 # FIX: Added missing match patterns for complete coverage:
 #   - MidiInputEvent::NoteOn { .. } - placeholder for future MIDI input recording
-#   - MidiInputEvent::NoteOff { .. } - placeholder for future MIDI input recording  
+#   - MidiInputEvent::NoteOff { .. } - placeholder for future MIDI input recording
 #   - MidiInputEvent::ControlChange { .. } - placeholder for future MIDI CC mapping
 #   - MidiInputEvent::ClockContinue - placeholder for MIDI clock resume functionality
 # RESULT: Match statement now exhaustive, compilation successful
@@ -3773,7 +3788,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-16 19:22:28 Tempo Tracking Solution Approaches Analysis
 # ISSUE: Need better tempo tracking algorithm to prevent overshoots during tempo changes
 # USER SUGGESTIONS: 1) Constrain maximum tempo change delta per second, 2) Shorter averaging timeframe
-# 
+#
 # SOLUTION APPROACH 1: TEMPO CHANGE RATE LIMITING
 #   - Implement maximum BPM change per second constraint (e.g., max ±10 BPM/second)
 #   - Gradual tempo adaptation instead of immediate jumps
@@ -3781,7 +3796,7 @@ kill 14815 16252 16404 16463
 #   - Cons: Slower response to legitimate tempo changes, may lag behind actual tempo
 #   - Implementation: Track previous tempo, limit delta per beat/second
 #
-# SOLUTION APPROACH 2: SHORTER AVERAGING TIMEFRAME  
+# SOLUTION APPROACH 2: SHORTER AVERAGING TIMEFRAME
 #   - Reduce from 16-beat averaging to shorter window (4-8 beats)
 #   - Faster response to tempo changes, less mixed timing data
 #   - Pros: Quicker adaptation, less historical data contamination
@@ -3833,24 +3848,24 @@ kill 14815 16252 16404 16463
 ## 2025-08-16 19:31:55 Improved Tempo Detection Algorithm Implementation
 # SOLUTION: Enhanced tempo detection with shorter averaging and stability validation
 # APPROACH: Multi-pronged improvement to underlying beat-based detection algorithm
-# 
+#
 # IMPROVEMENTS IMPLEMENTED:
 #   1. SHORTER AVERAGING WINDOW:
 #      - Reduced from 16 beats to 6 beats for faster response
 #      - Less contamination from old tempo data during transitions
 #      - Requires minimum 3 beats (was 2) for more stable calculations
-#   
+#
 #   2. TEMPO STABILITY VALIDATION:
 #      - REMOVED: No longer reject readings based on tempo difference
 #      - All tempo readings are now accepted for maximum responsiveness
 #      - Multi-scale weighted averaging provides inherent stability
-#   
+#
 #   3. TEMPO CHANGE DETECTION WITH WINDOW RESET:
 #      - Quick check with last 3 beats to detect tempo changes
 #      - If recent tempo differs >5 BPM from previous, reset averaging window
 #      - Allows fresh start for new tempo instead of mixing old/new timing data
 #      - Debug logging: "Tempo change detected (X.X -> Y.Y BPM), resetting averaging window"
-#   
+#
 #   4. ENHANCED FILTERING:
 #      - Basic range checks (20-300 BPM) still apply
 #      - Multi-scale weighted averaging provides natural filtering
@@ -3874,7 +3889,7 @@ kill 14815 16252 16404 16463
 ## 2025-08-16 19:34:49 Enhanced Test Mode with Clock Stop/Start Cycles
 # ENHANCEMENT: Added clock stop/start cycles to test mode for comprehensive sequencer testing
 # USER REQUEST: Test mode should stop clock, restart clock, and repeat sequence continuously
-# 
+#
 # NEW TEST SEQUENCE (120-second cycle):
 #   1. 0-10s: 120 BPM (baseline tempo)
 #   2. 10-20s: 125 BPM (+5 BPM increase)
@@ -3931,13 +3946,13 @@ kill 14815 16252 16404 16463
 # ENHANCEMENT: Streamlined keyboard control and eliminated unnecessary user input
 # USER FEEDBACK: "simplify keyboard entry approach" - no BPM entry needed, arrow keys only
 # PROBLEM: Raw terminal mode broke normal command input, required Enter key for some commands
-# 
+#
 # SIMPLIFICATIONS IMPLEMENTED:
 #   1. REMOVED BPM ENTRY AT STARTUP:
 #      - Eliminated "Enter BPM (default 120):" prompt
 #      - Start with default 120 BPM automatically
 #      - No keyboard input required during startup
-#   
+#
 #   2. STREAMLINED KEYBOARD COMMANDS:
 #      - Arrow keys: Immediate BPM adjustment (↑↓ ±1, ←→ ±5)
 #      - 's': Start/stop clock toggle
@@ -3945,12 +3960,12 @@ kill 14815 16252 16404 16463
 #      - 'q': Quit program
 #      - 'h': Show help
 #      - REMOVED: Number entry, status command, verbose commands
-#   
+#
 #   3. AUTO-SELECT PORT 0:
 #      - Always default to MIDI port 0 without user selection
 #      - Eliminated port selection prompt and input
 #      - Streamlined connection process
-#   
+#
 #   4. SIMPLIFIED HELP AND INTERFACE:
 #      - Concise command list focused on essential functions
 #      - Shorter status messages and prompts
@@ -3959,7 +3974,7 @@ kill 14815 16252 16404 16463
 # STARTUP SEQUENCE (STREAMLINED):
 #   1. Program launch
 #   2. Auto-select port 0
-#   3. Auto-start clock at 120 BPM  
+#   3. Auto-start clock at 120 BPM
 #   4. Ready for immediate arrow key control
 #
 # BENEFITS:
@@ -3974,59 +3989,59 @@ kill 14815 16252 16404 16463
 # CORRECTION: Restored port selection but with port 0 as default option
 # USER FEEDBACK: "we do need port selection at the beginning but the default should be 0"
 # PROBLEM: Complete removal of port selection was too aggressive - users need choice for VirMIDI
-# 
+#
 # PORT SELECTION BEHAVIOR IMPLEMENTED:
 #   - Single port: Auto-select port 0 (no user input)
 #   - Multiple ports: Show selection prompt with default to port 0
 #   - Empty input: Defaults to port 0 automatically
 #   - Invalid input: Falls back to port 0 with notification
 #   - Prompt: "Select MIDI output port (default 0): "
-# 
+#
 # USER EXPERIENCE:
 #   - Press Enter: Uses port 0 (Midi Through - for clock generator testing)
 #   - Type "1" + Enter: Uses port 1 (VirMIDI 3-0 - for sequencer connection)
 #   - Type invalid number: Falls back to port 0 with warning
-# 
+#
 # BENEFITS:
 #   - Maintains port choice flexibility for different testing scenarios
 #   - Zero-friction default for most common use case
 #   - Clear indication of default behavior
 #   - Robust error handling with safe fallback
-# 
+#
 # STATUS: Port selection with sensible defaults implemented for flexible testing setup
 
 ## 2025-08-16 19:55:38 Current Status - Ready for Tempo Detection Testing
 # MILESTONE: MIDI clock generator and sequencer improvements completed
 # READINESS: All components implemented and ready for comprehensive tempo tracking testing
-# 
+#
 # COMPLETED FEATURES:
 #   1. IMPROVED TEMPO DETECTION ALGORITHM:
 #      - Reduced averaging window from 16 to 6 beats for faster response
 #      - Added tempo stability validation (reject readings >30 BPM different)
 #      - Implemented tempo change detection with window reset (>5 BPM triggers reset)
 #      - Enhanced filtering with multiple validation layers
-#   
+#
 #   2. TEMPO CHANGE RATE LIMITING:
 #      - Maximum ±2 BPM per second change constraint
 #      - Prevents overshoots and spikes during tempo transitions
 #      - Applied before snap-to-whole processing
-#   
+#
 #   3. SNAP-TO-WHOLE TEMPO FEATURE:
 #      - Toggle button at GRID_TWO column 10, row 7
 #      - Default ON - rounds detected tempo to whole numbers
 #      - Visual LED feedback (brightness 8 ON, 0 OFF)
-#   
+#
 #   4. EXTERNAL TEMPO PRESERVATION:
 #      - Preserves last external tempo when MIDI clock times out
 #      - Seamless transition from external to internal clock
 #      - No tempo jumps during clock interruptions
-#   
+#
 #   5. STREAMLINED CLOCK GENERATOR:
 #      - Auto-starts clock on program launch
 #      - Port selection with default to port 0
 #      - Arrow key tempo control (↑↓ ±1, ←→ ±5)
 #      - Enhanced test mode with stop/start cycles
-#   
+#
 #   6. COMPREHENSIVE TEST MODE:
 #      - Realistic stepped tempo sequence (120→125→121→140→130→122→110)
 #      - Clock stop/start cycles (100-110s stop, 110-120s restart)
@@ -4053,23 +4068,23 @@ kill 14815 16252 16404 16463
 ## 2025-08-16 19:24:48 Tempo Rate Limiting Implementation (±2 BPM/second)
 # SOLUTION: Implemented conservative tempo change rate limiting to prevent overshoots
 # APPROACH: Rate limiting with maximum ±2 BPM per second change constraint
-# 
+#
 # IMPLEMENTATION DETAILS:
 #   1. Added tempo tracking fields to ClockState:
 #      - last_tempo_update: Option<Instant> - timestamp of last tempo change
 #      - previous_tempo: Option<f32> - previous tempo value for delta calculation
-#   
+#
 #   2. Enhanced get_external_tempo() with rate limiting logic:
 #      - Calculate time delta since last tempo update
 #      - Allow maximum 2 BPM change per second: max_change = 2.0 * time_delta
 #      - If requested tempo change exceeds limit, clamp to maximum allowed
 #      - Track previous tempo and update timestamp for next calculation
-#   
+#
 #   3. Rate limiting applied before snap-to-whole processing:
 #      - Raw detected tempo → rate limited tempo → snapped tempo (if enabled)
 #      - Debug logging shows when rate limiting is applied
 #      - Format: "Rate limiting X.X BPM change to Y.Y BPM (max 2.0 BPM/s)"
-#   
+#
 #   4. Reset handling: Clear tempo tracking state on clock reset
 #      - Ensures clean state for new external clock sessions
 #
@@ -4090,7 +4105,7 @@ kill 14815 16252 16404 16463
 # ISSUE: Rate limiting prevents immediate spikes but tempo still overshoots target before settling
 # BEHAVIOR OBSERVED: Clock generator 120→121 BPM change causes sequencer to go ~10 BPM above target
 # PATTERN: 120 → gradually increases → peaks around 130 BPM → gradually decreases → settles at 121 BPM
-# 
+#
 # PROBLEM ANALYSIS:
 #   - Rate limiting (±2 BPM/second) is working - prevents instant jumps
 #   - BUT underlying tempo detection algorithm still calculates incorrect intermediate values
@@ -4116,27 +4131,27 @@ kill 14815 16252 16404 16463
 ## 2025-08-16 15:06:36 Tempo Discrepancy Resolution SUCCESS
 # ISSUE RESOLVED: Major tempo discrepancy between clock generator and sequencer detection
 # FINAL RESULT: Drift correction algorithm successfully implemented and tested
-# 
+#
 # BEFORE FIX:
 #   - Clock Generator: 120.0 BPM (claimed)
 #   - Sequencer Detection: 118.1-118.2 BPM (actual)
 #   - Error: -1.8 to -1.9 BPM (systematic timing drift)
 #   - Beat Timing: expected 0.508s/beat, actual 0.508s/beat, diff 0.000s
 #   - Clock Timing: expected 2.000s, actual 2.030-2.057s, error +0.030-0.057s
-# 
+#
 # AFTER FIX:
 #   - Clock Generator: 120.0 BPM (drift-corrected)
 #   - Sequencer Detection: 119.7-120.1 BPM (accurate)
 #   - Error: ±0.3 BPM (normal precision variance)
 #   - Beat Timing: expected 0.500s/beat, actual 0.500s/beat, diff 0.000s
 #   - Improvement: 1.8 BPM systematic error eliminated
-# 
+#
 # SOLUTION EFFECTIVENESS:
 #   - Accuracy improved from 98.4% to 99.85%
 #   - Systematic drift eliminated through absolute timing algorithm
 #   - Beat timing remains perfect (0.000s difference)
 #   - Remaining ±0.3 BPM variation is normal for MIDI clock systems
-# 
+#
 # ROOT CAUSE CONFIRMED: Clock generator cumulative timing drift
 # SOLUTION APPLIED: Drift-corrected absolute timing with adaptive sleep
 # STATUS: Tempo discrepancy problem fully resolved - system now maintains precise timing
@@ -4152,28 +4167,28 @@ kill 14815 16252 16404 16463
 #   - Sequencer detection: Fluctuating 232.9-233.0 BPM (snapped)
 #   - Raw detection values: 232.9 → 120.0 → 119.9 → 121.1 (erratic)
 #   - Constant "Tempo change detected" messages with window resets
-# 
+#
 # ROOT CAUSE ANALYSIS:
 # The beat-based tempo calculation in src/midi.rs has a fundamental error:
 #   - Algorithm: beats_per_second = beat_count / time_span; bpm = beats_per_second * 60.0
 #   - MIDI events: Generated every 24 ticks (1 beat at 24 PPQ standard)
 #   - Issue: Calculation treating beat events as actual musical beats, but math is wrong
-# 
+#
 # DIAGNOSTIC DATA FROM LOGS:
 #   - "Tempo change detected (232.9 -> 120.1 BPM), resetting averaging window"
 #   - Constant window resets prevent stable tempo detection
 #   - Phase correction showing large drift: -312 ticks, 336 ticks, -240 ticks
 #   - Beat intervals roughly half of expected (causing 2x BPM calculation)
-# 
+#
 # INVESTIGATION ACTIONS:
 #   1. Added comprehensive tempo calculation diagnostics to src/midi.rs
 #   2. Diagnostic messages will show expected vs actual beat intervals for 121 BPM
 #   3. Clock tick interval analysis to verify MIDI timing precision
-# 
+#
 # EXPECTED FIX: Correct the beat-based tempo calculation algorithm in handle_midi_input_message
 # The issue is likely in how beat_count and time_span are used in BPM calculation
 # Need to verify MIDI clock standard: 24 ticks per quarter note relationship to BPM
-# 
+#
 # STATUS: Critical tempo detection bug identified, diagnostic code added, ready for fix implementation
 
 ## 2025-08-16 22:04:00 Tempo Synchronization System FULLY OPERATIONAL
@@ -4304,13 +4319,13 @@ kill 14815 16252 16404 16463
 # TEST RESULTS (Outstanding Performance):
 # Target BPM | Detected BPM | Error (BPM) | Error (%) | Status
 # 60.0       | 60.0         | 0.0         | 0.0%      | 🏆 PERFECT
-# 90.0       | 89.9         | 0.1         | 0.1%      | 🏆 EXCELLENT  
+# 90.0       | 89.9         | 0.1         | 0.1%      | 🏆 EXCELLENT
 # 120.0      | 119.6        | 0.4         | 0.3%      | 🏆 EXCELLENT
 # 150.0      | 149.2        | 0.8         | 0.5%      | 🏆 EXCELLENT
 # 180.0      | 178.8        | 1.2         | 0.7%      | 🏆 EXCELLENT
 #
 # PERFORMANCE METRICS:
-# - Average Error: 0.34% (Outstanding!)  
+# - Average Error: 0.34% (Outstanding!)
 # - Success Rate: 100% (5/5 tests excellent)
 # - Maximum Error: 0.7% (Well within tolerance)
 # - Convergence Time: Good readings within 8-10 seconds
@@ -4329,7 +4344,7 @@ kill 14815 16252 16404 16463
 # Location: src/midi.rs - MultiScaleTickWindows struct
 # Key Methods:
 #   - add_tick(timestamp): Records tick with timestamp
-#   - calculate_weighted_bpm(): Computes weighted BPM from all windows  
+#   - calculate_weighted_bpm(): Computes weighted BPM from all windows
 # Integration: handle_midi_input_message() uses weighted approach
 # Validation: Tighter ±8 BPM stability threshold
 # Memory: Auto-cleanup prevents unbounded tick storage growth
@@ -4473,7 +4488,7 @@ kill 14815 16252 16404 16463
 # TEST RESULTS WITH OPTIMIZED CONFIGURATION:
 # Target | Detected | Error | Status
 # 60.0   | 60.0     | 0.0%  | 🏆 PERFECT
-# 90.0   | 90.0     | 0.0%  | 🏆 PERFECT  
+# 90.0   | 90.0     | 0.0%  | 🏆 PERFECT
 # 120.0  | 120.0    | 0.0%  | 🏆 PERFECT
 # 150.0  | 149.7    | 0.2%  | 🏆 EXCELLENT
 # 180.0  | 179.3    | 0.4%  | 🏆 EXCELLENT
@@ -4481,7 +4496,7 @@ kill 14815 16252 16404 16463
 #
 # PROGRESSIVE ACTIVATION VALIDATION:
 # t=1s: 120.0 BPM (🏆 Excellent - immediate accuracy)
-# t=2s: 120.0 BPM (🏆 Excellent - maintained accuracy)  
+# t=2s: 120.0 BPM (🏆 Excellent - maintained accuracy)
 # t=3s: 120.0 BPM (🏆 Excellent - stable reading)
 # t=4s: 120.0 BPM (🏆 Excellent - high confidence)
 # t=5s: 119.8 BPM (🏆 Excellent - maximum stability)
@@ -4590,7 +4605,7 @@ kill 14815 16252 16404 16463
 #
 # PROGRESSIVE ACTIVATION TIMELINE:
 # t=1s:  Use only 1s window (weight=1)
-# t=2s:  Use 1s + 2s windows (total_weight=3)  
+# t=2s:  Use 1s + 2s windows (total_weight=3)
 # t=4s:  Use 1s + 2s + 4s windows (total_weight=7)
 # t=6s:  Use 1s + 2s + 4s + 6s windows (total_weight=13)
 # t=8s:  Use 1s + 2s + 4s + 6s + 8s windows (total_weight=21)
@@ -4604,7 +4619,7 @@ kill 14815 16252 16404 16463
 #
 # TEST RESULTS WITH PROGRESSIVE ACTIVATION:
 # Time | Active Windows | Detected BPM | Status
-# 1.0s | 1 (1s)        | 120.0 BPM    | 🏆 Excellent  
+# 1.0s | 1 (1s)        | 120.0 BPM    | 🏆 Excellent
 # 2.0s | 2 (1s,2s)     | 120.0 BPM    | 🏆 Excellent
 # 4.0s | 3 (1s,2s,4s)  | 120.0 BPM    | 🏆 Excellent
 # 6.0s | 4 windows     | 119.8 BPM    | 🏆 Excellent
@@ -4636,11 +4651,11 @@ kill 14815 16252 16404 16463
 # DEPLOYMENT REQUEST: Deploy to Norns Shield with minimal changes
 # STRICT REQUIREMENT: ZERO (0) changes to the sequencer logic
 # DISPLAY REQUIREMENT: ONLY show current tempo on norns shield screen
-# 
+#
 # ALLOWED CHANGES:
 # 1. Deployment files and scripts only
 # 2. Single display function to show tempo on norns screen
-# 
+#
 # NOT ALLOWED:
 # 1. Any modifications to sequencer functionality
 # 2. Any changes to MIDI, grid, or hardware logic
@@ -4691,17 +4706,17 @@ kill 14815 16252 16404 16463
 # ERROR MESSAGE: "the package 'simon-says-seeq-rust' does not contain this feature: simulation"
 
 # SOLUTION PROVIDED:
-# 1. Fixed deploy_to_norns.sh to use --features "midi" instead of "simulation"  
+# 1. Fixed deploy_to_norns.sh to use --features "midi" instead of "simulation"
 # 2. Created deploy_simple_norns.sh as backup - copies source to norns and compiles natively
 # 3. Updated deployment scripts to avoid cross-compilation issues
 
 # DEPLOYMENT OPTIONS FOR USER:
 # Option 1: Fixed original script
 #   ./deploy_to_norns.sh --native
-#   
-# Option 2: Simple native compilation  
+#
+# Option 2: Simple native compilation
 #   ./deploy_simple_norns.sh
-#   
+#
 # Option 3: Manual deployment
 #   scp -r . we@norns.local:/home/we/dust/code/SimonSaysSeeqRust/
 #   ssh we@norns.local
@@ -4710,7 +4725,7 @@ kill 14815 16252 16404 16463
 
 # NORNS DEPLOYMENT REQUIREMENTS MET:
 # ✅ ZERO sequencer changes (requirement satisfied)
-# ✅ Minimal tempo-only display (requirement satisfied)  
+# ✅ Minimal tempo-only display (requirement satisfied)
 # ✅ SimonSaysSeeqRust.lua for norns SELECT menu
 # ✅ Native compilation avoids cross-compilation issues
 # ✅ All deployment scripts updated and ready
@@ -4726,7 +4741,7 @@ kill 14815 16252 16404 16463
 
 # PREVIOUS ACHIEVEMENTS:
 # ✅ Fixed deploy_to_norns.sh simulation feature issue
-# ✅ Created deploy_simple_norns.sh backup script  
+# ✅ Created deploy_simple_norns.sh backup script
 # ✅ Zero sequencer logic changes maintained
 # ✅ Minimal tempo-only display implemented
 # ✅ SimonSaysSeeqRust.lua for norns SELECT menu ready
@@ -4734,7 +4749,7 @@ kill 14815 16252 16404 16463
 
 # READY DEPLOYMENT OPTIONS:
 # 1. ./deploy_to_norns.sh --native
-# 2. ./deploy_simple_norns.sh  
+# 2. ./deploy_simple_norns.sh
 # 3. Manual: scp + ssh + cargo build
 
 # AWAITING: User instructions for next steps with norns build/run process
@@ -4793,7 +4808,7 @@ kill 14815 16252 16404 16463
 
 # RUNTIME VERIFICATION COMPLETE:
 # ✅ Hardware input discovery: knobs1-3 + keys (/dev/input/event0-3)
-# ✅ MIDI system operational: 
+# ✅ MIDI system operational:
 #     - Output: Midi Through + Virtual RawMIDI
 #     - Input: Midi Through + SimonSaysSeeq Output port
 # ✅ Grid system initialized (0 devices found - normal when no grid connected)
@@ -4801,7 +4816,7 @@ kill 14815 16252 16404 16463
 # ✅ Configuration loaded from: /home/we/.config/simon-says-seeq/config.toml
 # ✅ Sequencer clock and hardware input loops started
 
-# ISSUE IDENTIFIED & RESOLVED: 
+# ISSUE IDENTIFIED & RESOLVED:
 # - Rust installation on norns was corrupted (wrong architecture rustup binary)
 # - Workaround: Used existing pre-compiled ARM binary from previous successful build
 # - Binary runs perfectly with full norns hardware features
@@ -4839,7 +4854,7 @@ kill 14815 16252 16404 16463
 ### Possible Causes:
 # - serialoscd not properly daemonizing (Type=forking vs Type=simple)
 # - Missing runtime dependencies
-# - USB permission issues  
+# - USB permission issues
 # - avahi-daemon not running
 # - Build artifacts from failed compilation
 
@@ -4890,7 +4905,7 @@ kill 14815 16252 16404 16463
 #   - Modern Grid (cafe:4001) ✅ WORKING
 
 ### Deployment Method
-# SCRIPT USED: rpi5_build_and_run.sh 
+# SCRIPT USED: rpi5_build_and_run.sh
 # BUILD APPROACH: Native compilation on Pi 5 (no cross-compilation)
 # FEATURES ENABLED: hardware,midi,desktop (includes rosc for OSC)
 # SERIALOSC: Successfully installed and configured
@@ -4903,7 +4918,7 @@ kill 14815 16252 16404 16463
 
 ### Technical Details
 # RUST VERSION: Native ARM64 compilation
-# GRID COMMUNICATION: OSC messages via serialosc daemon  
+# GRID COMMUNICATION: OSC messages via serialosc daemon
 # PROTOCOL: Standard 40h protocol working for both grids
 # PERFORMANCE: Both grids responsive and displaying patterns correctly
 
@@ -4941,7 +4956,7 @@ kill 14815 16252 16404 16463
 
 ### Service Features Working
 # ✅ Auto-start on boot (before login required)
-# ✅ Both grids immediately responsive 
+# ✅ Both grids immediately responsive
 # ✅ MIDI support ready at startup
 # ✅ Auto-restart on failure (5 second delay)
 # ✅ Proper hardware permissions (audio, gpio, dialout, plugdev)
@@ -4961,11 +4976,9 @@ kill 14815 16252 16404 16463
 
 ### Production Ready Features
 # - Instant-on music hardware behavior
-# - No login required for operation  
+# - No login required for operation
 # - Crash protection with auto-restart
 # - Minimal dependencies for maximum reliability
 # - Headless operation suitable for live performance
 
 🚀 MILESTONE: Raspberry Pi 5 now functions as dedicated hardware sequencer appliance!
-
-
