@@ -515,49 +515,25 @@ impl SimonSaysSeeq {
     }
 
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
-        // SPECIAL CASE: Always handle ARM button presses first, even in Mozart mode
+        // Handle ARM buttons first (row 7), even in Mozart mode
         if y == 7 && pressed {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
-                if let Some(_arm_action) = ArmAction::from_column(x) {
-                    // This is an ARM button press on the main grid - handle it immediately
-                    // (The ARM button logic will be processed later, but we need to let it through)
-                    // Continue to normal processing instead of returning early
+                if ArmAction::from_column(x).is_some() {
+                    // This is an ARM button on main grid - process it directly
+                    // Skip Mozart mode check and go straight to ARM button logic
+                    // (ARM button logic is later in this function)
                 }
             }
-        }
-        
-        // Check if Mozart mode is active (but allow ARM buttons to pass through)
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
-                // Mozart mode: Handle MIDI note input on both grids
-                // BUT: Let ARM button presses continue to normal processing
-                if y == 7 && pressed {
-                    let connected_grids = self.grid.get_connected_grids();
-                    if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
-                        if ArmAction::from_column(x).is_some() {
-                            // This is an ARM button - let it continue to normal ARM processing
-                            // Don't return early
-                        } else {
-                            // Non-ARM button in Mozart mode - handle as Mozart input
-                            if pressed && y <= 7 {
-                                self.handle_mozart_grid_press(x, y)?;
-                            }
-                            return Ok(());
-                        }
-                    } else {
-                        // Non-main grid in Mozart mode - handle as Mozart input
-                        if pressed && y <= 7 {
-                            self.handle_mozart_grid_press(x, y)?;
-                        }
-                        return Ok(());
-                    }
-                } else {
-                    // Non-ARM button in Mozart mode - handle as Mozart input
+        } else {
+            // Not an ARM button - check Mozart mode
+            if let Some(arm_action) = self.active_arm_action {
+                if matches!(arm_action, ArmAction::Mozart) {
+                    // Mozart mode active and this is not an ARM button
                     if pressed && y <= 7 {
                         self.handle_mozart_grid_press(x, y)?;
                     }
-                    return Ok(());
+                    return Ok(()); // Don't process further
                 }
             }
         }
