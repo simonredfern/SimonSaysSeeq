@@ -519,12 +519,12 @@ impl SimonSaysSeeq {
         info!("DEBUG MOZART: Grid press {} at ({},{}) pressed={} - Mozart active: {:?}", 
               grid_id, x, y, pressed, self.active_arm_action);
         
-        // Handle ARM buttons first (row 7), even in Mozart mode
-        if y == 7 && pressed {
+        // Handle ARM buttons first (row 7), even in Mozart mode - BOTH press and release
+        if y == 7 {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
                 if ArmAction::from_column(x).is_some() {
-                    info!("DEBUG MOZART: ARM button detected at column {} - proceeding to ARM logic", x);
+                    info!("DEBUG MOZART: ARM button detected at column {} press={} - proceeding to ARM logic", x, pressed);
                     // This is an ARM button on main grid - process it directly
                     // Skip Mozart mode check and go straight to ARM button logic
                     // (ARM button logic is later in this function)
