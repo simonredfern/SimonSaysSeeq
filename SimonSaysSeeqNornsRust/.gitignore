@@ -1,0 +1,45 @@
+# AI and development output files
+ai_startup_output
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Grid device files
+grid_state_*
+serialosc_*
+
+# Audio and MIDI files
+*.wav
+*.mid
+*.midi
+
+# Configuration backups
+*.bak
+*.backup
+config_*.toml
+
+# Test outputs
+test_output/
+debug_output/
