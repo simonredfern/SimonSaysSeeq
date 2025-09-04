@@ -78,12 +78,12 @@ chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3.8"
 
 [features]
-default = ["hardware", "midi"]
+default = ["hardware", "midi", "rosc"]  # HARD REQUIREMENT: rosc for real grids
 hardware = ["evdev", "serialport"]
 hardware-audio = ["cpal"]
 midi = ["midir"]
 
-norns = ["hardware", "hardware-audio", "midi", "framebuffer-support"]
+norns = ["hardware", "hardware-audio", "midi", "framebuffer-support", "rosc"]  # Real grids required
 cross-compile = ["midi"]  # Safe features for cross-compilation
 desktop = ["midi", "serialport", "rosc"]  # Development on laptop with grid
 framebuffer-support = ["framebuffer"]  # Optional framebuffer support

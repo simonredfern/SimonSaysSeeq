@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use log::{info, warn, debug, error};
+use anyhow::anyhow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -115,7 +116,19 @@ impl SimonSaysSeeq {
             sequencer: Sequencer::new(),
             #[cfg(feature = "midi")]
             midi: MidiManager::new(&config.midi)?,
-            grid: GridManager::new()?,
+            grid: {
+                let grid_manager = GridManager::new()?;
+                // HARD REQUIREMENT: Verify exactly 2 real grids are connected
+                grid_manager.verify_two_grids_requirement()
+                    .map_err(|e| {
+                        error!("STARTUP FAILURE: {}", e);
+                        error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
+                        error!("Application cannot start without meeting this requirement.");
+                        e
+                    })?;
+                info!("✅ HARD REQUIREMENT MET: Two real grids verified at startup");
+                grid_manager
+            },
             screen: ScreenManager::new()?,
             co2: Co2Manager::new(config.co2.clone())?,
             config,
@@ -138,13 +151,18 @@ impl SimonSaysSeeq {
     pub fn run(&mut self) -> Result<()> {
         // info!("run says: Starting SimonSaysSeeq Rust application");
 
-        // List connected devices for debugging
+        // Verify and display grid assignment
         let connected_grids = self.grid.get_connected_grids();
-        if connected_grids.is_empty() {
-            // info!("No monome grid devices found - connect grid for hardware functionality");
-        } else {
-            // info!("Found {} monome grid device(s): {:?}", connected_grids.len(), connected_grids);
+        if connected_grids.len() != 2 {
+            error!("RUNTIME FAILURE: Expected exactly 2 grids, found {}", connected_grids.len());
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids required"));
         }
+        
+        let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
+        info!("🎛️  GRID ASSIGNMENT:");
+        info!("   GRID_ONE: {}", grid_one);
+        info!("   GRID_TWO: {}", grid_two);
+        info!("✅ Two real grids ready for operation");
 
         // Show control instructions
         // info!("run says: Controls:");
