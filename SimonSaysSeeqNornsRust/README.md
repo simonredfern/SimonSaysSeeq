@@ -2,6 +2,58 @@
 
 A high-performance sequencer for Norns hardware, written in Rust.
 
+## Raspberry Pi 5 Build and Run Script
+
+For Raspberry Pi 5 users, use the optimized build script:
+
+```bash
+# Quick start - setup and run
+./rpi5_build_and_run.sh setup
+./rpi5_build_and_run.sh run
+
+# Or all-in-one
+./rpi5_build_and_run.sh
+```
+
+### rpi5_build_and_run.sh Usage
+
+```
+USAGE:
+    ./rpi5_build_and_run.sh [OPTIONS] [COMMAND] [-- APPLICATION_ARGS]
+
+COMMANDS:
+    setup       Install system dependencies and configure environment
+    build       Build the project with current configuration
+    run         Run the application (builds first if necessary)
+    test        Test the compiled binary
+    service     Install and manage systemd service
+                Actions: install, start, stop, status, enable, disable
+    info        Show system information
+    clean       Clean build artifacts
+    help        Show this help
+
+OPTIONS:
+    --release           Build in release mode (default)
+    --debug             Build in debug mode
+    --features FEATURES Specify cargo features (default: hardware,midi,desktop)
+    --update-rust       Update Rust toolchain before building
+    -h, --help          Show help
+
+EXAMPLES:
+    ./rpi5_build_and_run.sh setup                           # Install dependencies and setup environment
+    ./rpi5_build_and_run.sh build                          # Build in release mode
+    ./rpi5_build_and_run.sh --debug build                  # Build in debug mode
+    ./rpi5_build_and_run.sh run                            # Build and run
+    ./rpi5_build_and_run.sh run -- --simulation            # Run with simulation mode
+    ./rpi5_build_and_run.sh service install                # Install systemd service (stops if running)
+    ./rpi5_build_and_run.sh service start                  # Start the service
+    ./rpi5_build_and_run.sh service stop                   # Stop the service
+    ./rpi5_build_and_run.sh service status                 # Check service status
+    ./rpi5_build_and_run.sh service enable                 # Enable autostart on boot
+    ./rpi5_build_and_run.sh service disable                # Disable autostart
+    ./rpi5_build_and_run.sh --features "hardware,midi" run # Build and run with specific features
+```
+
 ## Quick Start
 
 **New to SimonSaysSeeq? Get started in 30 seconds:**
