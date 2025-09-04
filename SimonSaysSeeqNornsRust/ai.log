@@ -46,6 +46,31 @@ udevadm info --query=all --name=/dev/ttyACM0
 udevadm info --query=all --name=/dev/ttyACM1
 ls target/debug/
 
+## 2025-01-02 MIDI Auto-Detection Made Explicit with Simultaneous Button Press
+# CHANGE: Removed periodic MIDI clock detection from main loop, added explicit trigger via GRID_TWO buttons
+# REASON: Periodic MIDI detection was interfering with two-grid scrolling functionality
+# LOCATION: src/main.rs - main_loop function, handle_grid_press function, and SimonSaysSeeq struct
+# BEFORE: 
+#   - MIDI re-detection ran automatically every 5 seconds in main loop
+#   - Could block grid updates and cause scrolling issues
+# AFTER:
+#   - Removed periodic detection variables and logic from main_loop
+#   - Added explicit MIDI detection trigger on GRID_TWO row 7:
+#     * Requires BOTH buttons 0 AND 1 pressed simultaneously
+#     * Clears saved MIDI device and forces fresh detection
+#     * Added button state tracking: grid_two_button_0_pressed, grid_two_button_1_pressed
+# IMPLEMENTATION DETAILS:
+#   - Button press: Lights up LED and tracks state
+#   - Button release: Turns off LED and updates state
+#   - MIDI detection only triggers when both buttons are pressed at same time
+#   - Prevents accidental triggering, requires deliberate action
+# IMPACT: 
+#   - Eliminates potential interference with grid scrolling
+#   - Gives user control over when MIDI detection occurs
+#   - Maintains all MIDI detection functionality but makes it manual and deliberate
+# STATUS: Successfully implemented, compiles without errors
+# TESTING: Need to verify two-grid scrolling works properly now
+
 ### Results Summary
 # Two grids physically connected:
 
