@@ -222,11 +222,28 @@ impl MidiManager {
             }
         }
         
-        // Try to find the configured device, or use the first available
+        // Try to find the configured device, or use the OTHER port if clock detection is active
         let selected_port = if !self.device_name.is_empty() {
             self.find_port_by_name(&midi_out, &out_ports, &self.device_name)?
         } else if !out_ports.is_empty() {
-            out_ports[0].clone()
+            // If we have a clock input device and multiple ports, use the OTHER port for keyboard I/O
+            if !self.input_device_name.is_empty() && out_ports.len() > 1 {
+                let clock_port_name = &self.input_device_name;
+                // Find a port that's NOT the clock source
+                let other_port = out_ports.iter().find(|port| {
+                    if let Ok(name) = midi_out.port_name(port) {
+                        !name.contains(clock_port_name) && !clock_port_name.contains(&name)
+                    } else {
+                        false
+                    }
+                }).unwrap_or(&out_ports[0]); // Fallback to first port if no "other" found
+                
+                let port_name = midi_out.port_name(other_port).unwrap_or_else(|_| "Unknown".to_string());
+                info!("initialize_output says: Using OTHER port for keyboard I/O (not clock source): {}", port_name);
+                other_port.clone()
+            } else {
+                out_ports[0].clone()
+            }
         } else {
             warn!("initialize_output says: No MIDI output ports available - MIDI will be disabled");
             return Ok(());
@@ -336,6 +353,7 @@ impl MidiManager {
         
         // Try to find the configured device, or use the first available
         let selected_port = if !self.input_device_name.is_empty() {
+            // When input_device_name is set (from clock detection), use it directly
             self.find_input_port_by_name(&midi_in, &in_ports, &self.input_device_name)?
         } else if !in_ports.is_empty() {
             in_ports[0].clone()
@@ -936,6 +954,8 @@ impl MidiManager {
                     info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
                     self.input_device_name = selected_source.clone();
                     self.initialize_input()?;
+                    // Re-initialize output to use OTHER port for keyboard I/O
+                    self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
                 } else if !summary.reliable_sources.is_empty() {
                     // Use the first reliable source if none was auto-selected
@@ -943,6 +963,8 @@ impl MidiManager {
                     info!("auto_detect_and_connect says: Using first reliable source: {}", first_source);
                     self.input_device_name = first_source.clone();
                     self.initialize_input()?;
+                    // Re-initialize output to use OTHER port for keyboard I/O
+                    self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
                 } else {
                     warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
