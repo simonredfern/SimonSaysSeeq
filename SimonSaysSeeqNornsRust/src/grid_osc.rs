@@ -76,38 +76,11 @@ impl GridManager {
 
         #[cfg(not(feature = "rosc"))]
         {
-            info!("new says: OSC grid support disabled (rosc feature not enabled)");
-            info!("Creating mock grids for simulation mode...");
-            
-            let mut devices = HashMap::new();
-            
-            // Create two mock grid devices for testing
-            devices.insert("mock_grid_one".to_string(), GridDevice {
-                id: "mock_grid_one".to_string(),
-                device_type: "monome 128".to_string(),
-                cols: 16,
-                rows: 8,
-                port: 12345,
-                prefix: "/mock_grid_one".to_string(),
-                is_varibright: true,
-            });
-            
-            devices.insert("mock_grid_two".to_string(), GridDevice {
-                id: "mock_grid_two".to_string(),
-                device_type: "monome 128".to_string(),
-                cols: 16,
-                rows: 8,
-                port: 12346,
-                prefix: "/mock_grid_two".to_string(),
-                is_varibright: true,
-            });
-            
-            info!("Created mock grids: mock_grid_one, mock_grid_two");
-            
-            Ok(Self {
-                devices,
-                assumed_led_states: HashMap::new(),
-            })
+            error!("HARD REQUIREMENT: SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
+            error!("OSC grid support is DISABLED (rosc feature not enabled)");
+            error!("Mock grids are NOT ALLOWED in this application");
+            error!("Please rebuild with --features desktop or --features rosc to enable real grid support");
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids (GRID_ONE and GRID_TWO) are required. Mock grids are not allowed."));
         }
     }
 
@@ -165,11 +138,23 @@ impl GridManager {
         }
 
         if discovered_devices.is_empty() {
-            info!("discover_devices says: No serialosc devices found. Make sure:");
-            info!("discover_devices says:   1. Your grid is connected via USB");
-            info!("discover_devices says:   2. serialosc is running: sudo systemctl start serialosc");
-            info!("discover_devices says:   3. You're in the dialout group");
-            return Ok(());
+            error!("HARD REQUIREMENT VIOLATION: No serialosc devices found!");
+            error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
+            error!("Make sure:");
+            error!("  1. Both grids are connected via USB");
+            error!("  2. serialosc is running: sudo systemctl start serialosc");
+            error!("  3. You're in the dialout group");
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids (GRID_ONE and GRID_TWO) are required but none were found."));
+        }
+
+        if discovered_devices.len() != 2 {
+            error!("HARD REQUIREMENT VIOLATION: Found {} grid(s), but exactly 2 are required!", discovered_devices.len());
+            error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
+            error!("Currently detected grids:");
+            for (device_id, device_type, device_port) in &discovered_devices {
+                error!("  - {} ({}) on port {}", device_id, device_type, device_port);
+            }
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Exactly 2 real grids are required but {} were found.", discovered_devices.len()));
         }
 
         // Connect to each discovered device
@@ -179,7 +164,21 @@ impl GridManager {
             }
         }
 
-        info!("discover_devices says: Connected to {} grid device(s) via OSC", self.devices.len());
+        // Verify we have exactly 2 grids connected
+        if self.devices.len() != 2 {
+            error!("HARD REQUIREMENT VIOLATION: Connected to {} grid(s), but exactly 2 are required!", self.devices.len());
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Exactly 2 real grids are required but only {} connected successfully.", self.devices.len()));
+        }
+
+        // Assign grid roles (GRID_ONE and GRID_TWO) based on device IDs
+        let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
+        grid_ids.sort(); // Sort to ensure consistent assignment
+
+        info!("GRID ASSIGNMENT:");
+        info!("  GRID_ONE: {} ({})", grid_ids[0], self.devices[&grid_ids[0]].device_type);
+        info!("  GRID_TWO: {} ({})", grid_ids[1], self.devices[&grid_ids[1]].device_type);
+        info!("SUCCESS: Two real grids connected and assigned as required!");
+        
         Ok(())
     }
 
@@ -769,53 +768,100 @@ impl GridManager {
 
         #[cfg(feature = "rosc")]
         {
-        let (device_port, prefix, is_varibright) = {
-            let device = self.devices.get(grid_id)
-                .ok_or_else(|| anyhow!("Grid {} not found", grid_id))?;
-            (device.port, device.prefix.clone(), device.is_varibright)
-        };
-
-        let device_addr = format!("127.0.0.1:{}", device_port);
-
-        // Flash sequence - create pattern based on flash count
-        let mut brightness_levels = Vec::new();
-        let (on_brightness, off_brightness) = if is_varibright {
-            (8, 0)
-        } else {
-            (1, 0)
-        };
-        
-        for _ in 0..flash_count {
-            brightness_levels.push(on_brightness);  // ON
-            brightness_levels.push(off_brightness); // OFF
-        }
-
-        for brightness in brightness_levels {
-            let flash_msg = if is_varibright {
-                OscMessage {
-                    addr: format!("{}/grid/led/level/all", prefix),
-                    args: vec![OscType::Int(brightness)],
-                }
-            } else {
-                OscMessage {
-                    addr: format!("{}/grid/led/all", prefix),
-                    args: vec![OscType::Int(brightness)],
-                }
+            let (device_port, prefix, is_varibright) = {
+                let device = self.devices.get(grid_id)
+                    .ok_or_else(|| anyhow!("Grid {} not found", grid_id))?;
+                (device.port, device.prefix.clone(), device.is_varibright)
             };
 
-            debug!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
-            debug!("Flash args: {:?}", flash_msg.args);
+            let device_addr = format!("127.0.0.1:{}", device_port);
 
-            let packet = OscPacket::Message(flash_msg);
-            let msg_buf = rosc::encoder::encode(&packet)?;
-            self.socket.send_to(&msg_buf, &device_addr)?;
+            // Flash sequence - create pattern based on flash count
+            let mut brightness_levels = Vec::new();
+            let (on_brightness, off_brightness) = if is_varibright {
+                (8, 0)
+            } else {
+                (1, 0)
+            };
+            
+            for _ in 0..flash_count {
+                brightness_levels.push(on_brightness);  // ON
+                brightness_levels.push(off_brightness); // OFF
+            }
 
-            thread::sleep(Duration::from_millis(400));
+            for brightness in brightness_levels {
+                let flash_msg = if is_varibright {
+                    OscMessage {
+                        addr: format!("{}/grid/led/level/all", prefix),
+                        args: vec![OscType::Int(brightness)],
+                    }
+                } else {
+                    OscMessage {
+                        addr: format!("{}/grid/led/all", prefix),
+                        args: vec![OscType::Int(brightness)],
+                    }
+                };
+
+                debug!("Sending flash command: {} to {}", flash_msg.addr, device_addr);
+                debug!("Flash args: {:?}", flash_msg.args);
+
+                let packet = OscPacket::Message(flash_msg);
+                let msg_buf = rosc::encoder::encode(&packet)?;
+                self.socket.send_to(&msg_buf, &device_addr)?;
+
+                thread::sleep(Duration::from_millis(400));
+            }
+
+            debug!("Flashed grid {}", grid_id);
         }
-
-        debug!("Flashed grid {}", grid_id);
+        
         Ok(())
+    }
+
+    /// Get the ID of GRID_ONE (first grid in sorted order)
+    pub fn get_grid_one_id(&self) -> Result<String> {
+        let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
+        if grid_ids.len() != 2 {
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
         }
+        grid_ids.sort();
+        Ok(grid_ids[0].clone())
+    }
+
+    /// Get the ID of GRID_TWO (second grid in sorted order)
+    pub fn get_grid_two_id(&self) -> Result<String> {
+        let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
+        if grid_ids.len() != 2 {
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
+        }
+        grid_ids.sort();
+        Ok(grid_ids[1].clone())
+    }
+
+    /// Get both grid IDs in consistent order (GRID_ONE, GRID_TWO)
+    pub fn get_grid_ids_ordered(&self) -> Result<(String, String)> {
+        let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
+        if grid_ids.len() != 2 {
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
+        }
+        grid_ids.sort();
+        Ok((grid_ids[0].clone(), grid_ids[1].clone()))
+    }
+
+    /// Verify that exactly 2 real grids are connected
+    pub fn verify_two_grids_requirement(&self) -> Result<()> {
+        if self.devices.len() != 2 {
+            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", self.devices.len()));
+        }
+
+        // Check that no mock grids are present
+        for (grid_id, _) in &self.devices {
+            if grid_id.contains("mock") {
+                return Err(anyhow!("HARD REQUIREMENT VIOLATION: Mock grid '{}' detected. Only real grids are allowed.", grid_id));
+            }
+        }
+
+        Ok(())
     }
 
     /// Refresh/update a grid display
