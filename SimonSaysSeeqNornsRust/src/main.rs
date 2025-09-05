@@ -1841,13 +1841,13 @@ impl SimonSaysSeeq {
                     }
                 }
             }
-            MidiInputEvent::NoteOn { .. } => {
-                // Note On events - currently not handled in main app
-                // Could be used for MIDI input recording in future
+            MidiInputEvent::NoteOn { channel, note, velocity } => {
+                info!("handle_midi_input_event says: MIDI Note On - Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
+                // TODO: Could be used for MIDI input recording in future
             }
-            MidiInputEvent::NoteOff { .. } => {
-                // Note Off events - currently not handled in main app
-                // Could be used for MIDI input recording in future
+            MidiInputEvent::NoteOff { channel, note } => {
+                info!("handle_midi_input_event says: MIDI Note Off - Channel: {}, Note: {}", channel, note);
+                // TODO: Could be used for MIDI input recording in future
             }
             MidiInputEvent::ControlChange { .. } => {
                 // Control Change events - currently not handled in main app

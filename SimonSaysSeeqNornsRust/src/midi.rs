@@ -149,7 +149,8 @@ pub struct MidiManager {
     active_notes: Arc<Mutex<HashMap<(u8, u8), ActiveNote>>>, // (note, channel) -> ActiveNote
     last_note_sent: Arc<Mutex<Option<String>>>,
     device_name: String,
-    input_device_name: String,
+    port_a_midi_clock_in_and_gates_out: String,
+    port_b_midi_keyboard_in_and_out: String,
     /// MIDI input event channel
     input_sender: Option<Sender<MidiInputEvent>>,
     input_receiver: Option<Receiver<MidiInputEvent>>,
@@ -182,7 +183,8 @@ impl MidiManager {
             active_notes: Arc::new(Mutex::new(HashMap::new())),
             last_note_sent: Arc::new(Mutex::new(None)),
             device_name: config.device.clone(),
-            input_device_name: config.device.clone(), // Use same device for input by default
+            port_a_midi_clock_in_and_gates_out: config.device.clone(), // Use same device for clock by default
+            port_b_midi_keyboard_in_and_out: config.device.clone(), // Use same device for keyboard by default
             input_sender: Some(input_sender),
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
@@ -197,14 +199,23 @@ impl MidiManager {
         #[cfg(feature = "midi")]
         {
             info!("MIDI Manager initialized - auto_detect_clock: {}, device: '{}'", manager.auto_detect_clock, manager.device_name);
-            if manager.auto_detect_clock {
+            let output_port = if manager.auto_detect_clock {
                 info!("Starting MIDI auto-detection flow...");
                 manager.auto_detect_and_connect()?;
+                manager.initialize_output()?
             } else {
                 info!("Using manual MIDI configuration (auto-detect disabled)...");
-                let _output_port = manager.initialize_output()?;
+                let output_port = manager.initialize_output()?;
                 manager.initialize_input()?;
-            }
+                output_port
+            };
+            
+            // Always print final port assignments regardless of initialization mode
+            info!("════════════════════════════════════════════════════════");
+            info!("FINAL MIDI PORT ASSIGNMENTS:");
+            info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {}", manager.port_a_midi_clock_in_and_gates_out);
+            info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {}", manager.port_b_midi_keyboard_in_and_out);
+            info!("════════════════════════════════════════════════════════");
         }
         #[cfg(not(feature = "midi"))]
         info!("new says: MIDI simulation mode - no actual MIDI I/O");
@@ -239,11 +250,11 @@ impl MidiManager {
         let selected_port = if !self.device_name.is_empty() {
             self.find_port_by_name(&midi_out, &out_ports, &self.device_name)?
         } else if !hardware_ports.is_empty() {
-            if !self.input_device_name.is_empty() {
+            if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
                 // Clock detection is active
                 if hardware_ports.len() > 1 {
                     // Multiple hardware devices: use DIFFERENT device for keyboard I/O
-                    let clock_port_name = &self.input_device_name;
+                    let clock_port_name = &self.port_a_midi_clock_in_and_gates_out;
                     info!("DEBUG: Clock port name: '{}'", clock_port_name);
                     
                     // Find a hardware port that's NOT the clock source
@@ -262,7 +273,7 @@ impl MidiManager {
                     (*other_port).clone()
                 } else {
                     // Single hardware device: use SAME device for both clock and sequencer output
-                    let clock_port_name = &self.input_device_name;
+                    let clock_port_name = &self.port_a_midi_clock_in_and_gates_out;
                     let same_port = hardware_ports.iter().find(|port| {
                         if let Ok(name) = midi_out.port_name(port) {
                             name == *clock_port_name
@@ -288,16 +299,16 @@ impl MidiManager {
         
         match midi_out.connect(&selected_port, "SimonSaysSeeq Output") {
             Ok(connection) => {
-                if !self.input_device_name.is_empty() {
+                if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
                     // Clock detection is active - determine if same or different device
-                    let is_same_device = port_name == self.input_device_name;
+                    let is_same_device = port_name == self.port_a_midi_clock_in_and_gates_out;
                     if is_same_device {
-                        info!("MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
+                        info!("PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT: {} (for pattern playback)", port_name);
                     } else {
-                        info!("MIDI KEYBOARD OUTPUT PORT: {} (for note playback)", port_name);
+                        info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: {} (for note playback)", port_name);
                     }
                 } else {
-                    info!("MIDI OUTPUT PORT: {} (general purpose)", port_name);
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: {} (general purpose)", port_name);
                 }
                 self.output_connection = Some(connection);
                 return Ok(port_name.clone());
@@ -445,9 +456,9 @@ impl MidiManager {
         }).collect();
         
         // Try to find the configured device, or use the first available hardware device
-        let selected_port = if !self.input_device_name.is_empty() {
-            // When input_device_name is set (from clock detection), use it directly
-            self.find_input_port_by_name(&midi_in, &in_ports, &self.input_device_name)?
+        let selected_port = if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
+            // When port_a_midi_clock_in_and_gates_out is set (from clock detection), use it directly
+            self.find_input_port_by_name(&midi_in, &in_ports, &self.port_a_midi_clock_in_and_gates_out)?
         } else if !hardware_ports.is_empty() {
             hardware_ports[0].clone()
         } else {
@@ -467,10 +478,10 @@ impl MidiManager {
             Self::handle_midi_input_message(timestamp, message, &sender, &clock_state, &snap_to_whole_tempo);
         }, ()) {
             Ok(connection) => {
-                if self.auto_detect_clock && !self.input_device_name.is_empty() {
-                    info!("MIDI CLOCK INPUT PORT: {} (for tempo sync)", port_name);
+                if self.auto_detect_clock && !self.port_a_midi_clock_in_and_gates_out.is_empty() {
+                    info!("PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT: {} (for tempo sync)", port_name);
                 } else {
-                    info!("MIDI KEYBOARD INPUT PORT: {} (for note input)", port_name);
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: {} (for note input)", port_name);
                 }
                 self.input_connection = Some(connection);
             }
@@ -514,11 +525,11 @@ impl MidiManager {
                 let velocity = message[2];
                 
                 if velocity > 0 {
-                    info!("MIDI KEYBOARD INPUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
                     let _ = sender.send(MidiInputEvent::NoteOn { note, velocity, channel });
                 } else {
                     // Velocity 0 note-on is equivalent to note-off
-                    info!("MIDI KEYBOARD INPUT: Note Off (vel=0) - note={} channel={}", note, channel);
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
                     let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
                 }
             }
@@ -526,7 +537,7 @@ impl MidiManager {
             0x80..=0x8F if message.len() >= 3 => {
                 let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
                 let note = message[1];
-                info!("MIDI KEYBOARD INPUT: Note Off - note={} channel={}", note, channel);
+                info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
                 let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
             }
             // Control Change (0xB0-0xBF)
@@ -1028,7 +1039,7 @@ impl MidiManager {
         let last_detected = self.config.lock().unwrap().last_detected_device.clone();
         if let Some(ref last_device) = last_detected {
             info!("auto_detect_and_connect says: Trying last known device: {}", last_device);
-            self.input_device_name = last_device.clone();
+            self.port_a_midi_clock_in_and_gates_out = last_device.clone();
             match self.initialize_input() {
                 Ok(_) => {
                     // Test if this device actually provides clock
@@ -1055,44 +1066,100 @@ impl MidiManager {
                      summary.reliable_sources, summary.selected_source);
                 if let Some(selected_source) = summary.selected_source {
                     info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
-                    self.input_device_name = selected_source.clone();
+                    self.port_a_midi_clock_in_and_gates_out = selected_source.clone();
+                    // Set keyboard input to OTHER port (not the clock port)
+                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&selected_source)?;
                     self.initialize_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
                     info!("════════════════════════════════════════════════════════");
                     info!("MIDI PORT ASSIGNMENTS COMPLETE:");
-                    info!("   MIDI CLOCK INPUT:        {} (sequencer tempo sync)", selected_source);
-                    info!("   MAIN SEQUENCER OUTPUT:   {} (pattern playback)", selected_source);
-                    info!("   KEYBOARD INPUT/OUTPUT:   {} (note input/playback)", keyboard_output_port);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", selected_source);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", selected_source);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", selected_source);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", keyboard_output_port);
                     info!("════════════════════════════════════════════════════════");
                 } else if !summary.reliable_sources.is_empty() {
                     // Use the first reliable source if none was auto-selected
                     let first_source = summary.reliable_sources[0].clone();
                     info!("auto_detect_and_connect says: Using first reliable source: {}", first_source);
-                    self.input_device_name = first_source.clone();
+                    self.port_a_midi_clock_in_and_gates_out = first_source.clone();
+                    // Set keyboard input to OTHER port (not the clock port)
+                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&first_source)?;
                     self.initialize_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
                     info!("════════════════════════════════════════════════════════");
                     info!("MIDI PORT ASSIGNMENTS COMPLETE:");
-                    info!("   MIDI CLOCK INPUT:        {} (sequencer tempo sync)", first_source);
-                    info!("   MAIN SEQUENCER OUTPUT:   {} (pattern playback)", first_source);
-                    info!("   KEYBOARD INPUT/OUTPUT:   {} (note input/playback)", keyboard_output_port);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", first_source);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", first_source);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", first_source);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", keyboard_output_port);
                     info!("════════════════════════════════════════════════════════");
                 } else {
                     warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
                     self.initialize_input()?;
+                    let keyboard_output_port = self.initialize_output()?;
+                    info!("════════════════════════════════════════════════════════");
+                    info!("MIDI PORT ASSIGNMENTS COMPLETE (FALLBACK MODE):");
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - no clock detected)", self.port_b_midi_keyboard_in_and_out);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", keyboard_output_port);
+                    info!("════════════════════════════════════════════════════════");
                 }
             }
             Err(e) => {
                 warn!("auto_detect_and_connect says: Clock detection failed: {}, falling back to normal initialization", e);
                 self.initialize_input()?;
+                let keyboard_output_port = self.initialize_output()?;
+                info!("════════════════════════════════════════════════════════");
+                info!("MIDI PORT ASSIGNMENTS COMPLETE (ERROR FALLBACK):");
+                info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - clock detection failed)", self.port_b_midi_keyboard_in_and_out);
+                info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", keyboard_output_port);
+                info!("════════════════════════════════════════════════════════");
             }
         }
         
         Ok(())
+    }
+
+    /// Find the other USB MIDI device that's not the specified device
+    #[cfg(feature = "midi")]
+    fn find_other_usb_midi_device(&self, exclude_device: &str) -> Result<String> {
+        info!("find_other_usb_midi_device: Looking for other device, excluding: '{}'", exclude_device);
+        let midi_in = MidiInput::new("Device Finder")?;
+        let in_ports = midi_in.ports();
+        
+        // Find all hardware USB MIDI devices
+        let usb_devices: Vec<String> = in_ports.iter()
+            .filter_map(|port| {
+                if let Ok(name) = midi_in.port_name(port) {
+                    if name.contains("USB MIDI Interface") && !self.is_system_or_virtual_port(&name) {
+                        info!("find_other_usb_midi_device: Found USB device: '{}'", name);
+                        Some(name)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        info!("find_other_usb_midi_device: Found {} USB devices total", usb_devices.len());
+
+        // Find a device that's NOT the excluded device
+        for device in &usb_devices {
+            if device != exclude_device {
+                info!("find_other_usb_midi_device: Selected other device: '{}'", device);
+                return Ok(device.clone());
+            }
+        }
+
+        // Fallback: if we can't find another device, use the same device
+        warn!("find_other_usb_midi_device: Could not find other USB MIDI device, using same device for keyboard");
+        Ok(exclude_device.to_string())
     }
 
     /// Schedule a re-detection attempt
@@ -1208,7 +1275,7 @@ impl MidiManager {
             } else {
                 None
             },
-            device_name: self.input_device_name.clone(),
+            device_name: self.port_a_midi_clock_in_and_gates_out.clone(),
         }
     }
 
