@@ -188,7 +188,7 @@ impl MidiManager {
             clock_state: Arc::new(Mutex::new(ClockState::default())),
             snap_to_whole_tempo: Arc::new(Mutex::new(true)), // Default ON
             previous_clock_source: Arc::new(Mutex::new(ClockSource::Internal)),
-            auto_detect_clock: config.auto_detect_clock && config.device.is_empty(),
+            auto_detect_clock: config.auto_detect_clock,
             last_detection_time: Arc::new(Mutex::new(None)),
             detection_retry_interval: config.detection_retry_interval,
             config: Arc::new(Mutex::new(config.clone())),
