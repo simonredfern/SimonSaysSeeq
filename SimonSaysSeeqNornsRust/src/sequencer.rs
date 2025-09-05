@@ -1127,6 +1127,29 @@ impl Sequencer {
         }
     }
 
+    /// Clear all sequencer_b keyboard MIDI note events
+    pub fn clear_sequencer_b_midi_notes(&self) {
+        let mut state = self.state.lock().unwrap();
+        
+        // Clear all MIDI note events in sequencer_b_keyboard_midi_note_events
+        for lane in &mut state.sequencer_b_keyboard_midi_note_events {
+            for bar in lane {
+                for step in bar {
+                    for note in step {
+                        for event in note {
+                            event.velocity = 0;
+                            event.tick_count_since_step = 0;
+                            event.is_active = false;
+                            event.tick_count_since_start = 0;
+                        }
+                    }
+                }
+            }
+        }
+        
+        info!("Cleared all sequencer_b keyboard MIDI note events");
+    }
+
     /// Save state to file
     pub fn save_state(&self, path: &str) -> Result<()> {
         let state = self.state.lock().unwrap();

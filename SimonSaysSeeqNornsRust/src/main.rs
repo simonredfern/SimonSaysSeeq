@@ -714,8 +714,29 @@ impl SimonSaysSeeq {
                             }
                             return Ok(());
                         }
-                        // GRID_TWO tempo controls (columns 10, 12-15)
-                        else if x == 10 || (x >= 12 && x <= 15) {
+                        // GRID_TWO sequencer_b clear button (column 2)
+                        else if x == 2 {
+                            if pressed {
+                                // Clear sequencer_b keyboard MIDI notes button
+                                self.sequencer.clear_sequencer_b_midi_notes();
+                                info!("handle_grid_press says: Cleared all sequencer_b keyboard MIDI notes via GRID_TWO column 2");
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 15, "clear_button_press")?;
+                                    self.grid.refresh()?;
+                                }
+                            } else {
+                                // Button release - turn off LED
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 0, "clear_button_release")?;
+                                    self.grid.refresh()?;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        // GRID_TWO tempo controls (columns 10-15)
+                        else if x >= 10 && x <= 15 {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
