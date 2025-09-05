@@ -146,6 +146,8 @@ pub struct MidiManager {
     output_connection: Option<MidiOutputConnection>,
     #[cfg(feature = "midi")]
     input_connection: Option<MidiInputConnection<()>>,
+    #[cfg(feature = "midi")]
+    keyboard_input_connection: Option<MidiInputConnection<()>>,
     active_notes: Arc<Mutex<HashMap<(u8, u8), ActiveNote>>>, // (note, channel) -> ActiveNote
     last_note_sent: Arc<Mutex<Option<String>>>,
     device_name: String,
@@ -180,6 +182,8 @@ impl MidiManager {
             output_connection: None,
             #[cfg(feature = "midi")]
             input_connection: None,
+            #[cfg(feature = "midi")]
+            keyboard_input_connection: None,
             active_notes: Arc::new(Mutex::new(HashMap::new())),
             last_note_sent: Arc::new(Mutex::new(None)),
             device_name: config.device.clone(),
@@ -207,6 +211,7 @@ impl MidiManager {
                 info!("Using manual MIDI configuration (auto-detect disabled)...");
                 let output_port = manager.initialize_output()?;
                 manager.initialize_input()?;
+                manager.initialize_keyboard_input()?;
                 output_port
             };
             
@@ -492,6 +497,86 @@ impl MidiManager {
         }
         
         Ok(())
+    }
+
+    /// Initialize MIDI keyboard input connection (separate from clock input)
+    #[cfg(feature = "midi")]
+    fn initialize_keyboard_input(&mut self) -> Result<()> {
+        if self.port_b_midi_keyboard_in_and_out.is_empty() {
+            warn!("initialize_keyboard_input says: No keyboard port configured");
+            return Ok(());
+        }
+
+        let midi_in = MidiInput::new("SimonSaysSeeq Keyboard Input")?;
+        let in_ports = midi_in.ports();
+        
+        info!("initialize_keyboard_input says: Setting up keyboard input on: {}", self.port_b_midi_keyboard_in_and_out);
+        
+        let selected_port = self.find_input_port_by_name(&midi_in, &in_ports, &self.port_b_midi_keyboard_in_and_out)?;
+        let port_name = midi_in.port_name(&selected_port)
+            .unwrap_or_else(|_| "Unknown".to_string());
+        
+        // Set up keyboard input callback (only for note/CC messages, not clock)
+        let sender = self.input_sender.as_ref().unwrap().clone();
+        
+        match midi_in.connect(&selected_port, "SimonSaysSeeq Keyboard Input", move |_timestamp, message, _| {
+            Self::handle_keyboard_input_message(message, &sender);
+        }, ()) {
+            Ok(connection) => {
+                info!("initialize_keyboard_input says: Connected to keyboard port: {}", port_name);
+                self.keyboard_input_connection = Some(connection);
+            }
+            Err(e) => {
+                error!("initialize_keyboard_input says: Failed to connect to keyboard port {}: {}", port_name, e);
+                return Err(anyhow!("Keyboard MIDI input connection failed: {}", e));
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Handle keyboard-only MIDI input messages (notes, CC, but not clock)
+    #[cfg(feature = "midi")]
+    fn handle_keyboard_input_message(message: &[u8], sender: &Sender<MidiInputEvent>) {
+        if message.is_empty() {
+            return;
+        }
+        
+        match message[0] {
+            // Note On (0x90-0x9F)
+            0x90..=0x9F if message.len() >= 3 => {
+                let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
+                let note = message[1];
+                let velocity = message[2];
+                
+                if velocity > 0 {
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
+                    let _ = sender.send(MidiInputEvent::NoteOn { note, velocity, channel });
+                } else {
+                    // Velocity 0 note-on is equivalent to note-off
+                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
+                    let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
+                }
+            }
+            // Note Off (0x80-0x8F)
+            0x80..=0x8F if message.len() >= 3 => {
+                let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
+                let note = message[1];
+                info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
+                let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
+            }
+            // Control Change (0xB0-0xBF)
+            0xB0..=0xBF if message.len() >= 3 => {
+                let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
+                let controller = message[1];
+                let value = message[2];
+                let _ = sender.send(MidiInputEvent::ControlChange { controller, value, channel });
+            }
+            // Ignore clock and other system messages on keyboard input
+            _ => {
+                // Don't log every ignored message to avoid spam
+            }
+        }
     }
     
     /// Find a MIDI input port by name (case-insensitive substring match)
@@ -1053,6 +1138,7 @@ impl MidiManager {
                         info!("auto_detect_and_connect says: Successfully reconnected to last known device");
                         // Set up keyboard input/output on the OTHER port
                         self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(last_device)?;
+                        self.initialize_keyboard_input()?;
                         let keyboard_output_port = self.initialize_output()?;
                         info!("════════════════════════════════════════════════════════");
                         info!("MIDI PORT ASSIGNMENTS COMPLETE (RECONNECTED):");
@@ -1084,6 +1170,7 @@ impl MidiManager {
                     // Set keyboard input to OTHER port (not the clock port)
                     self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&selected_source)?;
                     self.initialize_input()?;
+                    self.initialize_keyboard_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
@@ -1102,6 +1189,7 @@ impl MidiManager {
                     // Set keyboard input to OTHER port (not the clock port)
                     self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&first_source)?;
                     self.initialize_input()?;
+                    self.initialize_keyboard_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
@@ -1115,6 +1203,7 @@ impl MidiManager {
                 } else {
                     warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
                     self.initialize_input()?;
+                    self.initialize_keyboard_input()?;
                     let keyboard_output_port = self.initialize_output()?;
                     info!("════════════════════════════════════════════════════════");
                     info!("MIDI PORT ASSIGNMENTS COMPLETE (FALLBACK MODE):");
@@ -1126,6 +1215,7 @@ impl MidiManager {
             Err(e) => {
                 warn!("auto_detect_and_connect says: Clock detection failed: {}, falling back to normal initialization", e);
                 self.initialize_input()?;
+                self.initialize_keyboard_input()?;
                 let keyboard_output_port = self.initialize_output()?;
                 info!("════════════════════════════════════════════════════════");
                 info!("MIDI PORT ASSIGNMENTS COMPLETE (ERROR FALLBACK):");
