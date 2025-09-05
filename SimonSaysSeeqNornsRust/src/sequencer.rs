@@ -26,6 +26,7 @@ pub struct MidiEvent {
     pub note_on: bool,
     pub step: usize,
     pub bar: usize,
+    pub sequencer_source: char, // 'A' for sequencer_a, 'B' for sequencer_b
 }
 
 /// Events that the sequencer can send to the main application
@@ -834,6 +835,7 @@ impl Sequencer {
                             note_on: true,
                             step: midi_step_count,
                             bar: midi_bar_count,
+                            sequencer_source: 'B',
                         };
 
                         if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
@@ -857,6 +859,7 @@ impl Sequencer {
                             note_on: false,
                             step: midi_step_count,
                             bar: midi_bar_count,
+                            sequencer_source: 'B',
                         };
 
                         if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
@@ -965,6 +968,7 @@ impl Sequencer {
                                 note_on: true,
                                 step: current_step,
                                 bar: state.midi_bar_count,
+                                sequencer_source: 'A',
                             };
 
                             if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {

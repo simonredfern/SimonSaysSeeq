@@ -449,9 +449,9 @@ impl SimonSaysSeeq {
                             #[cfg(feature = "midi")]
                             {
                                 if note_event.note_on {
-                                    self.midi.note_on(note_event.note, note_event.velocity, note_event.channel)?;
+                                    self.midi.sequencer_a_note_on(note_event.note, note_event.velocity, note_event.channel)?;
                                 } else {
-                                    self.midi.note_off(note_event.note, note_event.channel)?;
+                                    self.midi.sequencer_a_note_off(note_event.note, note_event.channel)?;
                                 }
                             }
                             #[cfg(not(feature = "midi"))]
@@ -486,17 +486,35 @@ impl SimonSaysSeeq {
             }
 
             SequencerEvent::MidiEvent(midi_event) => {
-                // Handle MIDI events from sequencer
+                // Handle MIDI events from sequencer - route based on source
                 #[cfg(feature = "midi")]
                 {
-                    if midi_event.note_on {
-                        self.midi.note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
-                        // info!("MIDI Note ON: {} vel:{} ch:{} step:{}",
-                        //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
-                    } else {
-                        self.midi.note_off(midi_event.note, midi_event.channel)?;
-                        // info!("MIDI Note OFF: {} ch:{} step:{}",
-                        //       midi_event.note, midi_event.channel, midi_event.step);
+                    match midi_event.sequencer_source {
+                        'A' => {
+                            if midi_event.note_on {
+                                self.midi.sequencer_a_note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
+                                // info!("Sequencer A MIDI Note ON: {} vel:{} ch:{} step:{}",
+                                //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                            } else {
+                                self.midi.sequencer_a_note_off(midi_event.note, midi_event.channel)?;
+                                // info!("Sequencer A MIDI Note OFF: {} ch:{} step:{}",
+                                //       midi_event.note, midi_event.channel, midi_event.step);
+                            }
+                        }
+                        'B' => {
+                            if midi_event.note_on {
+                                self.midi.sequencer_b_note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
+                                // info!("Sequencer B MIDI Note ON: {} vel:{} ch:{} step:{}",
+                                //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
+                            } else {
+                                self.midi.sequencer_b_note_off(midi_event.note, midi_event.channel)?;
+                                // info!("Sequencer B MIDI Note OFF: {} ch:{} step:{}",
+                                //       midi_event.note, midi_event.channel, midi_event.step);
+                            }
+                        }
+                        _ => {
+                            warn!("Unknown sequencer source: {}", midi_event.sequencer_source);
+                        }
                     }
                 }
                 #[cfg(not(feature = "midi"))]
@@ -930,7 +948,7 @@ impl SimonSaysSeeq {
 
             // Send test note
             #[cfg(feature = "midi")]
-            self.midi.note_on(note as u8, 100, 1)?;
+            self.midi.sequencer_b_note_on(note as u8, 100, 1)?;
             #[cfg(not(feature = "midi"))]
             info!("Simulated MIDI note: {} vel:100 ch:1", note);
 
