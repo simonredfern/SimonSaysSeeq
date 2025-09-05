@@ -375,7 +375,7 @@ impl SimonSaysSeeq {
                         }
                         2 => {
                             // Left key - Stop
-                            // info!("Stop pressed");
+                            info!("STOP TRIGGER: Key 2 (Left key) pressed - stopping sequencer");
                             self.sequencer.stop();
                             #[cfg(feature = "midi")]
                             self.midi.all_notes_off()?;
@@ -383,7 +383,7 @@ impl SimonSaysSeeq {
                         3 => {
                             // Right key - Start/Stop toggle
                             if self.sequencer.is_running() {
-                                // info!("Stop pressed");
+                                info!("STOP TRIGGER: Key 3 (Right key) pressed - stopping sequencer via toggle");
                                 self.sequencer.stop();
                                 #[cfg(feature = "midi")]
                                 self.midi.all_notes_off()?;
@@ -400,7 +400,7 @@ impl SimonSaysSeeq {
             HardwareEvent::StartStopToggle => {
                 // Handle start/stop toggle
                 if self.sequencer.is_running() {
-                    // info!("Stop pressed");
+                    info!("STOP TRIGGER: StartStopToggle hardware event - stopping sequencer");
                     self.sequencer.stop();
                     #[cfg(feature = "midi")]
                     self.midi.all_notes_off()?;
@@ -726,6 +726,7 @@ impl SimonSaysSeeq {
                                 }
                                 12 => {
                                     // Stop button - always works regardless of external clock
+                                    info!("STOP TRIGGER: GRID_TWO column 12 pressed - stopping sequencer");
                                     self.sequencer.stop();
                                     info!("handle_grid_press says: Sequencer stopped via GRID_TWO column 12");
                                 }
@@ -1813,6 +1814,7 @@ impl SimonSaysSeeq {
                 }
             }
             MidiInputEvent::ClockStop => {
+                info!("STOP TRIGGER: MIDI Clock Stop received from external device - stopping sequencer");
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
                 // Clear beat LEDs when clock stops

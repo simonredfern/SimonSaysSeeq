@@ -392,7 +392,9 @@ impl Sequencer {
             for row_state in &mut state.row_states {
                 row_state.current_step = 0;
             }
-            info!("Sequencer stopped and reset");
+            // Log the stack trace to identify what triggered the stop
+            let trace = std::backtrace::Backtrace::capture();
+            info!("Sequencer stopped and reset - Stack trace: {}", trace);
         }
     }
 
