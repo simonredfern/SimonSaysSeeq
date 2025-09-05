@@ -31,7 +31,7 @@ enum ArmAction {
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
     PresetGrid,        // Column 10
-    SequencerBMozart,  // Column 15
+    SequencerB,        // Column 15
 }
 
 impl ArmAction {
@@ -45,7 +45,7 @@ impl ArmAction {
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
             10 => Some(ArmAction::PresetGrid),
-            15 => Some(ArmAction::SequencerBMozart),
+            15 => Some(ArmAction::SequencerB),
             _ => None,
         }
     }
@@ -60,7 +60,7 @@ impl ArmAction {
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
             ArmAction::PresetGrid => 10,
-            ArmAction::SequencerBMozart => 15,
+            ArmAction::SequencerB => 15,
         }
     }
 }
@@ -534,7 +534,7 @@ impl SimonSaysSeeq {
         } else {
             // Not an ARM button - check Mozart mode
             if let Some(arm_action) = self.active_arm_action {
-                if matches!(arm_action, ArmAction::SequencerBMozart) {
+                if matches!(arm_action, ArmAction::SequencerB) {
                     // Mozart mode active and this is not an ARM button
                     if pressed && y <= 7 {
                         self.handle_mozart_grid_press(x, y)?;
@@ -819,7 +819,7 @@ impl SimonSaysSeeq {
                             // ARM button released - deactivate mode
                             if matches!(self.active_arm_action, Some(ref current) if *current == arm_action) {
                                 // Special handling for Mozart mode deactivation
-                                if matches!(arm_action, ArmAction::SequencerBMozart) {
+                                if matches!(arm_action, ArmAction::SequencerB) {
                                     info!("ARM MOZART: Deactivated - restoring normal grid display");
                                 }
                                 self.active_arm_action = None;
@@ -828,7 +828,7 @@ impl SimonSaysSeeq {
                                 {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     // Restore normal display when Mozart mode is deactivated
-                                    if matches!(arm_action, ArmAction::SequencerBMozart) {
+                                    if matches!(arm_action, ArmAction::SequencerB) {
                                         self.update_grid_display()?;
                                     }
                                     self.grid.refresh()?;
@@ -901,7 +901,7 @@ impl SimonSaysSeeq {
                 // Preset grid functionality - placeholder
                 info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
             }
-            ArmAction::SequencerBMozart => {
+            ArmAction::SequencerB => {
                 // Mozart mode - show keyboard MIDI notes on both grids
                 info!("ARM MOZART: Activated - showing 32-step keyboard MIDI sequence");
                 #[cfg(feature = "hardware")]
@@ -989,7 +989,7 @@ impl SimonSaysSeeq {
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode active - display already updated when mode was activated
                 return Ok(());
             }
@@ -1055,7 +1055,7 @@ impl SimonSaysSeeq {
 
         // Check if Mozart mode is active - show on BOTH grids
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1130,7 +1130,7 @@ impl SimonSaysSeeq {
     fn update_32step_display(&mut self, grid_one: &str, grid_two: &str) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1235,7 +1235,7 @@ impl SimonSaysSeeq {
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1453,7 +1453,7 @@ impl SimonSaysSeeq {
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1533,7 +1533,7 @@ impl SimonSaysSeeq {
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerBMozart) {
+            if matches!(arm_action, ArmAction::SequencerB) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
