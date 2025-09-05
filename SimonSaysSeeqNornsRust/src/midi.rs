@@ -196,10 +196,10 @@ impl MidiManager {
         
         #[cfg(feature = "midi")]
         {
-            manager.initialize_output()?;
             if manager.auto_detect_clock {
                 manager.auto_detect_and_connect()?;
             } else {
+                manager.initialize_output()?;
                 manager.initialize_input()?;
             }
         }
