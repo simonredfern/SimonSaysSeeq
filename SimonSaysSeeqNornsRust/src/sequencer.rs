@@ -469,10 +469,10 @@ impl Sequencer {
         }
     }
 
-    /// Set Mozart grid value (MIDI note number)
-    pub fn set_mozart_value(&self, x: usize, y: usize, note: u8) {
+    /// Set Sequence B grid value (MIDI note number)
+    pub fn set_sequence_b_value(&self, x: usize, y: usize, note: u8) {
         if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            self.push_undo_snapshot(format!("Set mozart[{}][{}] = {}", x, y, note));
+            self.push_undo_snapshot(format!("Set sequence_b[{}][{}] = {}", x, y, note));
 
             let mut state = self.state.lock().unwrap();
             let clamped_note = note.min(127);

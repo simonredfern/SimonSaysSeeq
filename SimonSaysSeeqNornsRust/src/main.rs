@@ -471,12 +471,12 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
 
-                // Update sequencer_b display to show scrolling position (only when ARM SequencerB is active)
+                // Update sequencer_b display to show scrolling position (only when ARM Sequence B is active)
                 #[cfg(feature = "hardware")]
                 {
                     if let Some(arm_action) = self.active_arm_action {
                         if matches!(arm_action, ArmAction::SequencerB) {
-                            self.update_sequencer_b_mozart_display()?;
+                            self.update_sequencer_b_display()?;
                         }
                     }
                 }
@@ -544,28 +544,28 @@ impl SimonSaysSeeq {
     }
 
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
-        // DEBUG: Log ALL grid presses to trace Mozart button issue
-        info!("DEBUG MOZART: Grid press {} at ({},{}) pressed={} - Mozart active: {:?}", 
+        // DEBUG: Log ALL grid presses to trace Sequence B button issue
+        info!("DEBUG Sequence B: Grid press {} at ({},{}) pressed={} - Sequence B active: {:?}", 
               grid_id, x, y, pressed, self.active_arm_action);
         
-        // Handle ARM buttons first (row 7), even in Mozart mode - BOTH press and release
+        // Handle ARM buttons first (row 7), even in Sequence B mode - BOTH press and release
         if y == 7 {
             let connected_grids = self.grid.get_connected_grids();
             if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
                 if ArmAction::from_column(x).is_some() {
-                    info!("DEBUG MOZART: ARM button detected at column {} press={} - proceeding to ARM logic", x, pressed);
+                    info!("DEBUG Sequence B: ARM button detected at column {} press={} - proceeding to ARM logic", x, pressed);
                     // This is an ARM button on main grid - process it directly
-                    // Skip Mozart mode check and go straight to ARM button logic
+                    // Skip Sequence B mode check and go straight to ARM button logic
                     // (ARM button logic is later in this function)
                 }
             }
         } else {
-            // Not an ARM button - check Mozart mode
+            // Not an ARM button - check Sequence B mode
             if let Some(arm_action) = self.active_arm_action {
                 if matches!(arm_action, ArmAction::SequencerB) {
-                    // Mozart mode active and this is not an ARM button
+                    // Sequence B mode active and this is not an ARM button
                     if pressed && y <= 7 {
-                        self.handle_mozart_grid_press(x, y)?;
+                        self.handle_sequence_b_grid_press(x, y)?;
                     }
                     return Ok(()); // Don't process further
                 }
@@ -840,11 +840,11 @@ impl SimonSaysSeeq {
                 
                 // Regular ARM control handling for main grid or other buttons
                 if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
-                    info!("ARM CONTROL: Row 7 button {} {} - Current Mozart: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
+                    info!("ARM CONTROL: Row 7 button {} {} - Current Sequence B: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
 
                     // Check if this column corresponds to a valid ARM action (use original x, not seq_x)
                     if let Some(arm_action) = ArmAction::from_column(x) {
-                        info!("DEBUG MOZART: Found ARM action {:?} for column {}", arm_action, x);
+                        info!("DEBUG Sequence B: Found ARM action {:?} for column {}", arm_action, x);
                         
                         // ALL ARM buttons are now momentary (press-and-hold)
                         if pressed {
@@ -867,16 +867,16 @@ impl SimonSaysSeeq {
                         } else {
                             // ARM button released - deactivate mode
                             if matches!(self.active_arm_action, Some(ref current) if *current == arm_action) {
-                                // Special handling for Mozart mode deactivation
+                                // Special handling for Sequence B mode deactivation
                                 if matches!(arm_action, ArmAction::SequencerB) {
-                                    info!("ARM MOZART: Deactivated - restoring normal grid display");
+                                    info!("ARM Sequence B: Deactivated - restoring normal grid display");
                                 }
                                 self.active_arm_action = None;
                                 info!("ARM CONTROL: {:?} RELEASED - mode OFF (column {})", arm_action, x);
                                 #[cfg(feature = "hardware")]
                                 {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
-                                    // Restore normal display when Mozart mode is deactivated
+                                    // Restore normal display when Sequence B mode is deactivated
                                     if matches!(arm_action, ArmAction::SequencerB) {
                                         self.update_grid_display()?;
                                     }
@@ -951,11 +951,11 @@ impl SimonSaysSeeq {
                 info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
             }
             ArmAction::SequencerB => {
-                // Mozart mode - show keyboard MIDI notes on both grids
-                info!("ARM MOZART: Activated - showing 32-step keyboard MIDI sequence");
+                // Sequence B mode - show keyboard MIDI notes on both grids
+                info!("ARM Sequence B: Activated - showing 32-step keyboard MIDI sequence");
                 #[cfg(feature = "hardware")]
                 {
-                    self.update_sequencer_b_mozart_display()?;
+                    self.update_sequencer_b_display()?;
                 }
             }
         }
@@ -965,17 +965,17 @@ impl SimonSaysSeeq {
 
 
     #[cfg(feature = "hardware")]
-    fn handle_mozart_grid_press(&mut self, x: usize, y: usize) -> Result<()> {
-        // Grid two - Mozart interface for MIDI note control
-        info!("Mozart grid press at ({}, {}) - MIDI note control", x, y);
+    fn handle_sequence_b_grid_press(&mut self, x: usize, y: usize) -> Result<()> {
+        // Grid two - Sequence B interface for MIDI note control
+        info!("Sequence B grid press at ({}, {}) - MIDI note control", x, y);
 
         // Convert grid position to MIDI note value
         let base_note = 60; // Middle C
         let note = base_note + (7 - y) * 5 + x; // Pentatonic-ish mapping
 
         if note <= 127 {
-            // Update Mozart state
-            self.sequencer.set_mozart_value(x + 1, y + 1, note as u8);
+            // Update Sequence B state
+            self.sequencer.set_sequence_b_value(x + 1, y + 1, note as u8);
 
             // Send test note
             #[cfg(feature = "midi")]
@@ -986,12 +986,12 @@ impl SimonSaysSeeq {
             // Update LED to show note value (brightness = note % 16)
             let brightness = ((note % 15) + 1) as u8;
             let connected_grids = self.grid.get_connected_grids();
-            // Mozart LED updates disabled for debugging
+            // Sequence B LED updates disabled for debugging
             // if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
-            //     self.grid.set_led(grid_id, x, y, brightness, "handle_mozart_grid_press")?;
+            //     self.grid.set_led(grid_id, x, y, brightness, "handle_sequence_b_grid_press")?;
             // }
 
-            info!("Set Mozart[{}][{}] = note {}", x + 1, y + 1, note);
+            info!("Set Sequence B[{}][{}] = note {}", x + 1, y + 1, note);
         }
 
         Ok(())
@@ -1036,10 +1036,10 @@ impl SimonSaysSeeq {
 
     /// Selective grid update - only update specific LEDs that changed
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
-        // Check if Mozart mode is active first
+        // Check if Sequence B mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode active - display already updated when mode was activated
+                // Sequence B mode active - display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1102,10 +1102,10 @@ impl SimonSaysSeeq {
         let connected_grids = self.grid.get_connected_grids();
         info!("DEBUG: update_grid_display called - found {} connected grids: {:?}", connected_grids.len(), connected_grids);
 
-        // Check if Mozart mode is active - show on BOTH grids
+        // Check if Sequence B mode is active - show on BOTH grids
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode: Display already updated when mode was activated
+                // Sequence B mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1177,10 +1177,10 @@ impl SimonSaysSeeq {
 
     #[cfg(feature = "hardware")]
     fn update_32step_display(&mut self, grid_one: &str, grid_two: &str) -> Result<()> {
-        // Check if Mozart mode is active first
+        // Check if Sequence B mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode: Display already updated when mode was activated
+                // Sequence B mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1282,10 +1282,10 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
-        // Check if Mozart mode is active first
+        // Check if Sequence B mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode: Display already updated when mode was activated
+                // Sequence B mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1500,10 +1500,10 @@ impl SimonSaysSeeq {
     /// Refresh all pattern LEDs on the grid (used after operations that change multiple positions)
     #[cfg(feature = "hardware")]
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
-        // Check if Mozart mode is active first
+        // Check if Sequence B mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode: Display already updated when mode was activated
+                // Sequence B mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1580,10 +1580,10 @@ impl SimonSaysSeeq {
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
-        // Check if Mozart mode is active first
+        // Check if Sequence B mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::SequencerB) {
-                // Mozart mode: Display already updated when mode was activated
+                // Sequence B mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1723,10 +1723,10 @@ impl SimonSaysSeeq {
 
 
     /// Handle CO2-influenced CV output
-    fn update_sequencer_b_mozart_display(&mut self) -> Result<()> {
+    fn update_sequencer_b_display(&mut self) -> Result<()> {
         let connected_grids = self.grid.get_connected_grids();
         
-        // Display keyboard MIDI note events on BOTH grids when Mozart is armed
+        // Display keyboard MIDI note events on BOTH grids when Sequence B is armed
         if connected_grids.len() >= 1 {
             let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
             let grid_one_id = grid_one.as_ref().unwrap();
