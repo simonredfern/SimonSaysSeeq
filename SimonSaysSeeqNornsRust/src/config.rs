@@ -3,7 +3,7 @@
 //! Handles loading and saving application configuration from TOML files.
 
 use anyhow::Result;
-use log::info;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -208,12 +208,36 @@ impl Config {
     /// Load configuration from specified path
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())?;
-        let config: Config = toml::from_str(&content)?;
         
-        info!("Configuration loaded from: {:?}", path.as_ref());
-        config.validate()?;
-        
-        Ok(config)
+        // Try to parse config, fall back to default for missing fields
+        match toml::from_str::<Config>(&content) {
+            Ok(config) => {
+                info!("Configuration loaded from: {:?}", path.as_ref());
+                info!("MIDI auto_detect_clock: {}", config.midi.auto_detect_clock);
+                config.validate()?;
+                Ok(config)
+            }
+            Err(e) => {
+                warn!("Failed to parse config file: {}. Using default config with some overrides.", e);
+                let mut config = Config::default();
+                
+                // Try to parse individual sections that might work
+                if let Ok(partial_config) = toml::from_str::<toml::Value>(&content) {
+                    if let Some(midi) = partial_config.get("midi") {
+                        if let Some(device) = midi.get("device").and_then(|v| v.as_str()) {
+                            config.midi.device = device.to_string();
+                        }
+                        // Add other fields that might be parseable
+                        if let Some(channel) = midi.get("default_channel").and_then(|v| v.as_integer()) {
+                            config.midi.default_channel = channel as u8;
+                        }
+                    }
+                }
+                
+                info!("Fallback config created - MIDI auto_detect_clock: {}", config.midi.auto_detect_clock);
+                Ok(config)
+            }
+        }
     }
     
     /// Save configuration to specified path

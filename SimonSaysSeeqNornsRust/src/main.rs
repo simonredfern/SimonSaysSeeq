@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
+use chrono;
 
 mod hardware;
 mod sequencer;
@@ -2105,8 +2106,29 @@ fn main() -> Result<()> {
     // Initialize logging
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    info!("SimonSaysSeeq Rust v{} (build-with-ctrlc-fix-2025-01-02)", env!("CARGO_PKG_VERSION"));
-    info!("Build info: Ctrl+C handler fix applied, startup output capture enabled");
+    // Also log version info to ai.log file
+    if let Ok(mut ai_log) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("ai.log") 
+    {
+        use std::io::Write;
+        let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
+        let version = env!("CARGO_PKG_VERSION");
+        let profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+        
+        writeln!(ai_log, "\n## {} - SimonSaysSeeq Rust v{} Startup", timestamp, version).ok();
+        writeln!(ai_log, "Build Profile: {}", profile).ok();
+        writeln!(ai_log, "Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware")).ok();
+    }
+
+    // Log startup banner with version and timestamp
+    info!("════════════════════════════════════════════════════════");
+    info!("SimonSaysSeeq Rust v{} Starting Up", env!("CARGO_PKG_VERSION"));
+    info!("Startup Time: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
+    info!("Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
+    info!("Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));
+    info!("════════════════════════════════════════════════════════");
 
     // Create and run application
     let mut app = SimonSaysSeeq::new()?;

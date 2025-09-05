@@ -196,9 +196,12 @@ impl MidiManager {
         
         #[cfg(feature = "midi")]
         {
+            info!("MIDI Manager initialized - auto_detect_clock: {}, device: '{}'", manager.auto_detect_clock, manager.device_name);
             if manager.auto_detect_clock {
+                info!("Starting MIDI auto-detection flow...");
                 manager.auto_detect_and_connect()?;
             } else {
+                info!("Using manual MIDI configuration (auto-detect disabled)...");
                 manager.initialize_output()?;
                 manager.initialize_input()?;
             }
@@ -1046,8 +1049,11 @@ impl MidiManager {
         }
         
         // Fall back to full scanning
+        info!("Starting full MIDI clock scan...");
         match scan_for_midi_clock() {
             Ok(summary) => {
+                info!("Clock scan completed - reliable sources: {:?}, selected: {:?}", 
+                     summary.reliable_sources, summary.selected_source);
                 if let Some(selected_source) = summary.selected_source {
                     info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
                     self.input_device_name = selected_source.clone();
