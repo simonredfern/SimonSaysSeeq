@@ -1743,26 +1743,20 @@ impl SimonSaysSeeq {
         // Add sequencer B current position brightness for scrolling visibility on rows 0-6
         let (sequencer_b_current_step, _sequencer_b_current_bar) = self.sequencer.get_sequencer_b_position();
         
-        for seq_y in 0..=6 {
-            let current_step_in_grid = if step_offset == 0 {
-                // Grid ONE (steps 0-15)
-                if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
-            } else {
-                // Grid TWO (steps 16-31)
-                if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
-                    Some(sequencer_b_current_step - 16) 
-                } else { 
-                    None 
-                }
-            };
-            
-            if let Some(grid_x) = current_step_in_grid {
-                // Add base brightness for sequencer B current position (scroll indicator)
-                self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
+        // Set sequencer B current position indicator (only on current step)
+        let current_step_in_grid = if step_offset == 0 {
+            // Grid ONE (steps 0-15)
+            if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
+        } else {
+            // Grid TWO (steps 16-31)
+            if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
+                Some(sequencer_b_current_step - 16) 
+            } else { 
+                None 
             }
-        }
+        };
         
-        // Then display MIDI note events on top
+        // Display MIDI note events with current position highlighting
         if lane < keyboard_events.len() && bar < keyboard_events[lane].len() {
             for x in 0..16 {
                 let step = step_offset + x;
@@ -1774,14 +1768,31 @@ impl SimonSaysSeeq {
                             if note_on_event.is_active {
                                 // Map MIDI note to grid Y position (notes 36-96 -> rows 0-7)
                                 let grid_y = ((note - 36) / 8).min(7);
-                                let base_brightness = self.grid.get_led(grid_id, x, grid_y);
                                 let note_brightness = (note_on_event.velocity / 8).max(1).min(15) as u8;
-                                // Combine current position brightness with note brightness for better visibility
-                                let final_brightness = (base_brightness + note_brightness).min(15);
+                                
+                                // Check if this is the current step - if so, make it brighter
+                                let final_brightness = if Some(x) == current_step_in_grid && grid_y <= 6 {
+                                    // Current step: combine note brightness with position indicator
+                                    (note_brightness + 6).min(15)
+                                } else {
+                                    // Other steps: just note brightness
+                                    note_brightness
+                                };
+                                
                                 self.grid.set_led(grid_id, x, grid_y, final_brightness, "keyboard_midi_note")?;
                             }
                         }
                     }
+                }
+            }
+        }
+        
+        // Finally, add position indicator for empty steps (rows 0-6 only)
+        if let Some(grid_x) = current_step_in_grid {
+            for seq_y in 0..=6 {
+                // Only set position indicator if there's no MIDI note already lit on this position
+                if self.grid.get_led(grid_id, grid_x, seq_y) == 0 {
+                    self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
                 }
             }
         }
