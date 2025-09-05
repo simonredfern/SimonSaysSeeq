@@ -1682,18 +1682,18 @@ impl SimonSaysSeeq {
             let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
             let grid_one_id = grid_one.as_ref().unwrap();
             // Show keyboard MIDI on GRID_ONE for steps 0-15
-            self.update_keyboard_midi_display(grid_one_id, 0)?;
+            self.update_sequencer_b_keyboard_midi_display(grid_one_id, 0)?;
         }
         if connected_grids.len() >= 2 {
             let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
             let grid_two_id = grid_two.as_ref().unwrap();
             // Show keyboard MIDI on GRID_TWO for steps 16-31
-            self.update_keyboard_midi_display(grid_two_id, 16)?;
+            self.update_sequencer_b_keyboard_midi_display(grid_two_id, 16)?;
         }
         Ok(())
     }
 
-    fn update_keyboard_midi_display(&mut self, grid_id: &str, step_offset: usize) -> Result<()> {
+    fn update_sequencer_b_keyboard_midi_display(&mut self, grid_id: &str, step_offset: usize) -> Result<()> {
         // Display keyboard MIDI note events for this grid
         // Clear grid first (all rows including control row)
         for x in 0..16 {
@@ -1709,26 +1709,25 @@ impl SimonSaysSeeq {
         let lane = 0;  // First lane
         let bar = 0;   // First bar
         
-        // First, add current position brightness for scrolling visibility on rows 0-6
+        // Add sequencer B current position brightness for scrolling visibility on rows 0-6
+        let (sequencer_b_current_step, _sequencer_b_current_bar) = self.sequencer.get_sequencer_b_position();
+        
         for seq_y in 0..=6 {
-            let row_states = self.sequencer.get_row_states(seq_y);
-            if let Some(row_state) = row_states {
-                let current_step_in_grid = if step_offset == 0 {
-                    // Grid ONE (steps 0-15)
-                    if row_state.sequencer_a_current_step <= 15 { Some(row_state.sequencer_a_current_step) } else { None }
-                } else {
-                    // Grid TWO (steps 16-31)
-                    if row_state.sequencer_a_current_step >= 16 && row_state.sequencer_a_current_step <= 31 { 
-                        Some(row_state.sequencer_a_current_step - 16) 
-                    } else { 
-                        None 
-                    }
-                };
-                
-                if let Some(grid_x) = current_step_in_grid {
-                    // Add base brightness for current position (scroll indicator)
-                    self.grid.set_led(grid_id, grid_x, seq_y, 6, "mozart_current_position")?;
+            let current_step_in_grid = if step_offset == 0 {
+                // Grid ONE (steps 0-15)
+                if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
+            } else {
+                // Grid TWO (steps 16-31)
+                if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
+                    Some(sequencer_b_current_step - 16) 
+                } else { 
+                    None 
                 }
+            };
+            
+            if let Some(grid_x) = current_step_in_grid {
+                // Add base brightness for sequencer B current position (scroll indicator)
+                self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
             }
         }
         
