@@ -512,9 +512,11 @@ impl MidiManager {
                 let velocity = message[2];
                 
                 if velocity > 0 {
+                    info!("MIDI KEYBOARD INPUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
                     let _ = sender.send(MidiInputEvent::NoteOn { note, velocity, channel });
                 } else {
                     // Velocity 0 note-on is equivalent to note-off
+                    info!("MIDI KEYBOARD INPUT: Note Off (vel=0) - note={} channel={}", note, channel);
                     let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
                 }
             }
@@ -522,6 +524,7 @@ impl MidiManager {
             0x80..=0x8F if message.len() >= 3 => {
                 let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
                 let note = message[1];
+                info!("MIDI KEYBOARD INPUT: Note Off - note={} channel={}", note, channel);
                 let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
             }
             // Control Change (0xB0-0xBF)
