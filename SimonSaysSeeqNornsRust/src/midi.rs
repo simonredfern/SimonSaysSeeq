@@ -223,36 +223,60 @@ impl MidiManager {
             }
         }
         
-        // Try to find the configured device, or use the OTHER USB interface if clock detection is active
+        // Filter out system and virtual ports to get only real hardware devices
+        let hardware_ports: Vec<_> = out_ports.iter().filter(|port| {
+            if let Ok(name) = midi_out.port_name(port) {
+                !self.is_system_or_virtual_port(&name)
+            } else {
+                false
+            }
+        }).collect();
+        
+        // Try to find the configured device, or use hardware device(s) for clock/keyboard separation
         let selected_port = if !self.device_name.is_empty() {
             self.find_port_by_name(&midi_out, &out_ports, &self.device_name)?
-        } else if !out_ports.is_empty() {
-            // If we have a clock input device and multiple ports, use the OTHER USB interface for keyboard I/O
-            if !self.input_device_name.is_empty() && out_ports.len() > 1 {
-                let clock_port_name = &self.input_device_name;
-                // Extract USB interface identifier from clock port name (e.g., "KeyLab Essential 61" from "KeyLab Essential 61 MIDI 1")
-                let clock_interface = self.extract_usb_interface_name(clock_port_name);
-                info!("DEBUG: Clock interface name: '{}'", clock_interface);
-                
-                // Find a port from a different USB interface
-                let other_port = out_ports.iter().find(|port| {
-                    if let Ok(name) = midi_out.port_name(port) {
-                        let port_interface = self.extract_usb_interface_name(&name);
-                        info!("DEBUG: Comparing port '{}' → interface '{}' vs clock interface '{}'", name, port_interface, clock_interface);
-                        port_interface != clock_interface
-                    } else {
-                        false
-                    }
-                }).unwrap_or(&out_ports[0]); // Fallback to first port if no "other" interface found
-                
-                let port_name = midi_out.port_name(other_port).unwrap_or_else(|_| "Unknown".to_string());
-                info!("initialize_output says: Using OTHER USB interface for keyboard I/O (not clock interface): {}", port_name);
-                other_port.clone()
+        } else if !hardware_ports.is_empty() {
+            if !self.input_device_name.is_empty() {
+                // Clock detection is active
+                if hardware_ports.len() > 1 {
+                    // Multiple hardware devices: use DIFFERENT device for keyboard I/O
+                    let clock_port_name = &self.input_device_name;
+                    info!("DEBUG: Clock port name: '{}'", clock_port_name);
+                    
+                    // Find a hardware port that's NOT the clock source
+                    let other_port = hardware_ports.iter().find(|port| {
+                        if let Ok(name) = midi_out.port_name(port) {
+                            let matches_clock = name == *clock_port_name;
+                            info!("DEBUG: Comparing port '{}' vs clock port '{}' - matches: {}", name, clock_port_name, matches_clock);
+                            !matches_clock
+                        } else {
+                            false
+                        }
+                    }).unwrap_or(&hardware_ports[0]); // Fallback to first hardware port if no "other" found
+                    
+                    let port_name = midi_out.port_name(other_port).unwrap_or_else(|_| "Unknown".to_string());
+                    info!("initialize_output says: Using OTHER hardware device for keyboard I/O (not clock device): {}", port_name);
+                    (*other_port).clone()
+                } else {
+                    // Single hardware device: use SAME device for both clock and sequencer output
+                    let clock_port_name = &self.input_device_name;
+                    let same_port = hardware_ports.iter().find(|port| {
+                        if let Ok(name) = midi_out.port_name(port) {
+                            name == *clock_port_name
+                        } else {
+                            false
+                        }
+                    }).unwrap_or(&hardware_ports[0]);
+                    
+                    let port_name = midi_out.port_name(same_port).unwrap_or_else(|_| "Unknown".to_string());
+                    info!("initialize_output says: Using SAME hardware device for clock AND sequencer output: {}", port_name);
+                    (*same_port).clone()
+                }
             } else {
-                out_ports[0].clone()
+                hardware_ports[0].clone()
             }
         } else {
-            warn!("initialize_output says: No MIDI output ports available - MIDI will be disabled");
+            warn!("initialize_output says: No hardware MIDI output ports available - MIDI will be disabled");
             return Ok(());
         };
         
@@ -262,7 +286,13 @@ impl MidiManager {
         match midi_out.connect(&selected_port, "SimonSaysSeeq Output") {
             Ok(connection) => {
                 if !self.input_device_name.is_empty() {
-                    info!("🎹 MIDI KEYBOARD OUTPUT PORT: {} (for note playback)", port_name);
+                    // Clock detection is active - determine if same or different device
+                    let is_same_device = port_name == self.input_device_name;
+                    if is_same_device {
+                        info!("🎵 MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
+                    } else {
+                        info!("🎹 MIDI KEYBOARD OUTPUT PORT: {} (for note playback)", port_name);
+                    }
                 } else {
                     info!("🎵 MIDI OUTPUT PORT: {} (general purpose)", port_name);
                 }
@@ -277,74 +307,26 @@ impl MidiManager {
         Ok(())
     }
     
-    /// Extract USB interface name from MIDI port name
-    /// E.g., "KeyLab Essential 61 MIDI 1" -> "KeyLab Essential 61"
-    /// For identical names, include ALSA port number: "USB MIDI Interface:USB MIDI Interface MIDI 1 24:0" -> "USB MIDI Interface 24:0"
+    /// Check if a MIDI port is a system or virtual port (should be filtered out)
     #[cfg(feature = "midi")]
-    fn extract_usb_interface_name(&self, port_name: &str) -> String {
-        // If port name contains ALSA port number (like "24:0"), include it for uniqueness
-        if let Some(alsa_pos) = port_name.rfind(' ') {
-            let potential_alsa = &port_name[alsa_pos + 1..];
-            if potential_alsa.contains(':') && potential_alsa.chars().all(|c| c.is_ascii_digit() || c == ':') {
-                // This has an ALSA port number - check if base name is generic
-                let base_name = &port_name[..alsa_pos];
-                
-                // Extract the actual device name part (remove duplicated parts)
-                let mut device_name = if base_name.contains(':') {
-                    // Format: "USB MIDI Interface:USB MIDI Interface MIDI 1"
-                    if let Some(colon_pos) = base_name.find(':') {
-                        base_name[..colon_pos].trim()
-                    } else {
-                        base_name
-                    }
-                } else {
-                    base_name
-                };
-                
-                // Remove common suffixes
-                let patterns_to_remove = [
-                    " MIDI 1", " MIDI 2", " MIDI 3", " MIDI 4",
-                    " Port 1", " Port 2", " Port 3", " Port 4"
-                ];
-                
-                for pattern in &patterns_to_remove {
-                    if device_name.ends_with(pattern) {
-                        device_name = &device_name[..device_name.len() - pattern.len()];
-                        break;
-                    }
-                }
-                
-                // If it's a generic name like "USB MIDI Interface", include ALSA port for uniqueness
-                if device_name.trim() == "USB MIDI Interface" || device_name.trim() == "MIDI Interface" {
-                    return format!("{} {}", device_name.trim(), potential_alsa);
-                } else {
-                    return device_name.trim().to_string();
-                }
-            }
-        }
-        
-        // Fallback to original logic for non-ALSA ports
-        let patterns_to_remove = [
-            " MIDI 1", " MIDI 2", " MIDI 3", " MIDI 4",
-            " Port 1", " Port 2", " Port 3", " Port 4", 
-            " In", " Out", " Sync", " Clock",
-            ":1", ":2", ":3", ":4"
+    fn is_system_or_virtual_port(&self, port_name: &str) -> bool {
+        let system_patterns = [
+            "Midi Through",           // Linux ALSA system through port
+            "SimonSaysSeeq Output",   // Our own virtual output
+            "SimonSaysSeeq:",         // Any SimonSaysSeeq virtual ports
+            "Through:",               // Generic through ports
+            "Virtual",                // Virtual devices
+            "Client-",                // ALSA client ports
+            "System:",                // System ports
         ];
         
-        let mut interface_name = port_name.to_string();
-        for pattern in &patterns_to_remove {
-            if let Some(pos) = interface_name.rfind(pattern) {
-                // Only remove if it's at the end or followed by whitespace/numbers
-                let after_pattern = pos + pattern.len();
-                if after_pattern >= interface_name.len() || 
-                   interface_name[after_pattern..].chars().all(|c| c.is_whitespace() || c.is_numeric()) {
-                    interface_name.truncate(pos);
-                    break;
-                }
+        for pattern in &system_patterns {
+            if port_name.contains(pattern) {
+                return true;
             }
         }
         
-        interface_name.trim().to_string()
+        false
     }
 
     /// Find a MIDI port by name (case-insensitive substring match)
@@ -433,14 +415,23 @@ impl MidiManager {
             }
         }
         
-        // Try to find the configured device, or use the first available
+        // Filter out system and virtual ports to get only real hardware devices
+        let hardware_ports: Vec<_> = in_ports.iter().filter(|port| {
+            if let Ok(name) = midi_in.port_name(port) {
+                !self.is_system_or_virtual_port(&name)
+            } else {
+                false
+            }
+        }).collect();
+        
+        // Try to find the configured device, or use the first available hardware device
         let selected_port = if !self.input_device_name.is_empty() {
             // When input_device_name is set (from clock detection), use it directly
             self.find_input_port_by_name(&midi_in, &in_ports, &self.input_device_name)?
-        } else if !in_ports.is_empty() {
-            in_ports[0].clone()
+        } else if !hardware_ports.is_empty() {
+            hardware_ports[0].clone()
         } else {
-            warn!("initialize_input says: No MIDI input ports available - MIDI input will be disabled");
+            warn!("initialize_input says: No hardware MIDI input ports available - MIDI input will be disabled");
             return Ok(());
         };
         
@@ -458,7 +449,6 @@ impl MidiManager {
             Ok(connection) => {
                 if self.auto_detect_clock && !self.input_device_name.is_empty() {
                     info!("⏱️  MIDI CLOCK INPUT PORT: {} (for tempo sync)", port_name);
-                    info!("🎵 MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
                 } else {
                     info!("🎹 MIDI KEYBOARD INPUT PORT: {} (for note input)", port_name);
                 }
@@ -1053,17 +1043,19 @@ impl MidiManager {
                         let midi_out = MidiOutput::new("Port Query").ok();
                         let keyboard_port = if let Some(midi) = midi_out {
                             let ports = midi.ports();
+                            // Filter to hardware ports and find one that's not the clock source
                             if let Some(port) = ports.iter().find(|p| {
                                 if let Ok(name) = midi.port_name(p) {
-                                    let port_interface = self.extract_usb_interface_name(&name);
-                                    let clock_interface = self.extract_usb_interface_name(&selected_source);
-                                    port_interface != clock_interface
+                                    !self.is_system_or_virtual_port(&name) && name != selected_source
                                 } else { false }
                             }) {
-                                midi.port_name(port).unwrap_or_else(|_| "Unknown".to_string())
-                            } else { "OTHER interface".to_string() }
-                        } else { "OTHER interface".to_string() };
-                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {} (note I/O)", keyboard_port);
+                                let port_name = midi.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+                                format!("{} (separate device)", port_name)
+                            } else { 
+                                format!("{} (same device)", selected_source)
+                            }
+                        } else { "Unknown device".to_string() };
+                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
                     }
                     info!("════════════════════════════════════════════════════════");
                 } else if !summary.reliable_sources.is_empty() {
@@ -1084,17 +1076,19 @@ impl MidiManager {
                         let midi_out = MidiOutput::new("Port Query").ok();
                         let keyboard_port = if let Some(midi) = midi_out {
                             let ports = midi.ports();
+                            // Filter to hardware ports and find one that's not the clock source
                             if let Some(port) = ports.iter().find(|p| {
                                 if let Ok(name) = midi.port_name(p) {
-                                    let port_interface = self.extract_usb_interface_name(&name);
-                                    let clock_interface = self.extract_usb_interface_name(&first_source);
-                                    port_interface != clock_interface
+                                    !self.is_system_or_virtual_port(&name) && name != first_source
                                 } else { false }
                             }) {
-                                midi.port_name(port).unwrap_or_else(|_| "Unknown".to_string())
-                            } else { "OTHER interface".to_string() }
-                        } else { "OTHER interface".to_string() };
-                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {} (note I/O)", keyboard_port);
+                                let port_name = midi.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+                                format!("{} (separate device)", port_name)
+                            } else { 
+                                format!("{} (same device)", first_source)
+                            }
+                        } else { "Unknown device".to_string() };
+                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
                     }
                     info!("════════════════════════════════════════════════════════");
                 } else {
