@@ -222,24 +222,28 @@ impl MidiManager {
             }
         }
         
-        // Try to find the configured device, or use the OTHER port if clock detection is active
+        // Try to find the configured device, or use the OTHER USB interface if clock detection is active
         let selected_port = if !self.device_name.is_empty() {
             self.find_port_by_name(&midi_out, &out_ports, &self.device_name)?
         } else if !out_ports.is_empty() {
-            // If we have a clock input device and multiple ports, use the OTHER port for keyboard I/O
+            // If we have a clock input device and multiple ports, use the OTHER USB interface for keyboard I/O
             if !self.input_device_name.is_empty() && out_ports.len() > 1 {
                 let clock_port_name = &self.input_device_name;
-                // Find a port that's NOT the clock source
+                // Extract USB interface identifier from clock port name (e.g., "KeyLab Essential 61" from "KeyLab Essential 61 MIDI 1")
+                let clock_interface = self.extract_usb_interface_name(clock_port_name);
+                
+                // Find a port from a different USB interface
                 let other_port = out_ports.iter().find(|port| {
                     if let Ok(name) = midi_out.port_name(port) {
-                        !name.contains(clock_port_name) && !clock_port_name.contains(&name)
+                        let port_interface = self.extract_usb_interface_name(&name);
+                        port_interface != clock_interface
                     } else {
                         false
                     }
-                }).unwrap_or(&out_ports[0]); // Fallback to first port if no "other" found
+                }).unwrap_or(&out_ports[0]); // Fallback to first port if no "other" interface found
                 
                 let port_name = midi_out.port_name(other_port).unwrap_or_else(|_| "Unknown".to_string());
-                info!("initialize_output says: Using OTHER port for keyboard I/O (not clock source): {}", port_name);
+                info!("initialize_output says: Using OTHER USB interface for keyboard I/O (not clock interface): {}", port_name);
                 other_port.clone()
             } else {
                 out_ports[0].clone()
@@ -266,6 +270,34 @@ impl MidiManager {
         Ok(())
     }
     
+    /// Extract USB interface name from MIDI port name
+    /// E.g., "KeyLab Essential 61 MIDI 1" -> "KeyLab Essential 61"
+    #[cfg(feature = "midi")]
+    fn extract_usb_interface_name(&self, port_name: &str) -> String {
+        // Common patterns to remove from port names to get the interface name
+        let patterns_to_remove = [
+            " MIDI 1", " MIDI 2", " MIDI 3", " MIDI 4",
+            " Port 1", " Port 2", " Port 3", " Port 4", 
+            " In", " Out", " Sync", " Clock",
+            ":1", ":2", ":3", ":4"
+        ];
+        
+        let mut interface_name = port_name.to_string();
+        for pattern in &patterns_to_remove {
+            if let Some(pos) = interface_name.rfind(pattern) {
+                // Only remove if it's at the end or followed by whitespace/numbers
+                let after_pattern = pos + pattern.len();
+                if after_pattern >= interface_name.len() || 
+                   interface_name[after_pattern..].chars().all(|c| c.is_whitespace() || c.is_numeric()) {
+                    interface_name.truncate(pos);
+                    break;
+                }
+            }
+        }
+        
+        interface_name.trim().to_string()
+    }
+
     /// Find a MIDI port by name (case-insensitive substring match)
     #[cfg(feature = "midi")]
     fn find_port_by_name(&self, midi_out: &MidiOutput, ports: &[MidiOutputPort], target_name: &str) -> Result<MidiOutputPort> {
