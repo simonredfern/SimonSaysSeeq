@@ -1135,7 +1135,25 @@ impl Sequencer {
     pub fn clear_sequencer_b_midi_notes(&self) {
         let mut state = self.state.lock().unwrap();
         
-        // Clear all MIDI note events in sequencer_b_keyboard_midi_note_events
+        // Count active notes before clearing
+        let mut active_note_count = 0;
+        
+        // First pass: count active notes
+        for lane in &state.sequencer_b_keyboard_midi_note_events {
+            for bar in lane {
+                for step in bar {
+                    for note in step {
+                        for event in note {
+                            if event.is_active {
+                                active_note_count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Second pass: clear all MIDI note events in sequencer_b_keyboard_midi_note_events
         for lane in &mut state.sequencer_b_keyboard_midi_note_events {
             for bar in lane {
                 for step in bar {
@@ -1151,7 +1169,7 @@ impl Sequencer {
             }
         }
         
-        info!("Cleared all sequencer_b keyboard MIDI note events");
+        info!("Cleared {} active Sequence B keyboard MIDI note events", active_note_count);
     }
 
     /// Save state to file
