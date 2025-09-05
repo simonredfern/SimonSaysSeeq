@@ -289,12 +289,12 @@ impl MidiManager {
                     // Clock detection is active - determine if same or different device
                     let is_same_device = port_name == self.input_device_name;
                     if is_same_device {
-                        info!("🎵 MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
+                        info!("MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
                     } else {
-                        info!("🎹 MIDI KEYBOARD OUTPUT PORT: {} (for note playback)", port_name);
+                        info!("MIDI KEYBOARD OUTPUT PORT: {} (for note playback)", port_name);
                     }
                 } else {
-                    info!("🎵 MIDI OUTPUT PORT: {} (general purpose)", port_name);
+                    info!("MIDI OUTPUT PORT: {} (general purpose)", port_name);
                 }
                 self.output_connection = Some(connection);
             }
@@ -466,9 +466,9 @@ impl MidiManager {
         }, ()) {
             Ok(connection) => {
                 if self.auto_detect_clock && !self.input_device_name.is_empty() {
-                    info!("⏱️  MIDI CLOCK INPUT PORT: {} (for tempo sync)", port_name);
+                    info!("MIDI CLOCK INPUT PORT: {} (for tempo sync)", port_name);
                 } else {
-                    info!("🎹 MIDI KEYBOARD INPUT PORT: {} (for note input)", port_name);
+                    info!("MIDI KEYBOARD INPUT PORT: {} (for note input)", port_name);
                 }
                 self.input_connection = Some(connection);
             }
@@ -1053,9 +1053,9 @@ impl MidiManager {
                     self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
                     info!("════════════════════════════════════════════════════════");
-                    info!("🎯 MIDI PORT ASSIGNMENTS COMPLETE:");
-                    info!("   ⏱️  MIDI CLOCK INPUT:    {} (sequencer tempo sync)", selected_source);
-                    info!("   🎵 MAIN SEQUENCER OUTPUT: {} (pattern playback)", selected_source);
+                    info!("MIDI PORT ASSIGNMENTS COMPLETE:");
+                    info!("   MIDI CLOCK INPUT:    {} (sequencer tempo sync)", selected_source);
+                    info!("   MAIN SEQUENCER OUTPUT: {} (pattern playback)", selected_source);
                     if let Some(ref _conn) = self.output_connection {
                         // Get the actual output port name for display
                         let midi_out = MidiOutput::new("Port Query").ok();
@@ -1073,7 +1073,7 @@ impl MidiManager {
                                 format!("{} (same device)", selected_source)
                             }
                         } else { "Unknown device".to_string() };
-                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
+                        info!("   KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
                     }
                     info!("════════════════════════════════════════════════════════");
                 } else if !summary.reliable_sources.is_empty() {
@@ -1086,9 +1086,9 @@ impl MidiManager {
                     self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
                     info!("════════════════════════════════════════════════════════");
-                    info!("🎯 MIDI PORT ASSIGNMENTS COMPLETE:");
-                    info!("   ⏱️  MIDI CLOCK INPUT:    {} (sequencer tempo sync)", first_source);
-                    info!("   🎵 MAIN SEQUENCER OUTPUT: {} (pattern playback)", first_source);
+                    info!("MIDI PORT ASSIGNMENTS COMPLETE:");
+                    info!("   MIDI CLOCK INPUT:    {} (sequencer tempo sync)", first_source);
+                    info!("   MAIN SEQUENCER OUTPUT: {} (pattern playback)", first_source);
                     if let Some(ref _conn) = self.output_connection {
                         // Get the actual output port name for display
                         let midi_out = MidiOutput::new("Port Query").ok();
@@ -1106,7 +1106,7 @@ impl MidiManager {
                                 format!("{} (same device)", first_source)
                             }
                         } else { "Unknown device".to_string() };
-                        info!("   🎹 KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
+                        info!("   KEYBOARD INPUT/OUTPUT: {}", keyboard_port);
                     }
                     info!("════════════════════════════════════════════════════════");
                 } else {

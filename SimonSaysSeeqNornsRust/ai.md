@@ -14,8 +14,9 @@
 - Use consistent formatting: command on one line, brief result/status below
 - All ai.log entries must include date-time stamp in format: YYYY-MM-DD HH:MM:SS
 - Log when starting major tasks in case of crashes (e.g. "Starting hardware mode test", "Beginning compilation", etc.)
+- Do not use emojis in logs
 
-## AI Log Dating Rules
+## AI Log Rules
 - ALWAYS use the current date/time for new ai.log entries
 - Use the `now` tool to get the current datetime before creating log entries
 - NEVER write over or modify existing log entries
