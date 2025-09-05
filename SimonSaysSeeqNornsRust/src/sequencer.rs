@@ -799,7 +799,7 @@ impl Sequencer {
 
     /// Play MIDI events for current tick
     fn play_midi(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
-        let current_lane = state.sequencer_a_current_lane;
+        let current_lane = state.sequencer_b_current_lane;
         let midi_bar_count = state.midi_bar_count;
         let midi_step_count = state.midi_step_count;
         let tick_since_step = state.the_current_tick_count_since_step;
