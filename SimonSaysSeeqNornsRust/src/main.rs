@@ -1144,19 +1144,12 @@ impl SimonSaysSeeq {
             }
         }
 
-        // Normal mode: Show 32-step sequence across both grids
+        // Normal mode: Grid will be naturally painted by selective updates during playback
+        // No need for full grid refresh - let the sequencer paint the display as it runs
         if connected_grids.len() >= 2 {
-            // Use sorted grid IDs for consistency
-            let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            let grid_one_id = grid_one.as_ref().unwrap();
-            let grid_two_id = grid_two.as_ref().unwrap();
-            
-            info!("GRID DEBUG: update_grid_display() using 32-step mode - GRID_ONE: {}, GRID_TWO: {}", grid_one_id, grid_two_id);
-            self.update_32step_display(grid_one_id, grid_two_id)?;
+            info!("GRID DEBUG: Dual-grid mode active - display will be painted by selective updates");
         } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // Fallback: Single grid showing 16 steps
-            info!("DEBUG: Using single grid fallback mode - grid: {}", main_grid_id);
-            self.update_main_grid_display(&main_grid_id)?;
+            info!("DEBUG: Single grid mode active - display will be painted by selective updates");
         } else {
             info!("DEBUG: No grids available for display");
         }
@@ -1209,110 +1202,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    #[cfg(feature = "hardware")]
-    fn update_32step_display(&mut self, grid_one: &str, grid_two: &str) -> Result<()> {
-        // Check if Sequence B mode is active first
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode: Display already updated when mode was activated
-                return Ok(());
-            }
-        }
-        
-        // 32-step mode: Current step flows between grids
-        // Steps 0-15: Show on GRID_ONE, Steps 16-31: Show on GRID_TWO
-        info!("GRID DEBUG: update_32step_display called - grid_one: {}, grid_two: {}", grid_one, grid_two);
-        
-        for seq_y in 0..=6 {
-            let row_states = self.sequencer.get_row_states(seq_y);
-            if let Some(row_state) = row_states {
-                let current_step = row_state.sequencer_a_current_step;
-                let euclidean_length = row_state.sequencer_a_euclidean_length;
-                
-                if seq_y == 0 { // Only log for first row to avoid spam
-                    info!("DEBUG: Row {} - current_step: {}, euclidean_length: {}", seq_y, current_step, euclidean_length);
-                }
-                
-                // Debug: Check for patterns in steps 16-31
-                let mut patterns_16_31 = Vec::new();
-                for step in 16..=31 {
-                    let pattern = self.sequencer.get_grid_value(step, seq_y);
-                    if pattern > 0 {
-                        patterns_16_31.push((step, pattern));
-                    }
-                }
-                if seq_y == 0 && !patterns_16_31.is_empty() {
-                    info!("DEBUG: Row {} patterns in steps 16-31: {:?}", seq_y, patterns_16_31);
-                }
-                
-                // Clear both grids for this row first
-                for grid_x in 0..=15 {
-                    self.grid.set_led(grid_one, grid_x, seq_y, 0, "clear_grid1")?;
-                    self.grid.set_led(grid_two, grid_x, seq_y, 0, "clear_grid2")?;
-                }
-                
-                // Show all patterns on both grids
-                for seq_x in 0..=31 {
-                    let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    if pattern_value > 0 {
-                        let brightness = 10; // Pattern exists but not current
-                        
-                        if seq_x <= 15 {
-                            // Show pattern on GRID_ONE (steps 0-15)
-                            if seq_y == 0 { // Only log for first row to avoid spam
-                                info!("DEBUG: Setting GRID_ONE pattern LED - step: {}, grid_x: {}, brightness: {}, pattern_value: {}", seq_x, seq_x, brightness, pattern_value);
-                            }
-                            self.grid.set_led(grid_one, seq_x, seq_y, brightness, "pattern_grid1")?;
-                        } else {
-                            // Show pattern on GRID_TWO (steps 16-31, mapped to 0-15)
-                            let grid_x = seq_x - 16;
-                            if seq_y == 0 { // Only log for first row to avoid spam
-                                info!("DEBUG: Setting GRID_TWO pattern LED - step: {}, grid_x: {}, brightness: {}, pattern_value: {}", seq_x, grid_x, brightness, pattern_value);
-                            }
-                            self.grid.set_led(grid_two, grid_x, seq_y, brightness, "pattern_grid2")?;
-                        }
-                    }
-                }
-                
-                // Show current step position with bright LED
-                if current_step <= 15 {
-                    // Current step is on GRID_ONE
-                    let pattern_value = self.sequencer.get_grid_value(current_step, seq_y);
-                    let brightness = if pattern_value > 0 { 14 } else { 6 }; // Bright if pattern, medium if just position
-                    self.grid.set_led(grid_one, current_step, seq_y, brightness, "current_step_grid1")?;
-                } else if current_step <= 31 {
-                    // Current step is on GRID_TWO
-                    let grid_x = current_step - 16;
-                    let pattern_value = self.sequencer.get_grid_value(current_step, seq_y);
-                    let brightness = if pattern_value > 0 { 14 } else { 6 }; // Bright if pattern, medium if just position
-                    
-                    if seq_y == 0 { // Only log for first row
-                        info!("DEBUG: Setting GRID_TWO LED - step: {}, grid_x: {}, brightness: {}, pattern_value: {}", current_step, grid_x, brightness, pattern_value);
-                    }
-                    
-                    self.grid.set_led(grid_two, grid_x, seq_y, brightness, "current_step_grid2")?;
-                } else {
-                    if seq_y == 0 {
-                        info!("DEBUG: current_step {} is outside valid range (0-31)", current_step);
-                    }
-                }
-            } else {
-                if seq_y == 0 {
-                    info!("DEBUG: No row state found for row {}", seq_y);
-                }
-            }
-        }
-        
-        // Update beat LEDs and ARM button LEDs before final refresh
-        self.update_beat_leds()?;
-        self.update_arm_button_leds()?;
-        
-        // Add a final debug to confirm grid refresh
-        info!("DEBUG: Calling grid.refresh() for both grids");
-        self.grid.refresh()?;
-        
-        Ok(())
-    }
+
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
