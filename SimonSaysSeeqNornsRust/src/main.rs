@@ -817,11 +817,19 @@ impl SimonSaysSeeq {
                         } else {
                             // ARM button released - deactivate mode
                             if matches!(self.active_arm_action, Some(ref current) if *current == arm_action) {
+                                // Special handling for Mozart mode deactivation
+                                if matches!(arm_action, ArmAction::Mozart) {
+                                    info!("ARM MOZART: Deactivated - restoring normal grid display");
+                                }
                                 self.active_arm_action = None;
                                 info!("ARM CONTROL: {:?} RELEASED - mode OFF (column {})", arm_action, x);
                                 #[cfg(feature = "hardware")]
                                 {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
+                                    // Restore normal display when Mozart mode is deactivated
+                                    if matches!(arm_action, ArmAction::Mozart) {
+                                        self.update_grid_display()?;
+                                    }
                                     self.grid.refresh()?;
                                 }
                             }
@@ -894,7 +902,7 @@ impl SimonSaysSeeq {
             }
             ArmAction::Mozart => {
                 // Mozart mode - show keyboard MIDI notes on both grids
-                info!("ARM MOZART: ARM button activated - showing 32-step keyboard MIDI sequence");
+                info!("ARM MOZART: Activated - showing 32-step keyboard MIDI sequence");
                 #[cfg(feature = "hardware")]
                 {
                     self.update_mozart_display()?;
@@ -981,8 +989,8 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                info!("DEBUG: Mozart mode active in handle_grid_update - showing keyboard MIDI notes");
-                return self.update_mozart_display();
+                // Mozart mode active - display already updated when mode was activated
+                return Ok(());
             }
         }
         
@@ -1047,9 +1055,7 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active - show on BOTH grids
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                // Mozart mode: Show keyboard MIDI notes on both grids
-                info!("DEBUG: Mozart mode active - showing keyboard MIDI notes on both grids");
-                self.update_mozart_display()?;
+                // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
         }
@@ -1123,8 +1129,8 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                info!("DEBUG: Mozart mode active in update_32step_display - showing keyboard MIDI notes");
-                return self.update_mozart_display();
+                // Mozart mode: Display already updated when mode was activated
+                return Ok(());
             }
         }
         
@@ -1228,8 +1234,8 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                info!("DEBUG: Mozart mode active in update_single_led - showing keyboard MIDI notes");
-                return self.update_mozart_display();
+                // Mozart mode: Display already updated when mode was activated
+                return Ok(());
             }
         }
         
@@ -1446,8 +1452,8 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                info!("DEBUG: Mozart mode active in refresh_all_pattern_leds - showing keyboard MIDI notes");
-                return self.update_mozart_display();
+                // Mozart mode: Display already updated when mode was activated
+                return Ok(());
             }
         }
         
@@ -1526,8 +1532,8 @@ impl SimonSaysSeeq {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
             if matches!(arm_action, ArmAction::Mozart) {
-                info!("DEBUG: Mozart mode active in refresh_all_row_leds - showing keyboard MIDI notes");
-                return self.update_mozart_display();
+                // Mozart mode: Display already updated when mode was activated
+                return Ok(());
             }
         }
         
