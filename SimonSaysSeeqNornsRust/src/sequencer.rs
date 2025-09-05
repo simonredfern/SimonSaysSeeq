@@ -53,17 +53,17 @@ pub struct NoteEvent {
 
 /// Row settings for each sequence row
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MainRowStates {
-    pub current_step: usize,
-    pub first_step: usize,
-    pub euclidean_length: usize,
-    pub euclidean_events: usize,
-    pub euclidean_rotation: usize,
-    pub previous_step: usize,
-    pub midi_note: u8,
-    pub midi_velocity: u8,
-    pub midi_channel: u8,
-    pub ratchet_count: u8,
+pub struct SequencerARowStates {
+    pub sequencer_a_current_step: usize,
+    pub sequencer_a_first_step: usize,
+    pub sequencer_a_euclidean_length: usize,
+    pub sequencer_a_euclidean_events: usize,
+    pub sequencer_a_euclidean_rotation: usize,
+    pub sequencer_a_previous_step: usize,
+    pub sequencer_a_midi_note: u8,
+    pub sequencer_a_midi_velocity: u8,
+    pub sequencer_a_midi_channel: u8,
+    pub sequencer_a_ratchet_count: u8,
 }
 
 /// MIDI note event for recording and playback
@@ -134,19 +134,19 @@ impl Default for TempoAnalysis {
     }
 }
 
-impl Default for MainRowStates {
+impl Default for SequencerARowStates {
     fn default() -> Self {
         Self {
-            current_step: 0,
-            first_step: 0,
-            euclidean_length: 31,
-            euclidean_events: 5,
-            euclidean_rotation: 0,
-            previous_step: 31,
-            midi_note: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + 1, // Default to first gate note (48)
-            midi_velocity: 100,
-            midi_channel: 1,
-            ratchet_count: 1,
+            sequencer_a_current_step: 0,
+            sequencer_a_first_step: 0,
+            sequencer_a_euclidean_length: 31,
+            sequencer_a_euclidean_events: 5,
+            sequencer_a_euclidean_rotation: 0,
+            sequencer_a_previous_step: 31,
+            sequencer_a_midi_note: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + 1, // Default to first gate note (48)
+            sequencer_a_midi_velocity: 100,
+            sequencer_a_midi_channel: 1,
+            sequencer_a_ratchet_count: 1,
         }
     }
 }
@@ -165,7 +165,7 @@ pub struct PatternChainEntry {
 pub struct StateSnapshot {
     pub grid: Vec<Vec<u8>>,
     pub mozart: Vec<Vec<u8>>,
-    pub row_states: Vec<MainRowStates>,
+    pub row_states: Vec<SequencerARowStates>,
     pub timestamp: std::time::SystemTime,
     pub description: String,
 }
@@ -180,27 +180,27 @@ pub struct SlideState {
 /// Main sequencer state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SequencerState {
-    /// Grid state: grid[column][row] = value (0=off, 1=on, 2+=ratchet)
-    pub grid: Vec<Vec<u8>>,
-    /// Mozart state (second grid/performance controls) - MIDI note values
-    pub mozart: Vec<Vec<u8>>,
-    /// Mozart grid for MIDI note assignments
-    pub mozart_grid: Vec<Vec<u8>>,
+    /// Sequencer A Grid state: grid[column][row] = value (0=off, 1=on, 2+=ratchet)
+    pub sequencer_a_grid: Vec<Vec<u8>>,
+    /// Sequencer A Mozart state (second grid/performance controls) - MIDI note values
+    pub sequencer_a_mozart: Vec<Vec<u8>>,
+    /// Sequencer A Mozart grid for MIDI note assignments
+    pub sequencer_a_mozart_grid: Vec<Vec<u8>>,
     /// Slide state for parameter transitions
     pub slide: SlideState,
     /// Held state for grid button combinations
     pub held: Vec<Vec<u8>>,
-    /// Row states for each sequence row
-    pub row_states: Vec<MainRowStates>,
+    /// Sequencer A Row states for each sequence row
+    pub sequencer_a_row_states: Vec<SequencerARowStates>,
     /// Pattern chains for song mode
     pub pattern_chains: Vec<PatternChainEntry>,
     pub current_chain_position: usize,
     pub chain_mode_enabled: bool,
     pub chain_repeat_current: usize,
-    /// Current global position
-    pub current_step: usize,
-    pub current_bar: usize,
-    pub current_lane: usize,
+    /// Sequencer A Current global position
+    pub sequencer_a_current_step: usize,
+    pub sequencer_a_current_bar: usize,
+    pub sequencer_a_current_lane: usize,
     /// Transport state
     pub is_running: bool,
     /// Core timing variables
@@ -217,8 +217,8 @@ pub struct SequencerState {
     pub last_step: usize,
     pub midi_first_step: usize,
     pub midi_last_step: usize,
-    /// MIDI recording system - [lane][bar][step][note][on_off] = MidiNoteEvent
-    pub keyboard_midi_note_events: Vec<Vec<Vec<Vec<Vec<MidiNoteEvent>>>>>,
+    /// Sequencer B MIDI recording system - [lane][bar][step][note][on_off] = MidiNoteEvent
+    pub sequencer_b_keyboard_midi_note_events: Vec<Vec<Vec<Vec<Vec<MidiNoteEvent>>>>>,
     /// Tempo analysis
     pub tempo_analysis: TempoAnalysis,
     /// Advanced features
@@ -261,16 +261,16 @@ impl Default for SequencerState {
 
         let mut row_states = Vec::new();
         for i in 0..ROWS {
-            let mut row_state = MainRowStates::default();
+            let mut row_state = SequencerARowStates::default();
             // Match Lua version: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + sequence_row (1-based)
             // Lua uses sequence_row 1-7, Rust uses i 0-6, so add 1 to convert
-            row_state.midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8;
-            row_state.midi_channel = 1; // All rows use MIDI channel 1
+            row_state.sequencer_a_midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8;
+            row_state.sequencer_a_midi_channel = 1; // All rows use MIDI channel 1
             row_states.push(row_state);
         }
 
         // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
-        let mut keyboard_midi_note_events = Vec::new();
+        let mut sequencer_b_keyboard_midi_note_events = Vec::new();
         for _lane in MIN_LANE..=MAX_LANE {
             let mut bars = Vec::new();
             for _bar in MIN_BAR..=MAX_BAR {
@@ -287,26 +287,26 @@ impl Default for SequencerState {
                 }
                 bars.push(steps);
             }
-            keyboard_midi_note_events.push(bars);
+            sequencer_b_keyboard_midi_note_events.push(bars);
         }
 
         // Initialize mozart_grid with default MIDI note values (60 = middle C)
         let mozart_grid = vec![vec![60; ROWS]; COLS];
 
         Self {
-            grid,
-            mozart,
-            mozart_grid,
+            sequencer_a_grid: grid,
+            sequencer_a_mozart: mozart,
+            sequencer_a_mozart_grid: mozart_grid,
             slide,
             held,
-            row_states,
+            sequencer_a_row_states: row_states,
             pattern_chains: Vec::new(),
             current_chain_position: 0,
             chain_mode_enabled: false,
             chain_repeat_current: 1,
-            current_step: 0,
-            current_bar: 0,
-            current_lane: 1,
+            sequencer_a_current_step: 0,
+            sequencer_a_current_bar: 0,
+            sequencer_a_current_lane: 1,
             is_running: false,
             tempo: 30.0,
             swing_amount: 0.0,
@@ -321,7 +321,7 @@ impl Default for SequencerState {
             midi_bar_count: 0,
             midi_first_step: 0,
             midi_last_step: 31,
-            keyboard_midi_note_events,
+            sequencer_b_keyboard_midi_note_events,
             tempo_analysis: TempoAnalysis::default(),
             swing_mode: 1,
             global_transpose: 0,
@@ -387,10 +387,10 @@ impl Sequencer {
         if state.is_running {
             state.is_running = false;
             // Reset to beginning
-            state.current_step = 0;
-            state.current_bar = 0;
-            for row_state in &mut state.row_states {
-                row_state.current_step = 0;
+            state.sequencer_a_current_step = 0;
+            state.sequencer_a_current_bar = 0;
+            for row_state in &mut state.sequencer_a_row_states {
+                row_state.sequencer_a_current_step = 0;
             }
             // Log the stack trace to identify what triggered the stop
             let trace = std::backtrace::Backtrace::capture();
@@ -411,9 +411,10 @@ impl Sequencer {
     }
 
     /// Get current position
+    /// Get the current playback position (step, bar)
     pub fn get_position(&self) -> (usize, usize) {
         let state = self.state.lock().unwrap();
-        (state.current_step, state.current_bar)
+        (state.sequencer_a_current_step, state.sequencer_a_current_bar)
     }
 
     /// Set grid value at position with automatic undo snapshot
@@ -428,7 +429,7 @@ impl Sequencer {
                 y + 1
             ));
             let mut state = self.state.lock().unwrap();
-            state.grid[x][y] = value;
+            state.sequencer_a_grid[x][y] = value;
         }
     }
 
@@ -436,7 +437,11 @@ impl Sequencer {
     pub fn get_grid_value(&self, x: usize, y: usize) -> u8 {
         let state = self.state.lock().unwrap();
         if x < 32 && y < 8 {
-            state.grid[x][y]
+            if x < state.sequencer_a_grid.len() && y < state.sequencer_a_grid[0].len() {
+                state.sequencer_a_grid[x][y]
+            } else {
+                0
+            }
         } else {
             0
         }
@@ -449,7 +454,7 @@ impl Sequencer {
 
             let mut state = self.state.lock().unwrap();
             let clamped_note = note.min(127);
-            state.mozart[x - 1][y - 1] = clamped_note;
+            state.sequencer_a_mozart[x - 1][y - 1] = clamped_note;
             // Clear slide for immediate response
             state.slide.slide_grid[x - 1][y - 1] = 0.0;
             debug!("Set mozart[{}][{}] = {}", x, y, clamped_note);
@@ -460,7 +465,7 @@ impl Sequencer {
     pub fn get_mozart_value(&self, x: usize, y: usize) -> u8 {
         let state = self.state.lock().unwrap();
         if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            state.mozart_grid[x - 1][y - 1]
+            state.sequencer_a_mozart_grid[x - 1][y - 1]
         } else {
             60 // Default to middle C
         }
@@ -504,7 +509,7 @@ impl Sequencer {
             } else {
                 0
             };
-            state.grid[x][y] = new_value;
+            state.sequencer_a_grid[x][y] = new_value;
         }
     }
 
@@ -515,7 +520,7 @@ impl Sequencer {
         for x in start_x..=(start_x + width - 1).min(31) {
             for y in start_y..=(start_y + height - 1).min(7) {
                 if x < 32 && y < 8 {
-                    state.grid[x][y] = 0;
+                    state.sequencer_a_grid[x][y] = 0;
                 }
             }
         }
@@ -541,7 +546,7 @@ impl Sequencer {
                 let sx = src_x + x;
                 let sy = src_y + y;
                 if sx < 32 && sy < 8 {
-                    row.push(state.grid[sx][sy]);
+                    row.push(state.sequencer_a_grid[sx][sy]);
                 } else {
                     row.push(0);
                 }
@@ -555,7 +560,7 @@ impl Sequencer {
                 let dx = dst_x + x;
                 let dy = dst_y + y;
                 if dx > 0 && dy > 0 && dx <= 32 && dy <= 8 {
-                    state.grid[dx - 1][dy - 1] = copy_buffer[y][x];
+                    state.sequencer_a_grid[dx - 1][dy - 1] = copy_buffer[y][x];
                 }
             }
         }
@@ -577,7 +582,7 @@ impl Sequencer {
     pub fn get_row_data(&self, row: usize) -> Vec<u8> {
         let state = self.state.lock().unwrap();
         if row < 8 {
-            (0..32).map(|x| state.grid[x][row]).collect()
+            (0..32).map(|x| state.sequencer_a_grid[x][row]).collect()
         } else {
             vec![0; 32]
         }
@@ -614,17 +619,18 @@ impl Sequencer {
         let mut state = self.state.lock().unwrap();
 
         // Clear grid
-        for col in &mut state.grid {
-            for cell in col {
+        for row in &mut state.sequencer_a_grid {
+            for cell in row {
                 *cell = 0;
             }
         }
-
-        // Reset positions
-        state.current_step = 0;
-        state.current_bar = 0;
-        for row_state in &mut state.row_states {
-            row_state.current_step = 0;
+        
+        // Reset position
+        state.sequencer_a_current_step = 0;
+        state.sequencer_a_current_bar = 0;
+        for row_state in &mut state.sequencer_a_row_states {
+            row_state.sequencer_a_current_step = 0;
+            row_state.sequencer_a_previous_step = 0;
         }
 
         info!("All sequences reset");
@@ -639,15 +645,15 @@ impl Sequencer {
             return None; // Only sequence rows 0-6
         }
 
-        let grid_value = state.grid[step][row];
+        let grid_value = state.sequencer_a_grid[step][row];
         if grid_value == 0 {
             return None; // No trigger
         }
 
-        let row_state = &state.row_states[row];
+        let row_state = &state.sequencer_a_row_states[row];
 
         // Check if this step is within the row's range
-        if step < row_state.first_step || step > row_state.euclidean_length {
+        if step < row_state.sequencer_a_first_step || step > row_state.sequencer_a_euclidean_length {
             return None;
         }
 
@@ -667,9 +673,9 @@ impl Sequencer {
 
             // Note ON event
             events.push(NoteEvent {
-                note: row_state.midi_note,
-                velocity: row_state.midi_velocity,
-                channel: row_state.midi_channel,
+                note: row_state.sequencer_a_midi_note,
+                velocity: row_state.sequencer_a_midi_velocity,
+                channel: row_state.sequencer_a_midi_channel,
                 note_on: true,
                 tick_offset,
             });
@@ -682,9 +688,9 @@ impl Sequencer {
             };
 
             events.push(NoteEvent {
-                note: row_state.midi_note,
+                note: row_state.sequencer_a_midi_note,
                 velocity: 0,
-                channel: row_state.midi_channel,
+                channel: row_state.sequencer_a_midi_channel,
                 note_on: false,
                 tick_offset: off_tick,
             });
@@ -770,7 +776,7 @@ impl Sequencer {
 
     /// Play MIDI events for current tick
     fn play_midi(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
-        let current_lane = state.current_lane;
+        let current_lane = state.sequencer_a_current_lane;
         let midi_bar_count = state.midi_bar_count;
         let midi_step_count = state.midi_step_count;
         let tick_since_step = state.the_current_tick_count_since_step;
@@ -782,13 +788,13 @@ impl Sequencer {
                 let bar_idx = midi_bar_count;
                 let step_idx = midi_step_count;
 
-                if lane_idx < state.keyboard_midi_note_events.len()
-                    && bar_idx < state.keyboard_midi_note_events[lane_idx].len()
-                    && step_idx < state.keyboard_midi_note_events[lane_idx][bar_idx].len()
+                if lane_idx < state.sequencer_b_keyboard_midi_note_events.len()
+                    && bar_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx].len()
+                    && step_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx].len()
                 {
                     // Check note ON events
                     let note_on_event =
-                        &state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][1];
+                        &state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][1];
                     if note_on_event.is_active
                         && note_on_event.tick_count_since_step == tick_since_step
                     {
@@ -814,7 +820,7 @@ impl Sequencer {
 
                     // Check note OFF events
                     let note_off_event =
-                        &state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][0];
+                        &state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][0];
                     if note_off_event.is_active
                         && note_off_event.tick_count_since_step == tick_since_step
                     {
@@ -876,21 +882,21 @@ impl Sequencer {
         }
 
         // Update global position counters to match MIDI counters
-        state.current_step = state.midi_step_count;
-        state.current_bar = state.midi_bar_count;
+        state.sequencer_a_current_step = state.midi_step_count;
+        state.sequencer_a_current_bar = state.midi_bar_count;
 
         // Advance each row's current step based on its individual settings
-        for (row_idx, row_state) in state.row_states.iter_mut().enumerate() {
-            let old_step = row_state.current_step;
-            row_state.previous_step = old_step;
-            row_state.current_step += 1;
-            if row_state.current_step > row_state.euclidean_length {
-                row_state.current_step = row_state.first_step;
+        for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
+            let old_step = row_state.sequencer_a_current_step;
+            row_state.sequencer_a_previous_step = old_step;
+            row_state.sequencer_a_current_step += 1;
+            if row_state.sequencer_a_current_step > row_state.sequencer_a_euclidean_length {
+                row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
             }
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                  // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
-                 //       row_idx, old_step, row_state.current_step,
-                 //       row_state.first_step, row_state.euclidean_length);
+                 //       row_idx, old_step, row_state.sequencer_a_current_step,
+                 //       row_state.sequencer_a_first_step, row_state.sequencer_a_euclidean_length);
             }
         }
 
@@ -906,27 +912,27 @@ impl Sequencer {
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // Process each sequence row (0-indexed)
-        for row_idx in 0..state.row_states.len() {
+        for row_idx in 0..state.sequencer_a_row_states.len() {
             // Only process rows 0-6 (sequencer rows, row 7 is control)
             if row_idx > 6 {
                 continue;
             }
 
-            if let Some(row_state) = state.row_states.get(row_idx) {
-                let current_step = row_state.current_step;
+            if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
+                let current_step = row_state.sequencer_a_current_step;
 
                 // Get grid value for this row at current step
                 if current_step < state.cols {
-                    let grid_value = state.grid[current_step][row_idx];
+                    let grid_value = state.sequencer_a_grid[current_step][row_idx];
 
                     if grid_value > 0 {
                         // This step is active - send MIDI note
                         // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
                         // Send MIDI note ON event for this row
-                        if let Some(row_state) = state.row_states.get(row_idx) {
+                        if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
                             let midi_event = MidiEvent {
-                                note: row_state.midi_note,
+                                note: row_state.sequencer_a_midi_note,
                                 velocity: 100,                // Default velocity
                                 channel: (row_idx + 1) as u8, // Row-based channel 1-7
                                 note_on: true,
@@ -944,7 +950,7 @@ impl Sequencer {
                 // Send selective grid update event for this row
                 if let Err(e) = sender.send(SequencerEvent::GridUpdate {
                     row: row_idx,
-                    old_step: row_state.previous_step,
+                    old_step: row_state.sequencer_a_previous_step,
                     new_step: current_step,
                 }) {
                     warn!("Failed to send grid update event: {}", e);
@@ -1023,12 +1029,12 @@ impl Sequencer {
 
         // Initialize row settings
         // Reset row states
-        for (i, row_state) in state.row_states.iter_mut().enumerate() {
-            row_state.current_step = row_state.first_step;
-            row_state.previous_step = row_state.euclidean_length;
-            row_state.midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8; // Match Lua version
-            row_state.midi_velocity = 100;
-            row_state.midi_channel = 1; // All rows use MIDI channel 1
+        for (i, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
+            row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
+            row_state.sequencer_a_previous_step = row_state.sequencer_a_euclidean_length;
+            row_state.sequencer_a_midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8; // Match Lua version
+            row_state.sequencer_a_midi_velocity = 100;
+            row_state.sequencer_a_midi_channel = 1; // All rows use MIDI channel 1
         }
 
         info!("Sequencer state tables initialized");
@@ -1038,9 +1044,9 @@ impl Sequencer {
     pub fn toggle_grid_position(&self, x: usize, y: usize) {
         if x > 0 && x <= 32 && y > 0 && y <= 8 {
             let mut state = self.state.lock().unwrap();
-            let current_value = state.grid[x - 1][y - 1];
+            let current_value = state.sequencer_a_grid[x - 1][y - 1];
             let new_value = if current_value == 0 { 1 } else { 0 };
-            state.grid[x - 1][y - 1] = new_value;
+            state.sequencer_a_grid[x - 1][y - 1] = new_value;
             debug!(
                 "toggle_grid_position says: Toggled grid[{}][{}]: {} -> {}",
                 x, y, current_value, new_value
@@ -1049,7 +1055,7 @@ impl Sequencer {
     }
 
     /// Set MIDI note event for keyboard recording
-    pub fn set_midi_note_event(
+    pub fn set_sequencer_b_midi_note_event(
         &self,
         lane: usize,
         bar: usize,
@@ -1072,14 +1078,14 @@ impl Sequencer {
             let step_idx = step;
             let event_idx = if is_on { 1 } else { 0 };
 
-            if lane_idx < state.keyboard_midi_note_events.len()
-                && bar_idx < state.keyboard_midi_note_events[lane_idx].len()
-                && step_idx < state.keyboard_midi_note_events[lane_idx][bar_idx].len()
+            if lane_idx < state.sequencer_b_keyboard_midi_note_events.len()
+                && bar_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx].len()
+                && step_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx].len()
                 && (note as usize)
-                    < state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx].len()
+                    < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx].len()
             {
                 let current_tick_count = state.the_current_tick_count_since_start;
-                let event = &mut state.keyboard_midi_note_events[lane_idx][bar_idx][step_idx]
+                let event = &mut state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx]
                     [note as usize][event_idx];
                 event.velocity = velocity;
                 event.tick_count_since_step = tick_offset;
@@ -1122,19 +1128,19 @@ impl Sequencer {
     /// Get a copy of the current grid state for display
     pub fn get_grid_state(&self) -> Vec<Vec<u8>> {
         let state = self.state.lock().unwrap();
-        state.grid.clone()
+        state.sequencer_a_grid.clone()
     }
 
     /// Get a copy of the current Mozart state for display
     pub fn get_mozart_state(&self) -> Vec<Vec<u8>> {
         let state = self.state.lock().unwrap();
-        state.mozart.clone()
+        state.sequencer_a_mozart.clone()
     }
 
     /// Get keyboard MIDI note events for display
     pub fn get_keyboard_midi_events(&self) -> Vec<Vec<Vec<Vec<Vec<MidiNoteEvent>>>>> {
         let state = self.state.lock().unwrap();
-        state.keyboard_midi_note_events.clone()
+        state.sequencer_b_keyboard_midi_note_events.clone()
     }
 
     /// Undo/Redo System Implementation
@@ -1143,9 +1149,9 @@ impl Sequencer {
     fn push_undo_snapshot(&self, description: String) {
         let state = self.state.lock().unwrap();
         let snapshot = StateSnapshot {
-            grid: state.grid.clone(),
-            mozart: state.mozart.clone(),
-            row_states: state.row_states.clone(),
+            grid: state.sequencer_a_grid.clone(),
+            mozart: state.sequencer_a_mozart.clone(),
+            row_states: state.sequencer_a_row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: description.clone(),
         };
@@ -1177,9 +1183,9 @@ impl Sequencer {
         // Push current state to redo stack
         let current_state = self.state.lock().unwrap();
         let current_snapshot = StateSnapshot {
-            grid: current_state.grid.clone(),
-            mozart: current_state.mozart.clone(),
-            row_states: current_state.row_states.clone(),
+            grid: current_state.sequencer_a_grid.clone(),
+            mozart: current_state.sequencer_a_mozart.clone(),
+            row_states: current_state.sequencer_a_row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: "Current state before undo".to_string(),
         };
@@ -1190,9 +1196,9 @@ impl Sequencer {
         // Pop from undo stack and apply
         if let Some(snapshot) = undo_stack.pop_back() {
             let mut state = self.state.lock().unwrap();
-            state.grid = snapshot.grid;
-            state.mozart = snapshot.mozart;
-            state.row_states = snapshot.row_states;
+            state.sequencer_a_grid = snapshot.grid;
+            state.sequencer_a_mozart = snapshot.mozart;
+            state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();
             info!("Undid: {}", description);
@@ -1214,9 +1220,9 @@ impl Sequencer {
         // Push current state to undo stack
         let current_state = self.state.lock().unwrap();
         let current_snapshot = StateSnapshot {
-            grid: current_state.grid.clone(),
-            mozart: current_state.mozart.clone(),
-            row_states: current_state.row_states.clone(),
+            grid: current_state.sequencer_a_grid.clone(),
+            mozart: current_state.sequencer_a_mozart.clone(),
+            row_states: current_state.sequencer_a_row_states.clone(),
             timestamp: std::time::SystemTime::now(),
             description: "State before redo".to_string(),
         };
@@ -1227,9 +1233,9 @@ impl Sequencer {
         // Pop from redo stack and apply
         if let Some(snapshot) = redo_stack.pop_back() {
             let mut state = self.state.lock().unwrap();
-            state.grid = snapshot.grid;
-            state.mozart = snapshot.mozart;
-            state.row_states = snapshot.row_states;
+            state.sequencer_a_grid = snapshot.grid;
+            state.sequencer_a_mozart = snapshot.mozart;
+            state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();
             info!("Redid: {}", description);
@@ -1248,8 +1254,8 @@ impl Sequencer {
 
         // Reset transport state for saved patterns
         pattern_state.is_running = false;
-        pattern_state.current_step = 0;
-        pattern_state.current_bar = 0;
+        pattern_state.sequencer_a_current_step = 0;
+        pattern_state.sequencer_a_current_bar = 0;
 
         let mut patterns = self.patterns.lock().unwrap();
         patterns.insert(pattern_id, pattern_state);
@@ -1268,19 +1274,19 @@ impl Sequencer {
             self.push_undo_snapshot(format!("Load pattern {}", pattern_id));
 
             let mut state = self.state.lock().unwrap();
-            state.grid = pattern_state.grid.clone();
-            state.mozart = pattern_state.mozart.clone();
+            state.sequencer_a_grid = pattern_state.sequencer_a_grid.clone();
+            state.sequencer_a_mozart = pattern_state.sequencer_a_mozart.clone();
             state.slide = pattern_state.slide.clone();
-            state.row_states = pattern_state.row_states.clone();
+            state.sequencer_a_row_states = pattern_state.sequencer_a_row_states.clone();
 
             // Keep current transport state
-            let current_step = state.current_step;
-            let current_bar = state.current_bar;
+            let current_step = state.sequencer_a_current_step;
+            let current_bar = state.sequencer_a_current_bar;
             let is_running = state.is_running;
 
             *state = pattern_state.clone();
-            state.current_step = current_step;
-            state.current_bar = current_bar;
+            state.sequencer_a_current_step = current_step;
+            state.sequencer_a_current_bar = current_bar;
             state.is_running = is_running;
 
             // Note: current_pattern tracking would need to be moved to state if needed
@@ -1326,13 +1332,13 @@ impl Sequencer {
                 let src_x = ((x as i32 - x_offset) + 32) % 32;
                 let src_y = ((y as i32 - y_offset) + 8) % 8;
 
-                new_grid[x][y] = state.grid[src_x as usize][src_y as usize];
-                new_mozart[x][y] = state.mozart[src_x as usize][src_y as usize];
+                new_grid[x][y] = state.sequencer_a_grid[src_x as usize][src_y as usize];
+                new_mozart[x][y] = state.sequencer_a_mozart[src_x as usize][src_y as usize];
             }
         }
 
-        state.grid = new_grid;
-        state.mozart = new_mozart;
+        state.sequencer_a_grid = new_grid;
+        state.sequencer_a_mozart = new_mozart;
         state.slide.scroll_offset.0 += x_offset;
         state.slide.scroll_offset.1 += y_offset;
 
@@ -1433,10 +1439,10 @@ impl Sequencer {
             let patterns = self.patterns.lock().unwrap();
             if let Some(pattern_state) = patterns.get(&next_pattern_id) {
                 let mut state = self.state.lock().unwrap();
-                state.grid = pattern_state.grid.clone();
-                state.mozart = pattern_state.mozart.clone();
+                state.sequencer_a_grid = pattern_state.sequencer_a_grid.clone();
+                state.sequencer_a_mozart = pattern_state.sequencer_a_mozart.clone();
                 state.slide = pattern_state.slide.clone();
-                state.row_states = pattern_state.row_states.clone();
+                state.sequencer_a_row_states = pattern_state.sequencer_a_row_states.clone();
                 info!("Loaded pattern {} in chain", next_pattern_id);
             }
         }
@@ -1459,7 +1465,7 @@ impl Sequencer {
     pub fn get_interpolated_note(&self, x: usize, y: usize, progress: f32) -> f32 {
         let state = self.state.lock().unwrap();
         if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            let base_note = state.mozart[x - 1][y - 1] as f32;
+            let base_note = state.sequencer_a_mozart[x - 1][y - 1] as f32;
             let slide_amount = state.slide.slide_grid[x - 1][y - 1];
 
             if slide_amount > 0.0 {
@@ -1468,7 +1474,7 @@ impl Sequencer {
                 for offset in 1..=8 {
                     let target_x = (x + offset) % 32;
                     if self.get_grid_value(target_x, y) > 0 {
-                        target_note = state.mozart[target_x][y] as f32;
+                        target_note = state.sequencer_a_mozart[target_x][y] as f32;
                         break;
                     }
                 }
@@ -1558,13 +1564,13 @@ impl Sequencer {
         let row_idx = row;
 
         // Update the row's Euclidean parameters
-        state.row_states[row_idx].euclidean_events = events;
-        state.row_states[row_idx].euclidean_length = length - 1; // Store as last valid step index (0-based)
-        state.row_states[row_idx].euclidean_rotation = rotation;
+        state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_events = events;
+        state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_length = length - 1; // Store as last valid step index (0-based)
+        state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_rotation = rotation;
 
         // Clear the row first
         for col in 0..32 {
-            state.grid[col][row_idx] = 0;
+            state.sequencer_a_grid[col][row_idx] = 0;
         }
 
         // Generate euclidean rhythm using Bresenham's algorithm
@@ -1575,7 +1581,7 @@ impl Sequencer {
                 bucket -= length;
                 let pos = (i + rotation) % length;
                 if pos < 32 {
-                    state.grid[pos][row_idx] = 1;
+                    state.sequencer_a_grid[pos][row_idx] = 1;
                 }
             }
         }
@@ -1584,7 +1590,7 @@ impl Sequencer {
         let mut pattern = String::new();
         let mut patterns_beyond_15 = Vec::new();
         for i in 0..length.min(32) {
-            let has_pattern = state.grid[i][row_idx] == 1;
+            let has_pattern = state.sequencer_a_grid[i][row_idx] == 1;
             pattern.push(if has_pattern { '1' } else { '0' });
 
             // Track patterns beyond step 15
@@ -1629,8 +1635,8 @@ impl Sequencer {
                 let dest_row = dest_y + y;
 
                 if src_col < 32 && src_row < 8 && dest_col < 32 && dest_row < 8 {
-                    state.grid[dest_col][dest_row] = state.grid[src_col][src_row];
-                    state.mozart[dest_col][dest_row] = state.mozart[src_col][src_row];
+                    state.sequencer_a_grid[dest_col][dest_row] = state.sequencer_a_grid[src_col][src_row];
+                    state.sequencer_a_mozart[dest_col][dest_row] = state.sequencer_a_mozart[src_col][src_row];
                     state.slide.slide_grid[dest_col][dest_row] =
                         state.slide.slide_grid[src_col][src_row];
                 }
@@ -1644,19 +1650,19 @@ impl Sequencer {
     }
 
     /// Set row states
-    pub fn set_row_states(&self, row: usize, states: MainRowStates) {
+    pub fn set_row_states(&self, row: usize, states: SequencerARowStates) {
         if row < 7 {
             let mut state = self.state.lock().unwrap();
-            state.row_states[row] = states;
+            state.sequencer_a_row_states[row] = states;
             debug!("set_row_states says: Updated states for row {}", row);
         }
     }
 
     /// Get row states
-    pub fn get_row_states(&self, row: usize) -> Option<MainRowStates> {
+    pub fn get_row_states(&self, row: usize) -> Option<SequencerARowStates> {
         if row < 7 {
             let state = self.state.lock().unwrap();
-            Some(state.row_states[row].clone())
+            Some(state.sequencer_a_row_states[row].clone())
         } else {
             None
         }

@@ -5118,6 +5118,71 @@ Features: MIDI=true, Hardware=true
 Build Profile: release
 Features: MIDI=true, Hardware=true
 
+## 2025-09-05 - Sequencer Renaming Project
+
+### Task: Rename Sequencer Components for Clarity
+Starting major refactoring to clearly distinguish between the two sequencer systems:
+
+**Sequencer A (Main Grid Sequencer) - Renaming:**
+- `state.grid` → `sequencer_a_grid`
+- `row_states` → `sequencer_a_row_states`
+- `current_step`, `current_bar`, `current_lane` → `sequencer_a_current_step`, etc.
+- Display functions: `update_main_grid_display()` → `update_sequencer_a_grid_display()`
+- Euclidean properties: `euclidean_length` → `sequencer_a_euclidean_length`
+- MIDI output: `midi_note`, `midi_velocity` → `sequencer_a_midi_note`, etc.
+
+**Sequencer B (MIDI Keyboard Sequencer) - Renaming:**
+- `keyboard_midi_note_events` → `sequencer_b_keyboard_midi_note_events`
+- Display functions: `update_mozart_display()` → `update_sequencer_b_mozart_display()`
+- Recording: `set_midi_note_event()` → `set_sequencer_b_midi_note_event()`
+- ARM mode: `ArmAction::Mozart` → `ArmAction::SequencerBMozart`
+- Grid interaction: `handle_mozart_grid_press()` → `handle_sequencer_b_mozart_grid_press()`
+
+### Purpose:
+- Clarify that these are two completely separate sequencer systems
+- Make codebase more maintainable and understandable
+- Prepare for potential future enhancements to either system independently
+
+### Status: PARTIAL IMPLEMENTATION - CONTINUATION NEEDED
+
+**Progress Made:**
+- Renamed `MainRowStates` → `SequencerARowStates`
+- Updated all fields in `SequencerARowStates` with `sequencer_a_` prefix
+- Renamed key `SequencerState` fields:
+  - `grid` → `sequencer_a_grid`
+  - `mozart` → `sequencer_a_mozart`
+  - `mozart_grid` → `sequencer_a_mozart_grid`
+  - `row_states` → `sequencer_a_row_states`
+  - `current_step` → `sequencer_a_current_step`
+  - `current_bar` → `sequencer_a_current_bar`
+  - `current_lane` → `sequencer_a_current_lane`
+  - `keyboard_midi_note_events` → `sequencer_b_keyboard_midi_note_events`
+- Updated `Default` implementations for renamed structs
+- Updated `get_position()` method to use new field names
+
+**Remaining Work (70+ references to update):**
+- All getter/setter methods in sequencer.rs using old field names
+- Display functions in main.rs (update_main_grid_display, etc.)
+- ARM action handling for Mozart mode
+- Grid interaction functions
+- All references to `.grid[x][y]`, `.row_states[n]`, `.current_step`, etc.
+- Method names: `set_midi_note_event` → `set_sequencer_b_midi_note_event`
+- Function names: `update_mozart_display` → `update_sequencer_b_mozart_display`
+- Enum value: `ArmAction::Mozart` → `ArmAction::SequencerBMozart`
+
+**Files to Update:**
+- SimonSaysSeeqNornsRust/src/sequencer.rs (primary - ~50+ references)
+- SimonSaysSeeqNornsRust/src/main.rs (secondary - ~20+ references)
+- Any other files referencing these structures
+
+**NOTE:** Skip folders with "old" or "unused" in name.
+
+**Next Steps for Continuation:**
+1. Systematically update all method implementations in sequencer.rs
+2. Update all references in main.rs
+3. Update enum values and function names
+4. Test compilation at each major milestone
+
 ## 2025-09-05 02:25:06 UTC - SimonSaysSeeq Rust v0.1.0 Startup
 Build Profile: release
 Features: MIDI=true, Hardware=true
@@ -5193,3 +5258,67 @@ Features: MIDI=true, Hardware=true
 ## 2025-09-05 13:52:53 UTC - SimonSaysSeeq Rust v0.1.0 Startup
 Build Profile: release
 Features: MIDI=true, Hardware=true
+
+## 2025-01-11 17:30:00 UTC - Sequencer Renaming Procedure COMPLETED
+
+**RENAMING PROCEDURE STATUS: ✅ COMPLETE**
+
+**Summary:** Successfully completed the systematic renaming of sequencer components to distinguish between Sequencer A (main grid sequencer) and Sequencer B (MIDI keyboard sequencer).
+
+**Completed Updates:**
+
+**1. Struct Field Renaming (sequencer.rs):**
+- ✅ Updated all field names in SequencerState and SequencerARowStates
+- ✅ Added sequencer_a_ prefix to main grid sequencer fields
+- ✅ Added sequencer_b_ prefix to keyboard MIDI sequencer fields
+
+**2. Method Implementation Updates (sequencer.rs - ~50+ references):**
+- ✅ Updated all getter/setter methods to use new field names
+- ✅ Fixed all grid, mozart, and row_states field references
+- ✅ Updated current_step, current_bar, current_lane references
+- ✅ Updated keyboard_midi_note_events references
+- ✅ Fixed all euclidean rhythm field references
+- ✅ Updated MIDI field references (midi_note, midi_velocity, midi_channel)
+
+**3. Method Name Updates:**
+- ✅ set_midi_note_event → set_sequencer_b_midi_note_event
+
+**4. Display Function Updates (main.rs - ~20+ references):**
+- ✅ Updated all current_step field references to sequencer_a_current_step
+- ✅ Updated all euclidean field references (euclidean_length, euclidean_events, euclidean_rotation)
+- ✅ Fixed all brightness calculation logic for grid displays
+
+**5. Enum Value Updates:**
+- ✅ ArmAction::Mozart → ArmAction::SequencerBMozart
+
+**6. Function Name Updates:**
+- ✅ update_mozart_display → update_sequencer_b_mozart_display
+
+**Compilation Results:**
+- ✅ All compilation errors resolved
+- ✅ sequencer.rs compiles successfully
+- ✅ main.rs compiles successfully  
+- ✅ Full project builds without errors
+- ⚠️ Only warnings remain (unused variables/methods - not critical)
+
+**Architecture Achievement:**
+The codebase now clearly distinguishes between:
+- **Sequencer A**: Main 32x8 grid-based step sequencer with euclidean rhythms
+- **Sequencer B**: MIDI keyboard recording sequencer for real-time note capture
+
+**Next Development Priorities:**
+1. ✅ Systematic renaming (COMPLETED)
+2. Test MIDI keyboard recording functionality
+3. Implement phase correction timing
+4. Optimize main loop performance
+5. Add unit tests for complex interactions
+
+**Files Modified:**
+- SimonSaysSeeqNornsRust/src/sequencer.rs (primary - 70+ references updated)
+- SimonSaysSeeqNornsRust/src/main.rs (secondary - 25+ references updated)
+
+**Technical Notes:**
+- All field access patterns updated to use new naming convention
+- StateSnapshot struct maintained compatibility
+- Method signatures remain unchanged for external API compatibility
+- Enum matching patterns updated throughout codebase

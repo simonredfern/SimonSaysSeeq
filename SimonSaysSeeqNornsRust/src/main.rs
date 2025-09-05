@@ -31,7 +31,7 @@ enum ArmAction {
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
     PresetGrid,        // Column 10
-    Mozart,            // Column 15
+    SequencerBMozart,  // Column 15
 }
 
 impl ArmAction {
@@ -45,7 +45,7 @@ impl ArmAction {
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
             10 => Some(ArmAction::PresetGrid),
-            15 => Some(ArmAction::Mozart),
+            15 => Some(ArmAction::SequencerBMozart),
             _ => None,
         }
     }
@@ -60,7 +60,7 @@ impl ArmAction {
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
             ArmAction::PresetGrid => 10,
-            ArmAction::Mozart => 15,
+            ArmAction::SequencerBMozart => 15,
         }
     }
 }
@@ -534,7 +534,7 @@ impl SimonSaysSeeq {
         } else {
             // Not an ARM button - check Mozart mode
             if let Some(arm_action) = self.active_arm_action {
-                if matches!(arm_action, ArmAction::Mozart) {
+                if matches!(arm_action, ArmAction::SequencerBMozart) {
                     // Mozart mode active and this is not an ARM button
                     if pressed && y <= 7 {
                         self.handle_mozart_grid_press(x, y)?;
@@ -586,8 +586,8 @@ impl SimonSaysSeeq {
                             
                             // Get current euclidean parameters to preserve length and rotation
                             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_length = row_state.euclidean_length + 1; // Convert from 0-based to step count
-                                let current_rotation = row_state.euclidean_rotation;
+                                let current_length = row_state.sequencer_a_euclidean_length + 1; // Convert from 0-based to step count
+                                let current_rotation = row_state.sequencer_a_euclidean_rotation;
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, current_length, current_rotation);
                             } else {
                                 // Fallback if row_state is not available
@@ -605,8 +605,8 @@ impl SimonSaysSeeq {
                             
                             // Get current euclidean parameters to preserve events and rotation
                             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_events = row_state.euclidean_events;
-                                let current_rotation = row_state.euclidean_rotation;
+                                let current_events = row_state.sequencer_a_euclidean_events;
+                                let current_rotation = row_state.sequencer_a_euclidean_rotation;
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
                             } else {
                                 // Fallback if row_state is not available
@@ -623,8 +623,8 @@ impl SimonSaysSeeq {
                             
                             // Get current euclidean parameters to preserve events and length
                             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_events = row_state.euclidean_events;
-                                let current_length = row_state.euclidean_length + 1; // Convert from 0-based to step count
+                                let current_events = row_state.sequencer_a_euclidean_events;
+                                let current_length = row_state.sequencer_a_euclidean_length + 1; // Convert from 0-based to step count
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, current_length, rotation);
                             } else {
                                 // Fallback if row_state is not available
@@ -819,7 +819,7 @@ impl SimonSaysSeeq {
                             // ARM button released - deactivate mode
                             if matches!(self.active_arm_action, Some(ref current) if *current == arm_action) {
                                 // Special handling for Mozart mode deactivation
-                                if matches!(arm_action, ArmAction::Mozart) {
+                                if matches!(arm_action, ArmAction::SequencerBMozart) {
                                     info!("ARM MOZART: Deactivated - restoring normal grid display");
                                 }
                                 self.active_arm_action = None;
@@ -828,7 +828,7 @@ impl SimonSaysSeeq {
                                 {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     // Restore normal display when Mozart mode is deactivated
-                                    if matches!(arm_action, ArmAction::Mozart) {
+                                    if matches!(arm_action, ArmAction::SequencerBMozart) {
                                         self.update_grid_display()?;
                                     }
                                     self.grid.refresh()?;
@@ -901,12 +901,12 @@ impl SimonSaysSeeq {
                 // Preset grid functionality - placeholder
                 info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
             }
-            ArmAction::Mozart => {
+            ArmAction::SequencerBMozart => {
                 // Mozart mode - show keyboard MIDI notes on both grids
                 info!("ARM MOZART: Activated - showing 32-step keyboard MIDI sequence");
                 #[cfg(feature = "hardware")]
                 {
-                    self.update_mozart_display()?;
+                    self.update_sequencer_b_mozart_display()?;
                 }
             }
         }
@@ -989,7 +989,7 @@ impl SimonSaysSeeq {
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode active - display already updated when mode was activated
                 return Ok(());
             }
@@ -1055,7 +1055,7 @@ impl SimonSaysSeeq {
 
         // Check if Mozart mode is active - show on BOTH grids
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1105,7 +1105,7 @@ impl SimonSaysSeeq {
                 // Update this row's LEDs based on pattern values and current step
                 for seq_x in 0..=15 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
 
                     // Calculate brightness based on pattern and current position
                     // Enhanced brightness for better scroll position visibility
@@ -1130,7 +1130,7 @@ impl SimonSaysSeeq {
     fn update_32step_display(&mut self, grid_one: &str, grid_two: &str) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1143,8 +1143,8 @@ impl SimonSaysSeeq {
         for seq_y in 0..=6 {
             let row_states = self.sequencer.get_row_states(seq_y);
             if let Some(row_state) = row_states {
-                let current_step = row_state.current_step;
-                let euclidean_length = row_state.euclidean_length;
+                let current_step = row_state.sequencer_a_current_step;
+                let euclidean_length = row_state.sequencer_a_euclidean_length;
                 
                 if seq_y == 0 { // Only log for first row to avoid spam
                     info!("DEBUG: Row {} - current_step: {}, euclidean_length: {}", seq_y, current_step, euclidean_length);
@@ -1235,7 +1235,7 @@ impl SimonSaysSeeq {
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1256,7 +1256,7 @@ impl SimonSaysSeeq {
             
             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.current_step;
+                let is_current_step = seq_x == row_state.sequencer_a_current_step;
 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => 0,
@@ -1278,7 +1278,7 @@ impl SimonSaysSeeq {
             if seq_x <= 15 {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
 
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,
@@ -1308,7 +1308,7 @@ impl SimonSaysSeeq {
             
             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.current_step;
+                let is_current_step = seq_x == row_state.sequencer_a_current_step;
                 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => 0,     // No pattern, not current position
@@ -1339,7 +1339,7 @@ impl SimonSaysSeeq {
             if seq_x <= 15 {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,
@@ -1453,7 +1453,7 @@ impl SimonSaysSeeq {
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1475,7 +1475,7 @@ impl SimonSaysSeeq {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                     for seq_x in 0..=31 {
                         let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let is_current_step = seq_x == row_state.current_step;
+                        let is_current_step = seq_x == row_state.sequencer_a_current_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
                             (false, false) => 0,     // No pattern, not current position
@@ -1505,7 +1505,7 @@ impl SimonSaysSeeq {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                     for seq_x in 0..=15 {
                         let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let is_current_step = seq_x == row_state.current_step;
+                        let is_current_step = seq_x == row_state.sequencer_a_current_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
                             (false, false) => 0,
@@ -1533,7 +1533,7 @@ impl SimonSaysSeeq {
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
         // Check if Mozart mode is active first
         if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::Mozart) {
+            if matches!(arm_action, ArmAction::SequencerBMozart) {
                 // Mozart mode: Display already updated when mode was activated
                 return Ok(());
             }
@@ -1550,11 +1550,11 @@ impl SimonSaysSeeq {
             info!("ARM DEBUG: refresh_all_row_leds() called for row {} on both grids", row);
             
             if let Some(row_state) = self.sequencer.get_row_states(row) {
-                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, row_state.current_step);
+                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, row_state.sequencer_a_current_step);
                 
                 for seq_x in 0..=31 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == row_state.current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,
@@ -1580,7 +1580,7 @@ impl SimonSaysSeeq {
             if let Some(row_state) = self.sequencer.get_row_states(row) {
                 for seq_x in 0..=15 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == row_state.current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,
@@ -1674,7 +1674,7 @@ impl SimonSaysSeeq {
 
 
     /// Handle CO2-influenced CV output
-    fn update_mozart_display(&mut self) -> Result<()> {
+    fn update_sequencer_b_mozart_display(&mut self) -> Result<()> {
         let connected_grids = self.grid.get_connected_grids();
         
         // Display keyboard MIDI note events on BOTH grids when Mozart is armed
@@ -1715,11 +1715,11 @@ impl SimonSaysSeeq {
             if let Some(row_state) = row_states {
                 let current_step_in_grid = if step_offset == 0 {
                     // Grid ONE (steps 0-15)
-                    if row_state.current_step <= 15 { Some(row_state.current_step) } else { None }
+                    if row_state.sequencer_a_current_step <= 15 { Some(row_state.sequencer_a_current_step) } else { None }
                 } else {
                     // Grid TWO (steps 16-31)
-                    if row_state.current_step >= 16 && row_state.current_step <= 31 { 
-                        Some(row_state.current_step - 16) 
+                    if row_state.sequencer_a_current_step >= 16 && row_state.sequencer_a_current_step <= 31 { 
+                        Some(row_state.sequencer_a_current_step - 16) 
                     } else { 
                         None 
                     }
@@ -1885,7 +1885,7 @@ impl SimonSaysSeeq {
                 let lane = 1; // Use first lane for keyboard recording
                 let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
                 
-                self.sequencer.set_midi_note_event(
+                self.sequencer.set_sequencer_b_midi_note_event(
                     lane,
                     current_bar,
                     current_step,
@@ -1906,7 +1906,7 @@ impl SimonSaysSeeq {
                 let lane = 1; // Use first lane for keyboard recording
                 let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
                 
-                self.sequencer.set_midi_note_event(
+                self.sequencer.set_sequencer_b_midi_note_event(
                     lane,
                     current_bar,
                     current_step,
