@@ -5034,6 +5034,36 @@ kill 14815 16252 16404 16463
 - Verify keyboard_midi_note_events array is being populated
 - Test MIDI keyboard output (note playback)
 
+## 2025-09-05 - MIDI Port Logging Issue
+
+### Problem: MIDI Port Logging Still Not Working
+- Fixed auto-detection logic to respect auto_detect_clock: true setting
+- Added comprehensive port logging to show both clock and keyboard ports
+- Fixed initialization order (clock detection before output assignment)  
+- Enhanced logging to clearly identify which port is used for what purpose
+- However, user reports the logging still doesn't work on actual hardware
+
+### Expected Logging (should appear but doesn't):
+```
+MIDI Manager initialized - auto_detect_clock: true, device: 'USB MIDI Interface'
+Starting MIDI auto-detection flow...
+Clock scan completed - reliable sources: ["USB MIDI Interface:USB MIDI Interface MIDI 1 28:0"]
+MIDI PORT ASSIGNMENTS COMPLETE:
+   MIDI CLOCK INPUT:        USB MIDI Interface:USB MIDI Interface MIDI 1 28:0 (sequencer tempo sync)
+   MAIN SEQUENCER OUTPUT:   USB MIDI Interface:USB MIDI Interface MIDI 1 28:0 (pattern playback)
+   KEYBOARD INPUT/OUTPUT:   USB MIDI Interface:USB MIDI Interface MIDI 1 24:0 (note input/playback)
+```
+
+### Investigation Required:
+- Check actual log output on hardware to see what messages DO appear
+- Verify auto-detection is actually being triggered vs manual mode
+- Check if clock scan is finding the expected ports
+- Determine if logging is being filtered or redirected
+- May need to add even more diagnostic logging to trace execution path
+
+### Status: NEEDS HUMAN INVESTIGATION IN MORNING
+The logging fixes were implemented but user reports they still don't see the expected port assignments in the logs. Need to examine actual hardware log output to determine root cause.
+
 ## 2025-09-05 01:39:59 UTC - SimonSaysSeeq Rust v0.1.0 Startup
 Build Profile: debug
 Features: MIDI=true, Hardware=true
