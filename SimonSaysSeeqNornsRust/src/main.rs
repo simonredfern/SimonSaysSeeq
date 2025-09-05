@@ -471,6 +471,16 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
 
+                // Update sequencer_b display to show scrolling position (only when ARM SequencerB is active)
+                #[cfg(feature = "hardware")]
+                {
+                    if let Some(arm_action) = self.active_arm_action {
+                        if matches!(arm_action, ArmAction::SequencerB) {
+                            self.update_sequencer_b_mozart_display()?;
+                        }
+                    }
+                }
+
                 // Grid updates now handled by selective GridUpdate events
                 // No need for full grid refresh on every step
             }
