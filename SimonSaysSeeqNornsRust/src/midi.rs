@@ -412,6 +412,7 @@ impl MidiManager {
             Ok(connection) => {
                 if self.auto_detect_clock && !self.input_device_name.is_empty() {
                     info!("⏱️  MIDI CLOCK INPUT PORT: {} (for tempo sync)", port_name);
+                    info!("🎵 MAIN SEQUENCER OUTPUT PORT: {} (for pattern playback)", port_name);
                 } else {
                     info!("🎹 MIDI KEYBOARD INPUT PORT: {} (for note input)", port_name);
                 }
@@ -1000,7 +1001,7 @@ impl MidiManager {
                     info!("════════════════════════════════════════════════════════");
                     info!("🎯 MIDI PORT ASSIGNMENTS COMPLETE:");
                     info!("   ⏱️  MIDI CLOCK INPUT:    {} (sequencer tempo sync)", selected_source);
-                    info!("   🎵 SEQUENCER OUTPUT:     {} (pattern playback)", selected_source);
+                    info!("   🎵 MAIN SEQUENCER OUTPUT: {} (pattern playback)", selected_source);
                     if let Some(ref _conn) = self.output_connection {
                         // Get the actual output port name for display
                         let midi_out = MidiOutput::new("Port Query").ok();
@@ -1031,7 +1032,7 @@ impl MidiManager {
                     info!("════════════════════════════════════════════════════════");
                     info!("🎯 MIDI PORT ASSIGNMENTS COMPLETE:");
                     info!("   ⏱️  MIDI CLOCK INPUT:    {} (sequencer tempo sync)", first_source);
-                    info!("   🎵 SEQUENCER OUTPUT:     {} (pattern playback)", first_source);
+                    info!("   🎵 MAIN SEQUENCER OUTPUT: {} (pattern playback)", first_source);
                     if let Some(ref _conn) = self.output_connection {
                         // Get the actual output port name for display
                         let midi_out = MidiOutput::new("Port Query").ok();
