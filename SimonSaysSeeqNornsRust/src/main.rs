@@ -471,6 +471,16 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
 
+                // Update sequencer_b display to show scrolling position (only when ARM SequencerB is active)
+                #[cfg(feature = "hardware")]
+                {
+                    if let Some(arm_action) = self.active_arm_action {
+                        if matches!(arm_action, ArmAction::SequencerB) {
+                            self.update_sequencer_b_mozart_display()?;
+                        }
+                    }
+                }
+
                 // Grid updates now handled by selective GridUpdate events
                 // No need for full grid refresh on every step
             }
@@ -722,8 +732,29 @@ impl SimonSaysSeeq {
                             }
                             return Ok(());
                         }
-                        // GRID_TWO tempo controls (columns 10, 12-15)
-                        else if x == 10 || (x >= 12 && x <= 15) {
+                        // GRID_TWO sequencer_b clear button (column 2)
+                        else if x == 2 {
+                            if pressed {
+                                // Clear sequencer_b keyboard MIDI notes button
+                                self.sequencer.clear_sequencer_b_midi_notes();
+                                info!("handle_grid_press says: Cleared all sequencer_b keyboard MIDI notes via GRID_TWO column 2");
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 15, "clear_button_press")?;
+                                    self.grid.refresh()?;
+                                }
+                            } else {
+                                // Button release - turn off LED
+                                #[cfg(feature = "hardware")]
+                                {
+                                    self.grid.set_led(grid_id, x, seq_y, 0, "clear_button_release")?;
+                                    self.grid.refresh()?;
+                                }
+                            }
+                            return Ok(());
+                        }
+                        // GRID_TWO tempo controls (columns 10-15)
+                        else if x >= 10 && x <= 15 {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
@@ -1730,26 +1761,20 @@ impl SimonSaysSeeq {
         // Add sequencer B current position brightness for scrolling visibility on rows 0-6
         let (sequencer_b_current_step, _sequencer_b_current_bar) = self.sequencer.get_sequencer_b_position();
         
-        for seq_y in 0..=6 {
-            let current_step_in_grid = if step_offset == 0 {
-                // Grid ONE (steps 0-15)
-                if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
-            } else {
-                // Grid TWO (steps 16-31)
-                if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
-                    Some(sequencer_b_current_step - 16) 
-                } else { 
-                    None 
-                }
-            };
-            
-            if let Some(grid_x) = current_step_in_grid {
-                // Add base brightness for sequencer B current position (scroll indicator)
-                self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
+        // Set sequencer B current position indicator (only on current step)
+        let current_step_in_grid = if step_offset == 0 {
+            // Grid ONE (steps 0-15)
+            if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
+        } else {
+            // Grid TWO (steps 16-31)
+            if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
+                Some(sequencer_b_current_step - 16) 
+            } else { 
+                None 
             }
-        }
+        };
         
-        // Then display MIDI note events on top
+        // Display MIDI note events with current position highlighting
         if lane < keyboard_events.len() && bar < keyboard_events[lane].len() {
             for x in 0..16 {
                 let step = step_offset + x;
@@ -1761,14 +1786,31 @@ impl SimonSaysSeeq {
                             if note_on_event.is_active {
                                 // Map MIDI note to grid Y position (notes 36-96 -> rows 0-7)
                                 let grid_y = ((note - 36) / 8).min(7);
-                                let base_brightness = self.grid.get_led(grid_id, x, grid_y);
                                 let note_brightness = (note_on_event.velocity / 8).max(1).min(15) as u8;
-                                // Combine current position brightness with note brightness for better visibility
-                                let final_brightness = (base_brightness + note_brightness).min(15);
+                                
+                                // Check if this is the current step - if so, make it brighter
+                                let final_brightness = if Some(x) == current_step_in_grid && grid_y <= 6 {
+                                    // Current step: combine note brightness with position indicator
+                                    (note_brightness + 6).min(15)
+                                } else {
+                                    // Other steps: just note brightness
+                                    note_brightness
+                                };
+                                
                                 self.grid.set_led(grid_id, x, grid_y, final_brightness, "keyboard_midi_note")?;
                             }
                         }
                     }
+                }
+            }
+        }
+        
+        // Finally, add position indicator for empty steps (rows 0-6 only)
+        if let Some(grid_x) = current_step_in_grid {
+            for seq_y in 0..=6 {
+                // Only set position indicator if there's no MIDI note already lit on this position
+                if self.grid.get_led(grid_id, grid_x, seq_y) == 0 {
+                    self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
                 }
             }
         }
