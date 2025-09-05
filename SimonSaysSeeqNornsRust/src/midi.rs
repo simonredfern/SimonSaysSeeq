@@ -329,6 +329,24 @@ impl MidiManager {
         false
     }
 
+    /// Extract USB interface name from MIDI port name (e.g., "28:0" from "USB MIDI Interface 28:0")
+    #[cfg(feature = "midi")]
+    fn extract_usb_interface_name(&self, port_name: &str) -> String {
+        // Look for pattern like "USB MIDI Interface 28:0" or "Interface 24:0"
+        if let Some(interface_pos) = port_name.find("Interface ") {
+            let after_interface = &port_name[interface_pos + "Interface ".len()..];
+            // Extract the part that looks like "XX:Y" (digits:digits)
+            for word in after_interface.split_whitespace() {
+                if word.contains(':') && word.chars().all(|c| c.is_ascii_digit() || c == ':') {
+                    return word.to_string();
+                }
+            }
+        }
+        
+        // Fallback: return the full port name if pattern not found
+        port_name.to_string()
+    }
+
     /// Find a MIDI port by name (case-insensitive substring match)
     #[cfg(feature = "midi")]
     fn find_port_by_name(&self, midi_out: &MidiOutput, ports: &[MidiOutputPort], target_name: &str) -> Result<MidiOutputPort> {

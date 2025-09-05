@@ -5007,3 +5007,29 @@ kill 14815 16252 16404 16463
 # - Headless operation suitable for live performance
 
 🚀 MILESTONE: Raspberry Pi 5 now functions as dedicated hardware sequencer appliance!
+
+## 2025-01-05 - MIDI Keyboard Issue Status
+
+### Current Problem: MIDI Keyboard Not Working
+- Mozart ARM button (GRID_ONE row 7 column 15) press/release detection works correctly
+- Mozart mode display override works correctly (both grids show keyboard MIDI notes when held)
+- However, MIDI keyboard input is not being captured/recorded into the keyboard_midi_note_events array
+- No MIDI notes appear on the Mozart display when playing the keyboard
+
+### MIDI Port Configuration (Working):
+- Clock Input: USB MIDI Interface 28:0 (tempo sync) ✅
+- Main Sequencer Output: USB MIDI Interface 28:0 (pattern playback) ✅  
+- Keyboard Input: USB MIDI Interface 24:0 (note input) ⚠️ NOT WORKING
+- Keyboard Output: USB MIDI Interface 24:0 (note playback) ⚠️ UNKNOWN STATUS
+
+### Suspected Issues:
+1. MIDI input callback might not be capturing note events properly
+2. set_midi_note_event() might not be called during live keyboard input
+3. Mozart display reads from keyboard_midi_note_events but array might be empty
+4. MIDI input filtering might be rejecting keyboard note messages
+
+### Next Steps:
+- Debug MIDI input message handling
+- Add logging to show incoming MIDI note messages
+- Verify keyboard_midi_note_events array is being populated
+- Test MIDI keyboard output (note playback)
