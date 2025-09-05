@@ -977,6 +977,14 @@ impl SimonSaysSeeq {
 
     /// Selective grid update - only update specific LEDs that changed
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
+        // Check if Mozart mode is active first
+        if let Some(arm_action) = self.active_arm_action {
+            if matches!(arm_action, ArmAction::Mozart) {
+                info!("DEBUG: Mozart mode active in handle_grid_update - showing keyboard MIDI notes");
+                return self.update_mozart_display();
+            }
+        }
+        
         let connected_grids = self.grid.get_connected_grids();
         
         if connected_grids.len() >= 2 {
@@ -1111,6 +1119,14 @@ impl SimonSaysSeeq {
 
     #[cfg(feature = "hardware")]
     fn update_32step_display(&mut self, grid_one: &str, grid_two: &str) -> Result<()> {
+        // Check if Mozart mode is active first
+        if let Some(arm_action) = self.active_arm_action {
+            if matches!(arm_action, ArmAction::Mozart) {
+                info!("DEBUG: Mozart mode active in update_32step_display - showing keyboard MIDI notes");
+                return self.update_mozart_display();
+            }
+        }
+        
         // 32-step mode: Current step flows between grids
         // Steps 0-15: Show on GRID_ONE, Steps 16-31: Show on GRID_TWO
         info!("GRID DEBUG: update_32step_display called - grid_one: {}, grid_two: {}", grid_one, grid_two);
@@ -1208,6 +1224,14 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
+        // Check if Mozart mode is active first
+        if let Some(arm_action) = self.active_arm_action {
+            if matches!(arm_action, ArmAction::Mozart) {
+                info!("DEBUG: Mozart mode active in update_single_led - showing keyboard MIDI notes");
+                return self.update_mozart_display();
+            }
+        }
+        
         // Only update LEDs for rows 0-6 (0-indexed)
         if seq_y > 6 {
             return Ok(());
@@ -1418,6 +1442,14 @@ impl SimonSaysSeeq {
     /// Refresh all pattern LEDs on the grid (used after operations that change multiple positions)
     #[cfg(feature = "hardware")]
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
+        // Check if Mozart mode is active first
+        if let Some(arm_action) = self.active_arm_action {
+            if matches!(arm_action, ArmAction::Mozart) {
+                info!("DEBUG: Mozart mode active in refresh_all_pattern_leds - showing keyboard MIDI notes");
+                return self.update_mozart_display();
+            }
+        }
+        
         info!("ARM DEBUG: refresh_all_pattern_leds() called");
         let connected_grids = self.grid.get_connected_grids();
         info!("ARM DEBUG: Found {} connected grids: {:?}", connected_grids.len(), connected_grids);
@@ -1490,6 +1522,14 @@ impl SimonSaysSeeq {
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
+        // Check if Mozart mode is active first
+        if let Some(arm_action) = self.active_arm_action {
+            if matches!(arm_action, ArmAction::Mozart) {
+                info!("DEBUG: Mozart mode active in refresh_all_row_leds - showing keyboard MIDI notes");
+                return self.update_mozart_display();
+            }
+        }
+        
         let connected_grids = self.grid.get_connected_grids();
         
         if connected_grids.len() >= 2 {
