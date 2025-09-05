@@ -1848,12 +1848,46 @@ impl SimonSaysSeeq {
                 }
             }
             MidiInputEvent::NoteOn { channel, note, velocity } => {
-                info!("handle_midi_input_event says: MIDI Note On - Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
-                // TODO: Could be used for MIDI input recording in future
+                info!("MIDI KEYBOARD RECORDING: Note On - Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
+                
+                // Record MIDI note into keyboard_midi_note_events structure
+                let (current_step, current_bar) = self.sequencer.get_position();
+                let lane = 1; // Use first lane for keyboard recording
+                let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
+                
+                self.sequencer.set_midi_note_event(
+                    lane,
+                    current_bar,
+                    current_step,
+                    note,
+                    true, // is_on = true for Note On
+                    velocity,
+                    tick_offset,
+                );
+                
+                info!("MIDI KEYBOARD RECORDING: Recorded Note On at lane={}, bar={}, step={}, note={}, velocity={}", 
+                     lane, current_bar, current_step, note, velocity);
             }
             MidiInputEvent::NoteOff { channel, note } => {
-                info!("handle_midi_input_event says: MIDI Note Off - Channel: {}, Note: {}", channel, note);
-                // TODO: Could be used for MIDI input recording in future
+                info!("MIDI KEYBOARD RECORDING: Note Off - Channel: {}, Note: {}", channel, note);
+                
+                // Record MIDI note off into keyboard_midi_note_events structure
+                let (current_step, current_bar) = self.sequencer.get_position();
+                let lane = 1; // Use first lane for keyboard recording
+                let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
+                
+                self.sequencer.set_midi_note_event(
+                    lane,
+                    current_bar,
+                    current_step,
+                    note,
+                    false, // is_on = false for Note Off
+                    0, // velocity = 0 for Note Off
+                    tick_offset,
+                );
+                
+                info!("MIDI KEYBOARD RECORDING: Recorded Note Off at lane={}, bar={}, step={}, note={}", 
+                     lane, current_bar, current_step, note);
             }
             MidiInputEvent::ControlChange { .. } => {
                 // Control Change events - currently not handled in main app
