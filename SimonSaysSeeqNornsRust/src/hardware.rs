@@ -2,7 +2,7 @@
 //! 
 //! Handles encoders, buttons, and other input devices on the Norns hardware.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use crossbeam_channel::Sender;
 #[cfg(feature = "hardware")]
 use evdev::{Device, InputEventKind};
@@ -215,13 +215,14 @@ impl NornsHardware {
     fn map_key_to_norns_key(&self, key: evdev::Key) -> Result<u8> {
         use evdev::Key;
         
+        // Reject all computer keyboard keys - only allow hardware buttons
         match key {
-            Key::KEY_LEFTSHIFT | Key::BTN_0 | Key::KEY_ESC => Ok(1),     // K1 (usually not used)
-            Key::KEY_LEFTCTRL | Key::BTN_1 | Key::KEY_ENTER => Ok(2),    // K2 (left/stop)
-            Key::KEY_LEFTALT | Key::BTN_2 | Key::KEY_SPACE => Ok(3),     // K3 (right/start)
+            Key::BTN_0 => Ok(1),     // K1 (hardware button only)
+            Key::BTN_1 => Ok(2),     // K2 (hardware button only)
+            Key::BTN_2 => Ok(3),     // K3 (hardware button only)
             _ => {
-                // Default mapping for other keys
-                Ok(2)
+                // Reject all keyboard keys
+                Err(anyhow!("Computer keyboard keys disabled - use hardware buttons only"))
             }
         }
     }
