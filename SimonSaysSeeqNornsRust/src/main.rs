@@ -1881,8 +1881,8 @@ impl SimonSaysSeeq {
                 info!("MIDI KEYBOARD RECORDING: Note On - Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
                 
                 // Record MIDI note into keyboard_midi_note_events structure
-                let (current_step, current_bar) = self.sequencer.get_position();
-                let lane = 1; // Use first lane for keyboard recording
+                let (current_step, current_bar) = self.sequencer.get_sequencer_b_position();
+                let lane = self.sequencer.get_sequencer_b_lane(); // Use sequencer B's current lane
                 let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
                 
                 self.sequencer.set_sequencer_b_midi_note_event(
@@ -1902,8 +1902,8 @@ impl SimonSaysSeeq {
                 info!("MIDI KEYBOARD RECORDING: Note Off - Channel: {}, Note: {}", channel, note);
                 
                 // Record MIDI note off into keyboard_midi_note_events structure
-                let (current_step, current_bar) = self.sequencer.get_position();
-                let lane = 1; // Use first lane for keyboard recording
+                let (current_step, current_bar) = self.sequencer.get_sequencer_b_position();
+                let lane = self.sequencer.get_sequencer_b_lane(); // Use sequencer B's current lane
                 let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
                 
                 self.sequencer.set_sequencer_b_midi_note_event(

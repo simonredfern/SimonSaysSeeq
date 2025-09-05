@@ -201,6 +201,10 @@ pub struct SequencerState {
     pub sequencer_a_current_step: usize,
     pub sequencer_a_current_bar: usize,
     pub sequencer_a_current_lane: usize,
+    /// Sequencer B Current global position
+    pub sequencer_b_current_step: usize,
+    pub sequencer_b_current_bar: usize,
+    pub sequencer_b_current_lane: usize,
     /// Transport state
     pub is_running: bool,
     /// Core timing variables
@@ -307,6 +311,9 @@ impl Default for SequencerState {
             sequencer_a_current_step: 0,
             sequencer_a_current_bar: 0,
             sequencer_a_current_lane: 1,
+            sequencer_b_current_step: 0,
+            sequencer_b_current_bar: 0,
+            sequencer_b_current_lane: 1,
             is_running: false,
             tempo: 30.0,
             swing_amount: 0.0,
@@ -389,6 +396,8 @@ impl Sequencer {
             // Reset to beginning
             state.sequencer_a_current_step = 0;
             state.sequencer_a_current_bar = 0;
+            state.sequencer_b_current_step = 0;
+            state.sequencer_b_current_bar = 0;
             for row_state in &mut state.sequencer_a_row_states {
                 row_state.sequencer_a_current_step = 0;
             }
@@ -415,6 +424,18 @@ impl Sequencer {
     pub fn get_position(&self) -> (usize, usize) {
         let state = self.state.lock().unwrap();
         (state.sequencer_a_current_step, state.sequencer_a_current_bar)
+    }
+
+    /// Get the current sequencer B position (step, bar)
+    pub fn get_sequencer_b_position(&self) -> (usize, usize) {
+        let state = self.state.lock().unwrap();
+        (state.sequencer_b_current_step, state.sequencer_b_current_bar)
+    }
+
+    /// Get the current sequencer B lane
+    pub fn get_sequencer_b_lane(&self) -> usize {
+        let state = self.state.lock().unwrap();
+        state.sequencer_b_current_lane
     }
 
     /// Set grid value at position with automatic undo snapshot
@@ -628,6 +649,8 @@ impl Sequencer {
         // Reset position
         state.sequencer_a_current_step = 0;
         state.sequencer_a_current_bar = 0;
+        state.sequencer_b_current_step = 0;
+        state.sequencer_b_current_bar = 0;
         for row_state in &mut state.sequencer_a_row_states {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
@@ -884,6 +907,10 @@ impl Sequencer {
         // Update global position counters to match MIDI counters
         state.sequencer_a_current_step = state.midi_step_count;
         state.sequencer_a_current_bar = state.midi_bar_count;
+        
+        // Also advance sequencer B position (independent tracking)
+        state.sequencer_b_current_step = state.midi_step_count;
+        state.sequencer_b_current_bar = state.midi_bar_count;
 
         // Advance each row's current step based on its individual settings
         for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
@@ -1256,6 +1283,8 @@ impl Sequencer {
         pattern_state.is_running = false;
         pattern_state.sequencer_a_current_step = 0;
         pattern_state.sequencer_a_current_bar = 0;
+        pattern_state.sequencer_b_current_step = 0;
+        pattern_state.sequencer_b_current_bar = 0;
 
         let mut patterns = self.patterns.lock().unwrap();
         patterns.insert(pattern_id, pattern_state);
@@ -1282,11 +1311,15 @@ impl Sequencer {
             // Keep current transport state
             let current_step = state.sequencer_a_current_step;
             let current_bar = state.sequencer_a_current_bar;
+            let sequencer_b_current_step = state.sequencer_b_current_step;
+            let sequencer_b_current_bar = state.sequencer_b_current_bar;
             let is_running = state.is_running;
 
             *state = pattern_state.clone();
             state.sequencer_a_current_step = current_step;
             state.sequencer_a_current_bar = current_bar;
+            state.sequencer_b_current_step = sequencer_b_current_step;
+            state.sequencer_b_current_bar = sequencer_b_current_bar;
             state.is_running = is_running;
 
             // Note: current_pattern tracking would need to be moved to state if needed
