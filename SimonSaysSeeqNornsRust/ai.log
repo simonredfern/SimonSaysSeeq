@@ -46,6 +46,20 @@ udevadm info --query=all --name=/dev/ttyACM0
 udevadm info --query=all --name=/dev/ttyACM1
 ls target/debug/
 
+## 2025-01-05 MIDI Dual Port Implementation
+# CHANGE: Implemented separate MIDI input connections for clock and keyboard data
+# REASON: Port 28:0 was not being used for keyboard input when system reconnected to last known clock device
+# PROBLEM: When auto-reconnecting to last known device, system would exit early without setting up keyboard port
+# SOLUTION: Added second MIDI input connection specifically for keyboard data
+# LOCATION: src/midi.rs - MidiManager struct and auto_detect_and_connect method
+# BEFORE: Single input_connection handled both clock and keyboard on same port
+# AFTER: Dual connections - input_connection (clock on 24:0) + keyboard_input_connection (keyboard on 28:0)
+# NEW METHODS: 
+#   - initialize_keyboard_input() - sets up dedicated keyboard input connection
+#   - handle_keyboard_input_message() - processes only keyboard messages (notes, CC)
+# IMPACT: Both USB MIDI ports now properly utilized, keyboard input logs visible
+# STATUS: Successfully implemented, keyboard input now detected and logged
+
 ## 2025-01-02 MIDI Auto-Detection Made Explicit with Simultaneous Button Press
 # CHANGE: Removed periodic MIDI clock detection from main loop, added explicit trigger via GRID_TWO buttons
 # REASON: Periodic MIDI detection was interfering with two-grid scrolling functionality
@@ -5161,5 +5175,21 @@ Build Profile: release
 Features: MIDI=true, Hardware=true
 
 ## 2025-09-05 12:28:33 UTC - SimonSaysSeeq Rust v0.1.0 Startup
+Build Profile: release
+Features: MIDI=true, Hardware=true
+
+## 2025-09-05 12:45:31 UTC - SimonSaysSeeq Rust v0.1.0 Startup
+Build Profile: release
+Features: MIDI=true, Hardware=true
+
+## 2025-09-05 12:49:53 UTC - SimonSaysSeeq Rust v0.1.0 Startup
+Build Profile: release
+Features: MIDI=true, Hardware=true
+
+## 2025-09-05 13:05:39 UTC - SimonSaysSeeq Rust v0.1.0 Startup
+Build Profile: release
+Features: MIDI=true, Hardware=true
+
+## 2025-09-05 13:52:53 UTC - SimonSaysSeeq Rust v0.1.0 Startup
 Build Profile: release
 Features: MIDI=true, Hardware=true
