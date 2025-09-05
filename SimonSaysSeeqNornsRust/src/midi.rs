@@ -1044,9 +1044,23 @@ impl MidiManager {
                 Ok(_) => {
                     // Test if this device actually provides clock
                     std::thread::sleep(std::time::Duration::from_millis(500));
-                    let clock_state = self.clock_state.lock().unwrap();
-                    if matches!(clock_state.source, ClockSource::MidiExternal) {
+                    let is_external_clock = {
+                        let clock_state = self.clock_state.lock().unwrap();
+                        matches!(clock_state.source, ClockSource::MidiExternal)
+                    };
+                    
+                    if is_external_clock {
                         info!("auto_detect_and_connect says: Successfully reconnected to last known device");
+                        // Set up keyboard input/output on the OTHER port
+                        self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(last_device)?;
+                        let keyboard_output_port = self.initialize_output()?;
+                        info!("════════════════════════════════════════════════════════");
+                        info!("MIDI PORT ASSIGNMENTS COMPLETE (RECONNECTED):");
+                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", last_device);
+                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", last_device);
+                        info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
+                        info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", keyboard_output_port);
+                        info!("════════════════════════════════════════════════════════");
                         return Ok(());
                     } else {
                         info!("auto_detect_and_connect says: Last known device no longer provides clock, scanning for new sources");
