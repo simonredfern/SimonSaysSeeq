@@ -1068,7 +1068,7 @@ impl MidiManager {
                     info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
                     self.port_a_midi_clock_in_and_gates_out = selected_source.clone();
                     // Set keyboard input to OTHER port (not the clock port)
-                    self.port_b_midi_keyboard_in_and_out = selected_source.clone(); // For now, use same port
+                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&selected_source)?;
                     self.initialize_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
@@ -1085,6 +1085,8 @@ impl MidiManager {
                     let first_source = summary.reliable_sources[0].clone();
                     info!("auto_detect_and_connect says: Using first reliable source: {}", first_source);
                     self.port_a_midi_clock_in_and_gates_out = first_source.clone();
+                    // Set keyboard input to OTHER port (not the clock port)
+                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&first_source)?;
                     self.initialize_input()?;
                     // Re-initialize output to use OTHER port for keyboard I/O
                     let keyboard_output_port = self.initialize_output()?;
@@ -1120,6 +1122,44 @@ impl MidiManager {
         }
         
         Ok(())
+    }
+
+    /// Find the other USB MIDI device that's not the specified device
+    #[cfg(feature = "midi")]
+    fn find_other_usb_midi_device(&self, exclude_device: &str) -> Result<String> {
+        info!("find_other_usb_midi_device: Looking for other device, excluding: '{}'", exclude_device);
+        let midi_in = MidiInput::new("Device Finder")?;
+        let in_ports = midi_in.ports();
+        
+        // Find all hardware USB MIDI devices
+        let usb_devices: Vec<String> = in_ports.iter()
+            .filter_map(|port| {
+                if let Ok(name) = midi_in.port_name(port) {
+                    if name.contains("USB MIDI Interface") && !self.is_system_or_virtual_port(&name) {
+                        info!("find_other_usb_midi_device: Found USB device: '{}'", name);
+                        Some(name)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        info!("find_other_usb_midi_device: Found {} USB devices total", usb_devices.len());
+
+        // Find a device that's NOT the excluded device
+        for device in &usb_devices {
+            if device != exclude_device {
+                info!("find_other_usb_midi_device: Selected other device: '{}'", device);
+                return Ok(device.clone());
+            }
+        }
+
+        // Fallback: if we can't find another device, use the same device
+        warn!("find_other_usb_midi_device: Could not find other USB MIDI device, using same device for keyboard");
+        Ok(exclude_device.to_string())
     }
 
     /// Schedule a re-detection attempt
