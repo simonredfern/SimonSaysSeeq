@@ -259,6 +259,11 @@ impl MidiManager {
         match midi_out.connect(&selected_port, "SimonSaysSeeq Output") {
             Ok(connection) => {
                 info!("initialize_output says: Connected to MIDI output: {}", port_name);
+                if !self.input_device_name.is_empty() {
+                    info!("MIDI PORT ASSIGNMENT: Keyboard Output → {}", port_name);
+                } else {
+                    info!("MIDI PORT ASSIGNMENT: Output → {}", port_name);
+                }
                 self.output_connection = Some(connection);
             }
             Err(e) => {
@@ -407,6 +412,11 @@ impl MidiManager {
         }, ()) {
             Ok(connection) => {
                 info!("initialize_input says: Connected to MIDI input: {}", port_name);
+                if self.auto_detect_clock {
+                    info!("MIDI PORT ASSIGNMENT: Clock Input → {}", port_name);
+                } else {
+                    info!("MIDI PORT ASSIGNMENT: Input → {}", port_name);
+                }
                 self.input_connection = Some(connection);
             }
             Err(e) => {
@@ -989,6 +999,13 @@ impl MidiManager {
                     // Re-initialize output to use OTHER port for keyboard I/O
                     self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
+                    info!("════════════════════════════════════════════════════════");
+                    info!("MIDI CLOCK DETECTION COMPLETE - PORT ASSIGNMENTS:");
+                    info!("  Clock Input:    {} (tempo sync)", selected_source);
+                    if let Some(ref conn) = self.output_connection {
+                        info!("  Keyboard I/O:   Using OTHER USB interface for notes");
+                    }
+                    info!("════════════════════════════════════════════════════════");
                 } else if !summary.reliable_sources.is_empty() {
                     // Use the first reliable source if none was auto-selected
                     let first_source = summary.reliable_sources[0].clone();
@@ -998,6 +1015,13 @@ impl MidiManager {
                     // Re-initialize output to use OTHER port for keyboard I/O
                     self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
+                    info!("════════════════════════════════════════════════════════");
+                    info!("MIDI CLOCK DETECTION COMPLETE - PORT ASSIGNMENTS:");
+                    info!("  Clock Input:    {} (tempo sync)", first_source);
+                    if let Some(ref conn) = self.output_connection {
+                        info!("  Keyboard I/O:   Using OTHER USB interface for notes");
+                    }
+                    info!("════════════════════════════════════════════════════════");
                 } else {
                     warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
                     self.initialize_input()?;
