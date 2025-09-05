@@ -1108,11 +1108,12 @@ impl SimonSaysSeeq {
                     let is_current_step = seq_x == row_state.current_step;
 
                     // Calculate brightness based on pattern and current position
+                    // Enhanced brightness for better scroll position visibility
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => 0,     // No pattern, not current position
-                        (false, true) => 6,      // No pattern, but current position  
+                        (false, true) => 8,      // No pattern, but current position (increased from 6)
                         (true, false) => 10,     // Has pattern, not current position
-                        (true, true) => 14,      // Has pattern AND current position
+                        (true, true) => 15,      // Has pattern AND current position (increased from 14)
                     };
 
                     // Use native 0-based grid coordinates directly
@@ -1708,6 +1709,30 @@ impl SimonSaysSeeq {
         let lane = 0;  // First lane
         let bar = 0;   // First bar
         
+        // First, add current position brightness for scrolling visibility on rows 0-6
+        for seq_y in 0..=6 {
+            let row_states = self.sequencer.get_row_states(seq_y);
+            if let Some(row_state) = row_states {
+                let current_step_in_grid = if step_offset == 0 {
+                    // Grid ONE (steps 0-15)
+                    if row_state.current_step <= 15 { Some(row_state.current_step) } else { None }
+                } else {
+                    // Grid TWO (steps 16-31)
+                    if row_state.current_step >= 16 && row_state.current_step <= 31 { 
+                        Some(row_state.current_step - 16) 
+                    } else { 
+                        None 
+                    }
+                };
+                
+                if let Some(grid_x) = current_step_in_grid {
+                    // Add base brightness for current position (scroll indicator)
+                    self.grid.set_led(grid_id, grid_x, seq_y, 6, "mozart_current_position")?;
+                }
+            }
+        }
+        
+        // Then display MIDI note events on top
         if lane < keyboard_events.len() && bar < keyboard_events[lane].len() {
             for x in 0..16 {
                 let step = step_offset + x;
@@ -1719,8 +1744,11 @@ impl SimonSaysSeeq {
                             if note_on_event.is_active {
                                 // Map MIDI note to grid Y position (notes 36-96 -> rows 0-7)
                                 let grid_y = ((note - 36) / 8).min(7);
-                                let brightness = (note_on_event.velocity / 8).max(1).min(15) as u8;
-                                self.grid.set_led(grid_id, x, grid_y, brightness, "keyboard_midi_note")?;
+                                let base_brightness = self.grid.get_led(grid_id, x, grid_y);
+                                let note_brightness = (note_on_event.velocity / 8).max(1).min(15) as u8;
+                                // Combine current position brightness with note brightness for better visibility
+                                let final_brightness = (base_brightness + note_brightness).min(15);
+                                self.grid.set_led(grid_id, x, grid_y, final_brightness, "keyboard_midi_note")?;
                             }
                         }
                     }
