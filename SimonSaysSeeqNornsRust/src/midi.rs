@@ -218,7 +218,8 @@ impl MidiManager {
         info!("initialize_output says: Available MIDI output ports:");
         for (i, port) in out_ports.iter().enumerate() {
             if let Ok(name) = midi_out.port_name(port) {
-                info!("initialize_output says:   {}: {}", i, name);
+                let interface_name = self.extract_usb_interface_name(&name);
+                info!("initialize_output says:   {}: {} → interface: '{}'", i, name, interface_name);
             }
         }
         
@@ -231,11 +232,13 @@ impl MidiManager {
                 let clock_port_name = &self.input_device_name;
                 // Extract USB interface identifier from clock port name (e.g., "KeyLab Essential 61" from "KeyLab Essential 61 MIDI 1")
                 let clock_interface = self.extract_usb_interface_name(clock_port_name);
+                info!("DEBUG: Clock interface name: '{}'", clock_interface);
                 
                 // Find a port from a different USB interface
                 let other_port = out_ports.iter().find(|port| {
                     if let Ok(name) = midi_out.port_name(port) {
                         let port_interface = self.extract_usb_interface_name(&name);
+                        info!("DEBUG: Comparing port '{}' → interface '{}' vs clock interface '{}'", name, port_interface, clock_interface);
                         port_interface != clock_interface
                     } else {
                         false
@@ -276,9 +279,51 @@ impl MidiManager {
     
     /// Extract USB interface name from MIDI port name
     /// E.g., "KeyLab Essential 61 MIDI 1" -> "KeyLab Essential 61"
+    /// For identical names, include ALSA port number: "USB MIDI Interface:USB MIDI Interface MIDI 1 24:0" -> "USB MIDI Interface 24:0"
     #[cfg(feature = "midi")]
     fn extract_usb_interface_name(&self, port_name: &str) -> String {
-        // Common patterns to remove from port names to get the interface name
+        // If port name contains ALSA port number (like "24:0"), include it for uniqueness
+        if let Some(alsa_pos) = port_name.rfind(' ') {
+            let potential_alsa = &port_name[alsa_pos + 1..];
+            if potential_alsa.contains(':') && potential_alsa.chars().all(|c| c.is_ascii_digit() || c == ':') {
+                // This has an ALSA port number - check if base name is generic
+                let base_name = &port_name[..alsa_pos];
+                
+                // Extract the actual device name part (remove duplicated parts)
+                let mut device_name = if base_name.contains(':') {
+                    // Format: "USB MIDI Interface:USB MIDI Interface MIDI 1"
+                    if let Some(colon_pos) = base_name.find(':') {
+                        base_name[..colon_pos].trim()
+                    } else {
+                        base_name
+                    }
+                } else {
+                    base_name
+                };
+                
+                // Remove common suffixes
+                let patterns_to_remove = [
+                    " MIDI 1", " MIDI 2", " MIDI 3", " MIDI 4",
+                    " Port 1", " Port 2", " Port 3", " Port 4"
+                ];
+                
+                for pattern in &patterns_to_remove {
+                    if device_name.ends_with(pattern) {
+                        device_name = &device_name[..device_name.len() - pattern.len()];
+                        break;
+                    }
+                }
+                
+                // If it's a generic name like "USB MIDI Interface", include ALSA port for uniqueness
+                if device_name.trim() == "USB MIDI Interface" || device_name.trim() == "MIDI Interface" {
+                    return format!("{} {}", device_name.trim(), potential_alsa);
+                } else {
+                    return device_name.trim().to_string();
+                }
+            }
+        }
+        
+        // Fallback to original logic for non-ALSA ports
         let patterns_to_remove = [
             " MIDI 1", " MIDI 2", " MIDI 3", " MIDI 4",
             " Port 1", " Port 2", " Port 3", " Port 4", 
@@ -383,7 +428,8 @@ impl MidiManager {
         info!("initialize_input says: Available MIDI input ports:");
         for (i, port) in in_ports.iter().enumerate() {
             if let Ok(name) = midi_in.port_name(port) {
-                info!("initialize_input says:   {}: {}", i, name);
+                let interface_name = self.extract_usb_interface_name(&name);
+                info!("initialize_input says:   {}: {} → interface: '{}'", i, name, interface_name);
             }
         }
         
