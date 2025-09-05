@@ -30,6 +30,7 @@ enum ArmAction {
     EuclidianLength,   // Column 5
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
+    SetSeqALength,     // Column 8
     PresetGrid,        // Column 10
     SequencerB,        // Column 15
 }
@@ -44,6 +45,7 @@ impl ArmAction {
             5 => Some(ArmAction::EuclidianLength),
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
+            8 => Some(ArmAction::SetSeqALength),
             10 => Some(ArmAction::PresetGrid),
             15 => Some(ArmAction::SequencerB),
             _ => None,
@@ -59,6 +61,7 @@ impl ArmAction {
             ArmAction::EuclidianLength => 5,
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
+            ArmAction::SetSeqALength => 8,
             ArmAction::PresetGrid => 10,
             ArmAction::SequencerB => 15,
         }
@@ -663,8 +666,33 @@ impl SimonSaysSeeq {
                             info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
+                        ArmAction::SetSeqALength => {
+                            let length = seq_x + 1; // Convert 0-based to 1-based (1-32)
+                            let length = length.clamp(1, 32);
+                            let last_step = length - 1; // Convert back to 0-based for internal storage (0-31)
+                            
+                            info!("ARM SET_SEQ_A_LENGTH: Setting row {} length to {} steps (last_step={})", seq_y, length, last_step);
+                            
+                            // Set the last step for this specific row
+                            if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
+                                row_state.sequencer_a_euclidean_length = last_step;
+                                
+                                // If last_step is 31 (full 32 steps), sync this row with row 0 (master)
+                                if last_step == 31 {
+                                    if let Some(master_row_state) = self.sequencer.get_row_states(0) {
+                                        row_state.sequencer_a_current_step = master_row_state.sequencer_a_current_step;
+                                        info!("ARM SET_SEQ_A_LENGTH: Row {} synced with master row 0 (current_step={})", seq_y, row_state.sequencer_a_current_step);
+                                    }
+                                }
+                                
+                                self.sequencer.set_row_states(seq_y, row_state);
+                                
+                                info!("ARM SET_SEQ_A_LENGTH: Successfully set row {} length to {} steps", seq_y, length);
+                                self.refresh_all_row_leds(seq_y)?;
+                            }
+                        },
                         _ => {
-                            // No active Euclidean ARM action - handle normal grid operation
+                            // Other ARM actions don't have grid-press behavior - handle normal grid operation
                             self.handle_normal_grid_operation(seq_x, seq_y)?;
                         }
                     }
@@ -945,6 +973,12 @@ impl SimonSaysSeeq {
             ArmAction::Ratchet => {
                 // Ratchet functionality - placeholder
                 info!("ARM RATCHET: ARM button activated - not yet implemented");
+            }
+            ArmAction::SetSeqALength => {
+                // Set Seq A Length ARM button activated - waiting for sequence row press
+                info!("ARM SET_SEQ_A_LENGTH: ARM button activated - press sequence row at column N for length N+1 (max 32)");
+                info!("ARM SET_SEQ_A_LENGTH: GRID_ONE columns 0-15 = lengths 1-16, GRID_TWO columns 0-15 = lengths 17-32");
+                info!("ARM SET_SEQ_A_LENGTH: When set to 32 steps, row will sync with master row 0");
             }
             ArmAction::PresetGrid => {
                 // Preset grid functionality - placeholder
