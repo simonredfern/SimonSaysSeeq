@@ -1554,8 +1554,9 @@ impl SimonSaysSeeq {
         
         match event {
             MidiInputEvent::ClockBeat => {
+                // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Flash LEDs 14 and 15 on GRID_TWO for 150ms
-                self.beat_led_flash_until = Some(Instant::now() + Duration::from_millis(150));
+                // self.beat_led_flash_until = Some(Instant::now() + Duration::from_millis(150));
                 
                 // Synchronize sequencer tempo with external MIDI clock (less frequent logging)
                 #[cfg(feature = "midi")]
@@ -1609,8 +1610,9 @@ impl SimonSaysSeeq {
                 info!("STOP TRIGGER: MIDI Clock Stop received from external device - stopping sequencer");
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
+                // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Clear beat LEDs when clock stops
-                self.beat_led_flash_until = None;
+                // self.beat_led_flash_until = None;
                 // Reset phase correction state
                 self.reset_phase_correction();
             }
@@ -1664,36 +1666,37 @@ impl SimonSaysSeeq {
 
     /// Update beat LEDs on GRID_TWO to flash with external MIDI clock beats
     fn update_beat_leds(&mut self) -> Result<()> {
-        let connected_grids = self.grid.get_connected_grids();
-        if connected_grids.len() >= 2 {
-            let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            if let Some(grid_two_id) = grid_two {
-                let brightness = if let Some(flash_until) = self.beat_led_flash_until {
-                    if Instant::now() < flash_until {
-                        8 // Dimmer flash
-                    } else {
-                        self.beat_led_flash_until = None;
-                        0  // Turn off
-                    }
-                } else {
-                    0  // Off by default
-                };
-                
-                #[cfg(feature = "hardware")]
-                {
-                    self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
-                    self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
-                    
-                    // Update snap tempo button LED (column 10, row 7)
-                    let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 0 };
-                    self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
-                    
-                    // Update drift indicator LED (column 11, row 7)
-                    let drift_brightness = self.calculate_drift_brightness();
-                    self.grid.set_led(&grid_two_id, 11, 7, drift_brightness, "drift_indicator")?;
-                }
-            }
-        }
+        // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
+        // let connected_grids = self.grid.get_connected_grids();
+        // if connected_grids.len() >= 2 {
+        //     let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+        //     if let Some(grid_two_id) = grid_two {
+        //         let brightness = if let Some(flash_until) = self.beat_led_flash_until {
+        //             if Instant::now() < flash_until {
+        //                 8 // Dimmer flash
+        //             } else {
+        //                 self.beat_led_flash_until = None;
+        //                 0  // Turn off
+        //             }
+        //         } else {
+        //             0  // Off by default
+        //         };
+        //         
+        //         #[cfg(feature = "hardware")]
+        //         {
+        //             self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
+        //             self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
+        //             
+        //             // Update snap tempo button LED (column 10, row 7)
+        //             let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 0 };
+        //             self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
+        //             
+        //             // Update drift indicator LED (column 11, row 7)
+        //             let drift_brightness = self.calculate_drift_brightness();
+        //             self.grid.set_led(&grid_two_id, 11, 7, drift_brightness, "drift_indicator")?;
+        //         }
+        //     }
+        // }
         
         Ok(())
     }
