@@ -5735,3 +5735,31 @@ The phantom LEDs were LED_DIM brightness LEDs that got set by playhead movement 
 ✅ Grid updates handled consistently by sequencer scroll system
 
 
+
+
+## 2025-09-06 08:18:08 UTC - UNDO/REDO TIMING ISSUES COMPLETELY RESOLVED ✅
+
+### Summary:
+Successfully fixed all UNDO/REDO timing issues that were causing conflicts with the sequencer scroll system and phantom LED problems.
+
+### Issues Fixed:
+1. **Position Preservation**: UNDO/REDO no longer affects sequencer playhead positions (current_step, previous_step)
+2. **Grid Refresh Conflicts**: Removed manual grid refreshes after UNDO/REDO operations  
+3. **Timing Interference**: UNDO/REDO now works independently from transport system
+
+### Technical Changes:
+- Modified StateSnapshot system to preserve transport state during UNDO/REDO
+- Enhanced push_undo_snapshot(), undo(), and redo() methods in sequencer.rs
+- Removed refresh_all_pattern_leds() calls from ARM UNDO/REDO actions in main.rs
+- Changed startup logging from ai.log to ai_startup.log to avoid conflicts
+
+### Result:
+- UNDO/REDO affects ONLY step state (on/off/ratchet), NOT sequencer state (positions)
+- Grid updates handled naturally by sequencer scroll - no manual refresh conflicts
+- Clean separation between pattern editing and transport functionality
+- Phantom LED issue from previous session also resolved via single-grid mode removal
+
+### Status: FULLY WORKING ✅
+UNDO/REDO operations now work cleanly without interfering with running sequencer.
+
+
