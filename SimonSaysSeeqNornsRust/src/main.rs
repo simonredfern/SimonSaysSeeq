@@ -1081,6 +1081,7 @@ impl SimonSaysSeeq {
                     warn!("GRID_DEBUG: NEW step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", new_step, row);
                 }
             }
+        }
         
         // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // Update beat LEDs and ARM button LEDs before final refresh
@@ -1194,6 +1195,7 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_two_id, grid_x, seq_y, brightness, "update_single_led_grid2")?;
                 }
             }
+        }
 
         Ok(())
     }
@@ -1238,6 +1240,7 @@ impl SimonSaysSeeq {
                 
                 self.grid.refresh()?;
             }
+        }
         
         Ok(())
     }
