@@ -5658,3 +5658,43 @@ Features: MIDI=true, Hardware=true
 ## 2025-09-05 16:44:46 UTC - SimonSaysSeeq Rust v0.1.0 Startup
 Build Profile: release
 Features: MIDI=true, Hardware=true
+
+
+## 2025-01-28 - PHANTOM LED PROBLEM SOLVED ✅
+
+### Problem:
+- Phantom dim LEDs (brightness 6) appearing on grid that didn't correspond to sequencer data
+- LEDs would remain dimly lit even when no MIDI notes were triggered
+- Brightness 6 = LED_DIM constant used for 'position only' indicators
+
+### Root Cause:
+- LED_DIM (brightness 6) LEDs were being set when playhead moved through empty steps
+- These 'position only' LEDs were not being properly cleared back to LED_OFF (brightness 0) when playhead moved away
+- Issue was in handle_grid_update() function - clearing logic was correct but had structural problems
+
+### Solution:
+- Complete removal of single-grid mode fallback code simplified LED update logic
+- Fixed missing closing braces in multiple LED update functions:
+  - handle_grid_update()
+  - update_single_led() 
+  - update_single_button_led()
+  - refresh_all_pattern_leds()
+  - refresh_all_row_leds()
+- Consolidated all LED brightness values into named constants:
+  - LED_OFF = 0 (completely dark)
+  - LED_DIM = 6 (empty step, playhead present)
+  - LED_DIM_PLUS = 8 (enhanced visibility)
+  - LED_BRIGHT = 10 (pattern exists, no playhead)
+  - LED_MAX = 14 (pattern + playhead)
+  - LED_TURBO = 15 (unused)
+
+### Key Insight:
+The phantom LEDs were LED_DIM brightness LEDs that got set by playhead movement but never properly cleared due to structural issues in the LED update functions. Removing single-grid mode complexity and fixing the missing braces resolved the state synchronization issues.
+
+### Result:
+✅ No more phantom LEDs
+✅ Clean LED state management 
+✅ Simplified dual-grid-only architecture
+✅ All brightness values now use named constants for maintainability
+
+
