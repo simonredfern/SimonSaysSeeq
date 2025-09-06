@@ -99,7 +99,6 @@ pub struct SimonSaysSeeq {
     config: Config,
     running: Arc<AtomicBool>,
     tempo: f32,
-    main_grid_preference: Option<String>,
     // Active ARM action for row 7 (control row) - only one can be active at a time
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
@@ -146,7 +145,6 @@ impl SimonSaysSeeq {
             config,
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
-            main_grid_preference: None, // GRID_ONE will be auto-selected as lowest ID
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
             last_midi_clock_count: 0,
@@ -548,10 +546,11 @@ impl SimonSaysSeeq {
         // Handle ARM buttons first (row 7), even in Sequence B mode - BOTH press and release
         if y == 7 {
             let connected_grids = self.grid.get_connected_grids();
-            if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
+            let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+            if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
                 if ArmAction::from_column(x).is_some() {
                     info!("DEBUG Sequence B: ARM button detected at column {} press={} - proceeding to ARM logic", x, pressed);
-                    // This is an ARM button on main grid - process it directly
+                    // This is an ARM button on GRID_ONE - process it directly
                     // Skip Sequence B mode check and go straight to ARM button logic
                     // (ARM button logic is later in this function)
                 }
@@ -562,22 +561,17 @@ impl SimonSaysSeeq {
 
         // Normal mode: Handle 32-step sequence input
         let connected_grids = self.grid.get_connected_grids();
-        let main_grid = self.get_main_grid_id(&connected_grids);
         
         // Calculate actual sequence step (0-31)
-        let seq_x = if connected_grids.len() >= 2 {
-            let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
-                // GRID_ONE (lowest ID): steps 0-15
-                x
-            } else if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
-                // GRID_TWO (second lowest ID): steps 16-31 (map from grid coordinates 0-15)
-                x + 16
-            } else {
-                x // Fallback
-            }
+        let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+        let seq_x = if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+            // GRID_ONE (lowest ID): steps 0-15
+            x
+        } else if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
+            // GRID_TWO (second lowest ID): steps 16-31 (map from grid coordinates 0-15)
+            x + 16
         } else {
-            x // Single grid fallback
+            return Ok(()); // Invalid grid, ignore
         };
         let seq_y = y;
         
@@ -590,7 +584,7 @@ impl SimonSaysSeeq {
         info!("GRID DEBUG: This press came from: {}", grid_id);
 
         // Handle sequence rows and ARM controls
-        if (connected_grids.len() >= 2) || main_grid.as_ref().map(|id| id == grid_id).unwrap_or(false) {
+        if connected_grids.len() >= 2 {
             // Sequence rows 0-6 - only handle button presses, not releases
             if seq_y <= 6 && pressed {
                 // Check if there's an active Euclidean ARM action
@@ -831,8 +825,9 @@ impl SimonSaysSeeq {
                     }
                 }
                 
-                // Regular ARM control handling for main grid or other buttons
-                if connected_grids.is_empty() || Some(grid_id) == self.get_main_grid_id(&connected_grids).as_ref().map(|x| x.as_str()) {
+                // Regular ARM control handling for GRID_ONE buttons
+                let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+                if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
                     info!("ARM CONTROL: Row 7 button {} {} - Current Sequence B: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
 
                     // Check if this column corresponds to a valid ARM action (use original x, not seq_x)
@@ -1086,36 +1081,6 @@ impl SimonSaysSeeq {
                     warn!("GRID_DEBUG: NEW step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", new_step, row);
                 }
             }
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // SINGLE GRID FALLBACK MODE:
-            // When only one grid is connected, we show steps 0-15 only (16-step sequence)
-            // This is backward compatibility - the system was originally designed for single 16x8 grids
-            // Steps 16-31 are ignored in this mode since there's no second grid to display them
-            info!("GRID_DEBUG: Using single grid mode - main_grid_id: {}", main_grid_id);
-            if let Some(row_state) = self.sequencer.get_row_states(row) {
-                // SINGLE GRID MODE: Same brightness logic as dual-grid mode (see detailed comments above)
-                // The brightness system works identically whether using one or two grids
-                // However, coordinate mapping is simpler - no need to split across grids
-                // Single grid mode only supports steps 0-15 (16-step sequences)
-                if old_step <= 15 {
-                    let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
-                    let old_brightness = if old_pattern_value > 0 { LED_BRIGHT } else { LED_OFF };
-                    info!("GRID_DEBUG: Setting OLD LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, old_step, row, old_brightness);
-                    self.grid.set_led(&main_grid_id, old_step, row, old_brightness, "grid_update_old")?;
-                } else {
-                    warn!("GRID_DEBUG: OLD step {} is out of bounds for single grid mode (valid range: 0-15), skipping LED update for row {}", old_step, row);
-                }
-
-                if new_step <= 15 {
-                    let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
-                    let new_brightness = if new_pattern_value > 0 { LED_MAX } else { LED_DIM };
-                    info!("GRID_DEBUG: Setting NEW LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, new_step, row, new_brightness);
-                    self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
-                } else {
-                    warn!("GRID_DEBUG: NEW step {} is out of bounds for single grid mode (valid range: 0-15), skipping LED update for row {}", new_step, row);
-                }
-            }
-        }
         
         // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // Update beat LEDs and ARM button LEDs before final refresh
@@ -1138,10 +1103,8 @@ impl SimonSaysSeeq {
         // No need for full grid refresh - let the sequencer paint the display as it runs
         if connected_grids.len() >= 2 {
             info!("GRID DEBUG: Dual-grid mode active - display will be painted by selective updates");
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            info!("DEBUG: Single grid mode active - display will be painted by selective updates");
         } else {
-            info!("DEBUG: No grids available for display");
+            error!("ERROR: Dual-grid mode required - {} grids connected", connected_grids.len());
         }
 
         // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
@@ -1231,24 +1194,6 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_two_id, grid_x, seq_y, brightness, "update_single_led_grid2")?;
                 }
             }
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // Single grid fallback - only handle steps 0-15
-            if seq_x <= 15 {
-                if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                    let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
-
-                    let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => LED_OFF,
-                        (false, true) => LED_DIM,
-                        (true, false) => LED_BRIGHT,
-                        (true, true) => LED_MAX,
-                    };
-
-                    self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "update_single_led_single")?;
-                }
-            }
-        }
 
         Ok(())
     }
@@ -1293,43 +1238,12 @@ impl SimonSaysSeeq {
                 
                 self.grid.refresh()?;
             }
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // Single grid fallback
-            if seq_x <= 15 {
-                if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                    let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
-                    
-                    let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => LED_OFF,
-                        (false, true) => LED_DIM,
-                        (true, false) => LED_BRIGHT,
-                        (true, true) => LED_MAX,
-                    };
-                    
-                    info!("GRID DEBUG: Setting single LED (single grid) seq_x={}, seq_y={}, brightness={}", seq_x, seq_y, brightness);
-                    self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "single_button_single")?;
-                    
-                    // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
-                    // Update beat LEDs and ARM button LEDs before refresh
-                    // self.update_beat_leds()?;
-                    // self.update_arm_button_leds()?;
-                    
-                    self.grid.refresh()?;
-                }
-            }
-        }
         
         Ok(())
     }
 
 
 
-    /// Set GRID_ONE preference (optional - defaults to lowest ID)
-    pub fn set_main_grid_preference(&mut self, grid_id: String) {
-        info!("Setting GRID_ONE preference to: {}", grid_id);
-        self.main_grid_preference = Some(grid_id);
-    }
 
     /// Get sorted grid IDs - returns (GRID_ONE, GRID_TWO)
     fn get_sorted_grid_ids(&self, connected_grids: &[String]) -> (Option<String>, Option<String>) {
@@ -1349,10 +1263,7 @@ impl SimonSaysSeeq {
         (grid_one, grid_two)
     }
 
-    /// Get GRID_ONE ID (lowest ID) - for compatibility
-    fn get_main_grid_id(&self, connected_grids: &[String]) -> Option<String> {
-        self.get_sorted_grid_ids(connected_grids).0
-    }
+
 
 
     // Helper methods for advanced grid operations
@@ -1453,28 +1364,6 @@ impl SimonSaysSeeq {
                     }
                 }
             }
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            info!("ARM DEBUG: Using single-grid fallback mode - grid: {}", main_grid_id);
-            // Single grid fallback - only show first 16 steps
-            for seq_y in 0..=6 {
-                if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                    for seq_x in 0..=15 {
-                        let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let is_current_step = seq_x == row_state.sequencer_a_current_step;
-                        
-                        let brightness = match (pattern_value > 0, is_current_step) {
-                            (false, false) => LED_OFF,
-                            (false, true) => LED_DIM,
-                            (true, false) => LED_BRIGHT,
-                            (true, true) => LED_MAX,
-                        };
-                        
-                        self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "refresh_pattern_single")?;
-                    }
-                }
-            }
-        } else {
-            info!("ARM DEBUG: No grids found!");
         }
         
         info!("ARM DEBUG: Calling grid.refresh()");
@@ -1521,26 +1410,6 @@ impl SimonSaysSeeq {
                 }
                 self.grid.refresh()?;
                 info!("ARM DEBUG: refresh_all_row_leds() completed successfully for row {}", row);
-            }
-        } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // Single grid fallback
-            info!("ARM DEBUG: refresh_all_row_leds() called for row {} on single grid", row);
-            
-            if let Some(row_state) = self.sequencer.get_row_states(row) {
-                for seq_x in 0..=15 {
-                    let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
-                    
-                    let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => LED_OFF,
-                        (false, true) => LED_DIM,
-                        (true, false) => LED_BRIGHT,
-                        (true, true) => LED_MAX,
-                    };
-                    
-                    self.grid.set_led(&main_grid_id, seq_x, row, brightness, "refresh_all_row_leds")?;
-                }
-                self.grid.refresh()?;
             }
         }
         Ok(())
@@ -1801,18 +1670,19 @@ impl SimonSaysSeeq {
     fn update_arm_button_leds(&mut self) -> Result<()> {
         // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // let connected_grids = self.grid.get_connected_grids();
-        // if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+        // let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+        // if let Some(grid_one_id) = grid_one {
         //     #[cfg(feature = "hardware")]
         //     {
         //         // Update ARM button LED based on active ARM action
         //         if let Some(active_action) = self.active_arm_action {
         //             let active_column = active_action.to_column();
         //             // Keep active ARM button lit at full brightness
-        //             self.grid.set_led(&main_grid_id, active_column, 7, LED_MAX, "arm_button_maintain")?;
+        //             self.grid.set_led(&grid_one_id, active_column, 7, LED_MAX, "arm_button_maintain")?;
         //         } else {
         //             // Turn off all ARM button LEDs when no ARM action is active
         //             for column in [0, 1, 4, 5, 6, 7, 10, 15] { // All ARM action columns
-        //                 self.grid.set_led(&main_grid_id, column, 7, 0, "arm_button_clear")?;
+        //                 self.grid.set_led(&grid_one_id, column, 7, LED_OFF, "arm_button_clear")?;
         //             }
         //         }
         //     }
@@ -1959,24 +1829,8 @@ fn main() -> Result<()> {
 
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
-    let mut main_grid_id: Option<String> = None;
 
-    // Parse grid selection argument
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--main-grid" => {
-                if i + 1 < args.len() {
-                    main_grid_id = Some(args[i + 1].clone());
-                    i += 2;
-                } else {
-                    eprintln!("Error: --main-grid requires a grid ID argument");
-                    std::process::exit(1);
-                }
-            }
-            _ => i += 1,
-        }
-    }
+    // Parse other arguments if needed (currently none)
 
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
@@ -1990,7 +1844,7 @@ fn main() -> Result<()> {
         println!("    --config <FILE>      Use custom configuration file");
         println!("    --no-hardware        Disable hardware features");
         println!("    --no-midi            Disable MIDI features");
-        println!("    --main-grid <ID>     Specify which grid to use as main sequencer (default: m2949672)");
+
 
         return Ok(());
     }
@@ -2033,10 +1887,7 @@ fn main() -> Result<()> {
     // Create and run application
     let mut app = SimonSaysSeeq::new()?;
 
-    // Set GRID_ONE preference if specified
-    if let Some(grid_id) = main_grid_id {
-        app.set_main_grid_preference(grid_id);
-    }
+    // Single-grid mode removed - application now requires exactly 2 grids
 
     app.run()?;
 
