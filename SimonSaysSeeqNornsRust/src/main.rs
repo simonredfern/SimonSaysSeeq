@@ -21,6 +21,13 @@ mod screen;
 mod config;
 mod co2;
 
+// LED brightness constants
+const LED_OFF: u8 = 0;      // Empty step, no playhead (LED off)
+const LED_DIM: u8 = 6;      // Empty step, playhead present (position only)
+const LED_BRIGHT: u8 = 10;  // Pattern exists, no playhead (pattern only)
+const LED_MAX: u8 = 14;     // Pattern exists, playhead present (pattern + position)
+const LED_TURBO: u8 = 15;   // Maximum brightness (ARM buttons, flashing, etc.)
+
 /// ARM actions that can be triggered from row 7 (control row) of the grid
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ArmAction {
@@ -845,7 +852,7 @@ impl SimonSaysSeeq {
                             info!("ARM CONTROL: {:?} PRESSED - mode ON (column {})", arm_action, x);
                             #[cfg(feature = "hardware")]
                             {
-                                self.grid.set_led(grid_id, x, seq_y, 15, "arm_press")?;
+                                self.grid.set_led(grid_id, x, seq_y, LED_MAX, "arm_press")?;
                                 self.grid.refresh()?;
                             }
                             self.handle_arm_action(arm_action)?;
@@ -1027,7 +1034,7 @@ impl SimonSaysSeeq {
                 // Without this check, ALL old positions would go dark, hiding the pattern data.
                 // Users need to see both: WHERE beats are programmed (dim LEDs) AND where the playhead is (bright LED)
                 let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
-                let old_brightness = if old_pattern_value > 0 { 10 } else { 0 };
+                let old_brightness = if old_pattern_value > 0 { LED_BRIGHT } else { LED_OFF };
                 
                 // DUAL-GRID COORDINATE MAPPING:
                 // Steps 0-15  → GRID_ONE (coordinates 0-15)  
@@ -1062,7 +1069,7 @@ impl SimonSaysSeeq {
                 //   - Steps WITH beats that are playing (brightness 14)
                 //   - Steps WITHOUT beats where playhead is just passing through (brightness 6)
                 let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
-                let new_brightness = if new_pattern_value > 0 { 14 } else { 6 };
+                let new_brightness = if new_pattern_value > 0 { LED_MAX } else { LED_DIM };
                 
                 // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
@@ -1091,7 +1098,7 @@ impl SimonSaysSeeq {
                 // Single grid mode only supports steps 0-15 (16-step sequences)
                 if old_step <= 15 {
                     let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
-                    let old_brightness = if old_pattern_value > 0 { 10 } else { 0 };
+                    let old_brightness = if old_pattern_value > 0 { LED_BRIGHT } else { LED_OFF };
                     info!("GRID_DEBUG: Setting OLD LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, old_step, row, old_brightness);
                     self.grid.set_led(&main_grid_id, old_step, row, old_brightness, "grid_update_old")?;
                 } else {
@@ -1100,7 +1107,7 @@ impl SimonSaysSeeq {
 
                 if new_step <= 15 {
                     let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
-                    let new_brightness = if new_pattern_value > 0 { 14 } else { 6 };
+                    let new_brightness = if new_pattern_value > 0 { LED_MAX } else { LED_DIM };
                     info!("GRID_DEBUG: Setting NEW LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, new_step, row, new_brightness);
                     self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
                 } else {
@@ -1169,10 +1176,10 @@ impl SimonSaysSeeq {
                     // Calculate brightness based on pattern and current position
                     // Enhanced brightness for better scroll position visibility
                     let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => 0,     // No pattern, not current position
-                        (false, true) => 8,      // No pattern, but current position (increased from 6)
-                        (true, false) => 10,     // Has pattern, not current position
-                        (true, true) => 15,      // Has pattern AND current position (increased from 14)
+                        (false, false) => LED_OFF,     // No pattern, not current position
+                        (false, true) => 8,            // No pattern, but current position (slightly brighter than LED_DIM)
+                        (true, false) => LED_BRIGHT,   // Has pattern, not current position
+                        (true, true) => LED_MAX,       // Has pattern AND current position (maximum brightness)
                     };
 
                     // Use native 0-based grid coordinates directly
@@ -1800,7 +1807,7 @@ impl SimonSaysSeeq {
         //         if let Some(active_action) = self.active_arm_action {
         //             let active_column = active_action.to_column();
         //             // Keep active ARM button lit at full brightness
-        //             self.grid.set_led(&main_grid_id, active_column, 7, 15, "arm_button_maintain")?;
+        //             self.grid.set_led(&main_grid_id, active_column, 7, LED_MAX, "arm_button_maintain")?;
         //         } else {
         //             // Turn off all ARM button LEDs when no ARM action is active
         //             for column in [0, 1, 4, 5, 6, 7, 10, 15] { // All ARM action columns
