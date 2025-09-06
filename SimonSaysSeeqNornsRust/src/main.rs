@@ -888,11 +888,7 @@ impl SimonSaysSeeq {
                     Ok(description) => info!("ARM UNDO: Successfully undid: {}", description),
                     Err(e) => warn!("ARM UNDO: Cannot undo: {}", e),
                 }
-                #[cfg(feature = "hardware")]
-                {
-                    // Refresh all pattern LEDs after undo - pattern state may have changed
-                    self.refresh_all_pattern_leds()?;
-                }
+                // Grid updates will be handled naturally by sequencer scroll - no manual refresh needed
             }
             ArmAction::Redo => {
                 // Redo last undone action
@@ -900,11 +896,7 @@ impl SimonSaysSeeq {
                     Ok(description) => info!("ARM REDO: Successfully redid: {}", description),
                     Err(e) => warn!("ARM REDO: Cannot redo: {}", e),
                 }
-                #[cfg(feature = "hardware")]
-                {
-                    // Refresh all pattern LEDs after redo - pattern state may have changed
-                    self.refresh_all_pattern_leds()?;
-                }
+                // Grid updates will be handled naturally by sequencer scroll - no manual refresh needed
             }
             ArmAction::EuclidianEvents => {
                 // Euclidean Events ARM button activated - waiting for sequence row press

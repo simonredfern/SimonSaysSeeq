@@ -1015,10 +1015,19 @@ impl Sequencer {
     /// Push current state to undo stack
     fn push_undo_snapshot(&self, description: String) {
         let state = self.state.lock().unwrap();
+        
+        // Clone row states but preserve current step positions
+        let mut row_states_snapshot = state.sequencer_a_row_states.clone();
+        for row_state in &mut row_states_snapshot {
+            // Don't save current step positions - these should not be undone
+            row_state.sequencer_a_current_step = 0;
+            row_state.sequencer_a_previous_step = 0;
+        }
+        
         let snapshot = StateSnapshot {
             grid: state.sequencer_a_grid.clone(),
             mozart: state.sequencer_a_mozart.clone(),
-            row_states: state.sequencer_a_row_states.clone(),
+            row_states: row_states_snapshot,
             timestamp: std::time::SystemTime::now(),
             description: description.clone(),
         };
@@ -1047,24 +1056,43 @@ impl Sequencer {
             return Err(anyhow::anyhow!("Nothing to undo"));
         }
 
-        // Push current state to redo stack
+        // Push current state to redo stack (preserve positions)
         let current_state = self.state.lock().unwrap();
+        let mut current_row_states = current_state.sequencer_a_row_states.clone();
+        for row_state in &mut current_row_states {
+            row_state.sequencer_a_current_step = 0;
+            row_state.sequencer_a_previous_step = 0;
+        }
+        
         let current_snapshot = StateSnapshot {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
-            row_states: current_state.sequencer_a_row_states.clone(),
+            row_states: current_row_states,
             timestamp: std::time::SystemTime::now(),
             description: "Current state before undo".to_string(),
         };
+        
+        // Preserve current positions before restoring
+        let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
+            .collect();
         drop(current_state);
 
         redo_stack.push_back(current_snapshot);
 
         // Pop from undo stack and apply
-        if let Some(snapshot) = undo_stack.pop_back() {
+        if let Some(mut snapshot) = undo_stack.pop_back() {
             let mut state = self.state.lock().unwrap();
             state.sequencer_a_grid = snapshot.grid;
             state.sequencer_a_mozart = snapshot.mozart;
+            
+            // Restore row states but keep current positions
+            for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
+                if i < current_positions.len() {
+                    row_state.sequencer_a_current_step = current_positions[i].0;
+                    row_state.sequencer_a_previous_step = current_positions[i].1;
+                }
+            }
             state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();
@@ -1084,24 +1112,43 @@ impl Sequencer {
             return Err(anyhow::anyhow!("Nothing to redo"));
         }
 
-        // Push current state to undo stack
+        // Push current state to undo stack (preserve positions)
         let current_state = self.state.lock().unwrap();
+        let mut current_row_states = current_state.sequencer_a_row_states.clone();
+        for row_state in &mut current_row_states {
+            row_state.sequencer_a_current_step = 0;
+            row_state.sequencer_a_previous_step = 0;
+        }
+        
         let current_snapshot = StateSnapshot {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
-            row_states: current_state.sequencer_a_row_states.clone(),
+            row_states: current_row_states,
             timestamp: std::time::SystemTime::now(),
             description: "State before redo".to_string(),
         };
+        
+        // Preserve current positions before restoring
+        let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
+            .collect();
         drop(current_state);
 
         undo_stack.push_back(current_snapshot);
 
         // Pop from redo stack and apply
-        if let Some(snapshot) = redo_stack.pop_back() {
+        if let Some(mut snapshot) = redo_stack.pop_back() {
             let mut state = self.state.lock().unwrap();
             state.sequencer_a_grid = snapshot.grid;
             state.sequencer_a_mozart = snapshot.mozart;
+            
+            // Restore row states but keep current positions
+            for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
+                if i < current_positions.len() {
+                    row_state.sequencer_a_current_step = current_positions[i].0;
+                    row_state.sequencer_a_previous_step = current_positions[i].1;
+                }
+            }
             state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();

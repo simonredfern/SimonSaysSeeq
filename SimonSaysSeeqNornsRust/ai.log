@@ -5698,3 +5698,40 @@ The phantom LEDs were LED_DIM brightness LEDs that got set by playhead movement 
 ✅ All brightness values now use named constants for maintainability
 
 
+
+
+## 2025-01-28 - UNDO/REDO TIMING BUG FIXED ✅
+
+### Problem:
+- Undo/Redo was causing timing conflicts with natural sequencer scroll
+- Undo/Redo was incorrectly changing sequencer position (current_step, previous_step)
+- Grid refreshes after Undo/Redo were creating LED update conflicts
+
+### Root Cause:
+1. StateSnapshot included row_states with sequencer_a_current_step and sequencer_a_previous_step
+2. Undo/Redo was restoring playhead positions, interfering with running sequencer
+3. Manual grid refreshes after Undo/Redo were conflicting with natural scroll updates
+
+### Solution:
+1. **Preserve Sequencer Position During Undo/Redo**:
+   - Modified push_undo_snapshot() to zero out current_step and previous_step before saving
+   - Modified undo() and redo() to preserve current positions before restoring snapshot
+   - Restored snapshots now maintain current playhead positions
+   
+2. **Remove Manual Grid Refreshes**:
+   - Removed refresh_all_pattern_leds() calls from ARM Undo/Redo actions  
+   - Natural sequencer scroll will update grid LEDs automatically
+   - Eliminates timing conflicts between manual refreshes and scroll updates
+
+### Key Changes:
+- sequencer.rs: Enhanced undo/redo to preserve transport state
+- main.rs: Removed grid refreshes from handle_arm_action() Undo/Redo cases
+- Undo/Redo now ONLY affects step state (on/off/ratchet), NOT sequencer state (positions)
+
+### Result:
+✅ Undo/Redo no longer interferes with sequencer playhead position  
+✅ No more timing conflicts between manual and natural grid updates
+✅ Simplified and more reliable Undo/Redo behavior
+✅ Grid updates handled consistently by sequencer scroll system
+
+
