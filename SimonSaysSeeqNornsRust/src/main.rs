@@ -24,6 +24,7 @@ mod co2;
 // LED brightness constants
 const LED_OFF: u8 = 0;      // Empty step, no playhead (LED off)
 const LED_DIM: u8 = 6;      // Empty step, playhead present (position only)
+const LED_DIM_PLUS: u8 = 8; // Empty step, playhead present (enhanced visibility)
 const LED_BRIGHT: u8 = 10;  // Pattern exists, no playhead (pattern only)
 const LED_MAX: u8 = 14;     // Pattern exists, playhead present (pattern + position)
 const LED_TURBO: u8 = 15;   // Maximum brightness (ARM buttons, flashing, etc.)
@@ -808,7 +809,7 @@ impl SimonSaysSeeq {
                                 let brightness = match x {
                                     10 => {
                                         // Snap tempo button - show state (ON/OFF)
-                                        if self.snap_to_whole_tempo { 8 } else { 0 }
+                                        if self.snap_to_whole_tempo { LED_DIM_PLUS } else { LED_OFF }
                                     }
                                     12 | 13 => 0, // Transport buttons always turn off
                                     14 | 15 => {
@@ -1177,7 +1178,7 @@ impl SimonSaysSeeq {
                     // Enhanced brightness for better scroll position visibility
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => LED_OFF,     // No pattern, not current position
-                        (false, true) => 8,            // No pattern, but current position (slightly brighter than LED_DIM)
+                        (false, true) => LED_DIM_PLUS, // No pattern, but current position (enhanced visibility)
                         (true, false) => LED_BRIGHT,   // Has pattern, not current position
                         (true, true) => LED_MAX,       // Has pattern AND current position (maximum brightness)
                     };
@@ -1216,10 +1217,10 @@ impl SimonSaysSeeq {
                 let is_current_step = seq_x == row_state.sequencer_a_current_step;
 
                 let brightness = match (pattern_value > 0, is_current_step) {
-                    (false, false) => 0,
-                    (false, true) => 6,
-                    (true, false) => 10,
-                    (true, true) => 14,
+                    (false, false) => LED_OFF,
+                    (false, true) => LED_DIM,
+                    (true, false) => LED_BRIGHT,
+                    (true, true) => LED_MAX,
                 };
 
                 // Map sequence coordinates to correct grid
@@ -1238,10 +1239,10 @@ impl SimonSaysSeeq {
                     let is_current_step = seq_x == row_state.sequencer_a_current_step;
 
                     let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => 0,
-                        (false, true) => 6,
-                        (true, false) => 10,
-                        (true, true) => 14,
+                        (false, false) => LED_OFF,
+                        (false, true) => LED_DIM,
+                        (true, false) => LED_BRIGHT,
+                        (true, true) => LED_MAX,
                     };
 
                     self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "update_single_led_single")?;
@@ -1268,10 +1269,10 @@ impl SimonSaysSeeq {
                 let is_current_step = seq_x == row_state.sequencer_a_current_step;
                 
                 let brightness = match (pattern_value > 0, is_current_step) {
-                    (false, false) => 0,     // No pattern, not current position
-                    (false, true) => 6,      // No pattern, but current position
-                    (true, false) => 10,     // Has pattern, not current position
-                    (true, true) => 14,      // Has pattern AND current position
+                    (false, false) => LED_OFF,     // No pattern, not current position
+                    (false, true) => LED_DIM,      // No pattern, but current position
+                    (true, false) => LED_BRIGHT,     // Has pattern, not current position
+                    (true, true) => LED_MAX,      // Has pattern AND current position
                 };
                 
                 info!("GRID DEBUG: Setting single LED seq_x={}, seq_y={}, brightness={}, pattern_value={}, is_current={}", 
@@ -1300,10 +1301,10 @@ impl SimonSaysSeeq {
                     let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => 0,
-                        (false, true) => 6,
-                        (true, false) => 10,
-                        (true, true) => 14,
+                        (false, false) => LED_OFF,
+                        (false, true) => LED_DIM,
+                        (true, false) => LED_BRIGHT,
+                        (true, true) => LED_MAX,
                     };
                     
                     info!("GRID DEBUG: Setting single LED (single grid) seq_x={}, seq_y={}, brightness={}", seq_x, seq_y, brightness);
@@ -1432,10 +1433,10 @@ impl SimonSaysSeeq {
                         let is_current_step = seq_x == row_state.sequencer_a_current_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
-                            (false, false) => 0,     // No pattern, not current position
-                            (false, true) => 6,      // No pattern, but current position  
-                            (true, false) => 10,     // Has pattern, not current position
-                            (true, true) => 14,      // Has pattern AND current position
+                            (false, false) => LED_OFF,     // No pattern, not current position
+                            (false, true) => LED_DIM,      // No pattern, but current position  
+                            (true, false) => LED_BRIGHT,     // Has pattern, not current position
+                            (true, true) => LED_MAX,      // Has pattern AND current position
                         };
                         
                         if brightness > 0 {
@@ -1462,10 +1463,10 @@ impl SimonSaysSeeq {
                         let is_current_step = seq_x == row_state.sequencer_a_current_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
-                            (false, false) => 0,
-                            (false, true) => 6,
-                            (true, false) => 10,
-                            (true, true) => 14,
+                            (false, false) => LED_OFF,
+                            (false, true) => LED_DIM,
+                            (true, false) => LED_BRIGHT,
+                            (true, true) => LED_MAX,
                         };
                         
                         self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "refresh_pattern_single")?;
@@ -1505,10 +1506,10 @@ impl SimonSaysSeeq {
                     let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => 0,
-                        (false, true) => 6,
-                        (true, false) => 10,
-                        (true, true) => 14,
+                        (false, false) => LED_OFF,
+                        (false, true) => LED_DIM,
+                        (true, false) => LED_BRIGHT,
+                        (true, true) => LED_MAX,
                     };
                     
                     if seq_x <= 15 {
@@ -1531,10 +1532,10 @@ impl SimonSaysSeeq {
                     let is_current_step = seq_x == row_state.sequencer_a_current_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => 0,
-                        (false, true) => 6,
-                        (true, false) => 10,
-                        (true, true) => 14,
+                        (false, false) => LED_OFF,
+                        (false, true) => LED_DIM,
+                        (true, false) => LED_BRIGHT,
+                        (true, true) => LED_MAX,
                     };
                     
                     self.grid.set_led(&main_grid_id, seq_x, row, brightness, "refresh_all_row_leds")?;
@@ -1768,7 +1769,7 @@ impl SimonSaysSeeq {
         //     if let Some(grid_two_id) = grid_two {
         //         let brightness = if let Some(flash_until) = self.beat_led_flash_until {
         //             if Instant::now() < flash_until {
-        //                 8 // Dimmer flash
+        //                 LED_DIM_PLUS // Dimmer flash
         //             } else {
         //                 self.beat_led_flash_until = None;
         //                 0  // Turn off
@@ -1783,7 +1784,7 @@ impl SimonSaysSeeq {
         //             self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
         //             
         //             // Update snap tempo button LED (column 10, row 7)
-        //             let snap_brightness = if self.snap_to_whole_tempo { 8 } else { 0 };
+        //             let snap_brightness = if self.snap_to_whole_tempo { LED_DIM_PLUS } else { LED_OFF };
         //             self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
         //             
         //             // Update drift indicator LED (column 11, row 7)
