@@ -1703,23 +1703,24 @@ impl SimonSaysSeeq {
 
     /// Update ARM button LEDs to maintain their state based on active ARM action
     fn update_arm_button_leds(&mut self) -> Result<()> {
-        let connected_grids = self.grid.get_connected_grids();
-        if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            #[cfg(feature = "hardware")]
-            {
-                // Update ARM button LED based on active ARM action
-                if let Some(active_action) = self.active_arm_action {
-                    let active_column = active_action.to_column();
-                    // Keep active ARM button lit at full brightness
-                    self.grid.set_led(&main_grid_id, active_column, 7, 15, "arm_button_maintain")?;
-                } else {
-                    // Turn off all ARM button LEDs when no ARM action is active
-                    for column in [0, 1, 4, 5, 6, 7, 10, 15] { // All ARM action columns
-                        self.grid.set_led(&main_grid_id, column, 7, 0, "arm_button_clear")?;
-                    }
-                }
-            }
-        }
+        // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
+        // let connected_grids = self.grid.get_connected_grids();
+        // if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
+        //     #[cfg(feature = "hardware")]
+        //     {
+        //         // Update ARM button LED based on active ARM action
+        //         if let Some(active_action) = self.active_arm_action {
+        //             let active_column = active_action.to_column();
+        //             // Keep active ARM button lit at full brightness
+        //             self.grid.set_led(&main_grid_id, active_column, 7, 15, "arm_button_maintain")?;
+        //         } else {
+        //             // Turn off all ARM button LEDs when no ARM action is active
+        //             for column in [0, 1, 4, 5, 6, 7, 10, 15] { // All ARM action columns
+        //                 self.grid.set_led(&main_grid_id, column, 7, 0, "arm_button_clear")?;
+        //             }
+        //         }
+        //     }
+        // }
         Ok(())
     }
 
