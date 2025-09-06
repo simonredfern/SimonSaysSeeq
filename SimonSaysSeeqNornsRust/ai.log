@@ -75,6 +75,39 @@
 # NEXT STEPS: Need to investigate core sequencer LED update logic and grid coordinate system
 # SIGNIFICANCE: This narrows down the problem significantly - it's in the fundamental LED positioning logic
 
+## 2025-01-24 Boundary Condition Bug Fixed
+# ACTION: Fixed critical boundary condition bug in dual-grid coordinate mapping
+# CHANGES:
+#   - Changed "else if old_step <= 31" to "else if old_step > 15 && old_step <= 31" 
+#   - Added explicit bounds checking for both dual-grid and single-grid modes
+#   - Added warning messages for out-of-bounds step values
+#   - Single grid mode now only accepts steps 0-15 with proper validation
+# REASON: User spotted boundary logic flaw that could cause LEDs to be skipped or mapped incorrectly
+# EXPECTED: If invalid step values were causing LED dropping, this should fix it
+# ACTUAL RESULT: LED dropping issue STILL persists - boundary conditions were NOT the cause
+# CONCLUSION: Problem is even deeper - not in coordinate mapping or boundary logic
+# STATUS: Boundary bug fixed but core LED dropping issue remains unsolved
+
+## 2025-01-24 Summary of Eliminated Suspects
+# ELIMINATED (confirmed NOT the cause):
+#   ✅ SequencerB functionality (completely removed) - LED dropping persists
+#   ✅ Beat LED systems (completely disabled) - LED dropping persists  
+#   ✅ ARM button LED systems (completely disabled) - LED dropping persists
+#   ✅ Grid flash functions (disabled) - LED dropping persists
+#   ✅ update_32step_display() function (removed) - LED dropping persists
+#   ✅ Boundary condition bugs (fixed) - LED dropping persists
+#
+# REMAINING SUSPECTS (still possible):
+#   🔍 Grid ID assignment inconsistency in get_sorted_grid_ids()
+#   🔍 Grid hardware communication timing/race conditions  
+#   🔍 OSC message ordering issues causing LEDs to reach wrong grids
+#   🔍 Internal grid state corruption in GridManager
+#   🔍 Sequencer step value generation bugs (invalid step numbers)
+#   🔍 Unknown function still writing LEDs to wrong coordinates
+#
+# CURRENT STATUS: Problem isolated to core LED update system with debug logging active
+# SIGNIFICANCE: 6 major suspects eliminated - issue is in fundamental grid/LED management
+
 ## 2025-01-24 Grid Reference Debugging Added
 # ACTION: Added comprehensive debugging to track grid ID references and LED coordinate assignments
 # CHANGES:
