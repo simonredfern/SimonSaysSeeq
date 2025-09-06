@@ -43,19 +43,24 @@
 # NEXT: Test disabling beat LEDs and ARM buttons to see if they're causing coordinate bugs
 # STATUS: SequencerB elimination complete, but issue remains unsolved
 
-## 2025-01-24 Beat LEDs and ARM Button LEDs Temporarily Disabled for Debugging
-# ACTION: Completely disabled both beat LED and ARM button LED functionality to test if causing LED dropping
+## 2025-01-24 Beat LEDs and ARM Button LEDs Completely Disabled for Debugging
+# ACTION: Completely eliminated all beat LED and ARM button LED functionality to test if causing LED dropping
 # CHANGES:
 #   Beat LEDs:
 #   - Commented out all LED updates in update_beat_leds() function
 #   - Disabled beat_led_flash_until trigger in MIDI clock beat handler
 #   - Disabled beat LED clearing in MIDI clock stop handler
+#   - Disabled all calls to update_beat_leds() throughout the codebase
 #   ARM Button LEDs:
 #   - Commented out all LED updates in update_arm_button_leds() function
+#   - Disabled all calls to update_arm_button_leds() throughout the codebase
 #   - No more ARM button state maintenance or clearing
-# REASON: Testing if beat LED or ARM button coordinate bugs are causing random LED activation
-# EXPECTED: If either system was writing to wrong coordinates, LED dropping should stop completely
-# STATUS: Both beat LEDs and ARM button LEDs disabled, ready for comprehensive testing
+#   Additional:
+#   - Disabled flash_all_grids() calls to eliminate any grid flashing during startup/operation
+# REASON: User reported beat LEDs were still flashing occasionally despite being "disabled"
+# SOLUTION: Disabled not just function content but all function calls to ensure no LED updates occur
+# EXPECTED: Zero LED activity from beat LED or ARM button systems - only core sequencer LEDs should work
+# STATUS: Complete elimination of auxiliary LED systems - ready for definitive testing
 
 ## 2025-01-24 MIDI Clock Generator Input Limit Increase
 # CHANGE: Increased u/d input limit from 5 to 20 characters in MIDI clock generator

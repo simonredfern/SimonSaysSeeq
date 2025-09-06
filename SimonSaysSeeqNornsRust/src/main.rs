@@ -206,10 +206,11 @@ impl SimonSaysSeeq {
         //     }
         // }
 
+        // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // Flash all connected grids for visual feedback
-        if let Err(e) = self.grid.flash_all_grids() {
-            // warn!("Failed to flash grids on sequencer start: {}", e);
-        }
+        // if let Err(e) = self.grid.flash_all_grids() {
+        //     // warn!("Failed to flash grids on sequencer start: {}", e);
+        // }
 
         // Initialize main grid with some default pattern for testing
         // Set test patterns for all rows to verify display pipeline (0-indexed)
@@ -411,10 +412,11 @@ impl SimonSaysSeeq {
                     // info!("Start pressed");
                     self.sequencer.start();
 
+                    // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                     // Flash all connected grids for visual feedback
-                    if let Err(e) = self.grid.flash_all_grids() {
-                        // warn!("Failed to flash grids on sequencer start: {}", e);
-                    }
+                    // if let Err(e) = self.grid.flash_all_grids() {
+                    //     // warn!("Failed to flash grids on sequencer start: {}", e);
+                    // }
                 }
             }
 
@@ -1026,9 +1028,10 @@ impl SimonSaysSeeq {
             }
         }
         
+        // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // Update beat LEDs and ARM button LEDs before final refresh
-        self.update_beat_leds()?;
-        self.update_arm_button_leds()?;
+        // self.update_beat_leds()?;
+        // self.update_arm_button_leds()?;
         
         self.grid.refresh()?;
         Ok(())
@@ -1052,9 +1055,10 @@ impl SimonSaysSeeq {
             info!("DEBUG: No grids available for display");
         }
 
+        // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
         // Update beat LEDs and ARM button LEDs before final refresh
-        self.update_beat_leds()?;
-        self.update_arm_button_leds()?;
+        // self.update_beat_leds()?;
+        // self.update_arm_button_leds()?;
         
         self.grid.refresh()?;
         Ok(())
@@ -1193,9 +1197,10 @@ impl SimonSaysSeeq {
                     self.grid.set_led(grid_two_id, grid_x, seq_y, brightness, "single_button_grid2")?;
                 }
                 
+                // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Update beat LEDs and ARM button LEDs before refresh
-                self.update_beat_leds()?;
-                self.update_arm_button_leds()?;
+                // self.update_beat_leds()?;
+                // self.update_arm_button_leds()?;
                 
                 self.grid.refresh()?;
             }
@@ -1216,9 +1221,10 @@ impl SimonSaysSeeq {
                     info!("GRID DEBUG: Setting single LED (single grid) seq_x={}, seq_y={}, brightness={}", seq_x, seq_y, brightness);
                     self.grid.set_led(&main_grid_id, seq_x, seq_y, brightness, "single_button_single")?;
                     
+                    // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                     // Update beat LEDs and ARM button LEDs before refresh
-                    self.update_beat_leds()?;
-                    self.update_arm_button_leds()?;
+                    // self.update_beat_leds()?;
+                    // self.update_arm_button_leds()?;
                     
                     self.grid.refresh()?;
                 }
