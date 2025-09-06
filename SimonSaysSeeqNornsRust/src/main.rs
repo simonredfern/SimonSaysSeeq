@@ -32,7 +32,7 @@ enum ArmAction {
     Ratchet,           // Column 7
     SetSeqALength,     // Column 8
     PresetGrid,        // Column 10
-    SequencerB,        // Column 15
+
 }
 
 impl ArmAction {
@@ -47,7 +47,7 @@ impl ArmAction {
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetSeqALength),
             10 => Some(ArmAction::PresetGrid),
-            15 => Some(ArmAction::SequencerB),
+
             _ => None,
         }
     }
@@ -63,7 +63,7 @@ impl ArmAction {
             ArmAction::Ratchet => 7,
             ArmAction::SetSeqALength => 8,
             ArmAction::PresetGrid => 10,
-            ArmAction::SequencerB => 15,
+
         }
     }
 }
@@ -474,15 +474,7 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
 
-                // Update sequencer_b display to show scrolling position (only when ARM Sequence B is active)
-                #[cfg(feature = "hardware")]
-                {
-                    if let Some(arm_action) = self.active_arm_action {
-                        if matches!(arm_action, ArmAction::SequencerB) {
-                            self.update_sequencer_b_display()?;
-                        }
-                    }
-                }
+
 
                 // Grid updates now handled by selective GridUpdate events
                 // No need for full grid refresh on every step
@@ -515,15 +507,7 @@ impl SimonSaysSeeq {
                             }
                         }
                         'B' => {
-                            if midi_event.note_on {
-                                self.midi.sequencer_b_note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
-                                // info!("Sequencer B MIDI Note ON: {} vel:{} ch:{} step:{}",
-                                //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
-                            } else {
-                                self.midi.sequencer_b_note_off(midi_event.note, midi_event.channel)?;
-                                // info!("Sequencer B MIDI Note OFF: {} ch:{} step:{}",
-                                //       midi_event.note, midi_event.channel, midi_event.step);
-                            }
+                            // Sequencer B functionality removed
                         }
                         _ => {
                             warn!("Unknown sequencer source: {}", midi_event.sequencer_source);
@@ -563,16 +547,7 @@ impl SimonSaysSeeq {
                 }
             }
         } else {
-            // Not an ARM button - check Sequence B mode
-            if let Some(arm_action) = self.active_arm_action {
-                if matches!(arm_action, ArmAction::SequencerB) {
-                    // Sequence B mode active and this is not an ARM button
-                    if pressed && y <= 7 {
-                        self.handle_sequence_b_grid_press(x, y)?;
-                    }
-                    return Ok(()); // Don't process further
-                }
-            }
+
         }
 
         // Normal mode: Handle 32-step sequence input
@@ -760,27 +735,7 @@ impl SimonSaysSeeq {
                             }
                             return Ok(());
                         }
-                        // GRID_TWO sequencer_b clear button (column 2)
-                        else if x == 2 {
-                            if pressed {
-                                // Clear sequencer_b keyboard MIDI notes button
-                                self.sequencer.clear_sequencer_b_midi_notes();
-                                info!("handle_grid_press says: Cleared all sequencer_b keyboard MIDI notes via GRID_TWO column 2");
-                                #[cfg(feature = "hardware")]
-                                {
-                                    self.grid.set_led(grid_id, x, seq_y, 15, "clear_button_press")?;
-                                    self.grid.refresh()?;
-                                }
-                            } else {
-                                // Button release - turn off LED
-                                #[cfg(feature = "hardware")]
-                                {
-                                    self.grid.set_led(grid_id, x, seq_y, 0, "clear_button_release")?;
-                                    self.grid.refresh()?;
-                                }
-                            }
-                            return Ok(());
-                        }
+
                         // GRID_TWO tempo controls (columns 10-15)
                         else if x >= 10 && x <= 15 {
                         // GRID_TWO transport and tempo controls - handle both press and release
@@ -895,19 +850,11 @@ impl SimonSaysSeeq {
                         } else {
                             // ARM button released - deactivate mode
                             if matches!(self.active_arm_action, Some(ref current) if *current == arm_action) {
-                                // Special handling for Sequence B mode deactivation
-                                if matches!(arm_action, ArmAction::SequencerB) {
-                                    info!("ARM Sequence B: Deactivated - restoring normal grid display");
-                                }
                                 self.active_arm_action = None;
                                 info!("ARM CONTROL: {:?} RELEASED - mode OFF (column {})", arm_action, x);
                                 #[cfg(feature = "hardware")]
                                 {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
-                                    // Restore normal display when Sequence B mode is deactivated
-                                    if matches!(arm_action, ArmAction::SequencerB) {
-                                        self.update_grid_display()?;
-                                    }
                                     self.grid.refresh()?;
                                 }
                             }
@@ -929,7 +876,6 @@ impl SimonSaysSeeq {
 
     #[cfg(feature = "hardware")]
     fn handle_arm_action(&mut self, action: ArmAction) -> Result<()> {
-        // Handle ARM actions based on enum
         match action {
             ArmAction::Undo => {
                 // Undo last action
@@ -984,52 +930,16 @@ impl SimonSaysSeeq {
                 // Preset grid functionality - placeholder
                 info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
             }
-            ArmAction::SequencerB => {
-                // Sequence B mode - show keyboard MIDI notes on both grids
-                info!("ARM Sequence B: Activated - showing 32-step keyboard MIDI sequence");
-                #[cfg(feature = "hardware")]
-                {
-                    self.update_sequencer_b_display()?;
-                }
-            }
+
         }
         Ok(())
     }
 
 
 
-    #[cfg(feature = "hardware")]
-    fn handle_sequence_b_grid_press(&mut self, x: usize, y: usize) -> Result<()> {
-        // Grid two - Sequence B interface for MIDI note control
-        info!("Sequence B grid press at ({}, {}) - MIDI note control", x, y);
 
-        // Convert grid position to MIDI note value
-        let base_note = 60; // Middle C
-        let note = base_note + (7 - y) * 5 + x; // Pentatonic-ish mapping
 
-        if note <= 127 {
-            // Update Sequence B state
-            self.sequencer.set_sequence_b_value(x + 1, y + 1, note as u8);
 
-            // Send test note
-            #[cfg(feature = "midi")]
-            self.midi.sequencer_b_note_on(note as u8, 100, 1)?;
-            #[cfg(not(feature = "midi"))]
-            info!("Simulated MIDI note: {} vel:100 ch:1", note);
-
-            // Update LED to show note value (brightness = note % 16)
-            let brightness = ((note % 15) + 1) as u8;
-            let connected_grids = self.grid.get_connected_grids();
-            // Sequence B LED updates disabled for debugging
-            // if let Some(grid_id) = connected_grids.get(1).or_else(|| connected_grids.first()) {
-            //     self.grid.set_led(grid_id, x, y, brightness, "handle_sequence_b_grid_press")?;
-            // }
-
-            info!("Set Sequence B[{}][{}] = note {}", x + 1, y + 1, note);
-        }
-
-        Ok(())
-    }
 
 
 
@@ -1070,13 +980,7 @@ impl SimonSaysSeeq {
 
     /// Selective grid update - only update specific LEDs that changed
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
-        // Check if Sequence B mode is active first
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode active - display already updated when mode was activated
-                return Ok(());
-            }
-        }
+
         
         let connected_grids = self.grid.get_connected_grids();
         
@@ -1136,13 +1040,7 @@ impl SimonSaysSeeq {
         let connected_grids = self.grid.get_connected_grids();
         info!("DEBUG: update_grid_display called - found {} connected grids: {:?}", connected_grids.len(), connected_grids);
 
-        // Check if Sequence B mode is active - show on BOTH grids
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode: Display already updated when mode was activated
-                return Ok(());
-            }
-        }
+
 
         // Normal mode: Grid will be naturally painted by selective updates during playback
         // No need for full grid refresh - let the sequencer paint the display as it runs
@@ -1206,13 +1104,7 @@ impl SimonSaysSeeq {
     /// Update single LED with current pattern and position state
     #[cfg(feature = "hardware")]
     fn update_single_led(&mut self, seq_x: usize, seq_y: usize) -> Result<()> {
-        // Check if Sequence B mode is active first
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode: Display already updated when mode was activated
-                return Ok(());
-            }
-        }
+
         
         // Only update LEDs for rows 0-6 (0-indexed)
         if seq_y > 6 {
@@ -1424,13 +1316,7 @@ impl SimonSaysSeeq {
     /// Refresh all pattern LEDs on the grid (used after operations that change multiple positions)
     #[cfg(feature = "hardware")]
     fn refresh_all_pattern_leds(&mut self) -> Result<()> {
-        // Check if Sequence B mode is active first
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode: Display already updated when mode was activated
-                return Ok(());
-            }
-        }
+
         
         info!("ARM DEBUG: refresh_all_pattern_leds() called");
         let connected_grids = self.grid.get_connected_grids();
@@ -1504,13 +1390,7 @@ impl SimonSaysSeeq {
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
-        // Check if Sequence B mode is active first
-        if let Some(arm_action) = self.active_arm_action {
-            if matches!(arm_action, ArmAction::SequencerB) {
-                // Sequence B mode: Display already updated when mode was activated
-                return Ok(());
-            }
-        }
+
         
         let connected_grids = self.grid.get_connected_grids();
         
@@ -1646,106 +1526,7 @@ impl SimonSaysSeeq {
 
 
 
-    /// Handle CO2-influenced CV output
-    fn update_sequencer_b_display(&mut self) -> Result<()> {
-        let connected_grids = self.grid.get_connected_grids();
-        
-        // Display keyboard MIDI note events on BOTH grids when Sequence B is armed
-        if connected_grids.len() >= 1 {
-            let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
-            let grid_one_id = grid_one.as_ref().unwrap();
-            // Show keyboard MIDI on GRID_ONE for steps 0-15
-            self.update_sequencer_b_keyboard_midi_display(grid_one_id, 0)?;
-        }
-        if connected_grids.len() >= 2 {
-            let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            let grid_two_id = grid_two.as_ref().unwrap();
-            // Show keyboard MIDI on GRID_TWO for steps 16-31
-            self.update_sequencer_b_keyboard_midi_display(grid_two_id, 16)?;
-        }
-        Ok(())
-    }
 
-    fn update_sequencer_b_keyboard_midi_display(&mut self, grid_id: &str, step_offset: usize) -> Result<()> {
-        // Display keyboard MIDI note events for this grid
-        // Clear grid first (all rows including control row)
-        for x in 0..16 {
-            for y in 0..8 {
-                self.grid.set_led(grid_id, x, y, 0, "clear_keyboard_midi")?;
-            }
-        }
-        
-        // Get keyboard MIDI note events from sequencer
-        let keyboard_events = self.sequencer.get_keyboard_midi_events();
-        
-        // Display MIDI events - using current lane (0) and bar (0) for now
-        let lane = 0;  // First lane
-        let bar = 0;   // First bar
-        
-        // Add sequencer B current position brightness for scrolling visibility on rows 0-6
-        let (sequencer_b_current_step, _sequencer_b_current_bar) = self.sequencer.get_sequencer_b_position();
-        
-        // Set sequencer B current position indicator (only on current step)
-        let current_step_in_grid = if step_offset == 0 {
-            // Grid ONE (steps 0-15)
-            if sequencer_b_current_step <= 15 { Some(sequencer_b_current_step) } else { None }
-        } else {
-            // Grid TWO (steps 16-31)
-            if sequencer_b_current_step >= 16 && sequencer_b_current_step <= 31 { 
-                Some(sequencer_b_current_step - 16) 
-            } else { 
-                None 
-            }
-        };
-        
-        // Display MIDI note events with current position highlighting
-        if lane < keyboard_events.len() && bar < keyboard_events[lane].len() {
-            for x in 0..16 {
-                let step = step_offset + x;
-                if step < keyboard_events[lane][bar].len() {
-                    // Check for active MIDI notes at this step
-                    for note in 36..96 { // Show notes C2 to C6
-                        if note < keyboard_events[lane][bar][step].len() {
-                            let note_on_event = &keyboard_events[lane][bar][step][note][1]; // Note ON events
-                            if note_on_event.is_active {
-                                // Map MIDI note to grid Y position (notes 36-96 -> rows 0-7)
-                                let grid_y = ((note - 36) / 8).min(7);
-                                let note_brightness = (note_on_event.velocity / 8).max(1).min(15) as u8;
-                                
-                                // Check if this is the current step - if so, make it brighter
-                                let final_brightness = if Some(x) == current_step_in_grid && grid_y <= 6 {
-                                    // Current step: combine note brightness with position indicator
-                                    (note_brightness + 6).min(15)
-                                } else {
-                                    // Other steps: just note brightness
-                                    note_brightness
-                                };
-                                
-                                self.grid.set_led(grid_id, x, grid_y, final_brightness, "keyboard_midi_note")?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Finally, add position indicator for empty steps (rows 0-6 only)
-        if let Some(grid_x) = current_step_in_grid {
-            for seq_y in 0..=6 {
-                // Only set position indicator if there's no MIDI note already lit on this position
-                if self.grid.get_led(grid_id, grid_x, seq_y) == 0 {
-                    self.grid.set_led(grid_id, grid_x, seq_y, 6, "sequencer_b_current_position")?;
-                }
-            }
-        }
-        
-        // Update beat LEDs and ARM button LEDs before refresh
-        self.update_beat_leds()?;
-        self.update_arm_button_leds()?;
-        
-        self.grid.refresh()?;
-        Ok(())
-    }
 
     fn handle_co2_cv_output(&mut self, step: usize, row: usize, co2_value: f32) -> Result<()> {
         // Get Mozart note value for this position
@@ -1861,46 +1642,12 @@ impl SimonSaysSeeq {
                 }
             }
             MidiInputEvent::NoteOn { channel, note, velocity } => {
-                info!("MIDI KEYBOARD RECORDING: Note On - Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
-                
-                // Record MIDI note into keyboard_midi_note_events structure
-                let (current_step, current_bar) = self.sequencer.get_sequencer_b_position();
-                let lane = self.sequencer.get_sequencer_b_lane(); // Use sequencer B's current lane
-                let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
-                
-                self.sequencer.set_sequencer_b_midi_note_event(
-                    lane,
-                    current_bar,
-                    current_step,
-                    note,
-                    true, // is_on = true for Note On
-                    velocity,
-                    tick_offset,
-                );
-                
-                info!("MIDI KEYBOARD RECORDING: Recorded Note On at lane={}, bar={}, step={}, note={}, velocity={}", 
-                     lane, current_bar, current_step, note, velocity);
+                // Sequencer B MIDI recording functionality removed
+                info!("MIDI Note On (sequencer B removed): Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
             }
             MidiInputEvent::NoteOff { channel, note } => {
-                info!("MIDI KEYBOARD RECORDING: Note Off - Channel: {}, Note: {}", channel, note);
-                
-                // Record MIDI note off into keyboard_midi_note_events structure
-                let (current_step, current_bar) = self.sequencer.get_sequencer_b_position();
-                let lane = self.sequencer.get_sequencer_b_lane(); // Use sequencer B's current lane
-                let tick_offset = 0; // TODO: Calculate precise tick offset within step if needed
-                
-                self.sequencer.set_sequencer_b_midi_note_event(
-                    lane,
-                    current_bar,
-                    current_step,
-                    note,
-                    false, // is_on = false for Note Off
-                    0, // velocity = 0 for Note Off
-                    tick_offset,
-                );
-                
-                info!("MIDI KEYBOARD RECORDING: Recorded Note Off at lane={}, bar={}, step={}, note={}", 
-                     lane, current_bar, current_step, note);
+                // Sequencer B MIDI recording functionality removed  
+                info!("MIDI Note Off (sequencer B removed): Channel: {}, Note: {}", channel, note);
             }
             MidiInputEvent::ControlChange { .. } => {
                 // Control Change events - currently not handled in main app

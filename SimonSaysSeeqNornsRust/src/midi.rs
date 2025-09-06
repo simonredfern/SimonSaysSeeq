@@ -145,8 +145,6 @@ pub struct MidiManager {
     #[cfg(feature = "midi")]
     sequencer_a_output_connection: Option<MidiOutputConnection>,
     #[cfg(feature = "midi")]
-    sequencer_b_output_connection: Option<MidiOutputConnection>,
-    #[cfg(feature = "midi")]
     input_connection: Option<MidiInputConnection<()>>,
     #[cfg(feature = "midi")]
     keyboard_input_connection: Option<MidiInputConnection<()>>,
@@ -183,8 +181,6 @@ impl MidiManager {
             #[cfg(feature = "midi")]
             sequencer_a_output_connection: None,
             #[cfg(feature = "midi")]
-            sequencer_b_output_connection: None,
-            #[cfg(feature = "midi")]
             input_connection: None,
             #[cfg(feature = "midi")]
             keyboard_input_connection: None,
@@ -207,17 +203,18 @@ impl MidiManager {
         #[cfg(feature = "midi")]
         {
             info!("MIDI Manager initialized - auto_detect_clock: {}, device: '{}'", manager.auto_detect_clock, manager.device_name);
-            let (sequencer_a_port, sequencer_b_port) = if manager.auto_detect_clock {
+            let sequencer_a_port = if manager.auto_detect_clock {
                 info!("Starting MIDI auto-detection flow...");
                 manager.auto_detect_and_connect()?;
-                manager.initialize_dual_outputs()?
+                manager.initialize_output()?
             } else {
                 info!("Using manual MIDI configuration (auto-detect disabled)...");
-                let ports = manager.initialize_dual_outputs()?;
+                let port = manager.initialize_output()?;
                 manager.initialize_input()?;
                 manager.initialize_keyboard_input()?;
-                ports
+                port
             };
+            info!("MIDI Manager connected: PORT_A={}", sequencer_a_port);
             
             // Always print final port assignments regardless of initialization mode
             info!("════════════════════════════════════════════════════════");
@@ -234,15 +231,12 @@ impl MidiManager {
     
     /// Initialize dual MIDI output connections for sequencer A and B
     #[cfg(feature = "midi")]
-    fn initialize_dual_outputs(&mut self) -> Result<(String, String)> {
+    fn initialize_output(&mut self) -> Result<String> {
         let midi_out_a = MidiOutput::new("SimonSaysSeeq Sequencer A")?;
-        let midi_out_b = MidiOutput::new("SimonSaysSeeq Sequencer B")?;
         let out_ports_a = midi_out_a.ports();
-        let out_ports_b = midi_out_b.ports();
         
-        info!("initialize_dual_outputs says: Setting up dual MIDI output connections");
+        info!("initialize_output says: Setting up MIDI output connection");
         info!("PORT_A (Sequencer A): {}", self.port_a_midi_clock_in_and_gates_out);
-        info!("PORT_B (Sequencer B): {}", self.port_b_midi_keyboard_in_and_out);
         
         // Initialize Sequencer A output (PORT_A)
         let sequencer_a_port_name = if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
@@ -263,30 +257,9 @@ impl MidiManager {
             "No PORT_A configured".to_string()
         };
         
-        // Initialize Sequencer B output (PORT_B)  
-        let sequencer_b_port_name = if !self.port_b_midi_keyboard_in_and_out.is_empty() {
-            let port_b = self.find_port_by_name(&midi_out_b, &out_ports_b, &self.port_b_midi_keyboard_in_and_out)?;
-            match midi_out_b.connect(&port_b, "SimonSaysSeeq Sequencer B") {
-                Ok(connection) => {
-                    info!("Sequencer B connected to PORT_B: {}", self.port_b_midi_keyboard_in_and_out);
-                    self.sequencer_b_output_connection = Some(connection);
-                    self.port_b_midi_keyboard_in_and_out.clone()
-                }
-                Err(e) => {
-                    error!("Failed to connect Sequencer B to PORT_B {}: {}", self.port_b_midi_keyboard_in_and_out, e);
-                    return Err(anyhow!("Sequencer B MIDI connection failed: {}", e));
-                }
-            }
-        } else {
-            warn!("PORT_B not configured for Sequencer B");
-            "No PORT_B configured".to_string()
-        };
+        info!("MIDI output connection established: Sequencer A → {}", sequencer_a_port_name);
         
-        info!("Dual MIDI output connections established:");
-        info!("  Sequencer A → {}", sequencer_a_port_name);
-        info!("  Sequencer B → {}", sequencer_b_port_name);
-        
-        Ok((sequencer_a_port_name, sequencer_b_port_name))
+        Ok(sequencer_a_port_name)
     }
     
     /// Check if a MIDI port is a system or virtual port (should be filtered out)
@@ -367,69 +340,13 @@ impl MidiManager {
                 let mut active_notes = self.active_notes.lock().unwrap();
                 active_notes.insert((note, channel + 1), active_note);
                 
-                // Update last note display
                 let note_name = midi_note_to_name(note);
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                // info!("note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                // info!("sequencer_a_note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                // info!("note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
-            }
-        }
-        
-        #[cfg(not(feature = "midi"))]
-        {
-            // No MIDI device mode - just track and log
-            let active_note = ActiveNote {
-                note,
-                velocity,
-                channel: channel + 1,
-                timestamp: Instant::now(),
-            };
-            
-            let mut active_notes = self.active_notes.lock().unwrap();
-            active_notes.insert((note, channel + 1), active_note);
-            
-            let note_name = midi_note_to_name(note);
-            let mut last_note = self.last_note_sent.lock().unwrap();
-            *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
-            
-            // info!("note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
-        }
-        
-        Ok(())
-    }
-
-    /// Send a MIDI note on message for sequencer B
-    pub fn sequencer_b_note_on(&mut self, note: u8, velocity: u8, channel: u8) -> Result<()> {
-        let channel = channel.saturating_sub(1).min(15); // Convert 1-16 to 0-15
-        
-        #[cfg(feature = "midi")]
-        {
-            let msg = [0x90 | channel, note.min(127), velocity.min(127)];
-            
-            if let Some(ref mut connection) = self.sequencer_b_output_connection {
-                connection.send(&msg)?;
-                
-                // Track the active note
-                let active_note = ActiveNote {
-                    note,
-                    velocity,
-                    channel: channel + 1, // Store as 1-16
-                    timestamp: Instant::now(),
-                };
-                
-                let mut active_notes = self.active_notes.lock().unwrap();
-                active_notes.insert((note, channel + 1), active_note);
-                
-                let note_name = midi_note_to_name(note);
-                let mut last_note = self.last_note_sent.lock().unwrap();
-                *last_note = Some(format!("{} ON vel:{} (B)", note_name, velocity));
-                
-                // info!("sequencer_b_note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
-            } else {
-                // info!("sequencer_b_note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                // info!("sequencer_a_note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
@@ -448,13 +365,15 @@ impl MidiManager {
             
             let note_name = midi_note_to_name(note);
             let mut last_note = self.last_note_sent.lock().unwrap();
-            *last_note = Some(format!("{} ON vel:{} (B sim)", note_name, velocity));
+            *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            // info!("sequencer_b_note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            // info!("sequencer_a_note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
     }
+
+
     
     /// Initialize MIDI input connection
     #[cfg(feature = "midi")]
@@ -800,47 +719,7 @@ impl MidiManager {
         Ok(())
     }
 
-    /// Send a MIDI note off message for sequencer B
-    pub fn sequencer_b_note_off(&mut self, note: u8, channel: u8) -> Result<()> {
-        let channel = channel.saturating_sub(1).min(15); // Convert 1-16 to 0-15
-        
-        #[cfg(feature = "midi")]
-        {
-            let msg = [0x80 | channel, note.min(127), 0];
-            
-            if let Some(ref mut connection) = self.sequencer_b_output_connection {
-                connection.send(&msg)?;
-                
-                // Remove from active notes
-                let mut active_notes = self.active_notes.lock().unwrap();
-                active_notes.remove(&(note, channel + 1));
-                
-                // Update last note display
-                let note_name = midi_note_to_name(note);
-                let mut last_note = self.last_note_sent.lock().unwrap();
-                *last_note = Some(format!("{} OFF (B)", note_name));
-                
-                // info!("sequencer_b_note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
-            } else {
-                // info!("sequencer_b_note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
-            }
-        }
-        
-        #[cfg(not(feature = "midi"))]
-        {
-            // No MIDI device mode
-            let mut active_notes = self.active_notes.lock().unwrap();
-            active_notes.remove(&(note, channel + 1));
-            
-            let note_name = midi_note_to_name(note);
-            let mut last_note = self.last_note_sent.lock().unwrap();
-            *last_note = Some(format!("{} OFF (B)", note_name));
-            
-            // info!("sequencer_b_note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
-        }
-        
-        Ok(())
-    }
+
     
     /// Send all notes off (panic button)
     pub fn all_notes_off(&mut self) -> Result<()> {
@@ -853,22 +732,15 @@ impl MidiManager {
         };
         
         for ((note, channel), _) in active_notes {
-            // Try both sequencer A and B note off methods
+            // Send note off for sequencer A
             let _ = self.sequencer_a_note_off(note, channel);
-            let _ = self.sequencer_b_note_off(note, channel);
         }
         
         // Also send CC 123 (All Notes Off) on all channels
         #[cfg(feature = "midi")]
         {
-            // Send all notes off to both sequencers
+            // Send all notes off to sequencer A
             if let Some(ref mut connection) = self.sequencer_a_output_connection {
-                for channel in 0..16 {
-                    let msg = [0xB0 | channel, 123, 0]; // CC 123 = All Notes Off
-                    let _ = connection.send(&msg);
-                }
-            }
-            if let Some(ref mut connection) = self.sequencer_b_output_connection {
                 for channel in 0..16 {
                     let msg = [0xB0 | channel, 123, 0]; // CC 123 = All Notes Off
                     let _ = connection.send(&msg);
@@ -1073,7 +945,6 @@ impl MidiManager {
         for (note, channel) in stuck_notes {
             warn!("cleanup_stuck_notes says: Cleaning up stuck note: {} on channel {}", note, channel);
             let _ = self.sequencer_a_note_off(note, channel);
-            let _ = self.sequencer_b_note_off(note, channel);
         }
         
         Ok(())
@@ -1083,13 +954,10 @@ impl MidiManager {
     pub fn test_output(&mut self) -> Result<()> {
         info!("test_output says: Testing MIDI output...");
         
-        // Send a middle C note for 100ms on both sequencers
+        // Send a middle C note for 100ms on sequencer A
         self.sequencer_a_note_on(60, 100, 1)?;
-        std::thread::sleep(Duration::from_millis(50));
-        self.sequencer_b_note_on(60, 100, 1)?;
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(100));
         self.sequencer_a_note_off(60, 1)?;
-        self.sequencer_b_note_off(60, 1)?;
         
         info!("test_output says: MIDI test completed");
         Ok(())
@@ -1100,12 +968,10 @@ impl MidiManager {
         #[cfg(feature = "midi")]
         {
             let a_connected = self.sequencer_a_output_connection.is_some();
-            let b_connected = self.sequencer_b_output_connection.is_some();
-            match (a_connected, b_connected) {
-                (true, true) => format!("Connected: A:{}, B:{}", self.port_a_midi_clock_in_and_gates_out, self.port_b_midi_keyboard_in_and_out),
-                (true, false) => format!("Connected: A:{}, B:None", self.port_a_midi_clock_in_and_gates_out),
-                (false, true) => format!("Connected: A:None, B:{}", self.port_b_midi_keyboard_in_and_out),
-                (false, false) => "No MIDI devices".to_string(),
+            if a_connected {
+                format!("Connected: A:{}", self.port_a_midi_clock_in_and_gates_out)
+            } else {
+                "No MIDI devices".to_string()
             }
         }
         #[cfg(not(feature = "midi"))]
@@ -1216,13 +1082,12 @@ impl MidiManager {
                         // Set up keyboard input/output on the OTHER port
                         self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(last_device)?;
                         self.initialize_keyboard_input()?;
-                        let (sequencer_a_port, sequencer_b_port) = self.initialize_dual_outputs()?;
+                        let sequencer_a_port = self.initialize_output()?;
                         info!("════════════════════════════════════════════════════════");
                         info!("MIDI PORT ASSIGNMENTS COMPLETE (RECONNECTED):");
                         info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", last_device);
-                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", last_device);
+                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
                         info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
-                        info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", sequencer_b_port);
                         info!("════════════════════════════════════════════════════════");
                         return Ok(());
                     } else {
@@ -1248,15 +1113,14 @@ impl MidiManager {
                     self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&selected_source)?;
                     self.initialize_input()?;
                     self.initialize_keyboard_input()?;
-                    // Re-initialize outputs for both sequencers
-                    let (sequencer_a_port, sequencer_b_port) = self.initialize_dual_outputs()?;
+                    // Re-initialize output for sequencer
+                    let sequencer_a_port = self.initialize_output()?;
                     self.save_detected_device(&selected_source)?;
                     info!("════════════════════════════════════════════════════════");
-                    info!("MIDI PORT ASSIGNMENTS COMPLETE:");
+                    info!("MIDI PORT ASSIGNMENTS COMPLETE (AUTO-DETECTED):");
                     info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", selected_source);
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", selected_source);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", selected_source);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", sequencer_b_port);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
                     info!("════════════════════════════════════════════════════════");
                 } else if !summary.reliable_sources.is_empty() {
                     // Use the first reliable source if none was auto-selected
@@ -1267,25 +1131,24 @@ impl MidiManager {
                     self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&first_source)?;
                     self.initialize_input()?;
                     self.initialize_keyboard_input()?;
-                    // Re-initialize outputs for both sequencers
-                    let (sequencer_a_port, sequencer_b_port) = self.initialize_dual_outputs()?;
+                    // Re-initialize output for sequencer
+                    let sequencer_a_port = self.initialize_output()?;
                     self.save_detected_device(&first_source)?;
                     info!("════════════════════════════════════════════════════════");
-                    info!("MIDI PORT ASSIGNMENTS COMPLETE:");
+                    info!("MIDI PORT ASSIGNMENTS COMPLETE (FIRST RELIABLE):");
                     info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", first_source);
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", first_source);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", first_source);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", sequencer_b_port);
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
+                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
                     info!("════════════════════════════════════════════════════════");
                 } else {
                     warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
                     self.initialize_input()?;
                     self.initialize_keyboard_input()?;
-                    let (sequencer_a_port, sequencer_b_port) = self.initialize_dual_outputs()?;
+                    let sequencer_a_port = self.initialize_output()?;
                     info!("════════════════════════════════════════════════════════");
                     info!("MIDI PORT ASSIGNMENTS COMPLETE (FALLBACK MODE):");
+                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
                     info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - no clock detected)", self.port_b_midi_keyboard_in_and_out);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", sequencer_b_port);
                     info!("════════════════════════════════════════════════════════");
                 }
             }
@@ -1293,11 +1156,11 @@ impl MidiManager {
                 warn!("auto_detect_and_connect says: Clock detection failed: {}, falling back to normal initialization", e);
                 self.initialize_input()?;
                 self.initialize_keyboard_input()?;
-                let (sequencer_a_port, sequencer_b_port) = self.initialize_dual_outputs()?;
+                let sequencer_a_port = self.initialize_output()?;
                 info!("════════════════════════════════════════════════════════");
                 info!("MIDI PORT ASSIGNMENTS COMPLETE (ERROR FALLBACK):");
+                info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
                 info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - clock detection failed)", self.port_b_midi_keyboard_in_and_out);
-                info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note playback)", sequencer_b_port);
                 info!("════════════════════════════════════════════════════════");
             }
         }
@@ -1627,10 +1490,10 @@ mod tests {
         let config = MidiConfig::default();
         if let Ok(mut midi) = MidiManager::new(&config) {
             // These should not panic
-            let _ = midi.note_on(60, 100, 1);
-            let _ = midi.note_on(60, 100, 16);
-            let _ = midi.note_on(60, 100, 0); // Should clamp to 1
-            let _ = midi.note_on(60, 100, 255); // Should clamp to 16
+            let _ = midi.sequencer_a_note_on(60, 100, 1);
+            let _ = midi.sequencer_a_note_on(60, 100, 16);
+            let _ = midi.sequencer_a_note_on(60, 100, 0); // Should clamp to 1
+            let _ = midi.sequencer_a_note_on(60, 100, 255); // Should clamp to 16
         }
     }
     

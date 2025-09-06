@@ -26,7 +26,7 @@ pub struct MidiEvent {
     pub note_on: bool,
     pub step: usize,
     pub bar: usize,
-    pub sequencer_source: char, // 'A' for sequencer_a, 'B' for sequencer_b
+    pub sequencer_source: char, // 'A' for sequencer_a
 }
 
 /// Events that the sequencer can send to the main application
@@ -202,10 +202,6 @@ pub struct SequencerState {
     pub sequencer_a_current_step: usize,
     pub sequencer_a_current_bar: usize,
     pub sequencer_a_current_lane: usize,
-    /// Sequencer B Current global position
-    pub sequencer_b_current_step: usize,
-    pub sequencer_b_current_bar: usize,
-    pub sequencer_b_current_lane: usize,
     /// Transport state
     pub is_running: bool,
     /// Core timing variables
@@ -222,8 +218,6 @@ pub struct SequencerState {
     pub last_step: usize,
     pub midi_first_step: usize,
     pub midi_last_step: usize,
-    /// Sequencer B MIDI recording system - [lane][bar][step][note][on_off] = MidiNoteEvent
-    pub sequencer_b_keyboard_midi_note_events: Vec<Vec<Vec<Vec<Vec<MidiNoteEvent>>>>>,
     /// Tempo analysis
     pub tempo_analysis: TempoAnalysis,
     /// Advanced features
@@ -274,26 +268,7 @@ impl Default for SequencerState {
             row_states.push(row_state);
         }
 
-        // Initialize the 5D MIDI note events table: [lane][bar][step][note][on_off]
-        let mut sequencer_b_keyboard_midi_note_events = Vec::new();
-        for _lane in MIN_LANE..=MAX_LANE {
-            let mut bars = Vec::new();
-            for _bar in MIN_BAR..=MAX_BAR {
-                let mut steps = Vec::new();
-                for _step in 0..TOTAL_STEPS {
-                    let mut notes = Vec::new();
-                    for _note in 0..=127 {
-                        let mut on_off = Vec::new();
-                        on_off.push(MidiNoteEvent::default()); // note off (0)
-                        on_off.push(MidiNoteEvent::default()); // note on (1)
-                        notes.push(on_off);
-                    }
-                    steps.push(notes);
-                }
-                bars.push(steps);
-            }
-            sequencer_b_keyboard_midi_note_events.push(bars);
-        }
+
 
         // Initialize mozart_grid with default MIDI note values (60 = middle C)
         let mozart_grid = vec![vec![60; ROWS]; COLS];
@@ -312,9 +287,6 @@ impl Default for SequencerState {
             sequencer_a_current_step: 0,
             sequencer_a_current_bar: 0,
             sequencer_a_current_lane: 1,
-            sequencer_b_current_step: 0,
-            sequencer_b_current_bar: 0,
-            sequencer_b_current_lane: 1,
             is_running: false,
             tempo: 30.0,
             swing_amount: 0.0,
@@ -329,7 +301,6 @@ impl Default for SequencerState {
             midi_bar_count: 0,
             midi_first_step: 0,
             midi_last_step: 31,
-            sequencer_b_keyboard_midi_note_events,
             tempo_analysis: TempoAnalysis::default(),
             swing_mode: 1,
             global_transpose: 0,
@@ -397,8 +368,6 @@ impl Sequencer {
             // Reset to beginning
             state.sequencer_a_current_step = 0;
             state.sequencer_a_current_bar = 0;
-            state.sequencer_b_current_step = 0;
-            state.sequencer_b_current_bar = 0;
             for row_state in &mut state.sequencer_a_row_states {
                 row_state.sequencer_a_current_step = 0;
             }
@@ -427,17 +396,7 @@ impl Sequencer {
         (state.sequencer_a_current_step, state.sequencer_a_current_bar)
     }
 
-    /// Get the current sequencer B position (step, bar)
-    pub fn get_sequencer_b_position(&self) -> (usize, usize) {
-        let state = self.state.lock().unwrap();
-        (state.sequencer_b_current_step, state.sequencer_b_current_bar)
-    }
 
-    /// Get the current sequencer B lane
-    pub fn get_sequencer_b_lane(&self) -> usize {
-        let state = self.state.lock().unwrap();
-        state.sequencer_b_current_lane
-    }
 
     /// Set grid value at position with automatic undo snapshot
     pub fn set_grid_value(&self, x: usize, y: usize, value: u8) {
@@ -650,8 +609,6 @@ impl Sequencer {
         // Reset position
         state.sequencer_a_current_step = 0;
         state.sequencer_a_current_bar = 0;
-        state.sequencer_b_current_step = 0;
-        state.sequencer_b_current_bar = 0;
         for row_state in &mut state.sequencer_a_row_states {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
@@ -799,77 +756,8 @@ impl Sequencer {
     }
 
     /// Play MIDI events for current tick
-    fn play_midi(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
-        let current_lane = state.sequencer_b_current_lane;
-        let midi_bar_count = state.midi_bar_count;
-        let midi_step_count = state.midi_step_count;
-        let tick_since_step = state.the_current_tick_count_since_step;
-
-        // Check keyboard MIDI note events for this tick
-        if current_lane <= state.max_lane && midi_bar_count <= state.max_bar {
-            for note in 0..=127 {
-                let lane_idx = current_lane - 1;
-                let bar_idx = midi_bar_count;
-                let step_idx = midi_step_count;
-
-                if lane_idx < state.sequencer_b_keyboard_midi_note_events.len()
-                    && bar_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx].len()
-                    && step_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx].len()
-                {
-                    // Check note ON events
-                    let note_on_event =
-                        &state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][1];
-                    if note_on_event.is_active
-                        && note_on_event.tick_count_since_step == tick_since_step
-                    {
-                        debug!(
-                            "MIDI Note ON: note={}, velocity={}, step={}",
-                            note, note_on_event.velocity, midi_step_count
-                        );
-
-                        // Create and send MIDI event
-                        let midi_event = MidiEvent {
-                            note: note as u8,
-                            velocity: note_on_event.velocity,
-                            channel: (lane_idx + 1) as u8,
-                            note_on: true,
-                            step: midi_step_count,
-                            bar: midi_bar_count,
-                            sequencer_source: 'B',
-                        };
-
-                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                            warn!("Failed to send MIDI note ON event: {}", e);
-                        }
-                    }
-
-                    // Check note OFF events
-                    let note_off_event =
-                        &state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx][note][0];
-                    if note_off_event.is_active
-                        && note_off_event.tick_count_since_step == tick_since_step
-                    {
-                        debug!("MIDI Note OFF: note={}, step={}", note, midi_step_count);
-
-                        // Create and send MIDI event
-                        let midi_event = MidiEvent {
-                            note: note as u8,
-                            velocity: 0,
-                            channel: (lane_idx + 1) as u8,
-                            note_on: false,
-                            step: midi_step_count,
-                            bar: midi_bar_count,
-                            sequencer_source: 'B',
-                        };
-
-                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                            warn!("Failed to send MIDI note OFF event: {}", e);
-                        }
-                    }
-                }
-            }
-        }
-
+    fn play_midi(&self, _state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
+        // Sequencer B MIDI playback functionality removed
         Ok(())
     }
 
@@ -911,10 +799,6 @@ impl Sequencer {
         state.sequencer_a_current_step = state.midi_step_count;
         state.sequencer_a_current_bar = state.midi_bar_count;
         
-        // Also advance sequencer B position (independent tracking)
-        state.sequencer_b_current_step = state.midi_step_count;
-        state.sequencer_b_current_bar = state.midi_bar_count;
-
         // Advance each row's current step based on its individual settings
         for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
             let old_step = row_state.sequencer_a_current_step;
@@ -1085,92 +969,7 @@ impl Sequencer {
         }
     }
 
-    /// Set MIDI note event for keyboard recording
-    pub fn set_sequencer_b_midi_note_event(
-        &self,
-        lane: usize,
-        bar: usize,
-        step: usize,
-        note: u8,
-        is_on: bool,
-        velocity: u8,
-        tick_offset: u32,
-    ) {
-        let mut state = self.state.lock().unwrap();
 
-        if lane >= state.min_lane
-            && lane <= state.max_lane
-            && bar >= state.min_bar
-            && bar <= state.max_bar
-            && step <= state.max_step
-        {
-            let lane_idx = lane - 1;
-            let bar_idx = bar;
-            let step_idx = step;
-            let event_idx = if is_on { 1 } else { 0 };
-
-            if lane_idx < state.sequencer_b_keyboard_midi_note_events.len()
-                && bar_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx].len()
-                && step_idx < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx].len()
-                && (note as usize)
-                    < state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx].len()
-            {
-                let current_tick_count = state.the_current_tick_count_since_start;
-                let event = &mut state.sequencer_b_keyboard_midi_note_events[lane_idx][bar_idx][step_idx]
-                    [note as usize][event_idx];
-                event.velocity = velocity;
-                event.tick_count_since_step = tick_offset;
-                event.is_active = velocity > 0;
-                event.tick_count_since_start = current_tick_count;
-
-                debug!(
-                    "Set MIDI event: lane={}, bar={}, step={}, note={}, on={}, vel={}, tick={}",
-                    lane, bar, step, note, is_on, velocity, tick_offset
-                );
-            }
-        }
-    }
-
-    /// Clear all sequencer_b keyboard MIDI note events
-    pub fn clear_sequencer_b_midi_notes(&self) {
-        let mut state = self.state.lock().unwrap();
-        
-        // Count active notes before clearing
-        let mut active_note_count = 0;
-        
-        // First pass: count active notes
-        for lane in &state.sequencer_b_keyboard_midi_note_events {
-            for bar in lane {
-                for step in bar {
-                    for note in step {
-                        for event in note {
-                            if event.is_active {
-                                active_note_count += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Second pass: clear all MIDI note events in sequencer_b_keyboard_midi_note_events
-        for lane in &mut state.sequencer_b_keyboard_midi_note_events {
-            for bar in lane {
-                for step in bar {
-                    for note in step {
-                        for event in note {
-                            event.velocity = 0;
-                            event.tick_count_since_step = 0;
-                            event.is_active = false;
-                            event.tick_count_since_start = 0;
-                        }
-                    }
-                }
-            }
-        }
-        
-        info!("Cleared {} active Sequence B keyboard MIDI note events", active_note_count);
-    }
 
     /// Save state to file
     pub fn save_state(&self, path: &str) -> Result<()> {
@@ -1209,11 +1008,7 @@ impl Sequencer {
         state.sequencer_a_mozart.clone()
     }
 
-    /// Get keyboard MIDI note events for display
-    pub fn get_keyboard_midi_events(&self) -> Vec<Vec<Vec<Vec<Vec<MidiNoteEvent>>>>> {
-        let state = self.state.lock().unwrap();
-        state.sequencer_b_keyboard_midi_note_events.clone()
-    }
+
 
     /// Undo/Redo System Implementation
 
@@ -1328,8 +1123,6 @@ impl Sequencer {
         pattern_state.is_running = false;
         pattern_state.sequencer_a_current_step = 0;
         pattern_state.sequencer_a_current_bar = 0;
-        pattern_state.sequencer_b_current_step = 0;
-        pattern_state.sequencer_b_current_bar = 0;
 
         let mut patterns = self.patterns.lock().unwrap();
         patterns.insert(pattern_id, pattern_state);
@@ -1356,15 +1149,11 @@ impl Sequencer {
             // Keep current transport state
             let current_step = state.sequencer_a_current_step;
             let current_bar = state.sequencer_a_current_bar;
-            let sequencer_b_current_step = state.sequencer_b_current_step;
-            let sequencer_b_current_bar = state.sequencer_b_current_bar;
             let is_running = state.is_running;
 
             *state = pattern_state.clone();
             state.sequencer_a_current_step = current_step;
             state.sequencer_a_current_bar = current_bar;
-            state.sequencer_b_current_step = sequencer_b_current_step;
-            state.sequencer_b_current_bar = sequencer_b_current_bar;
             state.is_running = is_running;
 
             // Note: current_pattern tracking would need to be moved to state if needed
