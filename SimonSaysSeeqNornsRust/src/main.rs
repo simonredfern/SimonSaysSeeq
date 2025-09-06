@@ -1855,11 +1855,11 @@ fn main() -> Result<()> {
     // Initialize logging
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    // Also log version info to ai.log file
+    // Also log version info to ai_startup.log file
     if let Ok(mut ai_log) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open("ai.log") 
+        .open("ai_startup.log") 
     {
         use std::io::Write;
         let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
