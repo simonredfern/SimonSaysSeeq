@@ -5762,4 +5762,27 @@ Successfully fixed all UNDO/REDO timing issues that were causing conflicts with 
 ### Status: FULLY WORKING ✅
 UNDO/REDO operations now work cleanly without interfering with running sequencer.
 
+## 2025-01-28 - MIDI Out Dropout Issue
+
+### Problem:
+- Occasionally we seem to get a MIDI out dropout but when it comes back we are still in time
+- Sequencer continues running and maintains proper timing
+- MIDI output temporarily stops then resumes without losing sync
+
+### Symptoms:
+- MIDI notes stop being sent to output
+- Grid display and sequencer continue operating normally
+- When MIDI output returns, playback is still synchronized
+- No apparent cause for the dropouts
+
+### Investigation Needed:
+- Check MIDI connection stability
+- Monitor MIDI buffer states during dropout
+- Verify USB MIDI interface reliability
+- Look for timing conflicts between MIDI output threads
+- Check for MIDI driver issues on hardware
+
+### Status: UNDER INVESTIGATION
+Need to identify root cause of intermittent MIDI output dropouts.
+
 
