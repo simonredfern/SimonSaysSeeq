@@ -60,7 +60,30 @@
 # REASON: User reported beat LEDs were still flashing occasionally despite being "disabled"
 # SOLUTION: Disabled not just function content but all function calls to ensure no LED updates occur
 # EXPECTED: Zero LED activity from beat LED or ARM button systems - only core sequencer LEDs should work
-# STATUS: Complete elimination of auxiliary LED systems - ready for definitive testing
+# ACTUAL RESULT: LED dropping issue STILL persists - auxiliary systems were NOT the cause
+# CONCLUSION: Problem is in core sequencer LED update system (handle_grid_update) or grid coordinate mapping
+# STATUS: All auxiliary LED systems eliminated, but core issue remains - problem is deeper than expected
+# STATUS: Complete elimination of auxiliary LED systems, but core issue remains - problem is deeper than expected
+
+## 2025-01-24 Core Issue Identified - Problem in Sequencer LED Logic
+# DISCOVERY: After eliminating SequencerB, beat LEDs, ARM buttons, and grid flash functions, LED dropping persists
+# REMAINING SUSPECTS:
+#   1. handle_grid_update() function - coordinate bugs in LED positioning
+#   2. Grid coordinate mapping in get_sorted_grid_ids() or similar functions  
+#   3. Grid OSC communication timing issues causing LEDs to be set at wrong coordinates
+#   4. Race conditions in rapid LED updates during sequencer playback
+# NEXT STEPS: Need to investigate core sequencer LED update logic and grid coordinate system
+# SIGNIFICANCE: This narrows down the problem significantly - it's in the fundamental LED positioning logic
+
+## 2025-01-24 Grid Reference Debugging Added
+# ACTION: Added comprehensive debugging to track grid ID references and LED coordinate assignments
+# CHANGES:
+#   - Added logging to handle_grid_update() to track every LED set operation
+#   - Added debugging to get_sorted_grid_ids() to monitor grid ID consistency
+#   - Logs show: grid assignments, coordinates (x,y), brightness values, and grid IDs for each LED update
+# HYPOTHESIS: Grid references might be inconsistent, causing LEDs to be sent to wrong grid randomly
+# EXPECTED: Debug logs will reveal if grid IDs are changing unexpectedly or coordinates are wrong
+# STATUS: Debug logging active - ready to analyze LED coordinate and grid reference patterns
 
 ## 2025-01-24 MIDI Clock Generator Input Limit Increase
 # CHANGE: Increased u/d input limit from 5 to 20 characters in MIDI clock generator

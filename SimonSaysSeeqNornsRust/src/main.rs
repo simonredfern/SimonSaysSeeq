@@ -981,50 +981,131 @@ impl SimonSaysSeeq {
     }
 
     /// Selective grid update - only update specific LEDs that changed
+    /// 
+    /// LED BRIGHTNESS SYSTEM (4 levels):
+    ///   - Brightness 0:  No pattern, not current position (OFF - dark)
+    ///   - Brightness 6:  No pattern, IS current position (MEDIUM - position indicator only)
+    ///   - Brightness 10: Has pattern, not current position (DIM - shows programmed beats)
+    ///   - Brightness 14: Has pattern, IS current position (BRIGHT - pattern + position highlight)
+    ///
+    /// This creates the "moving playhead" effect by updating only 2 LEDs per row:
+    ///   1. OLD position: Reverts to pattern-only brightness (10 if pattern, 0 if empty)  
+    ///   2. NEW position: Shows position highlight (14 if pattern+position, 6 if position-only)
+    /// 
+    /// This is much more efficient than refreshing the entire grid every step (32x7=224 LEDs)
+    /// vs selective update (2 LEDs per active row = ~14 LEDs per step)
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
 
         
         let connected_grids = self.grid.get_connected_grids();
         
+        // DEBUG: Log grid update details
+        info!("GRID_DEBUG: handle_grid_update called - row: {}, old_step: {}, new_step: {}", row, old_step, new_step);
+        info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
+        
         if connected_grids.len() >= 2 {
-            // 32-step mode: Update the correct grid based on step position
+            // DUAL-GRID MODE (32-step sequences):
+            // When 2+ grids are connected, we use the first two as GRID_ONE and GRID_TWO
+            // This creates a seamless 32-step sequence: steps 0-15 on left grid, 16-31 on right grid
+            // Users can see and edit the full 32-step pattern across both grids simultaneously
             let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
             let grid_one_id = grid_one.as_ref().unwrap();
             let grid_two_id = grid_two.as_ref().unwrap();
             
+            // DEBUG: Log grid ID assignments
+            info!("GRID_DEBUG: Grid assignments - GRID_ONE: {}, GRID_TWO: {}", grid_one_id, grid_two_id);
+            
             if let Some(row_state) = self.sequencer.get_row_states(row) {
-                // Update old position LED
+                // UPDATE OLD POSITION LED (remove position highlight, keep pattern visibility)
+                //
+                // We MUST check old_pattern_value because when the playhead moves away from a step,
+                // we need to know: "Was there a programmed beat at this position?"
+                //   
+                // If YES (pattern exists): Set brightness to 10 (dim but visible - shows the beat)
+                // If NO  (empty step):     Set brightness to 0  (turn off - nothing there)
+                //
+                // Without this check, ALL old positions would go dark, hiding the pattern data.
+                // Users need to see both: WHERE beats are programmed (dim LEDs) AND where the playhead is (bright LED)
                 let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
                 let old_brightness = if old_pattern_value > 0 { 10 } else { 0 };
                 
+                // DUAL-GRID COORDINATE MAPPING:
+                // Steps 0-15  → GRID_ONE (coordinates 0-15)  
+                // Steps 16-31 → GRID_TWO (coordinates 0-15, mapped via: grid_x = step - 16)
+                //
+                // This creates a seamless 32-step sequence across two 16-step grids
                 if old_step <= 15 {
+                    // OLD position is on GRID_ONE (left grid): Direct coordinate mapping
+                    info!("GRID_DEBUG: Setting OLD LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, old_step, row, old_brightness);
                     self.grid.set_led(grid_one_id, old_step, row, old_brightness, "grid_update_old_1")?;
-                } else if old_step <= 31 {
+                } else if old_step > 15 && old_step <= 31 {
+                    // OLD position is on GRID_TWO (right grid): Coordinate mapping required
+                    // Step 16 becomes grid_x=0, step 17 becomes grid_x=1, etc.
                     let grid_x = old_step - 16;
+                    info!("GRID_DEBUG: Setting OLD LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, old_brightness, old_step);
                     self.grid.set_led(grid_two_id, grid_x, row, old_brightness, "grid_update_old_2")?;
+                } else {
+                    warn!("GRID_DEBUG: OLD step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", old_step, row);
                 }
                 
-                // Update new position LED
+                // UPDATE NEW POSITION LED (add position highlight, preserve pattern info)
+                //
+                // We MUST check new_pattern_value to create the correct brightness for the current position:
+                //
+                // If pattern EXISTS at current step: Brightness 14 (BRIGHTEST)
+                //   - User sees: "There's a beat HERE and playhead is HERE" (pattern + position)
+                //
+                // If pattern is EMPTY at current step: Brightness 6 (MEDIUM)  
+                //   - User sees: "No beat here, but playhead is HERE" (position only)
+                //
+                // This dual-brightness system lets users instantly distinguish:
+                //   - Steps WITH beats that are playing (brightness 14)
+                //   - Steps WITHOUT beats where playhead is just passing through (brightness 6)
                 let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
                 let new_brightness = if new_pattern_value > 0 { 14 } else { 6 };
                 
+                // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
+                    // NEW position is on GRID_ONE: Direct coordinate mapping  
+                    info!("GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, new_step, row, new_brightness);
                     self.grid.set_led(grid_one_id, new_step, row, new_brightness, "grid_update_new_1")?;
-                } else if new_step <= 31 {
+                } else if new_step > 15 && new_step <= 31 {
+                    // NEW position is on GRID_TWO: Coordinate mapping required
                     let grid_x = new_step - 16;
+                    info!("GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, new_brightness, new_step);
                     self.grid.set_led(grid_two_id, grid_x, row, new_brightness, "grid_update_new_2")?;
+                } else {
+                    warn!("GRID_DEBUG: NEW step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", new_step, row);
                 }
             }
         } else if let Some(main_grid_id) = self.get_main_grid_id(&connected_grids) {
-            // Single grid fallback
+            // SINGLE GRID FALLBACK MODE:
+            // When only one grid is connected, we show steps 0-15 only (16-step sequence)
+            // This is backward compatibility - the system was originally designed for single 16x8 grids
+            // Steps 16-31 are ignored in this mode since there's no second grid to display them
+            info!("GRID_DEBUG: Using single grid mode - main_grid_id: {}", main_grid_id);
             if let Some(row_state) = self.sequencer.get_row_states(row) {
-                let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
-                let old_brightness = if old_pattern_value > 0 { 10 } else { 0 };
-                self.grid.set_led(&main_grid_id, old_step, row, old_brightness, "grid_update_old")?;
+                // SINGLE GRID MODE: Same brightness logic as dual-grid mode (see detailed comments above)
+                // The brightness system works identically whether using one or two grids
+                // However, coordinate mapping is simpler - no need to split across grids
+                // Single grid mode only supports steps 0-15 (16-step sequences)
+                if old_step <= 15 {
+                    let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
+                    let old_brightness = if old_pattern_value > 0 { 10 } else { 0 };
+                    info!("GRID_DEBUG: Setting OLD LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, old_step, row, old_brightness);
+                    self.grid.set_led(&main_grid_id, old_step, row, old_brightness, "grid_update_old")?;
+                } else {
+                    warn!("GRID_DEBUG: OLD step {} is out of bounds for single grid mode (valid range: 0-15), skipping LED update for row {}", old_step, row);
+                }
 
-                let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
-                let new_brightness = if new_pattern_value > 0 { 14 } else { 6 };
-                self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
+                if new_step <= 15 {
+                    let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
+                    let new_brightness = if new_pattern_value > 0 { 14 } else { 6 };
+                    info!("GRID_DEBUG: Setting NEW LED on single grid: grid_id={}, x={}, y={}, brightness={}", main_grid_id, new_step, row, new_brightness);
+                    self.grid.set_led(&main_grid_id, new_step, row, new_brightness, "grid_update_new")?;
+                } else {
+                    warn!("GRID_DEBUG: NEW step {} is out of bounds for single grid mode (valid range: 0-15), skipping LED update for row {}", new_step, row);
+                }
             }
         }
         
@@ -1244,7 +1325,8 @@ impl SimonSaysSeeq {
 
     /// Get sorted grid IDs - returns (GRID_ONE, GRID_TWO)
     fn get_sorted_grid_ids(&self, connected_grids: &[String]) -> (Option<String>, Option<String>) {
-        // info!("ARM DEBUG: get_sorted_grid_ids called with {} grids: {:?}", connected_grids.len(), connected_grids);
+        // DEBUG: Track grid ID consistency
+        info!("GRID_DEBUG: get_sorted_grid_ids called with {} grids: {:?}", connected_grids.len(), connected_grids);
         
         // Always sort grids by ID for consistency
         let mut sorted_grids = connected_grids.to_vec();
@@ -1253,8 +1335,8 @@ impl SimonSaysSeeq {
         let grid_one = sorted_grids.first().cloned();
         let grid_two = if sorted_grids.len() > 1 { sorted_grids.get(1).cloned() } else { None };
         
-        // info!("ARM DEBUG: GRID_ONE (lowest ID): {:?}", grid_one);
-        // info!("ARM DEBUG: GRID_TWO (second lowest ID): {:?}", grid_two);
+        info!("GRID_DEBUG: Sorted result - GRID_ONE (lowest ID): {:?}", grid_one);
+        info!("GRID_DEBUG: Sorted result - GRID_TWO (second lowest ID): {:?}", grid_two);
         
         (grid_one, grid_two)
     }
