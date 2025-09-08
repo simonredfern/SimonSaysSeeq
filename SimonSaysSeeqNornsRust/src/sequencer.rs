@@ -7,6 +7,7 @@ use crossbeam_channel::Sender;
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -345,6 +346,17 @@ impl Sequencer {
             current_pattern: 0,
         };
 
+        // Try to load saved pattern, or create default sparse pattern if none exists
+        match sequencer.load_current_pattern_from_file() {
+            Ok(()) => {
+                info!("Loaded saved pattern on startup");
+            }
+            Err(_) => {
+                info!("No saved pattern found, creating default sparse pattern");
+                sequencer.create_default_sparse_pattern();
+            }
+        }
+
         // Initialize with a snapshot for undo/redo
         sequencer.push_undo_snapshot("Initial state".to_string());
 
@@ -374,6 +386,12 @@ impl Sequencer {
             // Log the stack trace to identify what triggered the stop
             let trace = std::backtrace::Backtrace::capture();
             info!("Sequencer stopped and reset - Stack trace: {}", trace);
+            
+            // Save current pattern when stopping
+            drop(state); // Release the lock before calling save method
+            if let Err(e) = self.save_current_pattern_to_file() {
+                warn!("Failed to save current pattern on stop: {}", e);
+            }
         }
     }
 
@@ -1210,6 +1228,109 @@ impl Sequencer {
         } else {
             Err(anyhow::anyhow!("Pattern {} not found", pattern_id))
         }
+    }
+
+    /// Get the pattern file path for saving/loading current pattern
+    fn get_pattern_file_path() -> PathBuf {
+        if let Some(config_dir) = dirs::config_dir() {
+            let dir = config_dir.join("simon-says-seeq");
+            std::fs::create_dir_all(&dir).ok(); // Create directory if it doesn't exist
+            dir.join("current_pattern.json")
+        } else {
+            PathBuf::from("simon_says_seeq_current_pattern.json")
+        }
+    }
+
+    /// Save current pattern to file
+    pub fn save_current_pattern_to_file(&self) -> Result<()> {
+        let state = self.state.lock().unwrap();
+        let pattern_file = Self::get_pattern_file_path();
+        
+        // Create a copy of the state for saving (without transport state)
+        let mut save_state = state.clone();
+        save_state.is_running = false;
+        save_state.sequencer_a_current_step = 0;
+        save_state.sequencer_a_current_bar = 0;
+        save_state.tick_count = 0;
+        save_state.the_current_tick_count_since_step = 0;
+        save_state.the_current_tick_count_since_start = 0;
+
+        let json_content = serde_json::to_string_pretty(&save_state)?;
+        std::fs::write(&pattern_file, json_content)?;
+        
+        info!("Current pattern saved to: {:?}", pattern_file);
+        Ok(())
+    }
+
+    /// Load current pattern from file
+    pub fn load_current_pattern_from_file(&self) -> Result<()> {
+        let pattern_file = Self::get_pattern_file_path();
+        
+        if !pattern_file.exists() {
+            return Err(anyhow::anyhow!("No saved pattern found at: {:?}", pattern_file));
+        }
+
+        let json_content = std::fs::read_to_string(&pattern_file)?;
+        let loaded_state: SequencerState = serde_json::from_str(&json_content)?;
+        
+        // Save current transport state before loading
+        let mut state = self.state.lock().unwrap();
+        let current_step = state.sequencer_a_current_step;
+        let current_bar = state.sequencer_a_current_bar;
+        let is_running = state.is_running;
+        let tick_count = state.tick_count;
+        let tick_count_since_step = state.the_current_tick_count_since_step;
+        let tick_count_since_start = state.the_current_tick_count_since_start;
+
+        // Load the pattern data
+        *state = loaded_state;
+        
+        // Restore transport state
+        state.sequencer_a_current_step = current_step;
+        state.sequencer_a_current_bar = current_bar;
+        state.is_running = is_running;
+        state.tick_count = tick_count;
+        state.the_current_tick_count_since_step = tick_count_since_step;
+        state.the_current_tick_count_since_start = tick_count_since_start;
+
+        info!("Current pattern loaded from: {:?}", pattern_file);
+        Ok(())
+    }
+
+    /// Create a sparse default pattern across both grids
+    pub fn create_default_sparse_pattern(&self) {
+        let mut state = self.state.lock().unwrap();
+        
+        // Create sparse pattern - just a few notes across both grids
+        // Main grid (sequencer_a_grid) - add some sparse beats
+        if state.sequencer_a_grid.len() >= 16 && state.sequencer_a_grid[0].len() >= 8 {
+            // Row 0: Kick pattern - beats 1, 5, 9, 13
+            state.sequencer_a_grid[0][0] = 1;  // Step 1
+            state.sequencer_a_grid[4][0] = 1;  // Step 5
+            state.sequencer_a_grid[8][0] = 1;  // Step 9
+            state.sequencer_a_grid[12][0] = 1; // Step 13
+            
+            // Row 1: Hi-hat pattern - every 4th step offset
+            state.sequencer_a_grid[2][1] = 1;  // Step 3
+            state.sequencer_a_grid[6][1] = 1;  // Step 7
+            state.sequencer_a_grid[10][1] = 1; // Step 11
+            state.sequencer_a_grid[14][1] = 1; // Step 15
+
+            // Row 2: Snare pattern - beats 5, 13
+            state.sequencer_a_grid[4][2] = 1;  // Step 5
+            state.sequencer_a_grid[12][2] = 1; // Step 13
+        }
+
+        // Mozart grid (sequencer_a_mozart) - add some melody notes
+        if state.sequencer_a_mozart.len() >= 16 && state.sequencer_a_mozart[0].len() >= 8 {
+            // Row 0: Simple melody
+            state.sequencer_a_mozart[0][0] = 60;  // C4
+            state.sequencer_a_mozart[4][0] = 64;  // E4
+            state.sequencer_a_mozart[8][0] = 67;  // G4
+            state.sequencer_a_mozart[12][0] = 72; // C5
+        }
+
+        info!("Created default sparse pattern across both grids");
     }
 
     /// Advanced Sequencing Features
