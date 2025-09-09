@@ -1866,4 +1866,125 @@ mod tests {
         assert!(!note_on_events.is_empty());
         assert!(!note_off_events.is_empty());
     }
+
+    #[test]
+    fn test_individual_row_step_counters_reset() {
+        let sequencer = Sequencer::new();
+
+        // Simulate advancing individual row counters by starting and letting them advance
+        sequencer.start();
+        
+        // Manually advance row states to simulate playback
+        {
+            let mut state = sequencer.state.lock().unwrap();
+            // Simulate some rows having advanced to different positions
+            if state.sequencer_a_row_states.len() >= 8 {
+                state.sequencer_a_row_states[0].sequencer_a_current_step = 5;
+                state.sequencer_a_row_states[1].sequencer_a_current_step = 8;
+                state.sequencer_a_row_states[2].sequencer_a_current_step = 12;
+                state.sequencer_a_row_states[3].sequencer_a_current_step = 3;
+                state.sequencer_a_row_states[4].sequencer_a_current_step = 15;
+                state.sequencer_a_row_states[5].sequencer_a_current_step = 7;
+                state.sequencer_a_row_states[6].sequencer_a_current_step = 20;
+                state.sequencer_a_row_states[7].sequencer_a_current_step = 11;
+            }
+        }
+
+        // Verify rows are at different positions
+        {
+            let state = sequencer.state.lock().unwrap();
+            if state.sequencer_a_row_states.len() >= 8 {
+                assert_eq!(state.sequencer_a_row_states[0].sequencer_a_current_step, 5);
+                assert_eq!(state.sequencer_a_row_states[1].sequencer_a_current_step, 8);
+                assert_eq!(state.sequencer_a_row_states[2].sequencer_a_current_step, 12);
+                assert_eq!(state.sequencer_a_row_states[7].sequencer_a_current_step, 11);
+            }
+        }
+
+        // Stop should reset ALL individual row counters to 0
+        sequencer.stop();
+
+        // Verify all row counters are reset
+        {
+            let state = sequencer.state.lock().unwrap();
+            for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
+                assert_eq!(row_state.sequencer_a_current_step, 0, 
+                    "Row {} counter should be reset to 0 after stop", row_idx);
+            }
+        }
+
+        // Starting again should still have all counters at 0
+        sequencer.start();
+        {
+            let state = sequencer.state.lock().unwrap();
+            for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
+                assert_eq!(row_state.sequencer_a_current_step, 0, 
+                    "Row {} counter should remain at 0 after restart", row_idx);
+            }
+        }
+    }
+
+    #[test]
+    fn test_row_step_counter_values_and_ranges() {
+        let sequencer = Sequencer::new();
+
+        // Check default values
+        {
+            let state = sequencer.state.lock().unwrap();
+            for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
+                assert_eq!(row_state.sequencer_a_current_step, 0, "Row {} should start at step 0", row_idx);
+                assert_eq!(row_state.sequencer_a_first_step, 0, "Row {} should have first_step=0", row_idx);
+                assert_eq!(row_state.sequencer_a_euclidean_length, 31, "Row {} should have length=31 by default", row_idx);
+                assert_eq!(row_state.sequencer_a_previous_step, 31, "Row {} should have previous_step=31", row_idx);
+            }
+        }
+
+        // Simulate step advancement to show the actual range
+        sequencer.start();
+        {
+            let mut state = sequencer.state.lock().unwrap();
+            let row = &mut state.sequencer_a_row_states[0];
+            
+            // Simulate advancing through the full range
+            for expected_step in 0..=31 {
+                assert_eq!(row.sequencer_a_current_step, expected_step, 
+                    "Row step counter should be {} at position {}", expected_step, expected_step);
+                
+                // Advance step (simulating the advance_step logic)
+                row.sequencer_a_previous_step = row.sequencer_a_current_step;
+                row.sequencer_a_current_step += 1;
+                if row.sequencer_a_current_step > row.sequencer_a_euclidean_length {
+                    row.sequencer_a_current_step = row.sequencer_a_first_step;
+                }
+            }
+            
+            // After 32 steps (0-31), should wrap back to 0
+            assert_eq!(row.sequencer_a_current_step, 0, "Should wrap back to 0 after step 31");
+        }
+
+        // Test with custom range
+        {
+            let mut state = sequencer.state.lock().unwrap();
+            let row = &mut state.sequencer_a_row_states[1];
+            
+            // Set custom range: steps 4-15 (12 step loop starting at step 4)
+            row.sequencer_a_first_step = 4;
+            row.sequencer_a_euclidean_length = 15;
+            row.sequencer_a_current_step = 4;
+            
+            // Advance through custom range
+            for i in 0..20 { // Test more than one full cycle
+                let expected = if i <= 11 { 4 + i } else { 4 + ((i - 12) % 12) };
+                assert_eq!(row.sequencer_a_current_step, expected, 
+                    "Custom range: step {} should be at position {}", i, expected);
+                
+                // Advance
+                row.sequencer_a_previous_step = row.sequencer_a_current_step;
+                row.sequencer_a_current_step += 1;
+                if row.sequencer_a_current_step > row.sequencer_a_euclidean_length {
+                    row.sequencer_a_current_step = row.sequencer_a_first_step;
+                }
+            }
+        }
+    }
 }
