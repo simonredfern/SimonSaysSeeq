@@ -237,6 +237,8 @@ pub struct SequencerState {
     pub min_lane: usize,
     pub max_lane: usize,
     pub max_step: usize,
+    /// Flag to indicate tick counter should be reset on next clock loop iteration
+    pub reset_tick_counter: bool,
 }
 
 impl Default for SequencerState {
@@ -316,6 +318,7 @@ impl Default for SequencerState {
             min_lane: MIN_LANE,
             max_lane: MAX_LANE,
             max_step: MAX_STEP,
+            reset_tick_counter: false,
         }
     }
 }
@@ -368,6 +371,7 @@ impl Sequencer {
         let mut state = self.state.lock().unwrap();
         if !state.is_running {
             state.is_running = true;
+            state.reset_tick_counter = true;
             info!("Sequencer started");
         }
     }
@@ -726,10 +730,19 @@ impl Sequencer {
             if current_time.duration_since(last_tick) >= tick_interval {
                 last_tick = current_time;
 
-                let is_running = {
-                    let state = self.state.lock().unwrap();
-                    state.is_running
+                let (is_running, should_reset) = {
+                    let mut state = self.state.lock().unwrap();
+                    let reset = state.reset_tick_counter;
+                    if reset {
+                        state.reset_tick_counter = false;
+                    }
+                    (state.is_running, reset)
                 };
+
+                if should_reset {
+                    tick_counter = 0;
+                    info!("Tick counter reset to 0 for synchronization");
+                }
 
                 if is_running {
                     self.process_tick(tick_counter, &sender)?;
@@ -1714,6 +1727,12 @@ impl Sequencer {
         let state = self.state.lock().unwrap();
         state.chain_mode_enabled
     }
+
+    /// Check if tick counter reset flag is set (for testing/debugging)
+    pub fn get_reset_tick_counter_flag(&self) -> bool {
+        let state = self.state.lock().unwrap();
+        state.reset_tick_counter
+    }
 }
 
 #[cfg(test)]
@@ -1789,7 +1808,54 @@ mod tests {
         // Should get note events for this step
         let events = sequencer.get_step_events(0, 0, 0);
         assert!(events.is_some());
+    }
 
+    #[test]
+    fn test_tick_counter_reset() {
+        let sequencer = Sequencer::new();
+
+        // Clear any initial state by stopping first
+        sequencer.stop();
+
+        // Verify basic state after stop
+        {
+            let state = sequencer.state.lock().unwrap();
+            assert!(!state.is_running);
+            assert_eq!(state.sequencer_a_current_step, 0);
+            assert_eq!(state.sequencer_a_current_bar, 0);
+        }
+
+        // Start should set the reset flag
+        sequencer.start();
+        {
+            let state = sequencer.state.lock().unwrap();
+            assert!(state.reset_tick_counter);
+            assert!(state.is_running);
+        }
+
+        // Stop should reset positions and clear running flag
+        sequencer.stop();
+        {
+            let state = sequencer.state.lock().unwrap();
+            assert!(!state.is_running);
+            assert_eq!(state.sequencer_a_current_step, 0);
+            assert_eq!(state.sequencer_a_current_bar, 0);
+        }
+
+        // Starting again should set reset flag again
+        sequencer.start();
+        {
+            let state = sequencer.state.lock().unwrap();
+            assert!(state.reset_tick_counter);
+            assert!(state.is_running);
+        }
+    }
+
+    #[test]
+    fn test_step_events_completion() {
+        let sequencer = Sequencer::new();
+        sequencer.set_grid_value(0, 0, 1);
+        let events = sequencer.get_step_events(0, 0, 0);
         let events = events.unwrap();
         assert!(!events.is_empty());
 
