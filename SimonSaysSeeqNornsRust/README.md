@@ -54,15 +54,7 @@ EXAMPLES:
     ./rpi5_build_and_run.sh --features "hardware,midi" run # Build and run with specific features
 ```
 
-## Quick Start
 
-**New to SimonSaysSeeq? Get started in 30 seconds:**
-
-```bash
-./getting_started.sh
-```
-
-This interactive script will guide you through the deployment options and help you choose the best approach for your needs.
 
 ### Manual Options
 
@@ -157,17 +149,10 @@ cargo build --release --features="hardware,midi"
 
 ## Features
 
-- **High-Performance Sequencing**: Written in Rust for maximum performance
-- **Pure Rust Operation**: No Lua dependencies - direct hardware access
-- **Grid Support**: Monome grid integration for tactile control
-- **Framework RGB Macropad**: Native support for Framework Laptop 16 RGB Macropad
-- **MIDI I/O**: Full MIDI input/output support
-- **Real-time Display**: Direct framebuffer access for Norns screen
-- **RGB Flash Sequences**: Dynamic LED animations on sequencer start
-- **Simulation Mode**: Test without hardware using console output
-- **Pattern Management**: Save/load and chain patterns
-- **CO2 Integration**: Environmental data integration for tempo modulation
-- **systemd Integration**: Reliable service management and auto-start
+- **7 Row step sequencer**: Written in Rust
+- **Current Pattern Saved**: Current Pattern is saved on Midi stop and loaded at seqeuncer boot.
+
+
 
 ## Development
 
