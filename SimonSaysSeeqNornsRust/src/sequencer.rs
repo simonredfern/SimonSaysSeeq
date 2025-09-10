@@ -523,45 +523,7 @@ impl Sequencer {
         }
     }
 
-    /// Copy a section of the grid
-    pub fn copy_grid_section(
-        &self,
-        src_x: usize,
-        src_y: usize,
-        dst_x: usize,
-        dst_y: usize,
-        width: usize,
-        height: usize,
-    ) {
-        let mut state = self.state.lock().unwrap();
-        let mut copy_buffer = Vec::new();
 
-        // First copy the source section
-        for y in 0..height {
-            let mut row = Vec::new();
-            for x in 0..width {
-                let sx = src_x + x;
-                let sy = src_y + y;
-                if sx < 32 && sy < 8 {
-                    row.push(state.sequencer_a_grid[sx][sy]);
-                } else {
-                    row.push(0);
-                }
-            }
-            copy_buffer.push(row);
-        }
-
-        // Then paste to destination
-        for y in 0..height {
-            for x in 0..width {
-                let dx = dst_x + x;
-                let dy = dst_y + y;
-                if dx > 0 && dy > 0 && dx <= 32 && dy <= 8 {
-                    state.sequencer_a_grid[dx - 1][dy - 1] = copy_buffer[y][x];
-                }
-            }
-        }
-    }
 
     /// Set first step for sequencer
     pub fn set_first_step(&self, step: usize) {

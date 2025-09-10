@@ -1494,9 +1494,8 @@ impl SimonSaysSeeq {
                         // Same row - randomize this position (functionality disabled)
                         info!("Randomize position [{}, {}] (functionality disabled)", x, y);
                     } else {
-                        // Different row - copy from held row to this row
-                        self.sequencer.copy_grid_section(x, held_row, x, y, 1, 1);
-                        info!("Copied from [{}, {}] to [{}, {}]", x, held_row, x, y);
+                        // Different row - copy from held row to this row (functionality disabled)
+                        info!("Copy from [{}, {}] to [{}, {}] (functionality disabled)", x, held_row, x, y);
                     }
                 }
             }
@@ -1504,9 +1503,8 @@ impl SimonSaysSeeq {
             // Multiple rows held - advanced operations
             let first_row = self.get_first_held_row().unwrap_or(0);
 
-            // Copy pattern from first held row to current position
-            self.sequencer.copy_grid_section(0, first_row, 0, y, 16, 1);
-            info!("Copied pattern from row {} to row {}", first_row, y);
+            // Copy pattern from first held row to current position (functionality disabled)
+            info!("Copy pattern from row {} to row {} (functionality disabled)", first_row, y);
         }
 
         // Update grid display
