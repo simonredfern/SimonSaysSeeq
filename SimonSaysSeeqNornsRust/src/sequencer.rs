@@ -797,7 +797,7 @@ impl Sequencer {
     }
 
     /// Play MIDI events for current tick
-    fn play_midi(&self, _state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
+    pub fn play_midi(&self, _state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
         // Sequencer B MIDI playback functionality removed
         Ok(())
     }
@@ -1754,6 +1754,19 @@ impl Sequencer {
         let state = self.state.lock().unwrap();
         state.reset_tick_counter
     }
+
+    /// External clock play MIDI - locks state and calls play_midi
+    pub fn external_play_midi(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let state = self.state.lock().unwrap();
+        self.play_midi(&state, sender)
+    }
+
+    /// External clock step advancement - locks state and calls advance_step
+    pub fn external_advance_step(&mut self, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let mut state = self.state.lock().unwrap();
+        self.advance_step(&mut state, sender)
+    }
+
 }
 
 #[cfg(test)]

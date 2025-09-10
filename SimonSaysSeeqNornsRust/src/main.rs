@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use chrono;
+use crossbeam_channel::Sender;
 
 mod hardware;
 mod sequencer;
@@ -99,6 +100,7 @@ pub struct SimonSaysSeeq {
     config: Config,
     running: Arc<AtomicBool>,
     tempo: f32,
+    internal_timing_enabled: bool,
     // Active ARM action for row 7 (control row) - only one can be active at a time
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
@@ -145,6 +147,7 @@ impl SimonSaysSeeq {
             config,
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
+            internal_timing_enabled: false, // Default: external clock slave mode
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
             last_midi_clock_count: 0,
@@ -194,8 +197,9 @@ impl SimonSaysSeeq {
         // Start sequencer thread
         let running_seq = self.running.clone();
         let mut sequencer = self.sequencer.clone();
+        let seq_tx_clone = seq_tx.clone();
         let seq_thread = thread::spawn(move || {
-            sequencer.run_clock_loop(seq_tx, running_seq)
+            sequencer.run_clock_loop(seq_tx_clone, running_seq)
         });
 
         // Auto-start the sequencer for desktop testing (no hardware required)
@@ -231,7 +235,7 @@ impl SimonSaysSeeq {
         self.update_grid_display()?;
 
         // Main event loop
-        self.main_loop(hw_rx, seq_rx)?;
+        self.main_loop(hw_rx, seq_rx, seq_tx)?;
 
         // Cleanup with timeout
         self.running.store(false, Ordering::SeqCst);
@@ -255,7 +259,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    fn main_loop(&mut self, hw_rx: Receiver<HardwareEvent>, seq_rx: Receiver<SequencerEvent>) -> Result<()> {
+    fn main_loop(&mut self, hw_rx: Receiver<HardwareEvent>, seq_rx: Receiver<SequencerEvent>, seq_tx: Sender<SequencerEvent>) -> Result<()> {
         let mut last_screen_update = Instant::now();
         let screen_update_interval = Duration::from_millis(33); // ~30 FPS
 
@@ -318,7 +322,7 @@ impl SimonSaysSeeq {
             {
                 let midi_events = self.midi.get_input_events();
                 for event in midi_events {
-                    if let Err(e) = self.handle_midi_input_event(event) {
+                    if let Err(e) = self.handle_midi_input_event(event, &seq_tx) {
                         // error!("Error handling MIDI input event: {}", e);
                     }
                 }
@@ -753,6 +757,20 @@ impl SimonSaysSeeq {
                             }
                             
                             match x {
+                                9 => {
+                                    // Internal timing mode toggle button
+                                    self.internal_timing_enabled = !self.internal_timing_enabled;
+                                    info!("handle_grid_press says: Internal timing {} via GRID_TWO column 9", 
+                                          if self.internal_timing_enabled { "enabled" } else { "disabled" });
+                                    
+                                    // Update LED to show current mode
+                                    #[cfg(feature = "hardware")]
+                                    {
+                                        let brightness = if self.internal_timing_enabled { 15 } else { 0 };
+                                        self.grid.set_led(grid_id, x, seq_y, brightness, "timing_mode_indicator")?;
+                                        self.grid.refresh()?;
+                                    }
+                                }
                                 10 => {
                                     // Snap to whole tempo toggle button
                                     self.snap_to_whole_tempo = !self.snap_to_whole_tempo;
@@ -1110,6 +1128,15 @@ impl SimonSaysSeeq {
         // Update beat LEDs and ARM button LEDs before final refresh
         // self.update_beat_leds()?;
         // self.update_arm_button_leds()?;
+        
+        // Update timing mode indicator LED on GRID_TWO column 9
+        if connected_grids.len() >= 2 {
+            let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+            if let Some(grid_two_id) = grid_two {
+                let brightness = if self.internal_timing_enabled { 15 } else { 0 };
+                self.grid.set_led(&grid_two_id, 9, 0, brightness, "timing_mode_indicator")?;
+            }
+        }
         
         self.grid.refresh()?;
         Ok(())
@@ -1515,7 +1542,7 @@ impl SimonSaysSeeq {
 
     /// Handle MIDI input events
     #[cfg(feature = "midi")]
-    fn handle_midi_input_event(&mut self, event: crate::midi::MidiInputEvent) -> Result<()> {
+    fn handle_midi_input_event(&mut self, event: crate::midi::MidiInputEvent, seq_tx: &Sender<SequencerEvent>) -> Result<()> {
         use crate::midi::MidiInputEvent;
         
         match event {
@@ -1551,7 +1578,12 @@ impl SimonSaysSeeq {
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
-                
+
+                // Reset external clock counter for fresh sync
+                if !self.internal_timing_enabled {
+                    // Reset will happen naturally on next ClockTick handler
+                }
+
                 // Reset phase correction state on new start
                 self.reset_phase_correction();
                 
@@ -1576,6 +1608,12 @@ impl SimonSaysSeeq {
                 info!("STOP TRIGGER: MIDI Clock Stop received from external device - stopping sequencer");
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
+                
+                // Reset external clock counter on stop
+                if !self.internal_timing_enabled {
+                    // Reset will happen naturally on next ClockTick handler
+                }
+                
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Clear beat LEDs when clock stops
                 // self.beat_led_flash_until = None;
@@ -1589,6 +1627,26 @@ impl SimonSaysSeeq {
                     TICK_COUNTER += 1;
                     if TICK_COUNTER % 100 == 0 {
                         debug!("handle_midi_input_event says: MIDI Clock Tick #{} - connection active", TICK_COUNTER);
+                    }
+                }
+                
+                // External clock slave mode: advance sequencer directly on MIDI clock
+                if !self.internal_timing_enabled && self.sequencer.is_running() {
+                    // MIDI clock runs at 24 PPQ, we need 12 ticks per step
+                    static mut EXTERNAL_CLOCK_TICK_COUNTER: u32 = 0;
+                    unsafe {
+                        EXTERNAL_CLOCK_TICK_COUNTER += 1;
+                        if EXTERNAL_CLOCK_TICK_COUNTER % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
+                            // First play any sub-step MIDI events (match internal timing behavior)
+                            if let Err(e) = self.sequencer.external_play_midi(seq_tx) {
+                                warn!("External clock play MIDI failed: {}", e);
+                            }
+                            
+                            // Then advance sequencer step
+                            if let Err(e) = self.sequencer.external_advance_step(seq_tx) {
+                                warn!("External clock step advancement failed: {}", e);
+                            }
+                        }
                     }
                 }
             }

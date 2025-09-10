@@ -150,7 +150,7 @@ cargo build --release --features="hardware,midi"
 ## Features
 
 - **7 Row step sequencer**: Written in Rust
-- **Current Pattern Saved**: Current Pattern is saved on Midi stop and loaded at seqeuncer boot.
+- **Current Pattern Saved**: Current Pattern is saved on MIDI stop and loaded at seqeuncer boot.
 
 
 
@@ -320,6 +320,49 @@ brightness = 80
 ```
 
 ## Architecture
+
+### Timing Modes
+
+The sequencer supports two timing modes that can be toggled with **GRID_TWO column 9**:
+
+**External Timing Mode (Default - LED off):**
+```
+MIDI Clock Input (24 PPQ)
+         ↓
+   ClockTick Event
+         ↓
+handle_midi_input_event()
+         ↓
+  Counter % 6 == 0 ?  ←── (16th note timing)
+         ↓ YES
+external_play_midi() → external_advance_step()
+         ↓                       ↓
+    play_midi()            advance_step()
+         ↓                       ↓
+     Trigger MIDI + LEDs
+```
+
+**Internal Timing Mode (Advanced - LED on):**
+```
+  run_clock_loop()
+         ↓
+Calculate microsecond timing
+         ↓
+    process_tick()
+         ↓
+tick_counter % ticks_per_step == 0 ?
+         ↓ YES
+    play_midi() → advance_step()
+         ↓              ↓
+     Trigger MIDI + LEDs
+```
+
+**Key Benefits:**
+- **External Mode**: Bulletproof sync with external devices, preserves external swing
+- **Internal Mode**: Advanced features (internal swing, micro-timing, tempo analysis)
+- **DRY Principle**: Both modes use the same `play_midi()` and `advance_step()` functions
+
+### Code Structure
 
 - **main.rs**: Application entry point and main loop
 - **sequencer.rs**: Core sequencing engine
