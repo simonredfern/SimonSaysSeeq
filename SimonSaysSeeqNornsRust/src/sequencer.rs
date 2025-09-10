@@ -186,8 +186,7 @@ pub struct SequencerState {
     pub sequencer_a_grid: Vec<Vec<u8>>,
     /// Sequencer A Mozart state (second grid/performance controls) - MIDI note values
     pub sequencer_a_mozart: Vec<Vec<u8>>,
-    /// Sequencer A Mozart grid for MIDI note assignments
-    pub sequencer_a_mozart_grid: Vec<Vec<u8>>,
+
     /// Slide state for parameter transitions
     pub slide: SlideState,
     /// Held state for grid button combinations
@@ -271,13 +270,9 @@ impl Default for SequencerState {
 
 
 
-        // Initialize mozart_grid with default MIDI note values (60 = middle C)
-        let mozart_grid = vec![vec![60; ROWS]; COLS];
-
         Self {
             sequencer_a_grid: grid,
             sequencer_a_mozart: mozart,
-            sequencer_a_mozart_grid: mozart_grid,
             slide,
             held,
             sequencer_a_row_states: row_states,
@@ -470,14 +465,9 @@ impl Sequencer {
         }
     }
 
-    /// Get Mozart grid value (MIDI note number)
-    pub fn get_mozart_value(&self, x: usize, y: usize) -> u8 {
-        let state = self.state.lock().unwrap();
-        if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            state.sequencer_a_mozart_grid[x - 1][y - 1]
-        } else {
-            60 // Default to middle C
-        }
+    /// Get Mozart grid value (MIDI note number) - simplified to return default
+    pub fn get_mozart_value(&self, _x: usize, _y: usize) -> u8 {
+        60 // Default to middle C
     }
 
     /// Get swing amount
