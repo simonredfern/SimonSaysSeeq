@@ -347,6 +347,7 @@ impl SimonSaysSeeq {
 
     fn handle_hardware_event(&mut self, event: HardwareEvent) -> Result<()> {
         match event {
+            //TODO map these to buttons instead of encoders if we neeed them.
             HardwareEvent::EncoderTurn { encoder, delta } => {
                 match encoder {
                     1 => {
@@ -431,12 +432,12 @@ impl SimonSaysSeeq {
             }
 
             HardwareEvent::Shutdown => {
-                info!("🛑 Shutdown requested - initiating immediate exit");
+                info!("Shutdown requested - initiating immediate exit");
                 self.running.store(false, Ordering::SeqCst);
                 // More aggressive force exit
                 thread::spawn(|| {
                     thread::sleep(Duration::from_millis(500));
-                    warn!("🛑 Forcing immediate exit");
+                    warn!("Forcing immediate exit");
                     std::process::exit(0);
                 });
             }

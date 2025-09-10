@@ -372,6 +372,16 @@ impl Sequencer {
         if !state.is_running {
             state.is_running = true;
             state.reset_tick_counter = true;
+
+
+            // Reset to beginning
+            state.sequencer_a_current_step = 0;
+            state.sequencer_a_current_bar = 0;
+            for row_state in &mut state.sequencer_a_row_states {
+                row_state.sequencer_a_current_step = 0;
+            }
+
+
             info!("Sequencer started");
         }
     }
@@ -886,7 +896,7 @@ impl Sequencer {
                                 sequencer_source: 'A',
                             };
 
-                            if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                            if let Err(e) = sender.send(SequencerEvent::MidiEvent(midi_event)) {
                                 warn!("Failed to send MIDI note ON event: {}", e);
                             }
                         }
@@ -894,7 +904,7 @@ impl Sequencer {
                 }
 
                 // Send selective grid update event for this row
-                if let Err(e) = sender.send(SequencerEvent::GridUpdate {
+                if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,
                     old_step: row_state.sequencer_a_previous_step,
                     new_step: current_step,
