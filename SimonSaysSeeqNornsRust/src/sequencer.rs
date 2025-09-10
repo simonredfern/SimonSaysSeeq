@@ -200,8 +200,8 @@ pub struct SequencerState {
     pub chain_mode_enabled: bool,
     pub chain_repeat_current: usize,
     /// Sequencer A Current global position
-    pub sequencer_a_current_step: usize,
-    pub sequencer_a_current_bar: usize,
+    pub sequencer_a_current_master_step: usize,
+    pub sequencer_a_current_master_bar: usize,
     pub sequencer_a_current_lane: usize,
     /// Transport state
     pub is_running: bool,
@@ -213,8 +213,6 @@ pub struct SequencerState {
     pub tick_count: u64,
     pub the_current_tick_count_since_step: u32,
     pub the_current_tick_count_since_start: u64,
-    pub midi_step_count: usize,
-    pub midi_bar_count: usize,
     pub first_step: usize,
     pub last_step: usize,
     pub midi_first_step: usize,
@@ -287,8 +285,8 @@ impl Default for SequencerState {
             current_chain_position: 0,
             chain_mode_enabled: false,
             chain_repeat_current: 1,
-            sequencer_a_current_step: 0,
-            sequencer_a_current_bar: 0,
+            sequencer_a_current_master_step: 0,
+            sequencer_a_current_master_bar: 0,
             sequencer_a_current_lane: 1,
             is_running: false,
             tempo: 30.0,
@@ -300,8 +298,6 @@ impl Default for SequencerState {
             tick_count: 0,
             the_current_tick_count_since_step: 0,
             the_current_tick_count_since_start: 0,
-            midi_step_count: 0,
-            midi_bar_count: 0,
             midi_first_step: 0,
             midi_last_step: 31,
             tempo_analysis: TempoAnalysis::default(),
@@ -375,8 +371,8 @@ impl Sequencer {
 
 
             // Reset to beginning
-            state.sequencer_a_current_step = 0;
-            state.sequencer_a_current_bar = 0;
+            state.sequencer_a_current_master_step = 0;
+            state.sequencer_a_current_master_bar = 0;
             for row_state in &mut state.sequencer_a_row_states {
                 row_state.sequencer_a_current_step = 0;
             }
@@ -392,8 +388,8 @@ impl Sequencer {
         if state.is_running {
             state.is_running = false;
             // Reset to beginning
-            state.sequencer_a_current_step = 0;
-            state.sequencer_a_current_bar = 0;
+            state.sequencer_a_current_master_step = 0;
+            state.sequencer_a_current_master_bar = 0;
             for row_state in &mut state.sequencer_a_row_states {
                 row_state.sequencer_a_current_step = 0;
             }
@@ -425,7 +421,7 @@ impl Sequencer {
     /// Get the current playback position (step, bar)
     pub fn get_position(&self) -> (usize, usize) {
         let state = self.state.lock().unwrap();
-        (state.sequencer_a_current_step, state.sequencer_a_current_bar)
+        (state.sequencer_a_current_master_step, state.sequencer_a_current_master_bar)
     }
 
 
@@ -505,7 +501,7 @@ impl Sequencer {
     /// Get current step and bar
     pub fn get_current_position(&self) -> (usize, usize) {
         let state = self.state.lock().unwrap();
-        (state.midi_step_count, state.midi_bar_count)
+        (state.sequencer_a_current_master_step, state.sequencer_a_current_master_bar)
     }
 
 
@@ -585,8 +581,8 @@ impl Sequencer {
         }
         
         // Reset position
-        state.sequencer_a_current_step = 0;
-        state.sequencer_a_current_bar = 0;
+        state.sequencer_a_current_master_step = 0;
+        state.sequencer_a_current_master_bar = 0;
         for row_state in &mut state.sequencer_a_row_states {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
@@ -673,33 +669,29 @@ impl Sequencer {
         state.the_current_tick_count_since_step = 0;
 
         // Store current step values BEFORE increment for MIDI synchronization
-        let current_midi_step = state.midi_step_count;
-        let current_midi_bar = state.midi_bar_count;
+        let current_step = state.sequencer_a_current_master_step;
+        let current_bar = state.sequencer_a_current_master_bar;
 
         // Process current step for all sequence rows
         self.process_step(&*state, sender)?;
 
         // Send step event with CURRENT step values (before increment) for MIDI sync
         let _ = sender.try_send(SequencerEvent::Step {
-            step: current_midi_step,
-            bar: current_midi_bar,
+            step: current_step,
+            bar: current_bar,
         });
 
-        // Advance MIDI step
-        state.midi_step_count += 1;
-        if state.midi_step_count > state.midi_last_step {
-            state.midi_step_count = state.midi_first_step;
+        // Advance sequencer master step
+        state.sequencer_a_current_master_step += 1;
+        if state.sequencer_a_current_master_step > state.last_step {
+            state.sequencer_a_current_master_step = state.first_step;
 
-            // Advance bar
-            state.midi_bar_count += 1;
-            if state.midi_bar_count > state.max_bar {
-                state.midi_bar_count = state.min_bar;
+            // Advance master bar
+            state.sequencer_a_current_master_bar += 1;
+            if state.sequencer_a_current_master_bar > state.max_bar {
+                state.sequencer_a_current_master_bar = state.min_bar;
             }
         }
-
-        // Update global position counters to match MIDI counters
-        state.sequencer_a_current_step = state.midi_step_count;
-        state.sequencer_a_current_bar = state.midi_bar_count;
         
         // Advance each row's current step based on its individual settings
         for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
@@ -763,7 +755,7 @@ impl Sequencer {
                                 channel: (row_idx + 1) as u8, // Row-based channel 1-7
                                 note_on: true,
                                 step: current_step,
-                                bar: state.midi_bar_count,
+                                bar: state.sequencer_a_current_master_bar,
                                 sequencer_source: 'A',
                             };
 
@@ -854,8 +846,8 @@ impl Sequencer {
         state.tick_count = 0;
         state.the_current_tick_count_since_start = 0;
         state.the_current_tick_count_since_step = 0;
-        state.midi_step_count = state.first_step;
-        state.midi_bar_count = 0;
+        state.sequencer_a_current_master_step = state.first_step;
+        state.sequencer_a_current_master_bar = 0;
 
         // Reset tempo analysis
         state.tempo_analysis = TempoAnalysis::default();
@@ -1086,8 +1078,8 @@ impl Sequencer {
 
         // Reset transport state for saved patterns
         pattern_state.is_running = false;
-        pattern_state.sequencer_a_current_step = 0;
-        pattern_state.sequencer_a_current_bar = 0;
+        pattern_state.sequencer_a_current_master_step = 0;
+        pattern_state.sequencer_a_current_master_bar = 0;
 
         let mut patterns = self.patterns.lock().unwrap();
         patterns.insert(pattern_id, pattern_state);
@@ -1112,13 +1104,13 @@ impl Sequencer {
             state.sequencer_a_row_states = pattern_state.sequencer_a_row_states.clone();
 
             // Keep current transport state
-            let current_step = state.sequencer_a_current_step;
-            let current_bar = state.sequencer_a_current_bar;
+            let current_step = state.sequencer_a_current_master_step;
+            let current_bar = state.sequencer_a_current_master_bar;
             let is_running = state.is_running;
 
             *state = pattern_state.clone();
-            state.sequencer_a_current_step = current_step;
-            state.sequencer_a_current_bar = current_bar;
+            state.sequencer_a_current_master_step = current_step;
+            state.sequencer_a_current_master_bar = current_bar;
             state.is_running = is_running;
 
             // Note: current_pattern tracking would need to be moved to state if needed
@@ -1149,8 +1141,8 @@ impl Sequencer {
         // Create a copy of the state for saving (without transport state)
         let mut save_state = state.clone();
         save_state.is_running = false;
-        save_state.sequencer_a_current_step = 0;
-        save_state.sequencer_a_current_bar = 0;
+        save_state.sequencer_a_current_master_step = 0;
+        save_state.sequencer_a_current_master_bar = 0;
         save_state.tick_count = 0;
         save_state.the_current_tick_count_since_step = 0;
         save_state.the_current_tick_count_since_start = 0;
@@ -1175,8 +1167,8 @@ impl Sequencer {
         
         // Save current transport state before loading
         let mut state = self.state.lock().unwrap();
-        let current_step = state.sequencer_a_current_step;
-        let current_bar = state.sequencer_a_current_bar;
+        let current_step = state.sequencer_a_current_master_step;
+        let current_bar = state.sequencer_a_current_master_bar;
         let is_running = state.is_running;
         let tick_count = state.tick_count;
         let tick_count_since_step = state.the_current_tick_count_since_step;
@@ -1186,8 +1178,8 @@ impl Sequencer {
         *state = loaded_state;
         
         // Restore transport state
-        state.sequencer_a_current_step = current_step;
-        state.sequencer_a_current_bar = current_bar;
+        state.sequencer_a_current_master_step = current_step;
+        state.sequencer_a_current_master_bar = current_bar;
         state.is_running = is_running;
         state.tick_count = tick_count;
         state.the_current_tick_count_since_step = tick_count_since_step;
@@ -1715,8 +1707,8 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             assert!(!state.is_running);
-            assert_eq!(state.sequencer_a_current_step, 0);
-            assert_eq!(state.sequencer_a_current_bar, 0);
+            assert_eq!(state.sequencer_a_current_master_step, 0);
+            assert_eq!(state.sequencer_a_current_master_bar, 0);
         }
 
         // Start should set the reset flag
@@ -1732,8 +1724,8 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             assert!(!state.is_running);
-            assert_eq!(state.sequencer_a_current_step, 0);
-            assert_eq!(state.sequencer_a_current_bar, 0);
+            assert_eq!(state.sequencer_a_current_master_step, 0);
+            assert_eq!(state.sequencer_a_current_master_bar, 0);
         }
 
         // Starting again should set reset flag again
