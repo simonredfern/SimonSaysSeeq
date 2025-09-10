@@ -153,14 +153,7 @@ impl Default for SequencerARowStates {
     }
 }
 
-/// Pattern chain entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatternChainEntry {
-    pub pattern_id: usize,
-    pub repeat_count: usize,
-    pub transpose: i8,
-    pub velocity_offset: i8,
-}
+
 
 /// Undo/Redo state snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,11 +186,6 @@ pub struct SequencerState {
     pub held: Vec<Vec<u8>>,
     /// Sequencer A Row states for each sequence row
     pub sequencer_a_row_states: Vec<SequencerARowStates>,
-    /// Pattern chains for song mode
-    pub pattern_chains: Vec<PatternChainEntry>,
-    pub current_chain_position: usize,
-    pub chain_mode_enabled: bool,
-    pub chain_repeat_current: usize,
     /// Sequencer A Current global position
     pub sequencer_a_current_master_step: usize,
     pub sequencer_a_current_master_bar: usize,
@@ -276,10 +264,6 @@ impl Default for SequencerState {
             slide,
             held,
             sequencer_a_row_states: row_states,
-            pattern_chains: Vec::new(),
-            current_chain_position: 0,
-            chain_mode_enabled: false,
-            chain_repeat_current: 1,
             sequencer_a_current_master_step: 0,
             sequencer_a_current_master_bar: 0,
             sequencer_a_current_lane: 1,
@@ -1161,83 +1145,7 @@ impl Sequencer {
 
     /// Randomize specific rows with constraints
 
-    /// Pattern Chain Management
 
-    /// Clear pattern chain
-    pub fn clear_chain(&self) {
-        let mut state = self.state.lock().unwrap();
-        state.pattern_chains.clear();
-        state.current_chain_position = 0;
-        state.chain_repeat_current = 0;
-        state.chain_mode_enabled = false;
-        info!("Cleared pattern chain");
-    }
-
-    /// Enable/disable chain mode
-    pub fn set_chain_mode(&self, enabled: bool) {
-        let mut state = self.state.lock().unwrap();
-        state.chain_mode_enabled = enabled;
-        if enabled && !state.pattern_chains.is_empty() {
-            // Load first pattern in chain
-            state.current_chain_position = 0;
-            state.chain_repeat_current = 0;
-            info!(
-                "Chain mode enabled, starting with pattern {}",
-                state.pattern_chains[0].pattern_id
-            );
-        } else {
-            info!("Chain mode disabled");
-        }
-    }
-
-    /// Advance chain to next pattern (called at end of bar)
-    pub fn advance_chain(&self) -> Result<()> {
-        let (should_advance, next_pattern_id) = {
-            let mut state = self.state.lock().unwrap();
-
-            if !state.chain_mode_enabled || state.pattern_chains.is_empty() {
-                return Ok(());
-            }
-
-            let current_entry_repeat_count =
-                state.pattern_chains[state.current_chain_position].repeat_count;
-            state.chain_repeat_current += 1;
-
-            if state.chain_repeat_current >= current_entry_repeat_count {
-                // Move to next pattern in chain
-                state.chain_repeat_current = 0;
-                state.current_chain_position =
-                    (state.current_chain_position + 1) % state.pattern_chains.len();
-
-                let next_pattern_id = state.pattern_chains[state.current_chain_position].pattern_id;
-                info!(
-                    "Chain advanced to pattern {} (repeat {}/{})",
-                    next_pattern_id,
-                    state.chain_repeat_current + 1,
-                    state.pattern_chains[state.current_chain_position].repeat_count
-                );
-
-                (true, next_pattern_id)
-            } else {
-                (false, 0)
-            }
-        };
-
-        if should_advance {
-            // Load the pattern by copying its state
-            let patterns = self.patterns.lock().unwrap();
-            if let Some(pattern_state) = patterns.get(&next_pattern_id) {
-                let mut state = self.state.lock().unwrap();
-                state.sequencer_a_grid = pattern_state.sequencer_a_grid.clone();
-                state.sequencer_a_mozart = pattern_state.sequencer_a_mozart.clone();
-                state.slide = pattern_state.slide.clone();
-                state.sequencer_a_row_states = pattern_state.sequencer_a_row_states.clone();
-                info!("Loaded pattern {} in chain", next_pattern_id);
-            }
-        }
-
-        Ok(())
-    }
 
 
 
@@ -1267,12 +1175,6 @@ impl Sequencer {
         // Apply global transpose
         note += state.global_transpose as i16;
 
-        // Apply pattern chain transpose if in chain mode
-        if state.chain_mode_enabled && !state.pattern_chains.is_empty() {
-            let current_entry = &state.pattern_chains[state.current_chain_position];
-            note += current_entry.transpose as i16;
-        }
-
         // Clamp to valid MIDI range
         note.clamp(0, 127) as u8
     }
@@ -1285,13 +1187,7 @@ impl Sequencer {
         // Apply global velocity scale
         velocity *= state.global_velocity_scale;
 
-        // Apply pattern chain velocity offset if in chain mode
-        if state.chain_mode_enabled && !state.pattern_chains.is_empty() {
-            let current_entry = &state.pattern_chains[state.current_chain_position];
-            velocity += current_entry.velocity_offset as f32;
-        }
-
-        // Clamp to valid MIDI range
+        // Clamp to valid velocity range
         velocity.clamp(1.0, 127.0) as u8
     }
 
@@ -1426,11 +1322,7 @@ impl Sequencer {
         state.global_transpose
     }
 
-    /// Check if chain mode is enabled
-    pub fn is_chain_mode_enabled(&self) -> bool {
-        let state = self.state.lock().unwrap();
-        state.chain_mode_enabled
-    }
+
 
     /// Check if tick counter reset flag is set (for testing/debugging)
     pub fn get_reset_tick_counter_flag(&self) -> bool {
