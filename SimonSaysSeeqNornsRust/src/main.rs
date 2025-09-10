@@ -760,8 +760,11 @@ impl SimonSaysSeeq {
                                 9 => {
                                     // Internal timing mode toggle button
                                     self.internal_timing_enabled = !self.internal_timing_enabled;
-                                    info!("handle_grid_press says: Internal timing {} via GRID_TWO column 9", 
-                                          if self.internal_timing_enabled { "enabled" } else { "disabled" });
+                                    info!("⏰ TIMING MODE: {} | Row 0 Step: {}", 
+                                          if self.internal_timing_enabled { "INTERNAL" } else { "EXTERNAL" },
+                                          if let Some(row_state) = self.sequencer.get_row_states(0) {
+                                              row_state.sequencer_a_current_step.to_string()
+                                          } else { "?".to_string() });
                                     
                                     // Update LED to show current mode
                                     #[cfg(feature = "hardware")]
@@ -1018,9 +1021,9 @@ impl SimonSaysSeeq {
         info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
 
         // DEBUG: Focused tracking for row 0 LED updates
-        if row == 0 {
-            info!("🔥 LED HANDLER Row 0: Processing LED update old_step={} -> new_step={}", old_step, new_step);
-        }
+        // if row == 0 {
+        //     info!("🔥 LED HANDLER Row 0: Processing LED update old_step={} -> new_step={}", old_step, new_step);
+        // }
         
         if connected_grids.len() >= 2 {
             // DUAL-GRID MODE (32-step sequences):

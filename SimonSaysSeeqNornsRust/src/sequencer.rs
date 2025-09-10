@@ -866,6 +866,11 @@ impl Sequencer {
 
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
+        // DEBUG: Show row 0 current step
+        if let Some(row_state) = state.sequencer_a_row_states.get(0) {
+            info!("🎯 Row 0: step {}", row_state.sequencer_a_current_step);
+        }
+        
         // Process each sequence row (0-indexed)
         for row_idx in 0..state.sequencer_a_row_states.len() {
             // Only process rows 0-6 (sequencer rows, row 7 is control)
@@ -885,9 +890,9 @@ impl Sequencer {
                         // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
                         
                         // DEBUG: Track MIDI step position for row 0
-                        if row_idx == 0 {
-                            info!("🎵 MIDI DEBUG Row 0: Sending MIDI note at step {} (grid_value={})", current_step, grid_value);
-                        }
+                        // if row_idx == 0 {
+                        //     info!("🎵 MIDI DEBUG Row 0: Sending MIDI note at step {} (grid_value={})", current_step, grid_value);
+                        // }
 
                         // Send MIDI note ON event for this row
                         if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
@@ -910,10 +915,10 @@ impl Sequencer {
 
                 // Send selective grid update event for this row
                 // DEBUG: Track LED step position for row 0
-                if row_idx == 0 {
-                    info!("💡 LED DEBUG Row 0: Sending grid update old_step={} -> new_step={}", 
-                          row_state.sequencer_a_previous_step, current_step);
-                }
+                // if row_idx == 0 {
+                //     info!("💡 LED DEBUG Row 0: Sending grid update old_step={} -> new_step={}", 
+                //           row_state.sequencer_a_previous_step, current_step);
+                // }
                 
                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,
