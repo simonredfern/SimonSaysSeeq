@@ -104,13 +104,6 @@ pub struct SimonSaysSeeq {
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
     beat_led_flash_until: Option<Instant>,
-    // Phase correction state for MIDI clock sync
-    last_midi_clock_count: u32,
-    last_sync_check: Instant,
-    current_drift_ticks: i32,
-    // Tempo stability tracking for phase correction
-    tempo_stable_since: Option<Instant>,
-    last_stable_tempo: Option<f32>,
     // Snap to whole number tempo setting (default ON)
     snap_to_whole_tempo: bool,
     // GRID_TWO button state tracking for MIDI detection
@@ -148,11 +141,6 @@ impl SimonSaysSeeq {
             tempo: initial_tempo,
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
-            last_midi_clock_count: 0,
-            last_sync_check: Instant::now(),
-            current_drift_ticks: 0,
-            tempo_stable_since: None,
-            last_stable_tempo: None,
             snap_to_whole_tempo: true, // Default ON
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
@@ -1534,9 +1522,6 @@ impl SimonSaysSeeq {
                             }
                         }
                     }
-                    
-                    // Phase correction - check for drift every beat
-                    self.check_phase_correction()?;
                 }
                 
                 let current_tempo = self.sequencer.get_tempo();
@@ -1549,8 +1534,7 @@ impl SimonSaysSeeq {
 
 
 
-                // Reset phase correction state on new start
-                self.reset_phase_correction();
+
                 
                 // Synchronize sequencer tempo with external MIDI clock on start
                 #[cfg(feature = "midi")]
@@ -1579,8 +1563,7 @@ impl SimonSaysSeeq {
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Clear beat LEDs when clock stops
                 // self.beat_led_flash_until = None;
-                // Reset phase correction state
-                self.reset_phase_correction();
+
             }
             MidiInputEvent::ClockTick => {
                 // Log every 100th tick for connection diagnostics
@@ -1706,115 +1689,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// Check phase correction and apply gentle corrections to prevent drift
-    #[cfg(feature = "midi")]
-    fn check_phase_correction(&mut self) -> Result<()> {
-        if !self.midi.is_external_clock_running() {
-            return Ok(());
-        }
 
-        // Get current MIDI clock state
-        let (_, _, midi_running) = self.midi.get_clock_info();
-        if !midi_running {
-            return Ok(());
-        }
-
-        // Check tempo stability - only apply phase correction if tempo has been stable for 10 seconds
-        if let Some(external_tempo) = self.midi.get_external_tempo() {
-            let now = Instant::now();
-            let tempo_changed = if let Some(last_tempo) = self.last_stable_tempo {
-                (external_tempo - last_tempo).abs() > 2.0 // Consider tempo stable if within 2 BPM
-            } else {
-                true // No previous tempo, consider it changed
-            };
-
-            if tempo_changed {
-                // Tempo changed, reset stability timer
-                self.tempo_stable_since = Some(now);
-                self.last_stable_tempo = Some(external_tempo);
-                debug!("check_phase_correction says: Tempo changed to {:.1} BPM, resetting stability timer", external_tempo);
-                return Ok(());
-            } else if let Some(stable_since) = self.tempo_stable_since {
-                if now.duration_since(stable_since).as_secs() < 10 {
-                    // Tempo hasn't been stable for 10 seconds yet
-                    debug!("check_phase_correction says: Tempo stable for {:.1}s, waiting for 10s before enabling phase correction", 
-                           now.duration_since(stable_since).as_secs_f32());
-                    return Ok(());
-                }
-            }
-        } else {
-            // No external tempo available, can't do phase correction
-            return Ok(());
-        }
-
-        // Get MIDI clock tick count
-        let midi_clock_ticks = {
-            let clock_state = self.midi.get_clock_state();
-            clock_state.map(|state| state.clock_ticks).unwrap_or(0)
-        };
-
-        // Calculate expected sequencer position based on MIDI clock
-        let midi_beats = midi_clock_ticks / 24; // 24 ticks per beat
-        let expected_sequencer_step = (midi_beats % 32) as usize; // 32 steps per pattern
-
-        // Get current sequencer position
-        let (current_step, _) = self.sequencer.get_current_position();
-
-        // Calculate drift in ticks (convert steps back to ticks for precision)
-        let current_step_ticks = (current_step * 24) as i32; // 24 MIDI ticks per step
-        let expected_step_ticks = (expected_sequencer_step * 24) as i32;
-        let raw_drift = current_step_ticks - expected_step_ticks;
-        
-        // Handle wraparound (sequence boundary)
-        let drift_ticks = if raw_drift > 384 { // 384 = 16 steps * 24 ticks
-            raw_drift - 768 // 768 = 32 steps * 24 ticks (full sequence)
-        } else if raw_drift < -384 {
-            raw_drift + 768
-        } else {
-            raw_drift
-        };
-
-        self.current_drift_ticks = drift_ticks;
-
-        // Apply correction if drift is significant
-        if drift_ticks.abs() > 24 { // More than 1 step off
-            info!("check_phase_correction says: Large drift detected: {} ticks, applying correction", drift_ticks);
-            // For large drift, do a hard reset to the expected position
-            // This would require extending the sequencer interface
-            debug!("check_phase_correction says: Would reset sequencer to step {}", expected_sequencer_step);
-        } else if drift_ticks.abs() > 6 { // More than 1/4 step off
-            debug!("check_phase_correction says: Small drift detected: {} ticks, gentle correction needed", drift_ticks);
-            // For small drift, apply gentle correction by slightly adjusting timing
-            // This would require extending the sequencer interface for micro-timing adjustments
-        }
-
-        self.last_midi_clock_count = midi_clock_ticks;
-        self.last_sync_check = Instant::now();
-
-        Ok(())
-    }
-
-    /// Reset phase correction state
-    fn reset_phase_correction(&mut self) {
-        self.last_midi_clock_count = 0;
-        self.last_sync_check = Instant::now();
-        self.current_drift_ticks = 0;
-        self.tempo_stable_since = None;
-        self.last_stable_tempo = None;
-        debug!("reset_phase_correction says: Phase correction state reset");
-    }
-
-    /// Calculate LED brightness based on drift amount
-    fn calculate_drift_brightness(&self) -> u8 {
-        let abs_drift = self.current_drift_ticks.abs();
-        match abs_drift {
-            0 => 0,            // Perfect sync: off
-            1..=12 => 3,       // 1 tick to 1/2 step: very dim
-            13..=24 => 6,      // 1/2 to 1 step: dim
-            25..=48 => 10,     // 1 to 2 steps: medium
-            _ => 15,           // > 2 steps: bright warning
-        }
-    }
 }
 
 fn main() -> Result<()> {
