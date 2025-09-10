@@ -819,7 +819,7 @@ impl Sequencer {
         self.process_step(&*state, sender)?;
 
         // Send step event with CURRENT step values (before increment) for MIDI sync
-        let _ = sender.send(SequencerEvent::Step {
+        let _ = sender.try_send(SequencerEvent::Step {
             step: current_midi_step,
             bar: current_midi_bar,
         });
@@ -901,7 +901,7 @@ impl Sequencer {
                                 sequencer_source: 'A',
                             };
 
-                            if let Err(e) = sender.send(SequencerEvent::MidiEvent(midi_event)) {
+                            if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
                                 warn!("Failed to send MIDI note ON event: {}", e);
                             }
                         }
