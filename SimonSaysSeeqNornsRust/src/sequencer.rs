@@ -480,32 +480,11 @@ impl Sequencer {
 
 
 
-    /// Clear a specific section of the grid
-    pub fn clear_section(&self, start_x: usize, start_y: usize, width: usize, height: usize) {
-        let mut state = self.state.lock().unwrap();
-
-        for x in start_x..=(start_x + width - 1).min(31) {
-            for y in start_y..=(start_y + height - 1).min(7) {
-                if x < 32 && y < 8 {
-                    state.sequencer_a_grid[x][y] = 0;
-                }
-            }
-        }
-    }
 
 
 
-    /// Set first step for sequencer
-    pub fn set_first_step(&self, step: usize) {
-        let mut state = self.state.lock().unwrap();
-        state.first_step = step.clamp(0, 31);
-    }
 
-    /// Set last step for sequencer
-    pub fn set_last_step(&self, step: usize) {
-        let mut state = self.state.lock().unwrap();
-        state.last_step = step.clamp(0, 31);
-    }
+
 
     /// Get row data for display
     pub fn get_row_data(&self, row: usize) -> Vec<u8> {
@@ -517,21 +496,9 @@ impl Sequencer {
         }
     }
 
-    /// Set pattern change mode
-    pub fn set_pattern_change_mode(&self, mode: bool) {
-        let _state = self.state.lock().unwrap();
-        // Store pattern change mode in a custom field if needed
-        // For now, just log it
-        info!("Pattern change mode set to: {}", mode);
-    }
 
-    /// Set held state for button combinations
-    pub fn set_held_state(&self, x: usize, y: usize, held: bool) {
-        if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            let mut state = self.state.lock().unwrap();
-            state.held[x - 1][y - 1] = if held { 1 } else { 0 };
-        }
-    }
+
+
 
     /// Check if position is held
     pub fn is_held(&self, x: usize, y: usize) -> bool {
@@ -543,27 +510,7 @@ impl Sequencer {
         }
     }
 
-    /// Reset all sequences
-    pub fn reset_all(&self) {
-        let mut state = self.state.lock().unwrap();
 
-        // Clear grid
-        for row in &mut state.sequencer_a_grid {
-            for cell in row {
-                *cell = 0;
-            }
-        }
-        
-        // Reset position
-        state.sequencer_a_current_master_step = 0;
-        state.sequencer_a_current_master_bar = 0;
-        for row_state in &mut state.sequencer_a_row_states {
-            row_state.sequencer_a_current_step = 0;
-            row_state.sequencer_a_previous_step = 0;
-        }
-
-        info!("All sequences reset");
-    }
 
     /// Get note events for a specific step
     pub fn get_step_events(&self, row: usize, _bar: usize, step: usize) -> Option<Vec<NoteEvent>> {
@@ -764,19 +711,7 @@ impl Sequencer {
 
 
 
-    /// Toggle grid position (used for pattern editing)
-    pub fn toggle_grid_position(&self, x: usize, y: usize) {
-        if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            let mut state = self.state.lock().unwrap();
-            let current_value = state.sequencer_a_grid[x - 1][y - 1];
-            let new_value = if current_value == 0 { 1 } else { 0 };
-            state.sequencer_a_grid[x - 1][y - 1] = new_value;
-            debug!(
-                "toggle_grid_position says: Toggled grid[{}][{}]: {} -> {}",
-                x, y, current_value, new_value
-            );
-        }
-    }
+
 
 
 

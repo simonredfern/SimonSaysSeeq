@@ -284,24 +284,25 @@ impl ScreenManager {
             }
         }
     }
-    
-    /// Draw a horizontal line
-    pub fn draw_hline(&mut self, x: usize, y: usize, width: usize) {
-        for i in 0..width {
-            if x + i < self.width {
-                self.set_pixel(x + i, y, true);
+        /// Draw a horizontal line
+        pub fn draw_hline(&mut self, x: usize, y: usize, width: usize) {
+            for i in 0..width {
+                if x + i < self.width {
+                    self.set_pixel(x + i, y, true);
+                }
             }
         }
-    }
     
-    /// Draw a vertical line
-    pub fn draw_vline(&mut self, x: usize, y: usize, height: usize) {
-        for i in 0..height {
-            if y + i < self.height {
-                self.set_pixel(x, y + i, true);
+        /// Draw a vertical line
+        pub fn draw_vline(&mut self, x: usize, y: usize, height: usize) {
+            for i in 0..height {
+                if y + i < self.height {
+                    self.set_pixel(x, y + i, true);
+                }
             }
         }
-    }
+
+    
     
     /// Draw a rectangle outline
     pub fn draw_rect(&mut self, x: usize, y: usize, width: usize, height: usize) {
@@ -469,35 +470,8 @@ impl ScreenManager {
         (self.width, self.height)
     }
     
-    /// Draw a simple progress bar
-    pub fn draw_progress_bar(&mut self, x: usize, y: usize, width: usize, height: usize, progress: f32) {
-        // Background
-        self.draw_rect(x, y, width, height);
-        
-        // Fill
-        let fill_width = (width as f32 * progress.clamp(0.0, 1.0)) as usize;
-        if fill_width > 2 {
-            self.fill_rect(x + 1, y + 1, fill_width - 2, height - 2);
-        }
-    }
+
     
-    /// Draw sequence step indicators
-    pub fn draw_step_indicators(&mut self, current_step: usize, total_steps: usize) {
-        let indicator_y = self.height - 8;
-        let indicator_width = self.width / total_steps;
-        
-        for step in 1..=total_steps {
-            let x = (step - 1) * indicator_width;
-            
-            if step == current_step {
-                // Current step - filled
-                self.fill_rect(x, indicator_y, indicator_width - 1, 6);
-            } else {
-                // Other steps - outline only
-                self.draw_rect(x, indicator_y, indicator_width - 1, 6);
-            }
-        }
-    }
 
     /// Minimal norns display - ONLY show tempo (deployment requirement)
     pub fn draw_norns_tempo_only(&mut self, tempo: f32) -> Result<()> {
