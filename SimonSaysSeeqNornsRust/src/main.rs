@@ -1637,12 +1637,7 @@ impl SimonSaysSeeq {
                     unsafe {
                         EXTERNAL_CLOCK_TICK_COUNTER += 1;
                         if EXTERNAL_CLOCK_TICK_COUNTER % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
-                            // First play any sub-step MIDI events (match internal timing behavior)
-                            if let Err(e) = self.sequencer.external_play_midi(seq_tx) {
-                                warn!("External clock play MIDI failed: {}", e);
-                            }
-                            
-                            // Then advance sequencer step
+                            // Advance sequencer step based on external clock
                             if let Err(e) = self.sequencer.external_advance_step(seq_tx) {
                                 warn!("External clock step advancement failed: {}", e);
                             }

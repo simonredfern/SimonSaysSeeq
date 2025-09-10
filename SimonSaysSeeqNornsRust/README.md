@@ -335,11 +335,11 @@ handle_midi_input_event()
          ↓
   Counter % 6 == 0 ?  ←── (16th note timing)
          ↓ YES
-external_play_midi() → external_advance_step()
-         ↓                       ↓
-    play_midi()            advance_step()
-         ↓                       ↓
-     Trigger MIDI + LEDs
+external_advance_step()
+         ↓
+   advance_step()
+         ↓
+  Trigger MIDI + LEDs
 ```
 
 **Internal Timing Mode (Advanced - LED on):**
@@ -352,15 +352,15 @@ Calculate microsecond timing
          ↓
 tick_counter % ticks_per_step == 0 ?
          ↓ YES
-    play_midi() → advance_step()
-         ↓              ↓
-     Trigger MIDI + LEDs
+   advance_step()
+         ↓
+  Trigger MIDI + LEDs
 ```
 
 **Key Benefits:**
 - **External Mode**: Bulletproof sync with external devices, preserves external swing
 - **Internal Mode**: Advanced features (internal swing, micro-timing, tempo analysis)
-- **DRY Principle**: Both modes use the same `play_midi()` and `advance_step()` functions
+- **DRY Principle**: Both modes use the same `advance_step()` function
 
 ### Code Structure
 

@@ -1755,12 +1755,6 @@ impl Sequencer {
         state.reset_tick_counter
     }
 
-    /// External clock play MIDI - locks state and calls play_midi
-    pub fn external_play_midi(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
-        let state = self.state.lock().unwrap();
-        self.play_midi(&state, sender)
-    }
-
     /// External clock step advancement - locks state and calls advance_step
     pub fn external_advance_step(&mut self, sender: &Sender<SequencerEvent>) -> Result<()> {
         let mut state = self.state.lock().unwrap();
