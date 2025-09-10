@@ -1478,11 +1478,8 @@ impl SimonSaysSeeq {
                 8 => {
                     // Control row held - special functions
                     if x <= 8 {
-                        // Randomize column
-                        // Only randomize rows 0 and 1
-                        self.sequencer.randomize_section(x, 0);
-                        self.sequencer.randomize_section(x, 1);
-                        info!("Randomized column {}", x);
+                        // Randomize column functionality removed
+                        info!("Randomize column {} (functionality disabled)", x);
                     } else {
                         // Clear column
                         // Only clear rows 1 and 2
@@ -1494,9 +1491,8 @@ impl SimonSaysSeeq {
                 _ => {
                     // Sequence row held - copy/paste operations
                     if y == held_row {
-                        // Same row - randomize this position
-                        self.sequencer.randomize_section(x, y);
-                        info!("Randomized position [{}, {}]", x, y);
+                        // Same row - randomize this position (functionality disabled)
+                        info!("Randomize position [{}, {}] (functionality disabled)", x, y);
                     } else {
                         // Different row - copy from held row to this row
                         self.sequencer.copy_grid_section(x, held_row, x, y, 1, 1);

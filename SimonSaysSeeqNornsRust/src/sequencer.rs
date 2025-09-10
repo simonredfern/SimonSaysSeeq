@@ -508,23 +508,7 @@ impl Sequencer {
         (state.midi_step_count, state.midi_bar_count)
     }
 
-    /// Randomize a specific section of the grid
-    pub fn randomize_section(&self, x: usize, y: usize) {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let mut state = self.state.lock().unwrap();
 
-        if y < 8 && x < 32 {
-            // Randomize based on position - left side creates denser patterns
-            let density = (x as f32) / 32.0;
-            let new_value = if rng.gen::<f32>() < density {
-                rng.gen_range(1..=4) // Random ratchet value
-            } else {
-                0
-            };
-            state.sequencer_a_grid[x][y] = new_value;
-        }
-    }
 
     /// Clear a specific section of the grid
     pub fn clear_section(&self, start_x: usize, start_y: usize, width: usize, height: usize) {
