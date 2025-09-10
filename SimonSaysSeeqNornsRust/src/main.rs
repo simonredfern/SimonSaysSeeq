@@ -998,6 +998,11 @@ impl SimonSaysSeeq {
         // DEBUG: Log grid update details
         info!("GRID_DEBUG: handle_grid_update called - row: {}, old_step: {}, new_step: {}", row, old_step, new_step);
         info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
+
+        // DEBUG: Focused tracking for row 0 LED updates
+        if row == 0 {
+            info!("🔥 LED HANDLER Row 0: Processing LED update old_step={} -> new_step={}", old_step, new_step);
+        }
         
         if connected_grids.len() >= 2 {
             // DUAL-GRID MODE (32-step sequences):
