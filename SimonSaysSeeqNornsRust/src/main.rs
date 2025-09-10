@@ -1891,7 +1891,8 @@ fn main() -> Result<()> {
 
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
-        println!("SimonSaysSeeq Rust v{}", env!("CARGO_PKG_VERSION"));
+        let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
+        println!("SimonSaysSeeq Rust v{} ({})", env!("CARGO_PKG_VERSION"), git_hash);
         println!("A high-performance sequencer for Norns hardware\n");
         println!("USAGE:");
         println!("    simon_says_seeq [OPTIONS]\n");
@@ -1908,7 +1909,8 @@ fn main() -> Result<()> {
 
     // Handle version flag
     if args.len() > 1 && (args[1] == "--version" || args[1] == "-v") {
-        println!("SimonSaysSeeq Rust v{}", env!("CARGO_PKG_VERSION"));
+        let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
+        println!("SimonSaysSeeq Rust v{} ({})", env!("CARGO_PKG_VERSION"), git_hash);
         return Ok(());
     }
 
@@ -1935,10 +1937,13 @@ fn main() -> Result<()> {
 
     // Log startup banner with version and timestamp
     info!("════════════════════════════════════════════════════════");
-    info!("SimonSaysSeeq Rust v{} Starting Up", env!("CARGO_PKG_VERSION"));
-    info!("Startup Time: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
-    info!("Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
-    info!("Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));
+    let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
+    info!("🎵 SimonSaysSeeq Rust v{} ({})", env!("CARGO_PKG_VERSION"), git_hash);
+    info!("📅 Startup Time: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
+    info!("🔧 Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
+    info!("⚙️  Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));
+    info!("⏰ Default Timing Mode: EXTERNAL (bulletproof sync)");
+    info!("🎛️  Toggle with GRID_TWO column 9 (LED shows mode)");
     info!("════════════════════════════════════════════════════════");
 
     // Create and run application

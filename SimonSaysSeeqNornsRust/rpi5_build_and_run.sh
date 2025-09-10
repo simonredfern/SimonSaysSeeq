@@ -486,11 +486,15 @@ build_project() {
     log_build "Starting compilation (this may take 10-20 minutes)..."
     local start_time=$(date +%s)
     
+    # Get git hash for version info
+    local git_hash=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    log_info "Building with git hash: $git_hash"
+    
     if [ "$BUILD_TYPE" = "release" ]; then
-        cargo build --release --features "$RPI_FEATURES"
+        GIT_HASH="$git_hash" cargo build --release --features "$RPI_FEATURES"
         local binary_path="target/release/simon_says_seeq"
     else
-        cargo build --features "$RPI_FEATURES"
+        GIT_HASH="$git_hash" cargo build --features "$RPI_FEATURES"
         local binary_path="target/debug/simon_says_seeq"
     fi
     
