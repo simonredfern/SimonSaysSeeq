@@ -659,94 +659,9 @@ impl Sequencer {
     }
 
     /// Main clock loop that runs in its own thread
-    pub fn run_clock_loop(
-        &mut self,
-        sender: Sender<SequencerEvent>,
-        running: Arc<AtomicBool>,
-    ) -> Result<()> {
-        info!("Starting sequencer clock loop");
+    // Internal timing methods removed - external clock slave mode only
 
-        let mut last_tick = Instant::now();
-        let mut tick_counter = 0u32;
-
-        while running.load(Ordering::SeqCst) {
-            let current_time = Instant::now();
-
-            // Calculate tick interval based on tempo
-            let tempo = {
-                let state = self.state.lock().unwrap();
-                state.tempo
-            };
-
-            // Calculate microseconds per tick
-            // 60 seconds/minute * 1,000,000 microseconds/second / (tempo BPM * 4 steps/beat * 12 ticks/step)
-            let micros_per_tick = (60_000_000.0 / (tempo * 4.0 * 12.0)) as u64;
-            let tick_interval = Duration::from_micros(micros_per_tick);
-
-            if current_time.duration_since(last_tick) >= tick_interval {
-                last_tick = current_time;
-
-                let (is_running, should_reset) = {
-                    let mut state = self.state.lock().unwrap();
-                    let reset = state.reset_tick_counter;
-                    if reset {
-                        state.reset_tick_counter = false;
-                    }
-                    (state.is_running, reset)
-                };
-
-                if should_reset {
-                    tick_counter = 0;
-                    info!("Tick counter reset to 0 for synchronization");
-                }
-
-                if is_running {
-                    self.process_tick(tick_counter, &sender)?;
-                    tick_counter = (tick_counter + 1) % (32 * 12); // 32 steps per bar * 12 ticks per step
-                }
-            }
-
-            // Small sleep to prevent busy waiting
-            thread::sleep(Duration::from_micros(100));
-        }
-
-        info!("Sequencer clock loop terminated");
-        Ok(())
-    }
-
-    /// Process a single tick - the heart of the sequencer
-    fn process_tick(&mut self, tick_counter: u32, sender: &Sender<SequencerEvent>) -> Result<()> {
-        // First phase: update tick counters and analyze tempo
-        {
-            let mut state = self.state.lock().unwrap();
-            state.tick_count += 1;
-            state.the_current_tick_count_since_start += 1;
-            state.the_current_tick_count_since_step = tick_counter % state.ticks_per_step;
-
-            // Analyze tempo stability
-            self.analyze_tempo_stability(&mut state);
-        }
-
-        // Second phase: process MIDI playback BEFORE advancing step (needs immutable access)
-        {
-            let state = self.state.lock().unwrap();
-            self.play_midi(&state, sender)?;
-        }
-
-        // Third phase: advance step if needed (needs mutable access)
-        if tick_counter % self.state.lock().unwrap().ticks_per_step == 0 {
-            let mut state = self.state.lock().unwrap();
-            self.advance_step(&mut state, sender)?;
-        }
-
-        Ok(())
-    }
-
-    /// Play MIDI events for current tick
-    pub fn play_midi(&self, _state: &SequencerState, _sender: &Sender<SequencerEvent>) -> Result<()> {
-        // Sequencer B MIDI playback functionality removed
-        Ok(())
-    }
+    // play_midi removed - not needed for external clock mode
 
     /// Advance to next step and process triggers
     fn advance_step(

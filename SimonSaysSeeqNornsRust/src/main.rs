@@ -100,7 +100,6 @@ pub struct SimonSaysSeeq {
     config: Config,
     running: Arc<AtomicBool>,
     tempo: f32,
-    internal_timing_enabled: bool,
     // Active ARM action for row 7 (control row) - only one can be active at a time
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
@@ -147,7 +146,6 @@ impl SimonSaysSeeq {
             config,
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
-            internal_timing_enabled: false, // Default: external clock slave mode
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
             last_midi_clock_count: 0,
@@ -194,13 +192,7 @@ impl SimonSaysSeeq {
             hardware.run_input_loop(hw_tx, running_hw)
         });
 
-        // Start sequencer thread
-        let running_seq = self.running.clone();
-        let mut sequencer = self.sequencer.clone();
-        let seq_tx_clone = seq_tx.clone();
-        let seq_thread = thread::spawn(move || {
-            sequencer.run_clock_loop(seq_tx_clone, running_seq)
-        });
+        // Internal sequencer thread removed - external clock slave mode only
 
         // Auto-start the sequencer for desktop testing (no hardware required)
         // info!("Auto-starting sequencer - tempo: {:.1} BPM", self.tempo);
@@ -240,18 +232,17 @@ impl SimonSaysSeeq {
         // Cleanup with timeout
         self.running.store(false, Ordering::SeqCst);
 
-        // Give threads a chance to exit gracefully
+        // Give hardware thread a chance to exit gracefully
         // info!("run says: Shutting down threads...");
 
         // Try to join with timeout
         let hw_result = std::thread::spawn(move || hw_thread.join()).join();
-        let seq_result = std::thread::spawn(move || seq_thread.join()).join();
 
-        // If threads don't exit cleanly within reasonable time, force exit
+        // If thread doesn't exit cleanly within reasonable time, force exit
         thread::sleep(Duration::from_millis(500));
 
-        if hw_result.is_err() || seq_result.is_err() {
-            // warn!("run says: Threads did not exit cleanly, forcing shutdown");
+        if hw_result.is_err() {
+            // warn!("run says: Thread did not exit cleanly, forcing shutdown");
             std::process::exit(0);
         }
 
@@ -758,21 +749,8 @@ impl SimonSaysSeeq {
                             
                             match x {
                                 9 => {
-                                    // Internal timing mode toggle button
-                                    self.internal_timing_enabled = !self.internal_timing_enabled;
-                                    info!("⏰ TIMING MODE: {} | Row 0 Step: {}", 
-                                          if self.internal_timing_enabled { "INTERNAL" } else { "EXTERNAL" },
-                                          if let Some(row_state) = self.sequencer.get_row_states(0) {
-                                              row_state.sequencer_a_current_step.to_string()
-                                          } else { "?".to_string() });
-                                    
-                                    // Update LED to show current mode
-                                    #[cfg(feature = "hardware")]
-                                    {
-                                        let brightness = if self.internal_timing_enabled { 15 } else { 0 };
-                                        self.grid.set_led(grid_id, x, seq_y, brightness, "timing_mode_indicator")?;
-                                        self.grid.refresh()?;
-                                    }
+                                    // Column 9 reserved for future use
+                                    info!("Column 9 pressed (no function assigned)");
                                 }
                                 10 => {
                                     // Snap to whole tempo toggle button
@@ -1132,14 +1110,7 @@ impl SimonSaysSeeq {
         // self.update_beat_leds()?;
         // self.update_arm_button_leds()?;
         
-        // Update timing mode indicator LED on GRID_TWO column 9
-        if connected_grids.len() >= 2 {
-            let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            if let Some(grid_two_id) = grid_two {
-                let brightness = if self.internal_timing_enabled { 15 } else { 0 };
-                self.grid.set_led(&grid_two_id, 9, 0, brightness, "timing_mode_indicator")?;
-            }
-        }
+
         
         self.grid.refresh()?;
         Ok(())
@@ -1576,10 +1547,7 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
 
-                // Reset external clock counter for fresh sync
-                if !self.internal_timing_enabled {
-                    // Reset will happen naturally on next ClockTick handler
-                }
+
 
                 // Reset phase correction state on new start
                 self.reset_phase_correction();
@@ -1606,10 +1574,7 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
                 
-                // Reset external clock counter on stop
-                if !self.internal_timing_enabled {
-                    // Reset will happen naturally on next ClockTick handler
-                }
+
                 
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Clear beat LEDs when clock stops
@@ -1628,7 +1593,7 @@ impl SimonSaysSeeq {
                 }
                 
                 // External clock slave mode: advance sequencer directly on MIDI clock
-                if !self.internal_timing_enabled && self.sequencer.is_running() {
+                if self.sequencer.is_running() {
                     // MIDI clock runs at 24 PPQ, we need 12 ticks per step
                     static mut EXTERNAL_CLOCK_TICK_COUNTER: u32 = 0;
                     unsafe {
@@ -1936,8 +1901,7 @@ fn main() -> Result<()> {
     info!("📅 Startup Time: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
     info!("🔧 Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
     info!("⚙️  Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));
-    info!("⏰ Default Timing Mode: EXTERNAL (bulletproof sync)");
-    info!("🎛️  Toggle with GRID_TWO column 9 (LED shows mode)");
+    info!("⏰ Timing Mode: EXTERNAL CLOCK SLAVE ONLY (basic sync)");
     info!("════════════════════════════════════════════════════════");
 
     // Create and run application

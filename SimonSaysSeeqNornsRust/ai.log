@@ -5786,3 +5786,5 @@ UNDO/REDO operations now work cleanly without interfering with running sequencer
 Need to identify root cause of intermittent MIDI output dropouts.
 
 
+Mi 10. Sep 07:22:41 CEST 2025: ARCHITECTURE DECISION - Removing internal timing completely for stability. External clock slave mode only. Goal: stable, reliable sequencer that works.
+Mi 10. Sep 07:25:27 CEST 2025: Internal timing completely removed. Sequencer is now external clock slave mode only. Removed: run_clock_loop, process_tick, play_midi, internal_timing_enabled field, timing mode toggle. Architecture simplified for stability.

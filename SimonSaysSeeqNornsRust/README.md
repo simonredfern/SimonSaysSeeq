@@ -321,11 +321,11 @@ brightness = 80
 
 ## Architecture
 
-### Timing Modes
+### Timing Architecture
 
-The sequencer supports two timing modes that can be toggled with **GRID_TWO column 9**:
+The sequencer uses **External Clock Slave Mode Only** for maximum stability and reliability:
 
-**External Timing Mode (Default - LED off):**
+**External Clock Slave Mode:**
 ```
 MIDI Clock Input (24 PPQ)
          ↓
@@ -342,25 +342,12 @@ external_advance_step()
   Trigger MIDI + LEDs
 ```
 
-**Internal Timing Mode (Advanced - LED on):**
-```
-  run_clock_loop()
-         ↓
-Calculate microsecond timing
-         ↓
-    process_tick()
-         ↓
-tick_counter % ticks_per_step == 0 ?
-         ↓ YES
-   advance_step()
-         ↓
-  Trigger MIDI + LEDs
-```
-
 **Key Benefits:**
-- **External Mode**: Bulletproof sync with external devices, preserves external swing
-- **Internal Mode**: Advanced features (internal swing, micro-timing, tempo analysis)
-- **DRY Principle**: Both modes use the same `advance_step()` function
+- **Basic sync** with external devices
+- **Preserves external swing** timing perfectly
+- **Rock solid stability** - no complex internal timing
+- **Simple architecture** - fewer bugs, easier maintenance
+- **Professional workflow** - matches hardware sequencer behavior
 
 ### Code Structure
 
