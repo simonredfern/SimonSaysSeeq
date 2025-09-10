@@ -776,84 +776,9 @@ impl Sequencer {
         Ok(())
     }
 
-    /// Analyze tempo stability (wow and flutter detection)
-    fn analyze_tempo_stability(&self, state: &mut SequencerState) {
-        let current_tempo = state.tempo;
-        let analysis = &mut state.tempo_analysis;
 
-        // Update tempo sum for averaging windows
-        analysis.wow_tempo_sum += current_tempo;
-        analysis.flutter_tempo_sum += current_tempo;
 
-        // Advance window positions
-        analysis.wow_window_tick_position += 1;
-        analysis.flutter_window_tick_position += 1;
 
-        // Calculate averages when windows are full
-        if analysis.wow_window_tick_position >= analysis.wow_window_size {
-            analysis.wow_average_tempo = analysis.wow_tempo_sum / analysis.wow_window_size as f32;
-            analysis.wow_window_tick_position = 0;
-            analysis.wow_tempo_sum = 0.0;
-        }
-
-        if analysis.flutter_window_tick_position >= analysis.flutter_window_size {
-            analysis.flutter_average_tempo =
-                analysis.flutter_tempo_sum / analysis.flutter_window_size as f32;
-            analysis.flutter_window_tick_position = 0;
-            analysis.flutter_tempo_sum = 0.0;
-        }
-
-        // Check for wow (large tempo instability)
-        let wow_diff = (analysis.wow_average_tempo - current_tempo).abs();
-        if wow_diff > analysis.wow_threshold {
-            analysis.total_wow_tempo_ticks += 1;
-            if analysis.tempo_wow_is_good {
-                analysis.wow_tempo_episodes += 1;
-                analysis.tempo_wow_is_good = false;
-            }
-        } else {
-            analysis.tempo_wow_is_good = true;
-        }
-
-        // Check for flutter (small tempo instability)
-        let flutter_diff = (analysis.flutter_average_tempo - current_tempo).abs();
-        if flutter_diff > analysis.flutter_threshold {
-            analysis.total_flutter_tempo_ticks += 1;
-            if analysis.tempo_flutter_is_good {
-                analysis.flutter_tempo_episodes += 1;
-                analysis.tempo_flutter_is_good = false;
-            }
-        } else {
-            analysis.tempo_flutter_is_good = true;
-        }
-    }
-
-    /// Initialize sequencer state tables
-    pub fn init_state_tables(&self) {
-        let mut state = self.state.lock().unwrap();
-
-        // Reset all counters
-        state.tick_count = 0;
-        state.the_current_tick_count_since_start = 0;
-        state.the_current_tick_count_since_step = 0;
-        state.sequencer_a_current_master_step = state.first_step;
-        state.sequencer_a_current_master_bar = 0;
-
-        // Reset tempo analysis
-        state.tempo_analysis = TempoAnalysis::default();
-
-        // Initialize row settings
-        // Reset row states
-        for (i, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
-            row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
-            row_state.sequencer_a_previous_step = row_state.sequencer_a_euclidean_length;
-            row_state.sequencer_a_midi_note = LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + (i + 1) as u8; // Match Lua version
-            row_state.sequencer_a_midi_velocity = 100;
-            row_state.sequencer_a_midi_channel = 1; // All rows use MIDI channel 1
-        }
-
-        info!("Sequencer state tables initialized");
-    }
 
     /// Toggle grid position (used for pattern editing)
     pub fn toggle_grid_position(&self, x: usize, y: usize) {
@@ -1234,62 +1159,9 @@ impl Sequencer {
         );
     }
 
-    /// Scroll pattern by offset
-    pub fn scroll_pattern(&self, x_offset: i32, y_offset: i32) {
-        self.push_undo_snapshot(format!("Scroll pattern ({}, {})", x_offset, y_offset));
-
-        let mut state = self.state.lock().unwrap();
-
-        // Create new grids with scrolled content
-        let mut new_grid = vec![vec![0u8; 8]; 32];
-        let mut new_mozart = vec![vec![60u8; 8]; 32];
-
-        for x in 0..32 {
-            for y in 0..8 {
-                let src_x = ((x as i32 - x_offset) + 32) % 32;
-                let src_y = ((y as i32 - y_offset) + 8) % 8;
-
-                new_grid[x][y] = state.sequencer_a_grid[src_x as usize][src_y as usize];
-                new_mozart[x][y] = state.sequencer_a_mozart[src_x as usize][src_y as usize];
-            }
-        }
-
-        state.sequencer_a_grid = new_grid;
-        state.sequencer_a_mozart = new_mozart;
-        state.slide.scroll_offset.0 += x_offset;
-        state.slide.scroll_offset.1 += y_offset;
-
-        info!(
-            "scroll_pattern says: Scrolled pattern by ({}, {})",
-            x_offset, y_offset
-        );
-    }
-
     /// Randomize specific rows with constraints
 
     /// Pattern Chain Management
-
-    /// Add pattern to chain
-    pub fn add_to_chain(
-        &self,
-        pattern_id: usize,
-        repeat_count: usize,
-        transpose: i8,
-        velocity_offset: i8,
-    ) {
-        let mut state = self.state.lock().unwrap();
-        let entry = PatternChainEntry {
-            pattern_id,
-            repeat_count,
-            transpose,
-            velocity_offset,
-        };
-        state.pattern_chains.push(entry);
-        info!(
-            "Added pattern {} to chain (repeat: {}, transpose: {}, vel_offset: {})",
-            pattern_id, repeat_count, transpose, velocity_offset
-        );
-    }
 
     /// Clear pattern chain
     pub fn clear_chain(&self) {
@@ -1367,44 +1239,7 @@ impl Sequencer {
         Ok(())
     }
 
-    /// Slide and Interpolation Features
 
-    /// Set slide amount for smooth parameter transitions
-    pub fn set_slide(&self, x: usize, y: usize, amount: f32) {
-        if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            let mut state = self.state.lock().unwrap();
-            state.slide.slide_grid[x - 1][y - 1] = amount.clamp(0.0, 1.0);
-            debug!("Set slide[{}][{}] = {:.2}", x, y, amount);
-        }
-    }
-
-    /// Get interpolated value considering slide
-    pub fn get_interpolated_note(&self, x: usize, y: usize, progress: f32) -> f32 {
-        let state = self.state.lock().unwrap();
-        if x > 0 && x <= 32 && y > 0 && y <= 8 {
-            let base_note = state.sequencer_a_mozart[x - 1][y - 1] as f32;
-            let slide_amount = state.slide.slide_grid[x - 1][y - 1];
-
-            if slide_amount > 0.0 {
-                // Find next non-zero note for sliding target
-                let mut target_note = base_note;
-                for offset in 1..=8 {
-                    let target_x = (x + offset) % 32;
-                    if self.get_grid_value(target_x, y) > 0 {
-                        target_note = state.sequencer_a_mozart[target_x][y] as f32;
-                        break;
-                    }
-                }
-
-                // Interpolate between base and target
-                base_note + (target_note - base_note) * slide_amount * progress
-            } else {
-                base_note
-            }
-        } else {
-            60.0 // Default to middle C
-        }
-    }
 
     /// Advanced Timing Features
 
