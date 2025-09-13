@@ -2,6 +2,8 @@
 
 A high-performance sequencer for Norns hardware, written in Rust.
 
+Works ok using external clock and timing.
+
 ## Raspberry Pi 5 Build and Run Script
 
 For Raspberry Pi 5 users, use the optimized build script:
