@@ -13,6 +13,7 @@ pub mod midi_scanner;
 pub mod screen;
 pub mod sequencer;
 pub mod co2;
+pub mod crow;
 
 // Re-export commonly used types
 pub use config::Config;
@@ -23,6 +24,7 @@ pub use midi::MidiManager;
 pub use screen::ScreenManager;
 pub use hardware::NornsHardware;
 pub use co2::Co2Manager;
+pub use crow::Crow;
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

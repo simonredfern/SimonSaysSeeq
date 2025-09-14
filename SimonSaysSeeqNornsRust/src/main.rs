@@ -97,6 +97,7 @@ pub struct SimonSaysSeeq {
     grid: GridManager,
     screen: ScreenManager,
     co2: Co2Manager,
+    crow: simon_says_seeq_rust::crow::Crow,
     config: Config,
     running: Arc<AtomicBool>,
     tempo: f32,
@@ -136,6 +137,7 @@ impl SimonSaysSeeq {
             },
             screen: ScreenManager::new()?,
             co2: Co2Manager::new(config.co2.clone())?,
+            crow: simon_says_seeq_rust::crow::Crow::new()?,
             config,
             running: Arc::new(AtomicBool::new(false)),
             tempo: initial_tempo,
@@ -162,6 +164,15 @@ impl SimonSaysSeeq {
         info!("   GRID_ONE: {}", grid_one);
         info!("   GRID_TWO: {}", grid_two);
         info!("✅ Two real grids ready for operation");
+
+        // Initialize Crow USB serial communication
+        if let Err(e) = self.crow.initialize() {
+            warn!("Failed to initialize Crow: {}. CV output will be disabled.", e);
+        } else if self.crow.is_enabled() {
+            info!("🎛️  Crow USB serial initialized and ready");
+        } else {
+            info!("🎛️  Crow CV output disabled (hardware feature not enabled)");
+        }
 
         // Show control instructions
         // info!("run says: Controls:");
@@ -1477,21 +1488,25 @@ impl SimonSaysSeeq {
 
 
 
-    fn handle_co2_cv_output(&mut self, step: usize, row: usize, co2_value: f32) -> Result<()> {
-        // Get Mozart note value for this position
-        let mozart_note = self.sequencer.get_mozart_value(step, row) as f32;
+    fn handle_co2_cv_output(&mut self, step: usize, _row: usize, _co2_value: f32) -> Result<()> {
+        // Simple step counter voltages to test Crow control
+        let step_voltage = (step as f32 % 8.0) * 0.5; // 0V to 3.5V in 0.5V steps
+        let voltages = [
+            step_voltage,           // Output 1: step counter
+            step_voltage + 1.0,     // Output 2: step counter + 1V  
+            step_voltage + 2.0,     // Output 3: step counter + 2V
+            step_voltage + 3.0,     // Output 4: step counter + 3V
+        ];
 
-        // Calculate CO2 offset
-        let co2_offset = self.co2.get_step_offset(co2_value);
+        // Send to Crow CV outputs
+        if self.crow.is_enabled() {
+            if let Err(e) = self.crow.set_all_outputs(voltages[0], voltages[1], voltages[2], voltages[3]) {
+                warn!("Failed to send CV to Crow: {}", e);
+            }
+        }
 
-        // Combined voltage: CO2 offset + musical note (scaled to voltage)
-        let voltage = co2_offset + (mozart_note / 12.0);
-
-        // In a real implementation, this would send to Crow CV output
-        debug!("CV Output Row {}: {:.3}V (CO2: {:.2} ppm, Note: {}, Offset: {:.3})",
-               row, voltage, co2_value, mozart_note, co2_offset);
-
-        // TODO: Add actual Crow CV output when hardware support is added
+        debug!("CV Outputs: {:.1}V, {:.1}V, {:.1}V, {:.1}V (step {})", 
+               voltages[0], voltages[1], voltages[2], voltages[3], step);
 
         Ok(())
     }
