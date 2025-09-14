@@ -477,7 +477,20 @@ impl SimonSaysSeeq {
                     self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
                 }
 
-
+                // Send CV output based on row 1 (row 0) current step
+                if let Some(row_state) = self.sequencer.get_row_states(0) {
+                    // Convert step number to voltage (0.25V per step, starting at 0V)
+                    let step_voltage = (row_state.sequencer_a_current_step as f32 - 1.0) * 0.25;
+                    
+                    // Send to Crow output 1, keeping other outputs unchanged
+                    if self.crow.is_enabled() {
+                        if let Err(e) = self.crow.send_command(&format!("output[1].volts = {:.3}", step_voltage.clamp(-5.0, 10.0))) {
+                            debug!("Failed to send row 1 step CV to Crow: {}", e);
+                        } else {
+                            debug!("Row 1 step {} -> CV output 1: {:.3}V", row_state.sequencer_a_current_step, step_voltage);
+                        }
+                    }
+                }
 
                 // Grid updates now handled by selective GridUpdate events
                 // No need for full grid refresh on every step
