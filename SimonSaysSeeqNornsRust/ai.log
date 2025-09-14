@@ -9,6 +9,56 @@
 # AFTER: Column 14 decreases tempo by 1 BPM, Column 15 increases tempo by 1 BPM
 # IMPACT: More precise tempo control, easier fine-tuning during performance
 
+## 2025-09-14 Crow CV Output Implementation & USB Hub Analysis
+# FEATURE: Added CV output from Crow output 1 based on Row 1 sequencer step
+# IMPLEMENTATION: Modified main.rs handle_sequencer_event() to send voltage on each step
+# VOLTAGE MAPPING: Step number * 0.25V (Step 1 = 0V, Step 2 = 0.25V, Step 9 = 2V, etc.)
+# SAFETY: Voltage clamped to -5V to +10V range for Crow compatibility
+# DEBUGGING: Added comprehensive logging of voltage calculations and Crow commands
+
+### Crow Connection Issue Resolution:
+# PROBLEM: Crow detected at /dev/ttyACM1 but "Device or resource busy" error
+# ROOT CAUSE: serialosc-device processes were using /dev/ttyACM0 and /dev/ttyACM1 for monome grids
+# ACTUAL CROW LOCATION: /dev/ttyACM2 (not in original search paths)
+# SOLUTION: Extended crow.rs search paths to include /dev/ttyACM2 and /dev/ttyACM3
+# USB HUB IMPACT: USB hub changes device enumeration order, pushing Crow to higher device numbers
+
+### USB Hub Quality & Connection Strategy for 7-Device Setup:
+# DEVICES: 2 grids, 2 USB MIDI, 1 crow, 1 keyboard, 1 mouse
+# POWER REQUIREMENTS: ~1.1A total, recommend 2.5A+ powered hub
+# RECOMMENDED HUBS:
+#   - Anker PowerExpand+ 7-in-1 USB-C (~$50-80, professional audio grade)
+#   - Plugable USB 3.0 7-Port Hub (~$40-50, good isolation)
+#   - Amazon Basics 10-Port USB 3.0 (~$35-45, good value)
+# 
+# OPTIMAL CONNECTION STRATEGY:
+# Direct to Pi (timing critical):
+#   1. Primary MIDI Interface (clock source)
+#   2. Primary Grid (main control)
+#   3. Crow (CV timing sensitive)
+# Via Quality Hub (less timing critical):
+#   4. Secondary Grid
+#   5. Secondary MIDI Interface
+#   6. Keyboard (human interface)
+#   7. Mouse (lowest priority)
+#
+# HUB QUALITY FACTORS:
+#   - Individual port current limiting
+#   - Powered (not bus-powered)
+#   - USB 3.0 with proper power delivery
+#   - Metal construction for EMI shielding
+#   - Quality power supply (2A+ minimum)
+
+### Code Changes Made:
+# FILE: src/main.rs
+#   - Added CV voltage calculation in handle_sequencer_event()
+#   - Added logging for voltage values and Crow communication status
+#   - Voltage formula: (step - 1) * 0.25V, clamped to Crow safe range
+# FILE: src/crow.rs  
+#   - Made send_command() method public for external CV control
+#   - Extended possible_paths array to include /dev/ttyACM2 and /dev/ttyACM3
+# RESULT: Working CV output from Crow output 1 following Row 1 step progression
+
 ## 2025-01-24 Grid LED "Dropping" Behavior Observations
 # ISSUE: Grid LEDs are randomly turning on when they should stay off ("dropping" behavior)
 # TEST: Turned off all grid buttons manually - some required multiple presses to turn off
