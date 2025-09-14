@@ -6,6 +6,7 @@
 use anyhow::{anyhow, Result};
 use log::{debug, info, warn};
 use std::io::Write;
+use std::process::Command;
 use std::time::Duration;
 
 #[cfg(feature = "hardware")]
@@ -32,7 +33,42 @@ impl Crow {
     pub fn initialize(&mut self) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
-            // Try common Crow USB serial device paths
+            // First try to find Crow by USB vendor/product ID
+            match self.find_crow_device() {
+                Ok(Some(crow_path)) => {
+                    info!("Found Crow device at: {}", crow_path);
+                    match serialport::new(&crow_path, 115_200)
+                        .timeout(Duration::from_millis(1000))
+                        .open()
+                    {
+                        Ok(port) => {
+                            info!("Crow found and opened at {}", crow_path);
+                            self.port = Some(port);
+                            self.enabled = true;
+                            
+                            // Initialize all outputs to 0V
+                            self.send_command("output[1].volts = 0")?;
+                            self.send_command("output[2].volts = 0")?;
+                            self.send_command("output[3].volts = 0")?;
+                            self.send_command("output[4].volts = 0")?;
+                            
+                            info!("Crow initialized - all outputs set to 0V");
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            warn!("Failed to open identified Crow device {}: {}", crow_path, e);
+                        }
+                    }
+                }
+                Ok(None) => {
+                    debug!("No Crow device found by USB ID, trying fallback paths");
+                }
+                Err(e) => {
+                    warn!("Error searching for Crow device: {}", e);
+                }
+            }
+
+            // Fallback: Try common paths (but skip monome grids)
             let possible_paths = [
                 "/dev/ttyACM0",
                 "/dev/ttyACM1", 
@@ -41,12 +77,18 @@ impl Crow {
             ];
 
             for path in &possible_paths {
+                // Skip devices that are clearly monome grids
+                if self.is_monome_grid(path) {
+                    debug!("Skipping {} - identified as monome grid", path);
+                    continue;
+                }
+
                 match serialport::new(*path, 115_200)
                     .timeout(Duration::from_millis(1000))
                     .open()
                 {
                     Ok(port) => {
-                        info!("Crow found and opened at {}", path);
+                        info!("Crow found and opened at {} (fallback detection)", path);
                         self.port = Some(port);
                         self.enabled = true;
                         
@@ -119,6 +161,50 @@ impl Crow {
         }
         
         Err(anyhow!("Crow serial port not available"))
+    }
+
+    #[cfg(feature = "hardware")]
+    /// Find Crow device by USB vendor/product ID
+    fn find_crow_device(&self) -> Result<Option<String>> {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg("ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null || true")
+            .output()?;
+        
+        let devices_str = String::from_utf8_lossy(&output.stdout);
+        let devices: Vec<&str> = devices_str.trim().lines().filter(|s| !s.is_empty()).collect();
+        
+        for device in devices {
+            // Check if this device has the Crow USB IDs (STMicroelectronics Virtual COM Port)
+            let udev_output = Command::new("udevadm")
+                .args(&["info", "--query=all", &format!("--name={}", device)])
+                .output()?;
+            
+            let udev_str = String::from_utf8_lossy(&udev_output.stdout);
+            
+            // Look for STMicroelectronics Virtual COM Port (0483:5740)
+            if udev_str.contains("ID_VENDOR_ID=0483") && udev_str.contains("ID_MODEL_ID=5740") {
+                return Ok(Some(device.to_string()));
+            }
+        }
+        
+        Ok(None)
+    }
+
+    #[cfg(feature = "hardware")]
+    /// Check if a device is a monome grid
+    fn is_monome_grid(&self, device_path: &str) -> bool {
+        match Command::new("udevadm")
+            .args(&["info", "--query=all", &format!("--name={}", device_path)])
+            .output()
+        {
+            Ok(output) => {
+                let udev_str = String::from_utf8_lossy(&output.stdout);
+                // Check for monome vendor ID (cafe)
+                udev_str.contains("ID_VENDOR_ID=cafe")
+            }
+            Err(_) => false,
+        }
     }
 }
 
