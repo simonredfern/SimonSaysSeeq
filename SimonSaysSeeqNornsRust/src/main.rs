@@ -481,14 +481,21 @@ impl SimonSaysSeeq {
                 if let Some(row_state) = self.sequencer.get_row_states(0) {
                     // Convert step number to voltage (0.25V per step, starting at 0V)
                     let step_voltage = (row_state.sequencer_a_current_step as f32 - 1.0) * 0.25;
+                    let clamped_voltage = step_voltage.clamp(-5.0, 10.0);
+                    
+                    // Always log the voltage calculation for debugging
+                    info!("🎛️  Row 1 step {} -> CV output 1: {:.3}V (clamped: {:.3}V)", 
+                          row_state.sequencer_a_current_step, step_voltage, clamped_voltage);
                     
                     // Send to Crow output 1, keeping other outputs unchanged
                     if self.crow.is_enabled() {
-                        if let Err(e) = self.crow.send_command(&format!("output[1].volts = {:.3}", step_voltage.clamp(-5.0, 10.0))) {
-                            debug!("Failed to send row 1 step CV to Crow: {}", e);
+                        if let Err(e) = self.crow.send_command(&format!("output[1].volts = {:.3}", clamped_voltage)) {
+                            warn!("Failed to send row 1 step CV to Crow: {}", e);
                         } else {
-                            debug!("Row 1 step {} -> CV output 1: {:.3}V", row_state.sequencer_a_current_step, step_voltage);
+                            debug!("Successfully sent CV command to Crow");
                         }
+                    } else {
+                        warn!("Crow not enabled - CV voltage {:.3}V not sent", clamped_voltage);
                     }
                 }
 

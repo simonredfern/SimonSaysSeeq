@@ -71,7 +71,9 @@ impl Crow {
             // Fallback: Try common paths (but skip monome grids)
             let possible_paths = [
                 "/dev/ttyACM0",
-                "/dev/ttyACM1", 
+                "/dev/ttyACM1",
+                "/dev/ttyACM2",
+                "/dev/ttyACM3",
                 "/dev/ttyUSB0",
                 "/dev/ttyUSB1",
             ];
