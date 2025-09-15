@@ -174,6 +174,16 @@ impl SimonSaysSeeq {
             info!("🎛️  Crow CV output disabled (hardware feature not enabled)");
         }
 
+        // Display CO2 data initialization status
+        if self.co2.has_data() {
+            info!("📊 {}", self.co2.get_data_summary());
+            info!("📊 {}", self.co2.get_status_string());
+        } else if self.config.co2.enabled {
+            warn!("📊 CO2 features enabled but no data loaded");
+        } else {
+            info!("📊 CO2 features disabled");
+        }
+
         // Show control instructions
         // info!("run says: Controls:");
         // info!("run says:   Ctrl+C: Stop application");

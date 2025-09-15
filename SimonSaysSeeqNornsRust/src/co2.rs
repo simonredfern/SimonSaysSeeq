@@ -77,8 +77,8 @@ pub struct Co2Config {
 impl Default for Co2Config {
     fn default() -> Self {
         Self {
-            enabled: false,
-            data_dir: "co2_data".to_string(),
+            enabled: true,
+            data_dir: "/home/simonredfern/Documents/workspace_2025/SimonSaysSeeq/SimonSaysSeeqNornsRust/co2_data".to_string(),
             wow_threshold: 3.0,
             flutter_threshold: 0.25,
             window_size: 192, // 16 steps * 12 ticks
@@ -434,11 +434,12 @@ impl Co2Manager {
     }
     
     /// Get detailed CO2 information
+    /// Get CO2 information for display/debugging
     pub fn get_info(&self) -> Co2Info {
         Co2Info {
             enabled: self.config.enabled,
             has_data: self.has_data(),
-            record_count: self.records.len(),
+            record_count: self.get_record_count(),
             latest_daily_value: self.latest_daily_value,
             current_step_value: self.get_current_step_co2(),
             current_tick_value: self.get_current_tick_co2(),
@@ -449,6 +450,34 @@ impl Co2Manager {
             wow_episodes: self.tempo_analysis.wow_episodes,
             flutter_episodes: self.tempo_analysis.flutter_episodes,
         }
+    }
+
+    /// Get detailed summary of loaded CO2 data for logging/debugging
+    pub fn get_data_summary(&self) -> String {
+        if !self.has_data() {
+            return "No CO2 data loaded".to_string();
+        }
+
+        let first_record = &self.records[0];
+        let last_record = &self.records[self.records.len() - 1];
+        
+        let min_co2 = self.records.iter()
+            .map(|r| r.co2_ppm)
+            .fold(f32::INFINITY, f32::min);
+        let max_co2 = self.records.iter()
+            .map(|r| r.co2_ppm)
+            .fold(f32::NEG_INFINITY, f32::max);
+        let avg_co2 = self.records.iter()
+            .map(|r| r.co2_ppm)
+            .sum::<f32>() / self.records.len() as f32;
+
+        format!(
+            "CO2 data: {} records from {}/{}/{} to {}/{}/{} | Range: {:.2}-{:.2} ppm | Avg: {:.2} ppm",
+            self.records.len(),
+            first_record.month, first_record.day, first_record.year,
+            last_record.month, last_record.day, last_record.year,
+            min_co2, max_co2, avg_co2
+        )
     }
     
     /// Reload data from files
