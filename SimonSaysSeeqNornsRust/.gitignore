@@ -45,5 +45,5 @@ config_*.toml
 test_output/
 debug_output/
 
-# CO2 data files
-co2_data/
+# CO2 data files - exclude logs but include CSV files
+co2_data/*.log
