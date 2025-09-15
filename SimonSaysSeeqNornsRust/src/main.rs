@@ -204,6 +204,7 @@ impl SimonSaysSeeq {
                 info!("📊 {}", co2.get_data_summary());
                 info!("📊 {}", co2.get_status_string());
                 info!("📊 CO2 data is available and ready for use");
+                info!("⏱️  CO2 CV timing: 6 ticks per step (1 tick = 1 MIDI clock pulse)");
             } else {
                 warn!("📊 CO2 manager loaded but no data available");
                 warn!("🔍 CO2 Debug: This indicates either:");
@@ -1721,15 +1722,13 @@ impl SimonSaysSeeq {
                 
                 // External clock slave mode: advance sequencer directly on MIDI clock
                 if self.sequencer.is_running() {
-                    // MIDI clock runs at 24 PPQ, we need 12 ticks per step
+                    // MIDI clock runs at 24 PPQ, we get 6 ticks per step (every clock, 6 clocks per step)
                     static mut EXTERNAL_CLOCK_TICK_COUNTER: u32 = 0;
                     unsafe {
                         EXTERNAL_CLOCK_TICK_COUNTER += 1;
                         
-                        // Advance CO2 tick counter on every 2nd MIDI clock (gives us 12 ticks per step)
-                        if EXTERNAL_CLOCK_TICK_COUNTER % 2 == 0 {
-                            self.handle_co2_tick_advance()?;
-                        }
+                        // Advance CO2 tick counter on every MIDI clock (gives us 6 ticks per step)
+                        self.handle_co2_tick_advance()?;
                         
                         if EXTERNAL_CLOCK_TICK_COUNTER % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
                             // Advance sequencer step based on external clock

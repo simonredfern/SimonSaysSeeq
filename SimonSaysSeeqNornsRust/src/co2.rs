@@ -120,6 +120,7 @@ impl Co2Manager {
                         let last = &manager.records[manager.records.len() - 1];
                         info!("🔍 CO2 Debug: First record: {}/{}/{} = {:.2} ppm", first.year, first.month, first.day, first.co2_ppm);
                         info!("🔍 CO2 Debug: Last record: {}/{}/{} = {:.2} ppm", last.year, last.month, last.day, last.co2_ppm);
+                        info!("⏱️  CO2 timing: 6 ticks per step (1 tick = 1 MIDI clock pulse)");
                     }
                 }
                 Err(e) => {
