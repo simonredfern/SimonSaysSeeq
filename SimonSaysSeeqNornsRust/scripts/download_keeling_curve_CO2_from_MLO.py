@@ -34,6 +34,7 @@ def log_exception(folder, exception):
 def write_co2_ppm(folder):
 
     import requests
+    import time
 
     from datetime import datetime
     from datetime import date
@@ -55,10 +56,28 @@ def write_co2_ppm(folder):
     file_name_for_all_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv'
 
 
+    # Retry logic for network requests
+    max_retries = 5
+    base_delay = 30  # Start with 30 seconds
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempt {attempt + 1}/{max_retries} to download CO2 data...")
+            x = requests.get(url_for_daily_co2_ppm, timeout=30)
+            print(x.status_code)
+            print(x.text)
+            break  # Success, exit retry loop
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                print(f"Network error on attempt {attempt + 1}: {e}")
+                print(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+                continue
+            else:
+                raise  # Re-raise the exception if all retries failed
+
     try:
-        x = requests.get(url_for_daily_co2_ppm)
-        print(x.status_code)
-        print(x.text)
 
 
         co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.month) # use yesterday because data is (at least?) a day behind.
