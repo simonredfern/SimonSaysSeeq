@@ -1546,11 +1546,14 @@ impl SimonSaysSeeq {
                 };
                 
                 // Set all 4 outputs based on CO2 data
+                let step_delta_voltage = co2_manager.get_step_delta_voltage();
+                let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
+                
                 let voltages = [
                     co2_step_voltage,                    // Output 1: CO2 voltage (step-based)
                     (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
-                    0.0,                                 // Output 3: Unused
-                    0.0,                                 // Output 4: Unused
+                    step_delta_voltage,                  // Output 3: Step delta (bipolar -5V to +5V)
+                    tick_delta_voltage,                  // Output 4: Tick delta (bipolar -5V to +5V)
                 ];
 
                 // Clamp all voltages to Crow's safe range
@@ -1571,8 +1574,9 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V]", 
+                        info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V]", 
                               co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
@@ -1602,19 +1606,27 @@ impl SimonSaysSeeq {
     }
 
     fn handle_co2_tick_advance(&mut self) -> Result<()> {
-        // Advance CO2 tick counter and potentially update CV output 2
+        // Advance CO2 tick counter and update CV outputs 2 and 4
         if let Some(ref mut co2_manager) = self.co2 {
             if let Some(co2_tick_value) = co2_manager.advance_tick() {
-                // Update only CV output 2 with tick-based CO2 data
+                // Update CV output 2 with tick-based CO2 data
                 let tick_voltage = (co2_tick_value - 318.0) / 482.0 * 10.0; // Same formula as in handle_co2_cv_per_step
                 let clamped_tick_voltage = tick_voltage.clamp(-5.0, 10.0);
                 
-                // Send only output 2 update to Crow
+                // Update CV output 4 with tick delta voltage
+                let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
+                let clamped_tick_delta_voltage = tick_delta_voltage.clamp(-5.0, 10.0);
+                
+                // Send updates to Crow for outputs 2 and 4
                 if self.crow.is_enabled() {
                     if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
+                    } else if let Err(e) = self.crow.send_command(&format!("output[4].volts = {:.6}", clamped_tick_delta_voltage)) {
+                        warn!("Failed to send tick delta CV to Crow output 4: {}", e);
                     } else {
-                        info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", co2_manager.get_tick_counter(), co2_tick_value, clamped_tick_voltage);
+                        info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm Δ:{:.3}ppm -> Output 2: {:.3}V, Output 4: {:.3}V", 
+                              co2_manager.get_tick_counter(), co2_tick_value, co2_manager.get_tick_delta(), 
+                              clamped_tick_voltage, clamped_tick_delta_voltage);
                     }
                 }
             }

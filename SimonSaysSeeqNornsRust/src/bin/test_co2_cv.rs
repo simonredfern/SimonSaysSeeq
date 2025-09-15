@@ -66,11 +66,14 @@ fn main() -> Result<()> {
                 co2_step_value // Fall back to step value if tick data not available
             };
             
+            let step_delta_voltage = co2_manager.get_step_delta_voltage();
+            let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
+            
             let voltages = [
                 co2_step_voltage,                    // Output 1: CO2 voltage (0-10V range)
                 (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
-                0.0,                                 // Output 3: Unused
-                0.0,                                 // Output 4: Unused
+                step_delta_voltage,                  // Output 3: Step delta (bipolar -5V to +5V)
+                tick_delta_voltage,                  // Output 4: Tick delta (bipolar -5V to +5V)
             ];
 
             // Clamp all voltages to Crow's safe range
@@ -90,14 +93,16 @@ fn main() -> Result<()> {
                     clamped_voltages[3]
                 ) {
                     Ok(()) => {
-                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V] ✅", 
+                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V] ✅", 
                               co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
                     Err(e) => {
-                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V] ❌ ({})", 
+                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V] ❌ ({})", 
                               co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3], e);
                     }
@@ -160,11 +165,15 @@ fn simulate_without_data() -> Result<()> {
         // Get corresponding tick-based value
         let co2_tick_value = fake_tick_co2_values[(step - 1) % fake_tick_co2_values.len()];
         
+        // Simulate delta values when no real co2_manager is available
+        let step_delta_voltage = 0.0; // Simulated step delta
+        let tick_delta_voltage = 0.0; // Simulated tick delta
+        
         let voltages = [
             co2_step_voltage,                    // Output 1: CO2 voltage (0-10V range)
             (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
-            0.0,                                 // Output 3: Unused
-            0.0,                                 // Output 4: Unused
+            step_delta_voltage,                  // Output 3: Step delta (bipolar -5V to +5V)
+            tick_delta_voltage,                  // Output 4: Tick delta (bipolar -5V to +5V)
         ];
 
         let clamped_voltages = [

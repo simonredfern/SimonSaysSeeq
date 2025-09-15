@@ -48,6 +48,8 @@ pub struct Co2Manager {
     config: Co2Config,
     /// Data file paths
     all_daily_path: PathBuf,
+    /// Maximum delta between consecutive records (for scaling)
+    max_delta: f32,
 }
 
 /// CO2 configuration settings
@@ -96,11 +98,12 @@ impl Co2Manager {
                 flutter_average: 0.0,
                 wow_episodes: 0,
                 flutter_episodes: 0,
-                is_wow_stable: true,
-                is_flutter_stable: true,
+                is_wow_stable: false,
+                is_flutter_stable: false,
             },
             config,
             all_daily_path: data_dir.join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"),
+            max_delta: 0.0,
         };
         
         if manager.config.enabled {
@@ -212,6 +215,8 @@ impl Co2Manager {
 
         if valid_records > 0 {
             info!("Loaded {} valid CO2 records (ignored {} invalid)", valid_records, invalid_records);
+            // Calculate max delta for bipolar voltage scaling
+            self.calculate_max_delta();
         } else {
             warn!("No valid CO2 records loaded from file");
             warn!("🔍 CO2 Debug: This is why 'no data available' appears");
@@ -365,6 +370,78 @@ impl Co2Manager {
     /// Get current tick counter (record index for tick-based advancement)
     pub fn get_tick_counter(&self) -> usize {
         self.total_tick_counter
+    }
+
+    /// Get step-based delta (current step to next step)
+    pub fn get_step_delta(&self) -> f32 {
+        if self.records.len() < 2 {
+            return 0.0;
+        }
+        
+        let current_value = self.records[self.total_step_counter].co2_ppm;
+        let next_index = (self.total_step_counter + 1) % self.records.len();
+        let next_value = self.records[next_index].co2_ppm;
+        
+        next_value - current_value
+    }
+
+    /// Get tick-based delta (current tick to next tick)  
+    pub fn get_tick_delta(&self) -> f32 {
+        if self.records.len() < 2 {
+            return 0.0;
+        }
+        
+        let current_value = self.records[self.total_tick_counter].co2_ppm;
+        let next_index = (self.total_tick_counter + 1) % self.records.len();
+        let next_value = self.records[next_index].co2_ppm;
+        
+        next_value - current_value
+    }
+
+    /// Get step delta scaled to bipolar voltage (-5V to +5V)
+    pub fn get_step_delta_voltage(&self) -> f32 {
+        if self.max_delta == 0.0 {
+            return 0.0;
+        }
+        
+        let delta = self.get_step_delta();
+        // Scale to -5V to +5V range
+        (delta / self.max_delta) * 5.0
+    }
+
+    /// Get tick delta scaled to bipolar voltage (-5V to +5V)
+    pub fn get_tick_delta_voltage(&self) -> f32 {
+        if self.max_delta == 0.0 {
+            return 0.0;
+        }
+        
+        let delta = self.get_tick_delta();
+        // Scale to -5V to +5V range  
+        (delta / self.max_delta) * 5.0
+    }
+
+    /// Calculate maximum delta between consecutive records for scaling
+    fn calculate_max_delta(&mut self) {
+        if self.records.len() < 2 {
+            self.max_delta = 1.0; // Avoid division by zero
+            return;
+        }
+
+        let mut max_delta = 0.0_f32;
+        
+        for i in 0..self.records.len() {
+            let current_value = self.records[i].co2_ppm;
+            let next_index = (i + 1) % self.records.len();
+            let next_value = self.records[next_index].co2_ppm;
+            let delta = (next_value - current_value).abs();
+            
+            if delta > max_delta {
+                max_delta = delta;
+            }
+        }
+        
+        self.max_delta = max_delta.max(0.1); // Ensure minimum value to avoid division issues
+        debug!("Calculated max CO2 delta: {:.3} ppm", self.max_delta);
     }
     
     /// Analyze tempo stability using CO2 data influence
