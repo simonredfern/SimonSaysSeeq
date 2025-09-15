@@ -2,9 +2,34 @@
 # The data is known as the The Keeling Curve
 # This file was copied from SimonSaysSeeqNorns
 import sys
+import os
 
 
 # To include some CO2 PPM data for yesterday.
+
+def log_attempt(folder):
+    """Log the datetime of the download attempt"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_path = os.path.join(folder, "last_CO2_download_attempt.log")
+    with open(log_path, "w") as f:
+        f.write(timestamp)
+
+def log_success(folder):
+    """Log the datetime of successful download"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_path = os.path.join(folder, "last_CO2_download_success.log")
+    with open(log_path, "w") as f:
+        f.write(timestamp)
+
+def log_exception(folder, exception):
+    """Log the last exception"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_path = os.path.join(folder, "last_CO2_download_exception.log")
+    with open(log_path, "w") as f:
+        f.write(f"{timestamp}: {str(exception)}")
 
 def write_co2_ppm(folder):
 
@@ -13,6 +38,9 @@ def write_co2_ppm(folder):
     from datetime import datetime
     from datetime import date
     from datetime import timedelta
+    
+    # Log the attempt
+    log_attempt(folder)
 
 
     # We need to know yesterdays date becuase data on the website is generally one day old.
@@ -27,9 +55,10 @@ def write_co2_ppm(folder):
     file_name_for_all_daily_co2_ppm = 'simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv'
 
 
-    x = requests.get(url_for_daily_co2_ppm)
-    print(x.status_code)
-    print(x.text)
+    try:
+        x = requests.get(url_for_daily_co2_ppm)
+        print(x.status_code)
+        print(x.text)
 
 
     co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.month) # use yesterday because data is (at least?) a day behind.
@@ -83,9 +112,15 @@ def write_co2_ppm(folder):
 
     ################
 
+        # Log success if we got this far
+        log_success(folder)
 
-
-    return latest_value
+        return latest_value
+    
+    except Exception as e:
+        print(f"Error downloading CO2 data: {e}")
+        log_exception(folder, e)
+        return None
 
 
 
