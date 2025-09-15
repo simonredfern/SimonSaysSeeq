@@ -68,9 +68,9 @@ fn main() -> Result<()> {
             
             let voltages = [
                 co2_step_voltage,                    // Output 1: CO2 voltage (0-10V range)
-                co2_step_voltage * 0.5,             // Output 2: CO2 voltage scaled down (0-5V range)
-                (co2_step_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm baseline
-                (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
+                (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
+                0.0,                                 // Output 3: Unused
+                0.0,                                 // Output 4: Unused
             ];
 
             // Clamp all voltages to Crow's safe range
@@ -90,7 +90,7 @@ fn main() -> Result<()> {
                     clamped_voltages[3]
                 ) {
                     Ok(()) => {
-                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V] ✅", 
+                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V] ✅", 
                               step, co2_step_value, co2_tick_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
@@ -162,9 +162,9 @@ fn simulate_without_data() -> Result<()> {
         
         let voltages = [
             co2_step_voltage,                    // Output 1: CO2 voltage (0-10V range)
-            co2_step_voltage * 0.5,             // Output 2: CO2 voltage scaled down (0-5V range)
-            (co2_step_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm baseline
-            (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
+            (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
+            0.0,                                 // Output 3: Unused
+            0.0,                                 // Output 4: Unused
         ];
 
         let clamped_voltages = [
