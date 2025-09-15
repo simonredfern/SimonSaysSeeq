@@ -1538,12 +1538,19 @@ impl SimonSaysSeeq {
                 // Convert CO2 value to voltage for output 1
                 let co2_voltage = co2_manager.get_co2_voltage_offset(co2_value);
                 
+                // Get tick-based CO2 value for output 4 (advances on each tick)
+                let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
+                    tick_value
+                } else {
+                    co2_value // Fall back to step value if tick data not available
+                };
+                
                 // Set all 4 outputs based on CO2 data
                 let voltages = [
-                    co2_voltage,                    // Output 1: CO2 voltage
-                    co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down
-                    (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm
-                    (co2_value / 100.0) - 4.0,     // Output 4: CO2 as bipolar voltage (410ppm = 0.1V)
+                    co2_voltage,                    // Output 1: CO2 voltage (step-based)
+                    co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down (step-based)
+                    (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm (step-based)
+                    (tick_co2_value / 100.0) - 4.0, // Output 4: Tick-based CO2 as bipolar voltage
                 ];
 
                 // Clamp all voltages to Crow's safe range
@@ -1564,8 +1571,8 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - Step {}: {:.2} ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, Bipolar:{:.3}V]", 
-                              step, co2_value, 
+                        info!("🎛️  CO2 CV Output - Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V]", 
+                              step, co2_value, tick_co2_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
@@ -1591,6 +1598,27 @@ impl SimonSaysSeeq {
             debug!("CO2 manager not available - CV outputs set to 0V");
         }
 
+        Ok(())
+    }
+
+    fn handle_co2_tick_advance(&mut self) -> Result<()> {
+        // Advance CO2 tick counter and potentially update CV output 4
+        if let Some(ref mut co2_manager) = self.co2 {
+            if let Some(tick_co2_value) = co2_manager.advance_tick() {
+                // Update only CV output 4 with tick-based CO2 data
+                let tick_voltage = (tick_co2_value / 100.0) - 4.0; // Same formula as in handle_co2_cv_per_step
+                let clamped_tick_voltage = tick_voltage.clamp(-5.0, 10.0);
+                
+                // Send only output 4 update to Crow
+                if self.crow.is_enabled() {
+                    if let Err(e) = self.crow.send_command(&format!("output[4].volts = {:.6}", clamped_tick_voltage)) {
+                        warn!("Failed to send tick-based CO2 CV to Crow output 4: {}", e);
+                    } else {
+                        debug!("🎛️  CO2 Tick CV - Output 4: {:.2} ppm -> {:.3}V", tick_co2_value, clamped_tick_voltage);
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1679,6 +1707,12 @@ impl SimonSaysSeeq {
                     static mut EXTERNAL_CLOCK_TICK_COUNTER: u32 = 0;
                     unsafe {
                         EXTERNAL_CLOCK_TICK_COUNTER += 1;
+                        
+                        // Advance CO2 tick counter on every 2nd MIDI clock (gives us 12 ticks per step)
+                        if EXTERNAL_CLOCK_TICK_COUNTER % 2 == 0 {
+                            self.handle_co2_tick_advance()?;
+                        }
+                        
                         if EXTERNAL_CLOCK_TICK_COUNTER % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
                             // Advance sequencer step based on external clock
                             if let Err(e) = self.sequencer.external_advance_step(seq_tx) {
