@@ -492,12 +492,7 @@ impl SimonSaysSeeq {
             SequencerEvent::Step { step, bar } => {
                 // Step event - display updates handled
 
-                // Advance CO2 step counter if available
-                let step_co2_value = if let Some(ref mut co2) = self.co2 {
-                    co2.advance_step()
-                } else {
-                    Some(400.0) // Default CO2 value when manager not available
-                };
+                // CO2 data will be handled in handle_co2_cv_per_step function
 
                 // Process step for all active rows
                 for row in 0..=6 { // Rows 0-6 are sequence rows
@@ -524,31 +519,8 @@ impl SimonSaysSeeq {
                 }
 
                 // Handle CO2-influenced CV output for special rows
-                if let Some(co2_value) = step_co2_value {
-                    self.handle_co2_cv_output(step, 3, co2_value)?; // Row 3 uses step-based CO2
-                }
-
-                // Send CV output based on row 1 (row 0) current step
-                if let Some(row_state) = self.sequencer.get_row_states(0) {
-                    // Convert step number to voltage (0.25V per step, starting at 0V)
-                    let step_voltage = (row_state.sequencer_a_current_step as f32 - 1.0) * 0.25;
-                    let clamped_voltage = step_voltage.clamp(-5.0, 10.0);
-                    
-                    // Always log the voltage calculation for debugging
-                    info!("🎛️  Row 1 step {} -> CV output 1: {:.3}V (clamped: {:.3}V)", 
-                          row_state.sequencer_a_current_step, step_voltage, clamped_voltage);
-                    
-                    // Send to Crow output 1, keeping other outputs unchanged
-                    if self.crow.is_enabled() {
-                        if let Err(e) = self.crow.send_command(&format!("output[1].volts = {:.3}", clamped_voltage)) {
-                            warn!("Failed to send row 1 step CV to Crow: {}", e);
-                        } else {
-                            debug!("Successfully sent CV command to Crow");
-                        }
-                    } else {
-                        warn!("Crow not enabled - CV voltage {:.3}V not sent", clamped_voltage);
-                    }
-                }
+                // Send CV output using CO2 data - one record per step
+                self.handle_co2_cv_per_step(step)?;
 
                 // Grid updates now handled by selective GridUpdate events
                 // No need for full grid refresh on every step
@@ -1559,25 +1531,65 @@ impl SimonSaysSeeq {
 
 
 
-    fn handle_co2_cv_output(&mut self, step: usize, _row: usize, _co2_value: f32) -> Result<()> {
-        // Simple step counter voltages to test Crow control
-        let step_voltage = (step as f32 % 8.0) * 0.5; // 0V to 3.5V in 0.5V steps
-        let voltages = [
-            step_voltage,           // Output 1: step counter
-            step_voltage + 1.0,     // Output 2: step counter + 1V  
-            step_voltage + 2.0,     // Output 3: step counter + 2V
-            step_voltage + 3.0,     // Output 4: step counter + 3V
-        ];
+    fn handle_co2_cv_per_step(&mut self, step: usize) -> Result<()> {
+        // Get CO2 manager and advance to next record
+        if let Some(ref mut co2_manager) = self.co2 {
+            if let Some(co2_value) = co2_manager.advance_step() {
+                // Convert CO2 value to voltage for output 1
+                let co2_voltage = co2_manager.get_co2_voltage_offset(co2_value);
+                
+                // Set all 4 outputs based on CO2 data
+                let voltages = [
+                    co2_voltage,                    // Output 1: CO2 voltage
+                    co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down
+                    (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm
+                    (co2_value / 100.0) - 4.0,     // Output 4: CO2 as bipolar voltage (410ppm = 0.1V)
+                ];
 
-        // Send to Crow CV outputs
-        if self.crow.is_enabled() {
-            if let Err(e) = self.crow.set_all_outputs(voltages[0], voltages[1], voltages[2], voltages[3]) {
-                warn!("Failed to send CV to Crow: {}", e);
+                // Clamp all voltages to Crow's safe range
+                let clamped_voltages = [
+                    voltages[0].clamp(-5.0, 10.0),
+                    voltages[1].clamp(-5.0, 10.0),
+                    voltages[2].clamp(-5.0, 10.0),
+                    voltages[3].clamp(-5.0, 10.0),
+                ];
+
+                // Send to Crow CV outputs
+                if self.crow.is_enabled() {
+                    if let Err(e) = self.crow.set_all_outputs(
+                        clamped_voltages[0], 
+                        clamped_voltages[1], 
+                        clamped_voltages[2], 
+                        clamped_voltages[3]
+                    ) {
+                        warn!("Failed to send CO2 CV to Crow: {}", e);
+                    } else {
+                        info!("🎛️  CO2 CV Output - Step {}: {:.2} ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, Bipolar:{:.3}V]", 
+                              step, co2_value, 
+                              clamped_voltages[0], clamped_voltages[1], 
+                              clamped_voltages[2], clamped_voltages[3]);
+                    }
+                } else {
+                    debug!("Crow disabled - CO2 CV output ignored");
+                }
+            } else {
+                // No CO2 data available, send zero voltages
+                if self.crow.is_enabled() {
+                    if let Err(e) = self.crow.set_all_outputs(0.0, 0.0, 0.0, 0.0) {
+                        warn!("Failed to send zero CV to Crow: {}", e);
+                    }
+                }
+                debug!("No CO2 data available - CV outputs set to 0V");
             }
+        } else {
+            // No CO2 manager, send zero voltages
+            if self.crow.is_enabled() {
+                if let Err(e) = self.crow.set_all_outputs(0.0, 0.0, 0.0, 0.0) {
+                    warn!("Failed to send zero CV to Crow: {}", e);
+                }
+            }
+            debug!("CO2 manager not available - CV outputs set to 0V");
         }
-
-        debug!("CV Outputs: {:.1}V, {:.1}V, {:.1}V, {:.1}V (step {})", 
-               voltages[0], voltages[1], voltages[2], voltages[3], step);
 
         Ok(())
     }
