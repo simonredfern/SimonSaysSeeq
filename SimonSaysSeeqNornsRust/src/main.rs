@@ -1571,7 +1571,7 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - StepRec#{} TickRec#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V]", 
+                        info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V]", 
                               co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
@@ -1614,7 +1614,7 @@ impl SimonSaysSeeq {
                     if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
                     } else {
-                        info!("🎛️  CO2 Tick CV - TickRec#{}: {:.2}ppm -> Output 2: {:.3}V", co2_manager.get_tick_counter(), co2_tick_value, clamped_tick_voltage);
+                        info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", co2_manager.get_tick_counter(), co2_tick_value, clamped_tick_voltage);
                     }
                 }
             }
