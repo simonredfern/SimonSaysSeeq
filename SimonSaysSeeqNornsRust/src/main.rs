@@ -96,7 +96,7 @@ pub struct SimonSaysSeeq {
     midi: MidiManager,
     grid: GridManager,
     screen: ScreenManager,
-    co2: Co2Manager,
+    co2: Option<Co2Manager>,
     crow: simon_says_seeq_rust::crow::Crow,
     config: Config,
     running: Arc<AtomicBool>,
@@ -136,7 +136,17 @@ impl SimonSaysSeeq {
                 grid_manager
             },
             screen: ScreenManager::new()?,
-            co2: Co2Manager::new(config.co2.clone())?,
+            co2: match Co2Manager::new(config.co2.clone()) {
+                Ok(manager) => {
+                    info!("📊 CO2 manager initialized successfully");
+                    Some(manager)
+                }
+                Err(e) => {
+                    warn!("📊 CO2 manager initialization failed: {}", e);
+                    warn!("📊 Continuing without CO2 features");
+                    None
+                }
+            },
             crow: simon_says_seeq_rust::crow::Crow::new()?,
             config,
             running: Arc::new(AtomicBool::new(false)),
@@ -175,11 +185,15 @@ impl SimonSaysSeeq {
         }
 
         // Display CO2 data initialization status
-        if self.co2.has_data() {
-            info!("📊 {}", self.co2.get_data_summary());
-            info!("📊 {}", self.co2.get_status_string());
+        if let Some(ref co2) = self.co2 {
+            if co2.has_data() {
+                info!("📊 {}", co2.get_data_summary());
+                info!("📊 {}", co2.get_status_string());
+            } else {
+                warn!("📊 CO2 manager loaded but no data available");
+            }
         } else if self.config.co2.enabled {
-            warn!("📊 CO2 features enabled but no data loaded");
+            warn!("📊 CO2 features enabled but manager failed to initialize");
         } else {
             info!("📊 CO2 features disabled");
         }
@@ -455,8 +469,12 @@ impl SimonSaysSeeq {
             SequencerEvent::Step { step, bar } => {
                 // Step event - display updates handled
 
-                // Advance CO2 step counter
-                let step_co2_value = self.co2.advance_step();
+                // Advance CO2 step counter if available
+                let step_co2_value = if let Some(ref mut co2) = self.co2 {
+                    co2.advance_step()
+                } else {
+                    400.0 // Default CO2 value when manager not available
+                };
 
                 // Process step for all active rows
                 for row in 0..=6 { // Rows 0-6 are sequence rows

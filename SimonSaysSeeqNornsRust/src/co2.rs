@@ -115,7 +115,16 @@ impl Co2Manager {
         };
         
         if manager.config.enabled {
-            manager.load_data()?;
+            match manager.load_data() {
+                Ok(()) => {
+                    info!("CO2 data loaded successfully");
+                }
+                Err(e) => {
+                    warn!("CO2 data loading failed: {}", e);
+                    warn!("CO2 manager will continue without data");
+                    // Continue with empty data - don't fail initialization
+                }
+            }
         } else {
             info!("CO2 features disabled in configuration");
         }
@@ -162,7 +171,7 @@ impl Co2Manager {
                 }
             }
         } else {
-            warn!("Latest daily CO2 file not found: {:?}", self.daily_latest_path);
+            info!("Latest daily CO2 file not found: {:?} (this is normal for first run)", self.daily_latest_path);
         }
         
         Ok(())
