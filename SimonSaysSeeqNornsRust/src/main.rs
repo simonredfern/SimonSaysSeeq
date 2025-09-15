@@ -114,6 +114,8 @@ pub struct SimonSaysSeeq {
 
 impl SimonSaysSeeq {
     pub fn new() -> Result<Self> {
+        let config_path = Config::get_config_path();
+        info!("📁 Config file location: {:?}", config_path);
         let config = Config::load_or_default()?;
         let initial_tempo = config.sequencer.default_tempo;
 
@@ -136,7 +138,9 @@ impl SimonSaysSeeq {
                 grid_manager
             },
             screen: ScreenManager::new()?,
-            co2: match Co2Manager::new(config.co2.clone()) {
+            co2: {
+                info!("📊 CO2 file path: {:?}", std::path::PathBuf::from(&config.co2.data_dir).join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"));
+                match Co2Manager::new(config.co2.clone()) {
                 Ok(manager) => {
                     info!("📊 CO2 manager initialized successfully");
                     Some(manager)
@@ -146,7 +150,7 @@ impl SimonSaysSeeq {
                     warn!("📊 Continuing without CO2 features");
                     None
                 }
-            },
+            }},
             crow: simon_says_seeq_rust::crow::Crow::new()?,
             config,
             running: Arc::new(AtomicBool::new(false)),
