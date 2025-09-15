@@ -1550,7 +1550,7 @@ impl SimonSaysSeeq {
                     co2_voltage,                    // Output 1: CO2 voltage (step-based)
                     co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down (step-based)
                     (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm (step-based)
-                    (tick_co2_value / 100.0) - 4.0, // Output 4: Tick-based CO2 as bipolar voltage
+                    (tick_co2_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
                 ];
 
                 // Clamp all voltages to Crow's safe range
@@ -1571,7 +1571,7 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V]", 
+                        info!("🎛️  CO2 CV Output - Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V]", 
                               step, co2_value, tick_co2_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
@@ -1606,7 +1606,7 @@ impl SimonSaysSeeq {
         if let Some(ref mut co2_manager) = self.co2 {
             if let Some(tick_co2_value) = co2_manager.advance_tick() {
                 // Update only CV output 4 with tick-based CO2 data
-                let tick_voltage = (tick_co2_value / 100.0) - 4.0; // Same formula as in handle_co2_cv_per_step
+                let tick_voltage = (tick_co2_value - 318.0) / 482.0 * 10.0; // Same formula as in handle_co2_cv_per_step
                 let clamped_tick_voltage = tick_voltage.clamp(-5.0, 10.0);
                 
                 // Send only output 4 update to Crow

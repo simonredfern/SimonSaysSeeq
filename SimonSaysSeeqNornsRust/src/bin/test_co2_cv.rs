@@ -59,11 +59,18 @@ fn main() -> Result<()> {
             // Convert CO2 value to voltages (same logic as main application)
             let co2_voltage = co2_manager.get_co2_voltage_offset(co2_value);
             
+            // Get tick-based CO2 value for output 4 (advances on each tick)
+            let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
+                tick_value
+            } else {
+                co2_value // Fall back to step value if tick data not available
+            };
+            
             let voltages = [
                 co2_voltage,                    // Output 1: CO2 voltage (0-10V range)
                 co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down (0-5V range)
                 (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm baseline
-                (co2_value / 100.0) - 4.0,     // Output 4: CO2 as bipolar voltage (410ppm = 0.1V)
+                (tick_co2_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
             ];
 
             // Clamp all voltages to Crow's safe range
@@ -83,36 +90,20 @@ fn main() -> Result<()> {
                     clamped_voltages[3]
                 ) {
                     Ok(()) => {
-                        // Also demonstrate tick-based CO2 advancement for output 4
-                        let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
-                            tick_value
-                        } else {
-                            co2_value
-                        };
-                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V] ✅", 
+                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V] ✅", 
                               step, co2_value, tick_co2_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
                     Err(e) => {
-                        let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
-                            tick_value
-                        } else {
-                            co2_value
-                        };
-                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V] ❌ ({})", 
+                        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V] ❌ ({})", 
                               step, co2_value, tick_co2_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3], e);
                     }
                 }
             } else {
-                let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
-                    tick_value
-                } else {
-                    co2_value
-                };
-                info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V] (simulated)", 
+                info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V] (simulated)", 
                       step, co2_value, tick_co2_value,
                       clamped_voltages[0], clamped_voltages[1], 
                       clamped_voltages[2], clamped_voltages[3]);
@@ -173,7 +164,7 @@ fn simulate_without_data() -> Result<()> {
             co2_voltage,                    // Output 1: CO2 voltage (0-10V range)
             co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down (0-5V range)
             (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm baseline
-            (tick_co2_value / 100.0) - 4.0, // Output 4: Tick-based CO2 as bipolar voltage
+            (tick_co2_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
         ];
 
         let clamped_voltages = [
@@ -192,7 +183,7 @@ fn simulate_without_data() -> Result<()> {
             );
         }
 
-        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickBip:{:.3}V] (simulated)", 
+        info!("🎛️  Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V] (simulated)", 
               step, co2_value, tick_co2_value,
               clamped_voltages[0], clamped_voltages[1], 
               clamped_voltages[2], clamped_voltages[3]);
