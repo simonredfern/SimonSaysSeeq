@@ -1,5 +1,5 @@
 //! Configuration module for SimonSaysSeeq
-//! 
+//!
 //! Handles loading and saving application configuration from TOML files.
 
 use anyhow::Result;
@@ -194,7 +194,7 @@ impl Config {
     /// Load configuration from file, or create default if not found
     pub fn load_or_default() -> Result<Self> {
         let config_path = Self::get_config_path();
-        
+
         if config_path.exists() {
             Self::load(&config_path)
         } else {
@@ -204,11 +204,11 @@ impl Config {
             Ok(config)
         }
     }
-    
+
     /// Load configuration from specified path
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())?;
-        
+
         // Try to parse config, fall back to default for missing fields
         match toml::from_str::<Config>(&content) {
             Ok(config) => {
@@ -220,7 +220,7 @@ impl Config {
             Err(e) => {
                 warn!("Failed to parse config file: {}. Using default config with some overrides.", e);
                 let mut config = Config::default();
-                
+
                 // Try to parse individual sections that might work
                 if let Ok(partial_config) = toml::from_str::<toml::Value>(&content) {
                     if let Some(midi) = partial_config.get("midi") {
@@ -233,27 +233,27 @@ impl Config {
                         }
                     }
                 }
-                
+
                 info!("Fallback config created - MIDI auto_detect_clock: {}", config.midi.auto_detect_clock);
                 Ok(config)
             }
         }
     }
-    
+
     /// Save configuration to specified path
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path.as_ref(), content)?;
-        
+
         info!("Configuration saved to: {:?}", path.as_ref());
         Ok(())
     }
-    
+
     /// Get the default configuration file path
     pub fn get_config_path() -> PathBuf {
         // Try to use XDG config directory, fall back to current directory
@@ -263,66 +263,66 @@ impl Config {
             PathBuf::from("simon_says_seeq_config.toml")
         }
     }
-    
+
     /// Validate configuration values
     fn validate(&self) -> Result<()> {
         // Validate MIDI config
         if self.midi.default_channel < 1 || self.midi.default_channel > 16 {
             return Err(anyhow::anyhow!("MIDI channel must be 1-16"));
         }
-        
+
         if self.midi.default_velocity > 127 {
             return Err(anyhow::anyhow!("MIDI velocity must be 0-127"));
         }
-        
+
         // Validate grid config
         if ![0, 90, 180, 270].contains(&self.grid.rotation) {
             return Err(anyhow::anyhow!("Grid rotation must be 0, 90, 180, or 270 degrees"));
         }
-        
+
         if self.grid.default_brightness > 15 {
             return Err(anyhow::anyhow!("Grid brightness must be 0-15"));
         }
-        
+
         // Validate sequencer config
         if self.sequencer.default_tempo < 20.0 || self.sequencer.default_tempo > 200.0 {
             return Err(anyhow::anyhow!("Tempo must be between 20-200 BPM"));
         }
-        
+
         if self.sequencer.steps_per_bar == 0 || self.sequencer.steps_per_bar > 64 {
             return Err(anyhow::anyhow!("Steps per bar must be 1-64"));
         }
-        
+
         if self.sequencer.ticks_per_step == 0 || self.sequencer.ticks_per_step > 96 {
             return Err(anyhow::anyhow!("Ticks per step must be 1-96"));
         }
-        
-        if self.sequencer.default_first_step == 0 || 
+
+        if self.sequencer.default_first_step == 0 ||
            self.sequencer.default_last_step == 0 ||
            self.sequencer.default_first_step > self.sequencer.default_last_step ||
            self.sequencer.default_last_step > self.sequencer.steps_per_bar {
             return Err(anyhow::anyhow!("Invalid step range"));
         }
-        
 
-        
+
+
         // Validate display config
         if self.display.refresh_rate == 0 || self.display.refresh_rate > 120 {
             return Err(anyhow::anyhow!("Refresh rate must be 1-120 FPS"));
         }
-        
+
         if self.display.font_scale == 0 || self.display.font_scale > 4 {
             return Err(anyhow::anyhow!("Font scale must be 1-4"));
         }
-        
+
         Ok(())
     }
-    
+
     /// Get MIDI device name (for backward compatibility)
     pub fn midi_device(&self) -> &str {
         &self.midi.device
     }
-    
+
     /// Create a minimal configuration for testing
     pub fn minimal() -> Self {
         Self {
@@ -368,7 +368,7 @@ impl Config {
             },
             co2: crate::co2::Co2Config {
                 enabled: false,
-                data_dir: "/tmp/co2_data".to_string(),
+                data_dir: "/home/simonredfern/Documents/workspace_2025/SimonSaysSeeq/SimonSaysSeeqNornsRust/co2_data".to_string(),
                 wow_threshold: 20.0,
                 flutter_threshold: 10.0,
                 window_size: 100,
@@ -384,59 +384,59 @@ impl Config {
 mod tests {
     use super::*;
     use tempfile::NamedTempFile;
-    
+
     #[test]
     fn test_default_config() {
         let config = Config::default();
         assert!(config.validate().is_ok());
     }
-    
+
     #[test]
     fn test_config_serialization() {
         let config = Config::default();
         let toml_str = toml::to_string(&config).unwrap();
         let deserialized: Config = toml::from_str(&toml_str).unwrap();
-        
+
         assert_eq!(config.midi.default_channel, deserialized.midi.default_channel);
         assert_eq!(config.sequencer.default_tempo, deserialized.sequencer.default_tempo);
     }
-    
+
     #[test]
     fn test_config_save_load() {
         let config = Config::default();
         let temp_file = NamedTempFile::new().unwrap();
-        
+
         config.save(temp_file.path()).unwrap();
         let loaded_config = Config::load(temp_file.path()).unwrap();
-        
+
         assert_eq!(config.midi.default_channel, loaded_config.midi.default_channel);
         assert_eq!(config.sequencer.default_tempo, loaded_config.sequencer.default_tempo);
     }
-    
+
     #[test]
     fn test_validation() {
         let mut config = Config::default();
-        
+
         // Test invalid MIDI channel
         config.midi.default_channel = 17;
         assert!(config.validate().is_err());
-        
+
         config.midi.default_channel = 1;
         assert!(config.validate().is_ok());
-        
+
         // Test invalid tempo
         config.sequencer.default_tempo = 300.0;
         assert!(config.validate().is_err());
-        
+
         config.sequencer.default_tempo = 120.0;
         assert!(config.validate().is_ok());
-        
+
         // Test invalid step range
         config.sequencer.default_first_step = 10;
         config.sequencer.default_last_step = 5;
         assert!(config.validate().is_err());
     }
-    
+
     #[test]
     fn test_minimal_config() {
         let config = Config::minimal();
