@@ -139,18 +139,22 @@ impl SimonSaysSeeq {
             },
             screen: ScreenManager::new()?,
             co2: {
-                info!("📊 CO2 file path: {:?}", std::path::PathBuf::from(&config.co2.data_dir).join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"));
+                let data_dir = std::path::PathBuf::from(&config.co2.data_dir);
+                let co2_file_path = data_dir.join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv");
+                info!("📊 CO2 file path: {:?}", co2_file_path);
+                
                 match Co2Manager::new(config.co2.clone()) {
-                Ok(manager) => {
-                    info!("📊 CO2 manager initialized successfully");
-                    Some(manager)
+                    Ok(manager) => {
+                        info!("📊 CO2 manager initialized successfully");
+                        Some(manager)
+                    }
+                    Err(e) => {
+                        warn!("📊 CO2 manager initialization failed: {}", e);
+                        warn!("📊 Continuing without CO2 features");
+                        None
+                    }
                 }
-                Err(e) => {
-                    warn!("📊 CO2 manager initialization failed: {}", e);
-                    warn!("📊 Continuing without CO2 features");
-                    None
-                }
-            }},
+            },
             crow: simon_says_seeq_rust::crow::Crow::new()?,
             config,
             running: Arc::new(AtomicBool::new(false)),
