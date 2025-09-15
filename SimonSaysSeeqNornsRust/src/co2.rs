@@ -143,13 +143,17 @@ impl Co2Manager {
             match fs::read_to_string(&self.daily_latest_path) {
                 Ok(content) => {
                     let trimmed = content.trim();
-                    match self.validate_co2_value(trimmed) {
-                        Some(value) => {
-                            self.latest_daily_value = Some(value);
-                            info!("Loaded latest daily CO2 value: {:.2} ppm", value);
-                        }
-                        None => {
-                            warn!("Invalid CO2 value in latest daily file: {}", trimmed);
+                    if trimmed.is_empty() {
+                        info!("Latest daily CO2 file is empty, skipping load");
+                    } else {
+                        match self.validate_co2_value(trimmed) {
+                            Some(value) => {
+                                self.latest_daily_value = Some(value);
+                                info!("Loaded latest daily CO2 value: {:.2} ppm", value);
+                            }
+                            None => {
+                                warn!("Invalid CO2 value in latest daily file: {}", trimmed);
+                            }
                         }
                     }
                 }

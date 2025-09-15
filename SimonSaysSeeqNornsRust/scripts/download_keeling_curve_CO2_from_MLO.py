@@ -80,7 +80,7 @@ def write_co2_ppm(folder):
     try:
 
 
-        co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.month) # use yesterday because data is (at least?) a day behind.
+        co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.year) # use yesterday because data is (at least?) a day behind.
 
         co2_ppm_first_row_finder = "%s,%s,%s" %(1974, 5, 19) # first record was on this day.
 
@@ -109,25 +109,27 @@ def write_co2_ppm(folder):
 
         print (yesterday_start_position)
 
+        # Only write latest daily file if we found yesterday's data
+        if yesterday_start_position != -1:
+            latest_line = x.text[yesterday_start_position:]
 
+            print (latest_line)
 
+            latest_value =  latest_line.split(",")[-1]
 
-        latest_line = x.text[yesterday_start_position:]
+            print (latest_value)
 
-        print (latest_line)
+            latest_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_latest_daily_co2_ppm)
 
-        latest_value =  latest_line.split(",")[-1]
+            f = open(latest_daily_co2_ppm_path, "w")
+            f.write(latest_value)
+            f.close()
 
-        print (latest_value)
-
-        latest_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_latest_daily_co2_ppm)
-
-
-        f = open(latest_daily_co2_ppm_path, "w")
-        f.write(latest_value)
-        f.close()
-
-        print("I wrote the value %s for the day %s to the file %s" %(latest_value, co2_ppm_yesterday_finder, latest_daily_co2_ppm_path))
+            print("I wrote the value %s for the day %s to the file %s" %(latest_value, co2_ppm_yesterday_finder, latest_daily_co2_ppm_path))
+        else:
+            print("Could not find data for yesterday (%s), skipping latest daily file write" % co2_ppm_yesterday_finder)
+            # Don't write to the latest daily file if we can't find yesterday's data
+            latest_value = None
 
         ################
 
