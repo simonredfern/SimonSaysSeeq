@@ -1571,8 +1571,8 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V]", 
-                              step, co2_step_value, co2_tick_value,
+                        info!("🎛️  CO2 CV Output - StepRec#{} TickRec#{}: Step:{:.2}ppm Tick:{:.2}ppm -> [Step:{:.3}V, Tick:{:.3}V, Unused:{:.3}V, Unused:{:.3}V]", 
+                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
@@ -1614,7 +1614,7 @@ impl SimonSaysSeeq {
                     if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
                     } else {
-                        debug!("🎛️  CO2 Tick CV - Output 2: {:.2} ppm -> {:.3}V", co2_tick_value, clamped_tick_voltage);
+                        info!("🎛️  CO2 Tick CV - TickRec#{}: {:.2}ppm -> Output 2: {:.3}V", co2_manager.get_tick_counter(), co2_tick_value, clamped_tick_voltage);
                     }
                 }
             }
@@ -1658,9 +1658,11 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
 
-
-
-
+                // Reset CO2 counters on MIDI start
+                if let Some(ref mut co2_manager) = self.co2 {
+                    co2_manager.reset_counters();
+                    info!("🔄 CO2 counters reset on MIDI start");
+                }
                 
                 // Synchronize sequencer tempo with external MIDI clock on start
                 #[cfg(feature = "midi")]
@@ -1684,7 +1686,11 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
                 
-
+                // Reset CO2 counters on MIDI stop
+                if let Some(ref mut co2_manager) = self.co2 {
+                    co2_manager.reset_counters();
+                    info!("🔄 CO2 counters reset on MIDI stop");
+                }
                 
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
                 // Clear beat LEDs when clock stops

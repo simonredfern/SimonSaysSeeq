@@ -39,9 +39,9 @@ pub struct Co2Manager {
     /// All historical CO2 records
     records: Vec<Co2Record>,
     /// Current position in step-based CO2 cycling
-    step_counter: usize,
+    total_co2_step_counter: usize,
     /// Current position in tick-based CO2 cycling
-    tick_counter: usize,
+    total_co2_tick_counter: usize,
     /// Tempo analysis for wow/flutter detection
     tempo_analysis: Co2TempoAnalysis,
     /// Configuration
@@ -87,8 +87,8 @@ impl Co2Manager {
         
         let mut manager = Self {
             records: Vec::new(),
-            step_counter: 1,
-            tick_counter: 1,
+            total_co2_step_counter: 0,
+            total_co2_tick_counter: 0,
             tempo_analysis: Co2TempoAnalysis {
                 wow_window: VecDeque::with_capacity(config.window_size),
                 flutter_window: VecDeque::with_capacity(config.window_size),
@@ -276,13 +276,9 @@ impl Co2Manager {
     
     /// Reset all counters
     pub fn reset_counters(&mut self) {
-        if !self.records.is_empty() {
-            self.step_counter = 1;
-            self.tick_counter = 1;
-        } else {
-            self.step_counter = 0;
-            self.tick_counter = 0;
-        }
+        // Always reset to 0 (0-indexed)
+        self.total_co2_step_counter = 0;
+        self.total_co2_tick_counter = 0;
         
         // Reset tempo analysis
         self.tempo_analysis.wow_window.clear();
@@ -303,10 +299,10 @@ impl Co2Manager {
             return None;
         }
         
-        let co2_value = self.records[self.step_counter - 1].co2_ppm;
-        self.step_counter = self.step_counter % self.records.len() + 1;
+        let co2_value = self.records[self.total_co2_step_counter].co2_ppm;
+        self.total_co2_step_counter = (self.total_co2_step_counter + 1) % self.records.len();
         
-        debug!("Step CO2: {:.2} ppm (step {})", co2_value, self.step_counter);
+        debug!("Step CO2: {:.2} ppm (step counter {})", co2_value, self.total_co2_step_counter);
         Some(co2_value)
     }
     
@@ -316,28 +312,28 @@ impl Co2Manager {
             return None;
         }
         
-        let co2_value = self.records[self.tick_counter - 1].co2_ppm;
-        self.tick_counter = self.tick_counter % self.records.len() + 1;
+        let co2_value = self.records[self.total_co2_tick_counter].co2_ppm;
+        self.total_co2_tick_counter = (self.total_co2_tick_counter + 1) % self.records.len();
         
         Some(co2_value)
     }
     
     /// Get current step CO2 value without advancing
     pub fn get_current_step_co2(&self) -> Option<f32> {
-        if self.records.is_empty() || self.step_counter == 0 {
+        if self.records.is_empty() {
             return None;
         }
         
-        Some(self.records[self.step_counter - 1].co2_ppm)
+        Some(self.records[self.total_co2_step_counter].co2_ppm)
     }
     
     /// Get current tick CO2 value without advancing
     pub fn get_current_tick_co2(&self) -> Option<f32> {
-        if self.records.is_empty() || self.tick_counter == 0 {
+        if self.records.is_empty() {
             return None;
         }
         
-        Some(self.records[self.tick_counter - 1].co2_ppm)
+        Some(self.records[self.total_co2_tick_counter].co2_ppm)
     }
 
     
@@ -359,6 +355,16 @@ impl Co2Manager {
     /// Get CO2 value scaled for tick offset  
     pub fn get_tick_offset(&self, co2_value: f32) -> f32 {
         co2_value / self.config.voltage_scale
+    }
+
+    /// Get current step counter (CO2 record index for step-based advancement)
+    pub fn get_step_counter(&self) -> usize {
+        self.total_co2_step_counter
+    }
+
+    /// Get current tick counter (CO2 record index for tick-based advancement)
+    pub fn get_tick_counter(&self) -> usize {
+        self.total_co2_tick_counter
     }
     
     /// Analyze tempo stability using CO2 data influence
@@ -453,8 +459,8 @@ impl Co2Manager {
             latest_daily_value: self.records.last().map(|r| r.co2_ppm),
             current_step_value: self.get_current_step_co2(),
             current_tick_value: self.get_current_tick_co2(),
-            step_counter: self.step_counter,
-            tick_counter: self.tick_counter,
+            total_co2_step_counter: self.total_co2_step_counter,
+            total_co2_tick_counter: self.total_co2_tick_counter,
             wow_stable: self.tempo_analysis.is_wow_stable,
             flutter_stable: self.tempo_analysis.is_flutter_stable,
             wow_episodes: self.tempo_analysis.wow_episodes,
@@ -521,8 +527,8 @@ pub struct Co2Info {
     pub latest_daily_value: Option<f32>,
     pub current_step_value: Option<f32>,
     pub current_tick_value: Option<f32>,
-    pub step_counter: usize,
-    pub tick_counter: usize,
+    pub total_co2_step_counter: usize,
+    pub total_co2_tick_counter: usize,
     pub wow_stable: bool,
     pub flutter_stable: bool,
     pub wow_episodes: u32,
