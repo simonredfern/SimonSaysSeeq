@@ -796,14 +796,7 @@ impl SimonSaysSeeq {
                                     info!("Column 9 pressed (no function assigned)");
                                 }
                                 10 => {
-                                    // MUTE_CROW momentary button (held down to mute)
-                                    if pressed {
-                                        self.crow_muted = true;
-                                        info!("handle_grid_press says: MUTE_CROW activated - Crow outputs muted");
-                                    } else {
-                                        self.crow_muted = false;
-                                        info!("handle_grid_press says: MUTE_CROW released - Crow outputs enabled");
-                                    }
+                                    // MUTE_CROW momentary button (held down to mute) - handled outside this block
                                 }
                                 12 => {
                                     // Stop button - always works regardless of external clock
@@ -847,7 +840,7 @@ impl SimonSaysSeeq {
                             {
                                 let brightness = match x {
                                     10 => {
-                                        // Snap tempo button - show state (ON/OFF)
+                                        // MUTE_CROW button - show state (ON/OFF)
                                         if self.crow_muted { LED_BRIGHT } else { LED_OFF }
                                     }
                                     12 | 13 => 0, // Transport buttons always turn off
@@ -863,6 +856,17 @@ impl SimonSaysSeeq {
                                 };
                                 self.grid.set_led(grid_id, x, seq_y, brightness, "transport_button_release")?;
                                 self.grid.refresh()?;
+                            }
+                        }
+
+                        // Handle MUTE_CROW button for both press and release
+                        if x == 10 {
+                            if pressed {
+                                self.crow_muted = true;
+                                info!("handle_grid_press says: MUTE_CROW activated - Crow outputs muted");
+                            } else {
+                                self.crow_muted = false;
+                                info!("handle_grid_press says: MUTE_CROW released - Crow outputs enabled");
                             }
                         }
                         }

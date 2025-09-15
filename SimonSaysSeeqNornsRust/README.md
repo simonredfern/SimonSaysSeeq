@@ -153,6 +153,72 @@ cargo build --release --features="hardware,midi"
 
 - **7 Row step sequencer**: Written in Rust
 - **Current Pattern Saved**: Current Pattern is saved on MIDI stop and loaded at seqeuncer boot.
+- **CO2 Environmental Data Sonification**: Four CV outputs driven by atmospheric CO2 data
+
+## CO2 CV Outputs
+
+SimonSaysSeeq includes a unique environmental data sonification system that converts atmospheric CO2 measurements into musical control voltages. This system uses real NOAA CO2 data from 1958 to present, creating a powerful tool for climate-aware electronic music.
+
+### CV Output Configuration
+
+**CV1: Step-based CO2 Value (0-10V unipolar)**
+- Updates once per musical step (16th notes)
+- Represents absolute CO2 levels: 318-800 ppm mapped to 0-10V
+- Data source: Historical NOAA atmospheric CO2 measurements
+- Use for: Pitch control, filter cutoff, oscillator frequency
+
+**CV2: Tick-based CO2 Value (0-10V unipolar)**
+- Updates 6 times per musical step (every MIDI clock pulse)
+- Same CO2 range as CV1 but with faster temporal resolution
+- Provides rapid modulation based on CO2 progression
+- Use for: Fast vibrato, tremolo, high-frequency modulation
+
+**CV3: Daily Change Delta (±5V bipolar)**
+- Shows day-to-day change in CO2 levels
+- Updates once per musical step
+- Positive voltage = CO2 increasing, negative = decreasing
+- Auto-scaled to maximum delta found in dataset
+- Use for: Dynamic expression, filter resonance, amplitude modulation
+
+**CV4: Seasonal Anomaly Delta (±5V bipolar)**
+- Compares current CO2 level vs same day last year
+- **Positive voltage = Climate acceleration** (CO2 rising faster than last year)
+- **Negative voltage = Climate improvement** (CO2 rising slower than last year)
+- **Zero voltage = Same rate as last year**
+- Use for: Harmonic tension/release, distortion amount, musical "climate alarm"
+
+### Musical Applications
+
+The CO2 CV system provides multiple time scales for musical expression:
+- **Fast modulation** (CV2): 6x per step for rapid sonic changes
+- **Melodic changes** (CV1, CV3): Once per step for harmonic/melodic progression
+- **Climate narrative** (CV4): Real-time climate change acceleration feedback
+
+### Technical Features
+
+- **Historical Range**: 1958-2025+ NOAA CO2 data (318-800 ppm)
+- **Update Timing**: Synchronized to external MIDI clock (24 PPQ)
+- **Error Safe**: Graceful handling of missing data or date boundaries  
+- **Voltage Scaling**: Automatically scaled to maximize musical resolution
+- **MUTE_CROW Button**: Hold Grid Two column 10 to mute all CV outputs
+
+### Data Source & Accuracy
+
+- **Source**: NOAA Global Monitoring Laboratory CO2 measurements
+- **Resolution**: Daily atmospheric CO2 readings
+- **Span**: 65+ years of historical climate data
+- **Updates**: Counters advance with musical timing, data progresses through history
+- **Reset**: MIDI start/stop resets all CO2 counters to beginning of dataset
+
+### Example Log Output
+
+```
+⏱️  CO2 CV timing: 6 ticks per step (1 tick = 1 MIDI clock pulse)
+🎛️  CO2 CV Output - Step#1250 Tick#7500: Step:415.2ppm Tick:415.3ppm Δ:0.120ppm/YoY:2.1ppm -> [Step:2.013V, Tick:2.015V, StepΔ:0.245V, SeasonΔ:4.285V]
+🎛️  CO2 Tick CV - Tick#7501: 415.4ppm -> Output 2: 2.017V
+```
+
+This system transforms decades of climate data into immediate musical expression, creating a unique intersection of environmental awareness and electronic music performance.
 
 
 
