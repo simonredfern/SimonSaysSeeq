@@ -1534,23 +1534,23 @@ impl SimonSaysSeeq {
     fn handle_co2_cv_per_step(&mut self, step: usize) -> Result<()> {
         // Get CO2 manager and advance to next record
         if let Some(ref mut co2_manager) = self.co2 {
-            if let Some(co2_value) = co2_manager.advance_step() {
+            if let Some(co2_step_value) = co2_manager.advance_step() {
                 // Convert CO2 value to voltage for output 1
-                let co2_voltage = co2_manager.get_co2_voltage_offset(co2_value);
+                let co2_step_voltage = co2_manager.get_co2_voltage_offset(co2_step_value);
                 
                 // Get tick-based CO2 value for output 4 (advances on each tick)
-                let tick_co2_value = if let Some(tick_value) = co2_manager.advance_tick() {
+                let co2_tick_value = if let Some(tick_value) = co2_manager.advance_tick() {
                     tick_value
                 } else {
-                    co2_value // Fall back to step value if tick data not available
+                    co2_step_value // Fall back to step value if tick data not available
                 };
                 
                 // Set all 4 outputs based on CO2 data
                 let voltages = [
-                    co2_voltage,                    // Output 1: CO2 voltage (step-based)
-                    co2_voltage * 0.5,             // Output 2: CO2 voltage scaled down (step-based)
-                    (co2_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm (step-based)
-                    (tick_co2_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
+                    co2_step_voltage,                    // Output 1: CO2 voltage (step-based)
+                    co2_step_voltage * 0.5,             // Output 2: CO2 voltage scaled down (step-based)
+                    (co2_step_value - 400.0) / 50.0,    // Output 3: CO2 deviation from 400ppm (step-based)
+                    (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 4: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
                 ];
 
                 // Clamp all voltages to Crow's safe range
@@ -1572,7 +1572,7 @@ impl SimonSaysSeeq {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
                         info!("🎛️  CO2 CV Output - Step {}: Step:{:.2}ppm Tick:{:.2}ppm -> [CO2:{:.3}V, Half:{:.3}V, Dev:{:.3}V, TickUni:{:.3}V]", 
-                              step, co2_value, tick_co2_value,
+                              step, co2_step_value, co2_tick_value,
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
@@ -1604,9 +1604,9 @@ impl SimonSaysSeeq {
     fn handle_co2_tick_advance(&mut self) -> Result<()> {
         // Advance CO2 tick counter and potentially update CV output 4
         if let Some(ref mut co2_manager) = self.co2 {
-            if let Some(tick_co2_value) = co2_manager.advance_tick() {
+            if let Some(co2_tick_value) = co2_manager.advance_tick() {
                 // Update only CV output 4 with tick-based CO2 data
-                let tick_voltage = (tick_co2_value - 318.0) / 482.0 * 10.0; // Same formula as in handle_co2_cv_per_step
+                let tick_voltage = (co2_tick_value - 318.0) / 482.0 * 10.0; // Same formula as in handle_co2_cv_per_step
                 let clamped_tick_voltage = tick_voltage.clamp(-5.0, 10.0);
                 
                 // Send only output 4 update to Crow
@@ -1614,7 +1614,7 @@ impl SimonSaysSeeq {
                     if let Err(e) = self.crow.send_command(&format!("output[4].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 4: {}", e);
                     } else {
-                        debug!("🎛️  CO2 Tick CV - Output 4: {:.2} ppm -> {:.3}V", tick_co2_value, clamped_tick_voltage);
+                        debug!("🎛️  CO2 Tick CV - Output 4: {:.2} ppm -> {:.3}V", co2_tick_value, clamped_tick_voltage);
                     }
                 }
             }
