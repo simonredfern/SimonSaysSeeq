@@ -53,6 +53,8 @@ pub struct Co2Manager {
     all_daily_path: PathBuf,
     /// Maximum delta between consecutive records (for scaling)
     max_delta: f32,
+    /// Maximum seasonal anomaly delta (for year-over-year scaling)
+    max_seasonal_delta: f32,
 }
 
 /// CO2 configuration settings
@@ -96,6 +98,7 @@ impl Co2Manager {
             total_tick_counter: 0,
 
             days_per_year: 365, // Will be updated when data is loaded
+            max_seasonal_delta: 1.0,
             tempo_analysis: Co2TempoAnalysis {
                 wow_window: VecDeque::with_capacity(config.window_size),
                 flutter_window: VecDeque::with_capacity(config.window_size),
@@ -225,6 +228,8 @@ impl Co2Manager {
             self.calculate_max_delta();
             // Calculate approximate days per year from data span
             self.calculate_days_per_year();
+            // Calculate max seasonal delta for year-over-year scaling
+            self.calculate_max_seasonal_delta();
         } else {
             warn!("No valid CO2 records loaded from file");
             warn!("🔍 CO2 Debug: This is why 'no data available' appears");
@@ -432,13 +437,13 @@ impl Co2Manager {
 
     /// Get seasonal anomaly delta scaled to bipolar voltage (-5V to +5V)
     pub fn get_seasonal_anomaly_voltage(&self) -> f32 {
-        if self.max_delta == 0.0 {
+        if self.max_seasonal_delta == 0.0 {
             return 0.0;
         }
         
         let delta = self.get_seasonal_anomaly_delta();
-        // Scale to -5V to +5V range
-        (delta / self.max_delta) * 5.0
+        // Scale to -5V to +5V range using seasonal-specific scaling
+        (delta / self.max_seasonal_delta) * 5.0
     }
 
     /// Get step delta scaled to bipolar voltage (-5V to +5V)
@@ -506,6 +511,30 @@ impl Co2Manager {
             self.days_per_year = self.days_per_year.clamp(360, 370);
             debug!("Calculated days per year: {} (from {} years of data)", self.days_per_year, year_diff);
         }
+    }
+
+    /// Calculate maximum seasonal anomaly delta for proper scaling
+    fn calculate_max_seasonal_delta(&mut self) {
+        if self.records.len() < self.days_per_year {
+            self.max_seasonal_delta = 1.0; // Not enough data
+            return;
+        }
+
+        let mut max_seasonal_delta = 0.0_f32;
+        
+        // Check all possible year-over-year comparisons
+        for i in self.days_per_year..self.records.len() {
+            let current_value = self.records[i].co2_ppm;
+            let year_ago_value = self.records[i - self.days_per_year].co2_ppm;
+            let seasonal_delta = (current_value - year_ago_value).abs();
+            
+            if seasonal_delta > max_seasonal_delta {
+                max_seasonal_delta = seasonal_delta;
+            }
+        }
+        
+        self.max_seasonal_delta = max_seasonal_delta.max(0.1); // Ensure minimum value
+        debug!("Calculated max seasonal anomaly delta: {:.3} ppm", self.max_seasonal_delta);
     }
     
     /// Analyze tempo stability using CO2 data influence
