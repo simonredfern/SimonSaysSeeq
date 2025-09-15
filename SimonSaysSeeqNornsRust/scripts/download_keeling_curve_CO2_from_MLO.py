@@ -61,56 +61,56 @@ def write_co2_ppm(folder):
         print(x.text)
 
 
-    co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.month) # use yesterday because data is (at least?) a day behind.
+        co2_ppm_yesterday_finder = "%s,%s,%s" %(yesterday.day, yesterday.month, yesterday.month) # use yesterday because data is (at least?) a day behind.
 
-    co2_ppm_first_row_finder = "%s,%s,%s" %(1974, 5, 19) # first record was on this day.
-
-
-
-
-    print(co2_ppm_yesterday_finder)
-
-
-    data_start_position = x.text.find(co2_ppm_first_row_finder)
-    print (data_start_position)
-    co2_ppm_data = x.text[data_start_position:]
-
-
-    all_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_all_daily_co2_ppm)
-    f = open(all_daily_co2_ppm_path, "w")
-    f.write(co2_ppm_data)
-    f.close()
-
-
-    print("I wrote the data %s up to the day %s to the file %s" %(x.text, co2_ppm_yesterday_finder, all_daily_co2_ppm_path))
-
-
-
-    yesterday_start_position = co2_ppm_data.find(co2_ppm_yesterday_finder)
-
-    print (yesterday_start_position)
+        co2_ppm_first_row_finder = "%s,%s,%s" %(1974, 5, 19) # first record was on this day.
 
 
 
 
-    latest_line = x.text[yesterday_start_position:]
-
-    print (latest_line)
-
-    latest_value =  latest_line.split(",")[-1]
-
-    print (latest_value)
-
-    latest_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_latest_daily_co2_ppm)
+        print(co2_ppm_yesterday_finder)
 
 
-    f = open(latest_daily_co2_ppm_path, "w")
-    f.write(latest_value)
-    f.close()
+        data_start_position = x.text.find(co2_ppm_first_row_finder)
+        print (data_start_position)
+        co2_ppm_data = x.text[data_start_position:]
 
-    print("I wrote the value %s for the day %s to the file %s" %(latest_value, co2_ppm_yesterday_finder, latest_daily_co2_ppm_path))
 
-    ################
+        all_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_all_daily_co2_ppm)
+        f = open(all_daily_co2_ppm_path, "w")
+        f.write(co2_ppm_data)
+        f.close()
+
+
+        print("I wrote the data %s up to the day %s to the file %s" %(x.text, co2_ppm_yesterday_finder, all_daily_co2_ppm_path))
+
+
+
+        yesterday_start_position = co2_ppm_data.find(co2_ppm_yesterday_finder)
+
+        print (yesterday_start_position)
+
+
+
+
+        latest_line = x.text[yesterday_start_position:]
+
+        print (latest_line)
+
+        latest_value =  latest_line.split(",")[-1]
+
+        print (latest_value)
+
+        latest_daily_co2_ppm_path = "%s%s" %(folder, file_name_for_latest_daily_co2_ppm)
+
+
+        f = open(latest_daily_co2_ppm_path, "w")
+        f.write(latest_value)
+        f.close()
+
+        print("I wrote the value %s for the day %s to the file %s" %(latest_value, co2_ppm_yesterday_finder, latest_daily_co2_ppm_path))
+
+        ################
 
         # Log success if we got this far
         log_success(folder)
