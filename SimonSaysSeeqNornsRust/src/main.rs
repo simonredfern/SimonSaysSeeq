@@ -107,6 +107,8 @@ pub struct SimonSaysSeeq {
     beat_led_flash_until: Option<Instant>,
     // Crow mute state (true when MUTE_CROW button is held down)
     crow_muted: bool,
+    // Step counter for quarter note CV4 updates
+    step_counter_for_quarter_note: u32,
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
@@ -162,6 +164,7 @@ impl SimonSaysSeeq {
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
             crow_muted: false, // Default not muted
+            step_counter_for_quarter_note: 0,
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
         })
@@ -1548,15 +1551,24 @@ impl SimonSaysSeeq {
                     co2_step_value // Fall back to step value if tick data not available
                 };
                 
+                // Advance step counter and check for quarter note boundary (every 4 steps)
+                self.step_counter_for_quarter_note += 1;
+                let is_quarter_note_boundary = self.step_counter_for_quarter_note % 4 == 0;
+                
+                // Advance quarter note counter if we're on a boundary
+                if is_quarter_note_boundary {
+                    co2_manager.advance_quarter_note();
+                }
+                
                 // Set all 4 outputs based on CO2 data
                 let step_delta_voltage = co2_manager.get_step_delta_voltage();
-                let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
+                let quarter_note_delta_voltage = co2_manager.get_quarter_note_delta_voltage();
                 
                 let voltages = [
                     co2_step_voltage,                    // Output 1: CO2 voltage (step-based)
                     (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
                     step_delta_voltage,                  // Output 3: Step delta (bipolar -5V to +5V)
-                    tick_delta_voltage,                  // Output 4: Tick delta (bipolar -5V to +5V)
+                    quarter_note_delta_voltage,          // Output 4: Quarter note delta (bipolar -5V to +5V)
                 ];
 
                 // Clamp all voltages to Crow's safe range
@@ -1577,9 +1589,10 @@ impl SimonSaysSeeq {
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
                     } else {
-                        info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V]", 
-                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
-                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
+                        info!("🎛️  CO2 CV Output - Step#{} Tick#{} QNote#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, QNoteΔ:{:.3}V]", 
+                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_manager.get_quarter_note_counter(), 
+                              co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_quarter_note_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
@@ -1616,20 +1629,13 @@ impl SimonSaysSeeq {
                 let tick_voltage = (co2_tick_value - 318.0) / 482.0 * 10.0; // Same formula as in handle_co2_cv_per_step
                 let clamped_tick_voltage = tick_voltage.clamp(-5.0, 10.0);
                 
-                // Update CV output 4 with tick delta voltage
-                let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
-                let clamped_tick_delta_voltage = tick_delta_voltage.clamp(-5.0, 10.0);
-                
-                // Send updates to Crow for outputs 2 and 4
+                // Send updates to Crow for output 2 only (CV4 is now quarter note based, not tick based)
                 if self.crow.is_enabled() && !self.crow_muted {
                     if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
-                    } else if let Err(e) = self.crow.send_command(&format!("output[4].volts = {:.6}", clamped_tick_delta_voltage)) {
-                        warn!("Failed to send tick delta CV to Crow output 4: {}", e);
                     } else {
-                        info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm Δ:{:.3}ppm -> Output 2: {:.3}V, Output 4: {:.3}V", 
-                              co2_manager.get_tick_counter(), co2_tick_value, co2_manager.get_tick_delta(), 
-                              clamped_tick_voltage, clamped_tick_delta_voltage);
+                        info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", 
+                              co2_manager.get_tick_counter(), co2_tick_value, clamped_tick_voltage);
                     }
                 }
             }
@@ -1672,6 +1678,7 @@ impl SimonSaysSeeq {
                 // Reset CO2 counters on MIDI start
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
+                    self.step_counter_for_quarter_note = 0;
                     info!("🔄 CO2 counters reset on MIDI start");
                 }
                 
@@ -1696,6 +1703,7 @@ impl SimonSaysSeeq {
                 // Reset CO2 counters on MIDI stop
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
+                    self.step_counter_for_quarter_note = 0;
                     info!("🔄 CO2 counters reset on MIDI stop");
                 }
                 

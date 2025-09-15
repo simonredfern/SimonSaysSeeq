@@ -42,6 +42,8 @@ pub struct Co2Manager {
     total_step_counter: usize,
     /// Current position in tick-based cycling
     total_tick_counter: usize,
+    /// Current position in quarter-note cycling (for CV4)
+    total_quarter_note_counter: usize,
     /// Tempo analysis for wow/flutter detection
     tempo_analysis: Co2TempoAnalysis,
     /// Configuration
@@ -91,6 +93,7 @@ impl Co2Manager {
             records: Vec::new(),
             total_step_counter: 0,
             total_tick_counter: 0,
+            total_quarter_note_counter: 0,
             tempo_analysis: Co2TempoAnalysis {
                 wow_window: VecDeque::with_capacity(config.window_size),
                 flutter_window: VecDeque::with_capacity(config.window_size),
@@ -285,6 +288,7 @@ impl Co2Manager {
         // Always reset to 0 (0-indexed)
         self.total_step_counter = 0;
         self.total_tick_counter = 0;
+        self.total_quarter_note_counter = 0;
         
         // Reset tempo analysis
         self.tempo_analysis.wow_window.clear();
@@ -373,6 +377,11 @@ impl Co2Manager {
         self.total_tick_counter
     }
 
+    /// Get current quarter note counter (record index for quarter note advancement)
+    pub fn get_quarter_note_counter(&self) -> usize {
+        self.total_quarter_note_counter
+    }
+
     /// Get step-based delta (current step to next step)
     pub fn get_step_delta(&self) -> f32 {
         if self.records.len() < 2 {
@@ -399,6 +408,19 @@ impl Co2Manager {
         next_value - current_value
     }
 
+    /// Get quarter note-based delta (current quarter note to next quarter note)
+    pub fn get_quarter_note_delta(&self) -> f32 {
+        if self.records.len() < 2 {
+            return 0.0;
+        }
+        
+        let current_value = self.records[self.total_quarter_note_counter].co2_ppm;
+        let next_index = (self.total_quarter_note_counter + 1) % self.records.len();
+        let next_value = self.records[next_index].co2_ppm;
+        
+        next_value - current_value
+    }
+
     /// Get step delta scaled to bipolar voltage (-5V to +5V)
     pub fn get_step_delta_voltage(&self) -> f32 {
         if self.max_delta == 0.0 {
@@ -419,6 +441,29 @@ impl Co2Manager {
         let delta = self.get_tick_delta();
         // Scale to -5V to +5V range  
         (delta / self.max_delta) * 5.0
+    }
+
+    /// Get quarter note delta scaled to bipolar voltage (-5V to +5V)
+    pub fn get_quarter_note_delta_voltage(&self) -> f32 {
+        if self.max_delta == 0.0 {
+            return 0.0;
+        }
+        
+        let delta = self.get_quarter_note_delta();
+        // Scale to -5V to +5V range  
+        (delta / self.max_delta) * 5.0
+    }
+
+    /// Advance quarter note counter (called every 4th step / every quarter note)
+    pub fn advance_quarter_note(&mut self) -> Option<f32> {
+        if self.records.is_empty() {
+            return None;
+        }
+        
+        let co2_value = self.records[self.total_quarter_note_counter].co2_ppm;
+        self.total_quarter_note_counter = (self.total_quarter_note_counter + 1) % self.records.len();
+        
+        Some(co2_value)
     }
 
     /// Calculate maximum delta between consecutive records for scaling
@@ -539,6 +584,7 @@ impl Co2Manager {
             current_tick_value: self.get_current_tick_co2(),
             total_step_counter: self.total_step_counter,
             total_tick_counter: self.total_tick_counter,
+            total_quarter_note_counter: self.total_quarter_note_counter,
             wow_stable: self.tempo_analysis.is_wow_stable,
             flutter_stable: self.tempo_analysis.is_flutter_stable,
             wow_episodes: self.tempo_analysis.wow_episodes,
@@ -607,6 +653,7 @@ pub struct Co2Info {
     pub current_tick_value: Option<f32>,
     pub total_step_counter: usize,
     pub total_tick_counter: usize,
+    pub total_quarter_note_counter: usize,
     pub wow_stable: bool,
     pub flutter_stable: bool,
     pub wow_episodes: u32,

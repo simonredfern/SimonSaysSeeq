@@ -67,13 +67,13 @@ fn main() -> Result<()> {
             };
             
             let step_delta_voltage = co2_manager.get_step_delta_voltage();
-            let tick_delta_voltage = co2_manager.get_tick_delta_voltage();
+            let quarter_note_delta_voltage = co2_manager.get_quarter_note_delta_voltage();
             
             let voltages = [
                 co2_step_voltage,                    // Output 1: CO2 voltage (0-10V range)
                 (co2_tick_value - 318.0) / 482.0 * 10.0, // Output 2: Tick-based CO2 as unipolar voltage (318-800ppm → 0-10V)
                 step_delta_voltage,                  // Output 3: Step delta (bipolar -5V to +5V)
-                tick_delta_voltage,                  // Output 4: Tick delta (bipolar -5V to +5V)
+                quarter_note_delta_voltage,          // Output 4: Quarter note delta (bipolar -5V to +5V)
             ];
 
             // Clamp all voltages to Crow's safe range
@@ -93,16 +93,16 @@ fn main() -> Result<()> {
                     clamped_voltages[3]
                 ) {
                     Ok(()) => {
-                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V] ✅", 
-                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
-                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
+                        info!("🎛️  Step#{} Tick#{} QNote#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, QNoteΔ:{:.3}V] ✅", 
+                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_manager.get_quarter_note_counter(), co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_quarter_note_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3]);
                     }
                     Err(e) => {
-                        info!("🎛️  Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, TickΔ:{:.3}V] ❌ ({})", 
-                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_step_value, co2_tick_value,
-                              co2_manager.get_step_delta(), co2_manager.get_tick_delta(),
+                        info!("🎛️  Step#{} Tick#{} QNote#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, QNoteΔ:{:.3}V] ❌ ({})", 
+                              co2_manager.get_step_counter(), co2_manager.get_tick_counter(), co2_manager.get_quarter_note_counter(), co2_step_value, co2_tick_value,
+                              co2_manager.get_step_delta(), co2_manager.get_quarter_note_delta(),
                               clamped_voltages[0], clamped_voltages[1], 
                               clamped_voltages[2], clamped_voltages[3], e);
                     }
