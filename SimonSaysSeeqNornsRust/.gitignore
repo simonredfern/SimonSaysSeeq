@@ -44,3 +44,6 @@ config_*.toml
 # Test outputs
 test_output/
 debug_output/
+
+# CO2 data files
+co2_data/
