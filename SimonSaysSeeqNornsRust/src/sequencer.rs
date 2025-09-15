@@ -35,6 +35,8 @@ pub struct MidiEvent {
 pub enum SequencerEvent {
     /// A step has been reached
     Step { step: usize, bar: usize },
+    /// A tick has been reached (12 ticks per step for CO2 advancement)
+    Tick { tick: usize, step: usize, bar: usize },
     /// A beat has been reached (for visual indicators)
     Beat { beat: usize },
     /// MIDI event to be sent to hardware

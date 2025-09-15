@@ -65,10 +65,6 @@ pub struct Co2Config {
     pub window_size: usize,
     /// CO2 voltage scaling factor (for CV output)
     pub voltage_scale: f32,
-    /// Minimum CO2 value for scaling
-    pub co2_min: f32,
-    /// Maximum CO2 value for scaling
-    pub co2_max: f32,
 }
 
 impl Default for Co2Config {
@@ -80,8 +76,6 @@ impl Default for Co2Config {
             flutter_threshold: 0.25,
             window_size: 192, // 16 steps * 12 ticks
             voltage_scale: 50.0,
-            co2_min: 280.0, // Pre-industrial baseline
-            co2_max: 450.0, // High estimate for current era
         }
     }
 }
@@ -349,8 +343,10 @@ impl Co2Manager {
     
     /// Get CO2 voltage offset for CV output (scaled)
     pub fn get_co2_voltage_offset(&self, co2_value: f32) -> f32 {
-        // Scale CO2 value to voltage range
-        let normalized = (co2_value - self.config.co2_min) / (self.config.co2_max - self.config.co2_min);
+        // Scale CO2 value to voltage range (318-800 ppm hardcoded)
+        const CO2_MIN: f32 = 318.0; // NOAA data baseline (1958)
+        const CO2_MAX: f32 = 800.0; // Extreme future scenario
+        let normalized = (co2_value - CO2_MIN) / (CO2_MAX - CO2_MIN);
         let clamped = normalized.clamp(0.0, 1.0);
         clamped * 10.0 // 0-10V range typical for CV
     }
