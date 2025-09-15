@@ -12,7 +12,7 @@ fn main() -> Result<()> {
     
     let config = Co2Config {
         enabled: true,
-        data_dir: data_dir.to_path_buf(),
+        data_dir: data_dir.to_string_lossy().to_string(),
         wow_threshold: 0.5,
         flutter_threshold: 0.1,
         window_size: 16,
@@ -46,13 +46,19 @@ fn main() -> Result<()> {
             let current_step = co2_manager.get_current_step_co2();
             let current_tick = co2_manager.get_current_tick_co2();
             
-            println!("Current step CO2: {:.2} ppm", current_step);
-            println!("Current tick CO2: {:.2} ppm", current_tick);
+            match current_step {
+                Some(val) => println!("Current step CO2: {:.2} ppm", val),
+                None => println!("Current step CO2: No data available"),
+            }
+            match current_tick {
+                Some(val) => println!("Current tick CO2: {:.2} ppm", val),
+                None => println!("Current tick CO2: No data available"),
+            }
             
             // Test tempo analysis
-            co2_manager.analyze_tempo_stability();
+            co2_manager.analyze_tempo_stability(120.0);
             let stability = co2_manager.get_tempo_stability();
-            println!("Tempo stability - WOW: {}, Flutter: {}", stability.is_wow_stable, stability.is_flutter_stable);
+            println!("Tempo stability - WOW: {}, Flutter: {}", stability.0, stability.1);
             
             println!("✓ All CO2 manager tests passed!");
         }

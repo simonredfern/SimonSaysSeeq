@@ -280,13 +280,13 @@ impl SimonSaysSeeq {
         loop {
             // Handle hardware events (non-blocking)
             while let Ok(event) = hw_rx.try_recv() {
-                if let Err(e) = self.handle_hardware_event(event) {
+                if let Err(_e) = self.handle_hardware_event(event) {
                     // error!("Error handling hardware event: {}", e);
                 }
             }
 
             // Poll grid for button events
-            let poll_start = Instant::now();
+            let _poll_start = Instant::now();
                 match self.grid.read_button_events() {
                     Ok(grid_events) => {
                         // Process events from both grids - each should only report its own presses
@@ -308,7 +308,7 @@ impl SimonSaysSeeq {
                                     y: grid_event.y,
                                     pressed: grid_event.pressed,
                                 };
-                                if let Err(e) = self.handle_hardware_event(hardware_event) {
+                                if let Err(_e) = self.handle_hardware_event(hardware_event) {
                                     // error!("Error handling grid event: {}", e);
                                 }
                             } else {
@@ -326,7 +326,7 @@ impl SimonSaysSeeq {
 
             // Handle sequencer events (non-blocking)
             while let Ok(event) = seq_rx.try_recv() {
-                if let Err(e) = self.handle_sequencer_event(event) {
+                if let Err(_e) = self.handle_sequencer_event(event) {
                     // error!("Error handling sequencer event: {}", e);
                 }
             }
@@ -336,7 +336,7 @@ impl SimonSaysSeeq {
             {
                 let midi_events = self.midi.get_input_events();
                 for event in midi_events {
-                    if let Err(e) = self.handle_midi_input_event(event, &seq_tx) {
+                    if let Err(_e) = self.handle_midi_input_event(event, &seq_tx) {
                         // error!("Error handling MIDI input event: {}", e);
                     }
                 }
@@ -398,8 +398,8 @@ impl SimonSaysSeeq {
                         1 => {
                             // Key 1 - Undo/Redo (long press for redo)
                             match self.sequencer.undo() {
-                                Ok(description) => {}, // info!("Undid: {}", description),
-                                Err(e) => {}, // warn!("Cannot undo: {}", e),
+                                Ok(_description) => {}, // info!("Undid: {}", description),
+                                Err(_e) => {}, // warn!("Cannot undo: {}", e),
                             }
                         }
                         2 => {
@@ -473,7 +473,7 @@ impl SimonSaysSeeq {
                 let step_co2_value = if let Some(ref mut co2) = self.co2 {
                     co2.advance_step()
                 } else {
-                    400.0 // Default CO2 value when manager not available
+                    Some(400.0) // Default CO2 value when manager not available
                 };
 
                 // Process step for all active rows
@@ -727,7 +727,7 @@ impl SimonSaysSeeq {
                 
                 // Check if this is GRID_TWO controls
                 if connected_grids.len() >= 2 {
-                    let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+                    let (_grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
                     if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
                         // GRID_TWO MIDI auto-detection controls (columns 0, 1) - require both pressed
                         if x == 0 || x == 1 {
@@ -1062,7 +1062,7 @@ impl SimonSaysSeeq {
             // DEBUG: Log grid ID assignments
             info!("GRID_DEBUG: Grid assignments - GRID_ONE: {}, GRID_TWO: {}", grid_one_id, grid_two_id);
             
-            if let Some(row_state) = self.sequencer.get_row_states(row) {
+            if let Some(_row_state) = self.sequencer.get_row_states(row) {
                 // UPDATE OLD POSITION LED (remove position highlight, keep pattern visibility)
                 //
                 // We MUST check old_pattern_value because when the playhead moves away from a step,

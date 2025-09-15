@@ -417,13 +417,7 @@ pub struct ScanSummary {
 }
 
 impl ScanSummary {
-    pub fn has_reliable_sources(&self) -> bool {
-        !self.reliable_sources.is_empty()
-    }
-
-    pub fn is_locked(&self) -> bool {
-        self.selected_source.is_some()
-    }
+    // Methods removed to eliminate unused warnings
 }
 
 /// Convenience function to perform a complete MIDI clock scan
