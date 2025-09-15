@@ -105,8 +105,8 @@ pub struct SimonSaysSeeq {
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
     beat_led_flash_until: Option<Instant>,
-    // Snap to whole number tempo setting (default ON)
-    snap_to_whole_tempo: bool,
+    // Crow mute state (true when MUTE_CROW button is held down)
+    crow_muted: bool,
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
@@ -161,7 +161,7 @@ impl SimonSaysSeeq {
             tempo: initial_tempo,
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
-            snap_to_whole_tempo: true, // Default ON
+            crow_muted: false, // Default not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
         })
@@ -796,12 +796,14 @@ impl SimonSaysSeeq {
                                     info!("Column 9 pressed (no function assigned)");
                                 }
                                 10 => {
-                                    // Snap to whole tempo toggle button
-                                    self.snap_to_whole_tempo = !self.snap_to_whole_tempo;
-                                    #[cfg(feature = "midi")]
-                                    self.midi.set_snap_to_whole_tempo(self.snap_to_whole_tempo);
-                                    info!("handle_grid_press says: Snap to whole tempo {} via GRID_TWO column 10", 
-                                          if self.snap_to_whole_tempo { "enabled" } else { "disabled" });
+                                    // MUTE_CROW momentary button (held down to mute)
+                                    if pressed {
+                                        self.crow_muted = true;
+                                        info!("handle_grid_press says: MUTE_CROW activated - Crow outputs muted");
+                                    } else {
+                                        self.crow_muted = false;
+                                        info!("handle_grid_press says: MUTE_CROW released - Crow outputs enabled");
+                                    }
                                 }
                                 12 => {
                                     // Stop button - always works regardless of external clock
@@ -829,7 +831,7 @@ impl SimonSaysSeeq {
                                         if new_tempo != current_tempo {
                                             self.sequencer.set_tempo(new_tempo);
                                             self.tempo = new_tempo; // Keep main tempo in sync
-                                            let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                                            let snap_suffix = "";
                                             info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM{} via GRID_TWO column {}", 
                                                   current_tempo, new_tempo, snap_suffix, x);
                                         }
@@ -846,7 +848,7 @@ impl SimonSaysSeeq {
                                 let brightness = match x {
                                     10 => {
                                         // Snap tempo button - show state (ON/OFF)
-                                        if self.snap_to_whole_tempo { LED_DIM_PLUS } else { LED_OFF }
+                                        if self.crow_muted { LED_BRIGHT } else { LED_OFF }
                                     }
                                     12 | 13 => 0, // Transport buttons always turn off
                                     14 | 15 => {
@@ -1566,7 +1568,7 @@ impl SimonSaysSeeq {
                 ];
 
                 // Send to Crow CV outputs
-                if self.crow.is_enabled() {
+                if self.crow.is_enabled() && !self.crow_muted {
                     if let Err(e) = self.crow.set_all_outputs(
                         clamped_voltages[0], 
                         clamped_voltages[1], 
@@ -1586,7 +1588,7 @@ impl SimonSaysSeeq {
                 }
             } else {
                 // No CO2 data available, send zero voltages
-                if self.crow.is_enabled() {
+                if self.crow.is_enabled() && !self.crow_muted {
                     if let Err(e) = self.crow.set_all_outputs(0.0, 0.0, 0.0, 0.0) {
                         warn!("Failed to send zero CV to Crow: {}", e);
                     }
@@ -1595,7 +1597,7 @@ impl SimonSaysSeeq {
             }
         } else {
             // No CO2 manager, send zero voltages
-            if self.crow.is_enabled() {
+            if self.crow.is_enabled() && !self.crow_muted {
                 if let Err(e) = self.crow.set_all_outputs(0.0, 0.0, 0.0, 0.0) {
                     warn!("Failed to send zero CV to Crow: {}", e);
                 }
@@ -1619,7 +1621,7 @@ impl SimonSaysSeeq {
                 let clamped_tick_delta_voltage = tick_delta_voltage.clamp(-5.0, 10.0);
                 
                 // Send updates to Crow for outputs 2 and 4
-                if self.crow.is_enabled() {
+                if self.crow.is_enabled() && !self.crow_muted {
                     if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
                     } else if let Err(e) = self.crow.send_command(&format!("output[4].volts = {:.6}", clamped_tick_delta_voltage)) {
@@ -1654,17 +1656,13 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            if self.snap_to_whole_tempo {
-                                info!("handle_midi_input_event says: Applied snapped tempo to sequencer: {:.0} BPM", external_tempo);
-                            } else {
-                                info!("handle_midi_input_event says: Applied tempo to sequencer: {:.1} BPM (no snapping)", external_tempo);
-                            }
+                            info!("handle_midi_input_event says: Applied tempo to sequencer: {:.1} BPM", external_tempo);
                         }
                     }
                 }
                 
                 let current_tempo = self.sequencer.get_tempo();
-                let snap_suffix = if self.snap_to_whole_tempo { " (snapped)" } else { "" };
+                let snap_suffix = "";
                 debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM{}", current_tempo, snap_suffix);
             }
             MidiInputEvent::ClockStart => {
@@ -1685,11 +1683,7 @@ impl SimonSaysSeeq {
                         if (external_tempo - current_tempo).abs() > 0.5 {
                             self.sequencer.set_tempo(external_tempo);
                             self.tempo = external_tempo; // Keep main tempo in sync
-                            if self.snap_to_whole_tempo {
-                                info!("handle_midi_input_event says: Applied snapped tempo to sequencer on start: {:.0} BPM", external_tempo);
-                            } else {
-                                info!("handle_midi_input_event says: Applied tempo to sequencer on start: {:.1} BPM (no snapping)", external_tempo);
-                            }
+                            info!("handle_midi_input_event says: Applied tempo to sequencer on start: {:.1} BPM", external_tempo);
                         }
                     }
                 }
@@ -1746,11 +1740,7 @@ impl SimonSaysSeeq {
                     if let Some(last_external_tempo) = self.midi.get_external_tempo() {
                         self.sequencer.set_tempo(last_external_tempo);
                         self.tempo = last_external_tempo; // Keep main tempo in sync
-                        if self.snap_to_whole_tempo {
-                            info!("handle_midi_input_event says: External clock timeout - preserving snapped tempo: {:.0} BPM", last_external_tempo);
-                        } else {
-                            info!("handle_midi_input_event says: External clock timeout - preserving tempo: {:.1} BPM (no snapping)", last_external_tempo);
-                        }
+                        info!("handle_midi_input_event says: External clock timeout - preserving tempo: {:.1} BPM", last_external_tempo);
                     } else {
                         info!("handle_midi_input_event says: External clock timeout - no previous external tempo to preserve");
                     }
@@ -1800,9 +1790,9 @@ impl SimonSaysSeeq {
         //             self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
         //             self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
         //             
-        //             // Update snap tempo button LED (column 10, row 7)
-        //             let snap_brightness = if self.snap_to_whole_tempo { LED_DIM_PLUS } else { LED_OFF };
-        //             self.grid.set_led(&grid_two_id, 10, 7, snap_brightness, "snap_tempo_button")?;
+        //             // Update MUTE_CROW button LED (column 10, row 7)
+        //             let mute_brightness = if self.crow_muted { LED_BRIGHT } else { LED_OFF };
+        //             self.grid.set_led(&grid_two_id, 10, 7, mute_brightness, "mute_crow_button")?;
         //             
         //             // Update drift indicator LED (column 11, row 7)
         //             let drift_brightness = self.calculate_drift_brightness();

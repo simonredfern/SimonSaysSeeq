@@ -158,8 +158,6 @@ pub struct MidiManager {
     input_receiver: Option<Receiver<MidiInputEvent>>,
     /// Clock synchronization
     clock_state: Arc<Mutex<ClockState>>,
-    /// Snap to whole number tempo setting
-    snap_to_whole_tempo: Arc<Mutex<bool>>,
     /// Previous clock source to detect transitions
     previous_clock_source: Arc<Mutex<ClockSource>>,
     /// Auto-detect MIDI clock sources
@@ -192,7 +190,6 @@ impl MidiManager {
             input_sender: Some(input_sender),
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
-            snap_to_whole_tempo: Arc::new(Mutex::new(true)), // Default ON
             previous_clock_source: Arc::new(Mutex::new(ClockSource::Internal)),
             auto_detect_clock: config.auto_detect_clock,
             last_detection_time: Arc::new(Mutex::new(None)),
@@ -415,10 +412,9 @@ impl MidiManager {
         // Set up input callback
         let sender = self.input_sender.as_ref().unwrap().clone();
         let clock_state = self.clock_state.clone();
-        let snap_to_whole_tempo = self.snap_to_whole_tempo.clone();
         
         match midi_in.connect(&selected_port, "SimonSaysSeeq Input", move |timestamp, message, _| {
-            Self::handle_midi_input_message(timestamp, message, &sender, &clock_state, &snap_to_whole_tempo);
+            Self::handle_midi_input_message(timestamp, message, &sender, &clock_state);
         }, ()) {
             Ok(connection) => {
                 if self.auto_detect_clock && !self.port_a_midi_clock_in_and_gates_out.is_empty() {
@@ -535,7 +531,7 @@ impl MidiManager {
     
     /// Handle incoming MIDI message
     #[cfg(feature = "midi")]
-    fn handle_midi_input_message(_timestamp: u64, message: &[u8], sender: &Sender<MidiInputEvent>, clock_state: &Arc<Mutex<ClockState>>, snap_to_whole_tempo: &Arc<Mutex<bool>>) {
+    fn handle_midi_input_message(_timestamp: u64, message: &[u8], sender: &Sender<MidiInputEvent>, clock_state: &Arc<Mutex<ClockState>>) {
         if message.is_empty() {
             return;
         }
@@ -622,16 +618,8 @@ impl MidiManager {
                     
                     // Always accept tempo readings - rejection logic removed
                     clock.external_tempo = Some(weighted_bpm);
-                    let snap_enabled = *snap_to_whole_tempo.lock().unwrap();
-                    
-                    if snap_enabled {
-                        let snapped = weighted_bpm.round();
-                        debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks) -> will snap to {:.0} BPM", 
-                               weighted_bpm, active_windows, total_windows, total_ticks, snapped);
-                    } else {
-                        debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks, no snapping)", 
-                               weighted_bpm, active_windows, total_windows, total_ticks);
-                    }
+                    debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks)", 
+                           weighted_bpm, active_windows, total_windows, total_ticks);
                 }
                 
                 // Send beat event every 24 ticks for compatibility
@@ -845,22 +833,9 @@ impl MidiManager {
             clock.previous_tempo = Some(rate_limited_tempo);
             clock.last_tempo_update = Some(now);
             
-            // Apply snapping if enabled
-            let snap_enabled = *self.snap_to_whole_tempo.lock().unwrap();
-            let final_tempo = if snap_enabled {
-                let snapped_tempo = rate_limited_tempo.round();
-                if (snapped_tempo - rate_limited_tempo).abs() > 0.01 {
-                    debug!("get_external_tempo says: Snapping {:.1} BPM to {:.1} BPM", rate_limited_tempo, snapped_tempo);
-                }
-                debug!("get_external_tempo says: Final tempo used: {:.1} BPM (raw: {:.1}, snapped: {})", 
-                       snapped_tempo, rate_limited_tempo, snap_enabled);
-                snapped_tempo
-            } else {
-                debug!("get_external_tempo says: Final tempo used: {:.1} BPM (raw, no snapping)", rate_limited_tempo);
-                rate_limited_tempo
-            };
+            debug!("get_external_tempo says: Final tempo used: {:.1} BPM", rate_limited_tempo);
             
-            Some(final_tempo)
+            Some(rate_limited_tempo)
         } else {
             None
         }
@@ -1017,16 +992,6 @@ impl MidiManager {
         }
     }
     
-    /// Set snap to whole tempo preference
-    pub fn set_snap_to_whole_tempo(&self, enabled: bool) {
-        *self.snap_to_whole_tempo.lock().unwrap() = enabled;
-        debug!("set_snap_to_whole_tempo says: Snap to whole tempo {}", if enabled { "enabled" } else { "disabled" });
-    }
-
-    /// Get snap to whole tempo preference
-    pub fn get_snap_to_whole_tempo(&self) -> bool {
-        *self.snap_to_whole_tempo.lock().unwrap()
-    }
     
     /// Check for clock source transitions and generate appropriate events
     fn check_clock_source_transition(&self) -> Option<MidiInputEvent> {
