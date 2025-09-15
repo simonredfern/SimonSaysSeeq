@@ -599,8 +599,6 @@ mod tests {
     #[test]
     fn test_voltage_scaling() {
         let config = Co2Config {
-            co2_min: 400.0,
-            co2_max: 420.0,
             ..Default::default()
         };
         

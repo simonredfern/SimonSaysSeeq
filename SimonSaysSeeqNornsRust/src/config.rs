@@ -373,8 +373,6 @@ impl Config {
                 flutter_threshold: 10.0,
                 window_size: 100,
                 voltage_scale: 1.0,
-                co2_min: 320.0,
-                co2_max: 450.0,
             },
         }
     }

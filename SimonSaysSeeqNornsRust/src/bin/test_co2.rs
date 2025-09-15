@@ -17,8 +17,6 @@ fn main() -> Result<()> {
         flutter_threshold: 0.1,
         window_size: 16,
         voltage_scale: 3.3,
-        co2_min: 300.0,
-        co2_max: 500.0,
     };
     
     // Create CO2 manager
