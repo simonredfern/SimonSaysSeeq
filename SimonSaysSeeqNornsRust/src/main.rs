@@ -186,16 +186,31 @@ impl SimonSaysSeeq {
 
         // Display CO2 data initialization status
         if let Some(ref co2) = self.co2 {
+            info!("📊 CO2 manager successfully initialized");
+            info!("🔍 CO2 Debug: Configuration - enabled: {}, data_dir: {:?}", self.config.co2.enabled, self.config.co2.data_dir);
+            info!("🔍 CO2 Debug: Record count: {}", co2.get_record_count());
+
+            info!("🔍 CO2 Debug: has_data() returns: {}", co2.has_data());
+            
             if co2.has_data() {
                 info!("📊 {}", co2.get_data_summary());
                 info!("📊 {}", co2.get_status_string());
+                info!("📊 CO2 data is available and ready for use");
             } else {
                 warn!("📊 CO2 manager loaded but no data available");
+                warn!("🔍 CO2 Debug: This indicates either:");
+                warn!("🔍 CO2 Debug: - Files exist but contain no valid records");
+                warn!("🔍 CO2 Debug: - Files are missing from data directory");
+                warn!("🔍 CO2 Debug: - Data parsing failed for all records");
+                warn!("🔍 CO2 Debug: Check the detailed logs above for specific issues");
             }
         } else if self.config.co2.enabled {
             warn!("📊 CO2 features enabled but manager failed to initialize");
+            warn!("🔍 CO2 Debug: This means CO2Manager::new() returned an error");
+            warn!("🔍 CO2 Debug: Check logs above for initialization failure details");
+            warn!("🔍 CO2 Debug: Sequencer will continue without CO2 features");
         } else {
-            info!("📊 CO2 features disabled");
+            info!("📊 CO2 features disabled in configuration");
         }
 
         // Show control instructions

@@ -36,10 +36,11 @@ fn main() -> Result<()> {
                 println!("! CO2 manager has no historical data");
             }
             
-            // Check latest daily value
-            match co2_manager.get_latest_daily_value() {
-                Some(value) => println!("✓ Latest daily CO2 value: {:.2} ppm", value),
-                None => println!("! No latest daily CO2 value (this is expected if the file is empty)")
+            // Latest daily value functionality removed - using latest record from historical data
+            if co2_manager.get_record_count() > 0 {
+                println!("✓ Using latest historical CO2 record");
+            } else {
+                println!("! No historical CO2 data available");
             }
             
             // Get current values (should use historical data)

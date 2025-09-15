@@ -38,8 +38,6 @@ pub struct Co2TempoAnalysis {
 pub struct Co2Manager {
     /// All historical CO2 records
     records: Vec<Co2Record>,
-    /// Latest daily CO2 value
-    latest_daily_value: Option<f32>,
     /// Current position in step-based CO2 cycling
     step_counter: usize,
     /// Current position in tick-based CO2 cycling
@@ -49,7 +47,6 @@ pub struct Co2Manager {
     /// Configuration
     config: Co2Config,
     /// Data file paths
-    daily_latest_path: PathBuf,
     all_daily_path: PathBuf,
 }
 
@@ -96,7 +93,6 @@ impl Co2Manager {
         
         let mut manager = Self {
             records: Vec::new(),
-            latest_daily_value: None,
             step_counter: 1,
             tick_counter: 1,
             tempo_analysis: Co2TempoAnalysis {
@@ -110,18 +106,29 @@ impl Co2Manager {
                 is_flutter_stable: true,
             },
             config,
-            daily_latest_path: data_dir.join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv"),
             all_daily_path: data_dir.join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv"),
         };
         
         if manager.config.enabled {
+            info!("🔍 CO2 Debug: Starting data loading process");
+            info!("🔍 CO2 Debug: Data directory: {:?}", manager.config.data_dir);
+            info!("🔍 CO2 Debug: All daily path: {:?}", manager.all_daily_path);
+            
             match manager.load_data() {
                 Ok(()) => {
                     info!("CO2 data loaded successfully");
+                    info!("🔍 CO2 Debug: Records loaded: {}", manager.records.len());
+                    if !manager.records.is_empty() {
+                        let first = &manager.records[0];
+                        let last = &manager.records[manager.records.len() - 1];
+                        info!("🔍 CO2 Debug: First record: {}/{}/{} = {:.2} ppm", first.year, first.month, first.day, first.co2_ppm);
+                        info!("🔍 CO2 Debug: Last record: {}/{}/{} = {:.2} ppm", last.year, last.month, last.day, last.co2_ppm);
+                    }
                 }
                 Err(e) => {
                     warn!("CO2 data loading failed: {}", e);
                     warn!("CO2 manager will continue without data");
+                    warn!("🔍 CO2 Debug: Records after failure: {}", manager.records.len());
                     // Continue with empty data - don't fail initialization
                 }
             }
@@ -134,9 +141,6 @@ impl Co2Manager {
     
     /// Load CO2 data from files
     pub fn load_data(&mut self) -> Result<()> {
-        // Load latest daily value
-        self.load_latest_daily_value()?;
-        
         // Load all historical data
         self.load_all_daily_records()?;
         
@@ -145,84 +149,80 @@ impl Co2Manager {
         
         Ok(())
     }
-    
-    /// Load the latest daily CO2 value
-    fn load_latest_daily_value(&mut self) -> Result<()> {
-        if self.daily_latest_path.exists() {
-            match fs::read_to_string(&self.daily_latest_path) {
-                Ok(content) => {
-                    let trimmed = content.trim();
-                    if trimmed.is_empty() {
-                        info!("Latest daily CO2 file is empty, skipping load");
-                    } else {
-                        match self.validate_co2_value(trimmed) {
-                            Some(value) => {
-                                self.latest_daily_value = Some(value);
-                                info!("Loaded latest daily CO2 value: {:.2} ppm", value);
-                            }
-                            None => {
-                                warn!("Invalid CO2 value in latest daily file: {}", trimmed);
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    warn!("Failed to read latest daily CO2 file: {}", e);
-                }
-            }
-        } else {
-            info!("Latest daily CO2 file not found: {:?} (this is normal for first run)", self.daily_latest_path);
-        }
-        
-        Ok(())
-    }
+
     
     /// Load all daily CO2 records from CSV
     fn load_all_daily_records(&mut self) -> Result<()> {
+        info!("🔍 CO2 Debug: Checking all daily file: {:?}", self.all_daily_path);
+        info!("🔍 CO2 Debug: File exists: {}", self.all_daily_path.exists());
+        
         if !self.all_daily_path.exists() {
             warn!("All daily CO2 file not found: {:?}", self.all_daily_path);
             return Ok(());
         }
-        
+
+        let metadata = fs::metadata(&self.all_daily_path)?;
+        info!("🔍 CO2 Debug: File size: {} bytes", metadata.len());
+
         let content = fs::read_to_string(&self.all_daily_path)?;
+        let total_lines = content.lines().count();
+        info!("🔍 CO2 Debug: Total lines in file: {}", total_lines);
+        
         let mut valid_records = 0;
         let mut invalid_records = 0;
-        
+        let mut empty_lines = 0;
+
         for (line_num, line) in content.lines().enumerate() {
             if line.trim().is_empty() {
+                empty_lines += 1;
                 continue;
             }
-            
+
+            // Log first few lines for debugging
+            if line_num < 5 {
+                info!("🔍 CO2 Debug: Line {}: {:?}", line_num + 1, line);
+            }
+
             // Parse CSV line: year,month,day,decimal_date,co2_ppm
             let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
             
+            if line_num < 5 {
+                info!("🔍 CO2 Debug: Parsed parts: {:?}", parts);
+            }
+
             if parts.len() >= 5 {
                 match self.parse_co2_record(&parts) {
                     Ok(record) => {
+                        if valid_records < 3 {
+                            info!("🔍 CO2 Debug: Valid record {}: {}/{}/{} = {:.2} ppm", valid_records + 1, record.year, record.month, record.day, record.co2_ppm);
+                        }
                         self.records.push(record);
                         valid_records += 1;
                     }
                     Err(e) => {
                         if invalid_records < 10 { // Only log first 10 errors
-                            debug!("Invalid CO2 record at line {}: {} - {}", line_num + 1, line, e);
+                            warn!("🔍 CO2 Debug: Invalid CO2 record at line {}: {} - {}", line_num + 1, line, e);
                         }
                         invalid_records += 1;
                     }
                 }
             } else {
                 if invalid_records < 10 {
-                    debug!("Malformed CO2 record at line {}: {}", line_num + 1, line);
+                    warn!("🔍 CO2 Debug: Malformed CO2 record at line {} (parts: {}): {}", line_num + 1, parts.len(), line);
                 }
                 invalid_records += 1;
             }
         }
-        
+
+        info!("🔍 CO2 Debug: Processing complete - Valid: {}, Invalid: {}, Empty: {}", valid_records, invalid_records, empty_lines);
+
         if valid_records > 0 {
-            info!("Loaded {} valid CO2 records ({} invalid records skipped)", valid_records, invalid_records);
+            info!("Loaded {} valid CO2 records (ignored {} invalid)", valid_records, invalid_records);
         } else {
-            warn!("No valid CO2 records found in file");
+            warn!("No valid CO2 records loaded from file");
+            warn!("🔍 CO2 Debug: This is why 'no data available' appears");
         }
-        
+
         Ok(())
     }
     
@@ -345,11 +345,7 @@ impl Co2Manager {
         
         Some(self.records[self.tick_counter - 1].co2_ppm)
     }
-    
-    /// Get latest daily CO2 value
-    pub fn get_latest_daily_value(&self) -> Option<f32> {
-        self.latest_daily_value
-    }
+
     
     /// Get CO2 voltage offset for CV output (scaled)
     pub fn get_co2_voltage_offset(&self, co2_value: f32) -> f32 {
@@ -435,14 +431,19 @@ impl Co2Manager {
     
     /// Check if CO2 data is available
     pub fn has_data(&self) -> bool {
-        !self.records.is_empty()
+        let has_data = !self.records.is_empty();
+        if !has_data {
+            info!("🔍 CO2 Debug: has_data() returning false - records.len() = {}", self.records.len());
+        }
+        has_data
     }
     
     /// Get CO2 status string for display
     pub fn get_status_string(&self) -> String {
-        match self.latest_daily_value {
-            Some(value) => format!("CO2: {:.2} ppm", value),
-            None => "CO2: UNKNOWN".to_string(),
+        if let Some(latest_record) = self.records.last() {
+            format!("CO2: {:.2} ppm", latest_record.co2_ppm)
+        } else {
+            "CO2: UNKNOWN".to_string()
         }
     }
     
@@ -453,7 +454,7 @@ impl Co2Manager {
             enabled: self.config.enabled,
             has_data: self.has_data(),
             record_count: self.get_record_count(),
-            latest_daily_value: self.latest_daily_value,
+            latest_daily_value: self.records.last().map(|r| r.co2_ppm),
             current_step_value: self.get_current_step_co2(),
             current_tick_value: self.get_current_tick_co2(),
             step_counter: self.step_counter,
@@ -497,7 +498,6 @@ impl Co2Manager {
     pub fn reload_data(&mut self) -> Result<()> {
         info!("Reloading CO2 data");
         self.records.clear();
-        self.latest_daily_value = None;
         self.load_data()
     }
     
@@ -542,10 +542,6 @@ mod tests {
     fn create_test_data_dir() -> TempDir {
         let temp_dir = TempDir::new().unwrap();
         
-        // Create test latest daily file
-        let latest_path = temp_dir.path().join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_daily_latest.csv");
-        fs::write(&latest_path, "415.5").unwrap();
-        
         // Create test all daily file
         let all_daily_path = temp_dir.path().join("simon_says_seeq_web_data_co2_ppm_gml_noaa_gov_ccgg_all_daily.csv");
         let test_data = "2023,1,1,2023.001,410.5\n2023,1,2,2023.003,411.0\n2023,1,3,2023.005,411.5\n";
@@ -567,7 +563,6 @@ mod tests {
         let manager = Co2Manager::new(config).unwrap();
         assert!(manager.has_data());
         assert_eq!(manager.get_record_count(), 3);
-        assert_eq!(manager.get_latest_daily_value(), Some(415.5));
     }
     
     #[test]
