@@ -220,6 +220,52 @@ The CO2 CV system provides multiple time scales for musical expression:
 
 This system transforms decades of climate data into immediate musical expression, creating a unique intersection of environmental awareness and electronic music performance.
 
+## Version Management
+
+SimonSaysSeeq uses a simple VERSION file for manual version tracking:
+
+### VERSION File Format
+
+The `VERSION` file contains a version number and optional description:
+
+```
+1.0.0 - Initial CO2 Environmental Data Sonification Release
+```
+
+### Version Functions
+
+```rust
+use simon_says_seeq_rust::version;
+
+// Get just the version number
+let version = version::get_version(); // "1.0.0"
+
+// Get just the description  
+let description = version::get_version_description(); // "Initial CO2 Environmental Data..."
+
+// Get the full version line
+let full = version::get_full_version(); // "1.0.0 - Initial CO2 Environmental..."
+
+// Get formatted version info
+let info = version::get_version_info(); // "SimonSaysSeeq Rust v1.0.0 - Initial CO2..."
+```
+
+### Startup Logging
+
+The version appears in startup logs:
+```
+🎵 SimonSaysSeeq Rust v1.0.0 - Initial CO2 Environmental Data Sonification Release
+📦 Cargo Version: v0.1.0 (abc123)
+```
+
+### Updating Version
+
+Simply edit the `VERSION` file:
+```bash
+echo "1.1.0 - Added seasonal anomaly CV4 output with proper scaling" > VERSION
+```
+
+
 
 
 ## Development

@@ -21,6 +21,7 @@ mod midi_scanner;
 mod screen;
 mod config;
 mod co2;
+mod version;
 
 // LED brightness constants
 const LED_OFF: u8 = 0;      // Empty step, no playhead (LED off)
@@ -1909,7 +1910,8 @@ fn main() -> Result<()> {
     // Log startup banner with version and timestamp
     info!("════════════════════════════════════════════════════════");
     let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
-    info!("🎵 SimonSaysSeeq Rust v{} ({})", env!("CARGO_PKG_VERSION"), git_hash);
+    info!("🎵 {}", version::get_version_info());
+    info!("📦 Cargo Version: v{} ({})", env!("CARGO_PKG_VERSION"), git_hash);
     info!("📅 Startup Time: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
     info!("🔧 Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
     info!("⚙️  Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));

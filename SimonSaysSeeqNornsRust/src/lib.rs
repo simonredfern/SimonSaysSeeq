@@ -13,6 +13,7 @@ pub mod midi_scanner;
 pub mod screen;
 pub mod sequencer;
 pub mod co2;
+pub mod version;
 pub mod crow;
 
 // Re-export commonly used types
