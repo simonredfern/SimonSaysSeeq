@@ -106,7 +106,7 @@ pub struct SimonSaysSeeq {
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
     beat_led_flash_until: Option<Instant>,
-    // Crow mute state (true when MUTE_CROW button is held down)
+    // Crow mute state (true when MUTE_CROW button is latched ON)
     crow_muted: bool,
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
@@ -797,7 +797,7 @@ impl SimonSaysSeeq {
                                     info!("Column 9 pressed (no function assigned)");
                                 }
                                 10 => {
-                                    // MUTE_CROW momentary button (held down to mute) - handled outside this block
+                                    // MUTE_CROW latching toggle button - handled outside this block
                                 }
                                 12 => {
                                     // Stop button - always works regardless of external clock
@@ -860,14 +860,13 @@ impl SimonSaysSeeq {
                             }
                         }
 
-                        // Handle MUTE_CROW button for both press and release
-                        if x == 10 {
-                            if pressed {
-                                self.crow_muted = true;
-                                info!("handle_grid_press says: MUTE_CROW activated - Crow outputs muted");
+                        // Handle MUTE_CROW button as a latching toggle (only on press, ignore release)
+                        if x == 10 && pressed {
+                            self.crow_muted = !self.crow_muted;
+                            if self.crow_muted {
+                                info!("handle_grid_press says: MUTE_CROW toggled ON - Crow outputs muted");
                             } else {
-                                self.crow_muted = false;
-                                info!("handle_grid_press says: MUTE_CROW released - Crow outputs enabled");
+                                info!("handle_grid_press says: MUTE_CROW toggled OFF - Crow outputs enabled");
                             }
                         }
                         }
