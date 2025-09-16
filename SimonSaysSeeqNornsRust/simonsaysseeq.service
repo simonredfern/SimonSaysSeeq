@@ -1,8 +1,8 @@
 [Unit]
 Description=SimonSaysSeeq Sequencer with MIDI Clock Detection
 Documentation=https://github.com/simonredfern/SimonSaysSeeq
-After=network.target sound.target serialosc.target
-Wants=network.target sound.target
+After=network.target sound.target serialosc.target udev.service
+Wants=network.target sound.target udev.service
 Conflicts=shutdown.target
 RequiresMountsFor=/home/we /usr/local
 
@@ -18,7 +18,7 @@ Restart=always
 RestartSec=5
 StartLimitInterval=60
 StartLimitBurst=3
-TimeoutStartSec=30
+TimeoutStartSec=45
 TimeoutStopSec=10
 
 # Environment
