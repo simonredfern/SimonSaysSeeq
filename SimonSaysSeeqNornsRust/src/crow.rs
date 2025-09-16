@@ -4,7 +4,7 @@
 //! for controlling CV outputs. Crow accepts plain Lua commands over USB serial.
 
 use anyhow::{anyhow, Result};
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use std::io::Write;
 use std::process::Command;
 use std::time::Duration;
@@ -194,35 +194,35 @@ impl Crow {
                 // Send the Lua command followed by newline
                 let command = format!("{}\n", lua_code);
                 
-                info!("🐦 Sending to Crow: {}", lua_code);
+                info!("Sending to Crow: {}", lua_code);
                 
                 match port.write_all(command.as_bytes()) {
                     Ok(()) => {
-                        info!("✅ Command written to serial port");
+                        info!("Command written to serial port");
                     }
                     Err(e) => {
-                        error!("❌ Failed to write to Crow serial port: {}", e);
+                        error!("Failed to write to Crow serial port: {}", e);
                         return Err(anyhow!("Failed to send command to Crow: {}", e));
                     }
                 }
                 
                 match port.flush() {
                     Ok(()) => {
-                        info!("✅ Serial port flushed successfully");
+                        info!("Serial port flushed successfully");
                     }
                     Err(e) => {
-                        error!("❌ Failed to flush Crow serial port: {}", e);
+                        error!("Failed to flush Crow serial port: {}", e);
                         return Err(anyhow!("Failed to flush Crow serial port: {}", e));
                     }
                 }
                 
                 return Ok(());
             } else {
-                error!("❌ Crow serial port is None");
+                error!("Crow serial port is None");
             }
         }
         
-        error!("❌ Crow serial port not available");
+        error!("Crow serial port not available");
         Err(anyhow!("Crow serial port not available"))
     }
 

@@ -644,14 +644,15 @@ install_service() {
     sudo tee /etc/systemd/system/simonsaysseeq-rpi.service > /dev/null << EOF
 [Unit]
 Description=SimonSaysSeeq Sequencer for Raspberry Pi
-After=multi-user.target udev.target serialosc.service
-Wants=serialosc.service
+After=multi-user.target udev.target serialosc.service systemd-udev-settle.service
+Wants=serialosc.service systemd-udev-settle.service
 
 [Service]
 Type=simple
 User=$USER
 Group=audio
 WorkingDirectory=$(pwd)
+ExecStartPre=/bin/sleep 10
 ExecStart=$binary_path
 Environment=RUST_LOG=info
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
