@@ -34,8 +34,8 @@ impl Crow {
         #[cfg(feature = "hardware")]
         {
             // Retry USB device detection with backoff for boot reliability
-            for attempt in 1..=5 {
-                info!("Crow initialization attempt {}/5", attempt);
+            for attempt in 1..=10 {
+                info!("Crow initialization attempt {}/10", attempt);
                 
                 if attempt > 1 {
                     std::thread::sleep(Duration::from_secs(attempt as u64));
@@ -45,10 +45,10 @@ impl Crow {
                     return Ok(());
                 }
                 
-                warn!("Crow initialization attempt {} failed, retrying...", attempt);
+                warn!("Crow initialization attempt {} failed, retrying in {} seconds...", attempt, attempt + 1);
             }
             
-            warn!("Failed to initialize Crow after 5 attempts");
+            warn!("Failed to initialize Crow after 10 attempts");
             return Err(anyhow!("Failed to find Crow USB serial device after retries"));
         }
 
@@ -63,6 +63,19 @@ impl Crow {
     fn try_initialize_once(&mut self) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
+            // Log available USB devices for debugging
+            info!("Available USB serial devices:");
+            if let Ok(entries) = std::fs::read_dir("/dev") {
+                for entry in entries.flatten() {
+                    let name = entry.file_name();
+                    if let Some(name_str) = name.to_str() {
+                        if name_str.starts_with("ttyACM") || name_str.starts_with("ttyUSB") {
+                            info!("  Found: /dev/{}", name_str);
+                        }
+                    }
+                }
+            }
+            
             // Try to find Crow by USB vendor/product ID
             match self.find_crow_device() {
                 Ok(Some(crow_path)) => {
