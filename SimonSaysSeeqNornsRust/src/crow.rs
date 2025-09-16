@@ -187,7 +187,7 @@ impl Crow {
     }
 
     /// Send a raw Lua command to Crow
-    fn send_command(&mut self, lua_code: &str) -> Result<()> {
+    pub fn send_command(&mut self, lua_code: &str) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
             if let Some(ref mut port) = self.port {
