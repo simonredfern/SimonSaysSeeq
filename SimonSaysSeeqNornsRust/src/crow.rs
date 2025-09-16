@@ -187,22 +187,42 @@ impl Crow {
     }
 
     /// Send a raw Lua command to Crow
-    pub fn send_command(&mut self, lua_code: &str) -> Result<()> {
+    fn send_command(&mut self, lua_code: &str) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
             if let Some(ref mut port) = self.port {
                 // Send the Lua command followed by newline
                 let command = format!("{}\n", lua_code);
-                port.write_all(command.as_bytes())
-                    .map_err(|e| anyhow!("Failed to send command to Crow: {}", e))?;
-                port.flush()
-                    .map_err(|e| anyhow!("Failed to flush Crow serial port: {}", e))?;
                 
-                debug!("Sent to Crow: {}", lua_code);
+                info!("🐦 Sending to Crow: {}", lua_code);
+                
+                match port.write_all(command.as_bytes()) {
+                    Ok(()) => {
+                        info!("✅ Command written to serial port");
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to write to Crow serial port: {}", e);
+                        return Err(anyhow!("Failed to send command to Crow: {}", e));
+                    }
+                }
+                
+                match port.flush() {
+                    Ok(()) => {
+                        info!("✅ Serial port flushed successfully");
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to flush Crow serial port: {}", e);
+                        return Err(anyhow!("Failed to flush Crow serial port: {}", e));
+                    }
+                }
+                
                 return Ok(());
+            } else {
+                error!("❌ Crow serial port is None");
             }
         }
         
+        error!("❌ Crow serial port not available");
         Err(anyhow!("Crow serial port not available"))
     }
 
