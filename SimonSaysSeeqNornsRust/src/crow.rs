@@ -33,7 +33,37 @@ impl Crow {
     pub fn initialize(&mut self) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
-            // First try to find Crow by USB vendor/product ID
+            // Retry USB device detection with backoff for boot reliability
+            for attempt in 1..=5 {
+                info!("Crow initialization attempt {}/5", attempt);
+                
+                if attempt > 1 {
+                    std::thread::sleep(Duration::from_secs(attempt as u64));
+                }
+                
+                if let Ok(()) = self.try_initialize_once() {
+                    return Ok(());
+                }
+                
+                warn!("Crow initialization attempt {} failed, retrying...", attempt);
+            }
+            
+            warn!("Failed to initialize Crow after 5 attempts");
+            return Err(anyhow!("Failed to find Crow USB serial device after retries"));
+        }
+
+        #[cfg(not(feature = "hardware"))]
+        {
+            warn!("Crow support disabled (hardware feature not enabled)");
+            return Ok(());
+        }
+    }
+
+    /// Single initialization attempt
+    fn try_initialize_once(&mut self) -> Result<()> {
+        #[cfg(feature = "hardware")]
+        {
+            // Try to find Crow by USB vendor/product ID
             match self.find_crow_device() {
                 Ok(Some(crow_path)) => {
                     info!("Found Crow device at: {}", crow_path);
@@ -106,15 +136,13 @@ impl Crow {
                     Err(_) => continue,
                 }
             }
-            
-            warn!("Crow not found on any USB serial port");
-            return Err(anyhow!("Failed to find Crow USB serial device"));
-        }
 
+            return Err(anyhow!("No suitable Crow device found"));
+        }
+        
         #[cfg(not(feature = "hardware"))]
         {
-            warn!("Crow support disabled (hardware feature not enabled)");
-            return Ok(());
+            return Err(anyhow!("Hardware feature not enabled"));
         }
     }
 
