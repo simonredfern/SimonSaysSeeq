@@ -789,8 +789,8 @@ impl SimonSaysSeeq {
                             return Ok(());
                         }
 
-                        // GRID_TWO tempo controls (columns 10-15)
-                        else if x >= 10 && x <= 15 {
+                        // GRID_TWO mute and tempo controls (columns 7-15)
+                        else if x >= 7 && x <= 15 {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
@@ -886,43 +886,42 @@ impl SimonSaysSeeq {
                             }
                         }
 
-                        // Handle MUTE_CROW_1 button as a latching toggle (only on press, ignore release)
-                        if x == 7 && pressed {
-                            self.crow_cv1_muted = !self.crow_cv1_muted;
-                            if self.crow_cv1_muted {
-                                info!("handle_grid_press says: MUTE_CROW_1 toggled ON - Crow CV1 output muted");
-                            } else {
-                                info!("handle_grid_press says: MUTE_CROW_1 toggled OFF - Crow CV1 output enabled");
-                            }
-                        }
-
-                        // Handle MUTE_CROW_2 button as a latching toggle (only on press, ignore release)
-                        if x == 8 && pressed {
-                            self.crow_cv2_muted = !self.crow_cv2_muted;
-                            if self.crow_cv2_muted {
-                                info!("handle_grid_press says: MUTE_CROW_2 toggled ON - Crow CV2 output muted");
-                            } else {
-                                info!("handle_grid_press says: MUTE_CROW_2 toggled OFF - Crow CV2 output enabled");
-                            }
-                        }
-
-                        // Handle MUTE_CROW_3 button as a latching toggle (only on press, ignore release)
-                        if x == 9 && pressed {
-                            self.crow_cv3_muted = !self.crow_cv3_muted;
-                            if self.crow_cv3_muted {
-                                info!("handle_grid_press says: MUTE_CROW_3 toggled ON - Crow CV3 output muted");
-                            } else {
-                                info!("handle_grid_press says: MUTE_CROW_3 toggled OFF - Crow CV3 output enabled");
-                            }
-                        }
-
-                        // Handle MUTE_CROW_4 button as a latching toggle (only on press, ignore release)
-                        if x == 10 && pressed {
-                            self.crow_cv4_muted = !self.crow_cv4_muted;
-                            if self.crow_cv4_muted {
-                                info!("handle_grid_press says: MUTE_CROW_4 toggled ON - Crow CV4 output muted");
-                            } else {
-                                info!("handle_grid_press says: MUTE_CROW_4 toggled OFF - Crow CV4 output enabled");
+                        // Handle MUTE_CROW buttons as latching toggles (only on press, ignore release)
+                        if pressed {
+                            match x {
+                                7 => {
+                                    self.crow_cv1_muted = !self.crow_cv1_muted;
+                                    if self.crow_cv1_muted {
+                                        info!("handle_grid_press says: MUTE_CROW_1 toggled ON - Crow CV1 output muted");
+                                    } else {
+                                        info!("handle_grid_press says: MUTE_CROW_1 toggled OFF - Crow CV1 output enabled");
+                                    }
+                                }
+                                8 => {
+                                    self.crow_cv2_muted = !self.crow_cv2_muted;
+                                    if self.crow_cv2_muted {
+                                        info!("handle_grid_press says: MUTE_CROW_2 toggled ON - Crow CV2 output muted");
+                                    } else {
+                                        info!("handle_grid_press says: MUTE_CROW_2 toggled OFF - Crow CV2 output enabled");
+                                    }
+                                }
+                                9 => {
+                                    self.crow_cv3_muted = !self.crow_cv3_muted;
+                                    if self.crow_cv3_muted {
+                                        info!("handle_grid_press says: MUTE_CROW_3 toggled ON - Crow CV3 output muted");
+                                    } else {
+                                        info!("handle_grid_press says: MUTE_CROW_3 toggled OFF - Crow CV3 output enabled");
+                                    }
+                                }
+                                10 => {
+                                    self.crow_cv4_muted = !self.crow_cv4_muted;
+                                    if self.crow_cv4_muted {
+                                        info!("handle_grid_press says: MUTE_CROW_4 toggled ON - Crow CV4 output muted");
+                                    } else {
+                                        info!("handle_grid_press says: MUTE_CROW_4 toggled OFF - Crow CV4 output enabled");
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                         }
