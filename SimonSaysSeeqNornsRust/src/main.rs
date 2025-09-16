@@ -106,6 +106,12 @@ pub struct SimonSaysSeeq {
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
     beat_led_flash_until: Option<Instant>,
+    // Crow CV1 mute state (true when MUTE_CROW_1 button is latched ON)
+    crow_cv1_muted: bool,
+    // Crow CV2 mute state (true when MUTE_CROW_2 button is latched ON)
+    crow_cv2_muted: bool,
+    // Crow CV3 mute state (true when MUTE_CROW_3 button is latched ON)
+    crow_cv3_muted: bool,
     // Crow CV4 mute state (true when MUTE_CROW_4 button is latched ON)
     crow_cv4_muted: bool,
     // GRID_TWO button state tracking for MIDI detection
@@ -162,6 +168,9 @@ impl SimonSaysSeeq {
             tempo: initial_tempo,
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
+            crow_cv1_muted: false, // Default CV1 not muted
+            crow_cv2_muted: false, // Default CV2 not muted
+            crow_cv3_muted: false, // Default CV3 not muted
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
@@ -792,9 +801,14 @@ impl SimonSaysSeeq {
                             }
                             
                             match x {
+                                7 => {
+                                    // MUTE_CROW_1 latching toggle button - handled outside this block
+                                }
+                                8 => {
+                                    // MUTE_CROW_2 latching toggle button - handled outside this block
+                                }
                                 9 => {
-                                    // Column 9 reserved for future use
-                                    info!("Column 9 pressed (no function assigned)");
+                                    // MUTE_CROW_3 latching toggle button - handled outside this block
                                 }
                                 10 => {
                                     // MUTE_CROW_4 latching toggle button - handled outside this block
@@ -840,6 +854,18 @@ impl SimonSaysSeeq {
                             #[cfg(feature = "hardware")]
                             {
                                 let brightness = match x {
+                                    7 => {
+                                        // MUTE_CROW_1 button - show state (ON/OFF)
+                                        if self.crow_cv1_muted { LED_BRIGHT } else { LED_OFF }
+                                    }
+                                    8 => {
+                                        // MUTE_CROW_2 button - show state (ON/OFF)
+                                        if self.crow_cv2_muted { LED_BRIGHT } else { LED_OFF }
+                                    }
+                                    9 => {
+                                        // MUTE_CROW_3 button - show state (ON/OFF)
+                                        if self.crow_cv3_muted { LED_BRIGHT } else { LED_OFF }
+                                    }
                                     10 => {
                                         // MUTE_CROW_4 button - show state (ON/OFF)
                                         if self.crow_cv4_muted { LED_BRIGHT } else { LED_OFF }
@@ -857,6 +883,36 @@ impl SimonSaysSeeq {
                                 };
                                 self.grid.set_led(grid_id, x, seq_y, brightness, "transport_button_release")?;
                                 self.grid.refresh()?;
+                            }
+                        }
+
+                        // Handle MUTE_CROW_1 button as a latching toggle (only on press, ignore release)
+                        if x == 7 && pressed {
+                            self.crow_cv1_muted = !self.crow_cv1_muted;
+                            if self.crow_cv1_muted {
+                                info!("handle_grid_press says: MUTE_CROW_1 toggled ON - Crow CV1 output muted");
+                            } else {
+                                info!("handle_grid_press says: MUTE_CROW_1 toggled OFF - Crow CV1 output enabled");
+                            }
+                        }
+
+                        // Handle MUTE_CROW_2 button as a latching toggle (only on press, ignore release)
+                        if x == 8 && pressed {
+                            self.crow_cv2_muted = !self.crow_cv2_muted;
+                            if self.crow_cv2_muted {
+                                info!("handle_grid_press says: MUTE_CROW_2 toggled ON - Crow CV2 output muted");
+                            } else {
+                                info!("handle_grid_press says: MUTE_CROW_2 toggled OFF - Crow CV2 output enabled");
+                            }
+                        }
+
+                        // Handle MUTE_CROW_3 button as a latching toggle (only on press, ignore release)
+                        if x == 9 && pressed {
+                            self.crow_cv3_muted = !self.crow_cv3_muted;
+                            if self.crow_cv3_muted {
+                                info!("handle_grid_press says: MUTE_CROW_3 toggled ON - Crow CV3 output muted");
+                            } else {
+                                info!("handle_grid_press says: MUTE_CROW_3 toggled OFF - Crow CV3 output enabled");
                             }
                         }
 
@@ -1571,13 +1627,16 @@ impl SimonSaysSeeq {
                     voltages[3].clamp(-5.0, 10.0),
                 ];
 
-                // Send to Crow CV outputs (with CV4 muting support)
+                // Send to Crow CV outputs (with CV1, CV2, CV3 and CV4 muting support)
                 if self.crow.is_enabled() {
+                    let final_cv1 = if self.crow_cv1_muted { 0.0 } else { clamped_voltages[0] };
+                    let final_cv2 = if self.crow_cv2_muted { 0.0 } else { clamped_voltages[1] };
+                    let final_cv3 = if self.crow_cv3_muted { 0.0 } else { clamped_voltages[2] };
                     let final_cv4 = if self.crow_cv4_muted { 0.0 } else { clamped_voltages[3] };
                     if let Err(e) = self.crow.set_all_outputs(
-                        clamped_voltages[0], 
-                        clamped_voltages[1], 
-                        clamped_voltages[2], 
+                        final_cv1,
+                        final_cv2, 
+                        final_cv3, 
                         final_cv4
                     ) {
                         warn!("Failed to send CO2 CV to Crow: {}", e);
@@ -1624,7 +1683,8 @@ impl SimonSaysSeeq {
                 
                 // Send updates to Crow for output 2 only (CV4 is now quarter note based, not tick based)
                 if self.crow.is_enabled() {
-                    if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", clamped_tick_voltage)) {
+                    let final_tick_voltage = if self.crow_cv2_muted { 0.0 } else { clamped_tick_voltage };
+                    if let Err(e) = self.crow.send_command(&format!("output[2].volts = {:.6}", final_tick_voltage)) {
                         warn!("Failed to send tick-based CO2 CV to Crow output 2: {}", e);
                     } else {
                         info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", 
@@ -1789,9 +1849,21 @@ impl SimonSaysSeeq {
         //             self.grid.set_led(&grid_two_id, 14, 7, brightness, "beat_led_flash")?;
         //             self.grid.set_led(&grid_two_id, 15, 7, brightness, "beat_led_flash")?;
         //             
+        //             // Update MUTE_CROW_1 button LED (column 7, row 7)
+        //             let mute_cv1_brightness = if self.crow_cv1_muted { LED_BRIGHT } else { LED_OFF };
+        //             self.grid.set_led(&grid_two_id, 7, 7, mute_cv1_brightness, "mute_crow_1_button")?;
+        //             
+        //             // Update MUTE_CROW_2 button LED (column 8, row 7)
+        //             let mute_cv2_brightness = if self.crow_cv2_muted { LED_BRIGHT } else { LED_OFF };
+        //             self.grid.set_led(&grid_two_id, 8, 7, mute_cv2_brightness, "mute_crow_2_button")?;
+        //             
+        //             // Update MUTE_CROW_3 button LED (column 9, row 7)
+        //             let mute_cv3_brightness = if self.crow_cv3_muted { LED_BRIGHT } else { LED_OFF };
+        //             self.grid.set_led(&grid_two_id, 9, 7, mute_cv3_brightness, "mute_crow_3_button")?;
+        //             
         //             // Update MUTE_CROW_4 button LED (column 10, row 7)
-        //             let mute_brightness = if self.crow_cv4_muted { LED_BRIGHT } else { LED_OFF };
-        //             self.grid.set_led(&grid_two_id, 10, 7, mute_brightness, "mute_crow_4_button")?;
+        //             let mute_cv4_brightness = if self.crow_cv4_muted { LED_BRIGHT } else { LED_OFF };
+        //             self.grid.set_led(&grid_two_id, 10, 7, mute_cv4_brightness, "mute_crow_4_button")?;
         //             
         //             // Update drift indicator LED (column 11, row 7)
         //             let drift_brightness = self.calculate_drift_brightness();
