@@ -603,7 +603,7 @@ show_tempo_viz = true
 font_scale = 1
 
 [co2]
-enabled = false
+enabled = true
 data_dir = "/home/simonredfern/Documents/workspace_2025/SimonSaysSeeq/SimonSaysSeeqNornsRust/co2_data"
 wow_threshold = 20.0
 flutter_threshold = 10.0
@@ -654,7 +654,7 @@ Group=audio
 WorkingDirectory=$(pwd)
 ExecStartPre=/bin/sleep 10
 ExecStart=$binary_path
-Environment=RUST_LOG=info
+Environment=RUST_LOG=error
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
 Restart=on-failure
 RestartSec=5
