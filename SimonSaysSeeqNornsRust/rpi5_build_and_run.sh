@@ -640,10 +640,49 @@ install_service() {
         binary_path="$(pwd)/target/debug/simon_says_seeq"
     fi
 
+    # Create Crow CV boot fix wrapper script
+    log_info "Creating Crow CV boot fix wrapper..."
+    cat > /tmp/simonsaysseeq_wrapper.sh << WRAPPER
+#!/bin/bash
+# SimonSaysSeeq Crow CV Boot Fix Wrapper
+# This implements the start-stop-start sequence to fix Crow CV outputs
+
+set -e
+
+BINARY_PATH="$binary_path"
+LOG_FILE="/tmp/simonsaysseeq_crow_boot_fix.log"
+
+log_msg() {
+    echo "\$(date '+%Y-%m-%d %H:%M:%S') [CROW-FIX] \$1" >> "\$LOG_FILE"
+}
+
+log_msg "=== Crow CV Boot Fix Started ==="
+log_msg "Binary path: \$BINARY_PATH"
+
+# Step 1: Start the service briefly to initialize hardware
+log_msg "Step 1: Starting service for initial hardware setup..."
+"\$BINARY_PATH" &
+SERVICE_PID=\$!
+sleep 3
+
+# Step 2: Stop the service (this is the key part of the fix)
+log_msg "Step 2: Stopping service (key part of Crow CV fix)..."
+kill \$SERVICE_PID 2>/dev/null || true
+wait \$SERVICE_PID 2>/dev/null || true
+sleep 2
+
+# Step 3: Start the service for real (Crow CV should now work)
+log_msg "Step 3: Final start - Crow CV should now work..."
+exec "\$BINARY_PATH"
+WRAPPER
+
+    chmod +x /tmp/simonsaysseeq_wrapper.sh
+    sudo mv /tmp/simonsaysseeq_wrapper.sh /usr/local/bin/simonsaysseeq_wrapper.sh
+
     # Create systemd service
     sudo tee /etc/systemd/system/simonsaysseeq-rpi.service > /dev/null << EOF
 [Unit]
-Description=SimonSaysSeeq Sequencer for Raspberry Pi
+Description=SimonSaysSeeq Sequencer for Raspberry Pi (with Crow CV fix)
 After=multi-user.target udev.target serialosc.service systemd-udev-settle.service
 Wants=serialosc.service systemd-udev-settle.service
 
@@ -653,7 +692,7 @@ User=$USER
 Group=audio
 WorkingDirectory=$(pwd)
 ExecStartPre=/bin/sleep 10
-ExecStart=$binary_path
+ExecStart=/usr/local/bin/simonsaysseeq_wrapper.sh
 Environment=RUST_LOG=error
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
 Restart=on-failure
@@ -779,6 +818,7 @@ EXAMPLES:
 NOTES:
     - Grid support requires serialosc (automatically installed during setup)
     - Grid support is a hard requirement for SimonSaysSeeq functionality
+    - Service installation includes automatic Crow CV boot fix (start-stop-start sequence)
 
 ENVIRONMENT VARIABLES:
     BUILD_TYPE          Build type: release or debug (default: release)
