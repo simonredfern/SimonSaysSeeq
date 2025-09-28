@@ -271,14 +271,7 @@ impl SimonSaysSeeq {
         //     // warn!("Failed to flash grids on sequencer start: {}", e);
         // }
 
-        // Initialize main grid with some default pattern for testing
-        // Set test patterns for all rows to verify display pipeline (0-indexed)
-        for row in 0..=6 {
-            self.sequencer.set_grid_value(0, row, 1);   // Step 0 (display: step 1)
-            self.sequencer.set_grid_value(4, row, 2);   // Step 4 (display: step 5)
-            self.sequencer.set_grid_value(8, row, 1);   // Step 8 (display: step 9)
-            self.sequencer.set_grid_value(12, row, 2);  // Step 12 (display: step 13)
-        }
+
 
         // Update main grid initially
         self.update_grid_display()?;
