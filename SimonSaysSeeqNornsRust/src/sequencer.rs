@@ -958,13 +958,7 @@ impl Sequencer {
 
     /// Get the pattern file path for saving/loading current pattern
     fn get_pattern_file_path() -> PathBuf {
-        if let Some(config_dir) = dirs::config_dir() {
-            let dir = config_dir.join("simon-says-seeq");
-            std::fs::create_dir_all(&dir).ok(); // Create directory if it doesn't exist
-            dir.join("current_pattern.json")
-        } else {
-            PathBuf::from("simon_says_seeq_current_pattern.json")
-        }
+        PathBuf::from("current_pattern.json")
     }
 
     /// Save current pattern to file
