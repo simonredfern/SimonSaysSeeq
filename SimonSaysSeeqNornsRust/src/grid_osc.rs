@@ -307,9 +307,16 @@ impl GridManager {
 
     /// Set a single LED
     pub fn set_led(&mut self, grid_id: &str, x: usize, y: usize, brightness: u8, caller: &str) -> Result<()> {
-        // Use native 0-based coordinates directly
-        let seq_x = x;
-        let seq_y = y;
+        // Always rotate GRID_TWO by 180 degrees for physical orientation
+        let (transformed_x, transformed_y) = if self.is_grid_two(grid_id)? {
+            (15 - x, 7 - y)
+        } else {
+            (x, y)
+        };
+        
+        // Use transformed coordinates
+        let seq_x = transformed_x;
+        let seq_y = transformed_y;
 
         // Allow LED updates for all sequencer rows (0-6, with row 7 for control)
         if seq_y > 7 {
@@ -334,10 +341,10 @@ impl GridManager {
         let device = self.devices.get(grid_id)
             .ok_or_else(|| anyhow!("Grid {} not found", grid_id))?;
 
-        // Validate coordinates
-        if x >= device.cols || y >= device.rows {
-            return Err(anyhow!("LED coordinates ({}, {}) out of bounds for grid {} ({}x{})",
-                             x, y, grid_id, device.cols, device.rows));
+        // Validate transformed coordinates
+        if transformed_x >= device.cols || transformed_y >= device.rows {
+            return Err(anyhow!("LED coordinates ({}, {}) -> transformed ({}, {}) out of bounds for grid {} ({}x{})",
+                             x, y, transformed_x, transformed_y, grid_id, device.cols, device.rows));
         }
 
         // Clamp brightness
@@ -347,7 +354,7 @@ impl GridManager {
             if brightness > 0 { 1 } else { 0 }
         };
 
-        // Update internal state
+        // Update internal state with original coordinates (not transformed)
         self.assumed_led_states.insert((grid_id.to_string(), x, y), brightness);
 
         // Send OSC command
@@ -359,8 +366,8 @@ impl GridManager {
             OscMessage {
                 addr: format!("{}/grid/led/level/set", prefix),
                 args: vec![
-                    OscType::Int(x as i32),
-                    OscType::Int(y as i32),
+                    OscType::Int(transformed_x as i32),
+                    OscType::Int(transformed_y as i32),
                     OscType::Int(brightness as i32),
                 ],
             }
@@ -369,8 +376,8 @@ impl GridManager {
             OscMessage {
                 addr: format!("{}/grid/led/set", prefix),
                 args: vec![
-                    OscType::Int(x as i32),
-                    OscType::Int(y as i32),
+                    OscType::Int(transformed_x as i32),
+                    OscType::Int(transformed_y as i32),
                     OscType::Int(if brightness > 0 { 1 } else { 0 }),
                 ],
             }
@@ -572,14 +579,21 @@ impl GridManager {
                                 if msg.addr == key_addr && msg.args.len() >= 3 {
                                     if let (Some(OscType::Int(x)), Some(OscType::Int(y)), Some(OscType::Int(state))) =
                                         (msg.args.get(0), msg.args.get(1), msg.args.get(2)) {
+                                        // Always apply inverse 180-degree transformation for GRID_TWO button events
+                                        let (logical_x, logical_y) = if self.is_grid_two(&device.id).unwrap_or(false) {
+                                            (15 - (*x as usize), 7 - (*y as usize))
+                                        } else {
+                                            (*x as usize, *y as usize)
+                                        };
+                                    
                                         events.push(GridButtonEvent {
                                             grid_id: device.id.clone(),
-                                            x: *x as usize,
-                                            y: *y as usize,
+                                            x: logical_x,
+                                            y: logical_y,
                                             pressed: *state != 0,
                                         });
-                                        debug!("Grid {} button event: ({}, {}) = {} (from port {})",
-                                               device.id, x, y, *state != 0, source_port);
+                                        debug!("Grid {} button event: hardware ({}, {}) -> logical ({}, {}) = {} (from port {})",
+                                               device.id, x, y, logical_x, logical_y, *state != 0, source_port);
                                     }
                                 }
                             } else {
@@ -836,6 +850,12 @@ impl GridManager {
         }
         grid_ids.sort();
         Ok(grid_ids[1].clone())
+    }
+
+    /// Check if given grid_id is GRID_TWO
+    fn is_grid_two(&self, grid_id: &str) -> Result<bool> {
+        let grid_two_id = self.get_grid_two_id()?;
+        Ok(grid_id == grid_two_id)
     }
 
     /// Get both grid IDs in consistent order (GRID_ONE, GRID_TWO)
