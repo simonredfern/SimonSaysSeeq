@@ -656,10 +656,23 @@ impl SimonSaysSeeq {
                             info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
                             
                             // Get current euclidean parameters to preserve events and rotation
-                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                            if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
                                 let current_events = row_state.sequencer_a_euclidean_events;
                                 let current_rotation = row_state.sequencer_a_euclidean_rotation;
+                                
+                                // Generate the rhythm first
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
+                                
+                                // Reset step position if it's beyond the new length
+                                let last_step = length - 1; // Convert to 0-based
+                                if row_state.sequencer_a_current_step > last_step {
+                                    let (master_step, _) = self.sequencer.get_current_position();
+                                    // Reset to current master position, but clamp within new length
+                                    row_state.sequencer_a_current_step = master_step % length;
+                                    self.sequencer.set_row_states(seq_y, row_state);
+                                    info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
+                                          seq_y, row_state.sequencer_a_current_step, last_step);
+                                }
                             } else {
                                 // Fallback if row_state is not available
                                 warn!("EuclidianLength: Could not get row_state for row {}, using fallback defaults", seq_y);
