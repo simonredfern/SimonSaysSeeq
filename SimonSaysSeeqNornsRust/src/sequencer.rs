@@ -1124,12 +1124,19 @@ impl Sequencer {
     pub fn generate_euclidean_rhythm(
         &self,
         row: usize,
-        events: usize,
+        mut events: usize,
         length: usize,
         rotation: usize,
     ) {
-        if row > 6 || events > length || length > 32 {
+        if row > 6 || length > 32 {
             return;
+        }
+
+        // Auto-reduce events if they exceed the new length
+        if events > length {
+            events = length;
+            info!("generate_euclidean_rhythm says: Auto-reduced events from {} to {} to match length {}", 
+                  events, length, length);
         }
 
         self.push_undo_snapshot(format!(
