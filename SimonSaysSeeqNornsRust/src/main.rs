@@ -724,6 +724,15 @@ impl SimonSaysSeeq {
                                 self.refresh_all_row_leds(seq_y)?;
                             }
                         },
+                        ArmAction::PresetGrid => {
+                            // Apply preset pattern to this row
+                            info!("ARM PRESET_GRID: Applying preset pattern column {} to row {}", seq_x, seq_y);
+                            self.sequencer.apply_preset_pattern(seq_y, seq_x);
+                            
+                            // Refresh the entire row to show the new pattern
+                            self.refresh_all_row_leds(seq_y)?;
+                            info!("ARM PRESET_GRID: Successfully applied preset pattern column {} to row {}", seq_x, seq_y);
+                        },
                         _ => {
                             // Other ARM actions don't have grid-press behavior - handle normal grid operation
                             self.handle_normal_grid_operation(seq_x, seq_y)?;
@@ -1033,8 +1042,9 @@ impl SimonSaysSeeq {
                 info!("ARM SET_SEQ_A_LENGTH: When set to 32 steps, row will sync with master row 0");
             }
             ArmAction::PresetGrid => {
-                // Preset grid functionality - placeholder
-                info!("ARM PRESET_GRID: ARM button activated - not yet implemented");
+                // Preset Grid ARM button activated - waiting for sequence row press
+                info!("ARM PRESET_GRID: ARM button activated - press any sequence row at any column for preset patterns");
+                info!("ARM PRESET_GRID: Column 0-3 = Basic drums, 4-15 = African rhythms, 16-23 = Salsa, 24-31 = Jazz");
             }
 
         }

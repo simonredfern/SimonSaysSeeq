@@ -1053,6 +1053,81 @@ impl Sequencer {
         info!("Created default sparse pattern across both grids");
     }
 
+    /// Preset Rhythm Patterns
+
+    /// Get preset rhythm pattern by column (0-31)
+    pub fn get_preset_pattern(column: usize) -> Vec<u8> {
+        match column {
+            // Basic Drum Patterns (0-3)
+            0 => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // 4-on-the-floor kick
+            1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat (8th notes)
+            2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0], // Techno open hi-hat (accents)
+            3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], // Techno clap/snare (2 and 4)
+            
+            // African Rhythms (4-15)
+            4 => vec![1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0], // Kagan (16 steps)
+            5 => vec![1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1], // Soukous (32 steps)
+            6 => vec![1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0], // Bembe
+            7 => vec![1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0], // Djembe pattern (32 steps)
+            8 => vec![1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0], // West African polyrhythm
+            9 => vec![1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0], // Makossa (32 steps)
+            10 => vec![1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1], // Highlife
+            11 => vec![1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1], // Afrobeat (32 steps)
+            12 => vec![1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0], // Ashiko
+            13 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Kpanlogo
+            14 => vec![1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0], // Agbadza
+            15 => vec![1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0], // Gahu (32 steps)
+            
+            // Salsa Rhythms (16-23)
+            16 => vec![1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], // Son Clave 3-2 (32 steps)
+            17 => vec![0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1], // Son Clave 2-3
+            18 => vec![1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], // Rumba Clave 3-2
+            19 => vec![0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0], // Rumba Clave 2-3 (32 steps)
+            20 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Tumbao (32 steps)
+            21 => vec![1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0], // Cascara
+            22 => vec![0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1], // Mambo bell (32 steps)
+            23 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Cha-cha-cha
+            
+            // Jazz Rhythms (24-31)
+            24 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Jazz ride (32 steps)
+            25 => vec![1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], // Swing shuffle
+            26 => vec![0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], // Jazz snare (32 steps)
+            27 => vec![1,1,0,1,1,0,1,1,0,1,1,0], // Brushes pattern (12 steps)
+            28 => vec![1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1], // Latin jazz (32 steps)
+            29 => vec![1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0], // Bossa nova (32 steps)
+            30 => vec![1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1], // Samba
+            31 => vec![1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1], // Jazz waltz (32 steps)
+            
+            _ => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // Default to 4-on-floor
+        }
+    }
+
+    /// Apply preset pattern to a row
+    pub fn apply_preset_pattern(&self, row: usize, column: usize) {
+        if row > 6 {
+            return;
+        }
+
+        self.push_undo_snapshot(format!("Preset pattern column {} on row {}", column, row));
+
+        let pattern = Self::get_preset_pattern(column);
+        let mut state = self.state.lock().unwrap();
+
+        // Clear the entire row first
+        for col in 0..32 {
+            state.sequencer_a_grid[col][row] = 0;
+        }
+
+        // Apply the preset pattern
+        for (i, &value) in pattern.iter().enumerate() {
+            if i < 32 {
+                state.sequencer_a_grid[i][row] = value;
+            }
+        }
+
+        info!("Applied preset pattern column {} to row {} (pattern length: {})", column, row, pattern.len());
+    }
+
     /// Advanced Sequencing Features
 
     /// Set global transpose
