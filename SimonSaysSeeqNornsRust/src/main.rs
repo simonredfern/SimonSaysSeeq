@@ -1045,7 +1045,7 @@ impl SimonSaysSeeq {
             ArmAction::PresetGrid => {
                 // Preset Grid ARM button activated - waiting for sequence row press
                 info!("ARM PRESET_GRID: ARM button activated - press any sequence row at any column for preset patterns");
-                info!("ARM PRESET_GRID: Column 0-3 = Basic drums, 4-15 = African rhythms, 16-23 = Salsa, 24-31 = Jazz");
+                info!("ARM PRESET_GRID: Column 0 = Clear row, 1-3 = Basic drums, 4-15 = African rhythms, 16-23 = Salsa, 24-31 = Jazz");
             }
 
         }

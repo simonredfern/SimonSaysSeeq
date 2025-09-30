@@ -1058,8 +1058,9 @@ impl Sequencer {
     /// Get preset rhythm pattern by column (0-31)
     pub fn get_preset_pattern(column: usize) -> Vec<u8> {
         match column {
-            // Basic Drum Patterns (0-3)
-            0 => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // 4-on-the-floor kick (32 steps)
+            // Column 0: Clear row
+            0 => vec![0; 32], // Clear row (32 steps of silence)
+            // Basic Drum Patterns (1-3)
             1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat with variation (32 steps)
             2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0], // Techno open hi-hat with accents (32 steps)
             3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0], // Techno clap/snare with ghost notes (32 steps)
