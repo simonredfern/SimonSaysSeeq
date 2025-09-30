@@ -712,8 +712,16 @@ impl SimonSaysSeeq {
                             if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
                                 row_state.sequencer_a_euclidean_length = last_step;
                                 
-                                // If last_step is 31 (full 32 steps), sync this row with global master step counter
-                                if last_step == 31 {
+                                // Reset step position if it's beyond the new length
+                                if row_state.sequencer_a_current_step > last_step {
+                                    let (master_step, _) = self.sequencer.get_current_position();
+                                    // Reset to current master position, but clamp within new length
+                                    let new_step = master_step % length;
+                                    row_state.sequencer_a_current_step = new_step;
+                                    info!("ARM SET_SEQ_A_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
+                                          seq_y, new_step, last_step);
+                                } else if last_step == 31 {
+                                    // If last_step is 31 (full 32 steps), sync this row with global master step counter
                                     let (master_step, _) = self.sequencer.get_current_position();
                                     row_state.sequencer_a_current_step = master_step;
                                     info!("ARM SET_SEQ_A_LENGTH: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
