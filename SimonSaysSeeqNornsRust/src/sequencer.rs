@@ -1059,46 +1059,46 @@ impl Sequencer {
     pub fn get_preset_pattern(column: usize) -> Vec<u8> {
         match column {
             // Basic Drum Patterns (0-3)
-            0 => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // 4-on-the-floor kick
-            1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat (8th notes)
-            2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0], // Techno open hi-hat (accents)
-            3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], // Techno clap/snare (2 and 4)
+            0 => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // 4-on-the-floor kick (32 steps)
+            1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat with variation (32 steps)
+            2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0], // Techno open hi-hat with accents (32 steps)
+            3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0], // Techno clap/snare with ghost notes (32 steps)
             
             // African Rhythms (4-15)
-            4 => vec![1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0], // Kagan (16 steps)
+            4 => vec![1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0], // Kagan with variation (32 steps)
             5 => vec![1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1], // Soukous (32 steps)
-            6 => vec![1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0], // Bembe
+            6 => vec![1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0], // Bembe extended (32 steps)
             7 => vec![1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0], // Djembe pattern (32 steps)
-            8 => vec![1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0], // West African polyrhythm
+            8 => vec![1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0], // West African polyrhythm extended (32 steps)
             9 => vec![1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0], // Makossa (32 steps)
-            10 => vec![1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1], // Highlife
+            10 => vec![1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1], // Highlife extended (32 steps)
             11 => vec![1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1], // Afrobeat (32 steps)
-            12 => vec![1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0], // Ashiko
-            13 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Kpanlogo
-            14 => vec![1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0], // Agbadza
+            12 => vec![1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0], // Ashiko extended (32 steps)
+            13 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Kpanlogo extended (32 steps)
+            14 => vec![1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0], // Agbadza extended (32 steps)
             15 => vec![1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0], // Gahu (32 steps)
             
             // Salsa Rhythms (16-23)
             16 => vec![1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], // Son Clave 3-2 (32 steps)
-            17 => vec![0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1], // Son Clave 2-3
-            18 => vec![1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], // Rumba Clave 3-2
+            17 => vec![0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1], // Son Clave 2-3 extended (32 steps)
+            18 => vec![1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], // Rumba Clave 3-2 extended (32 steps)
             19 => vec![0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0], // Rumba Clave 2-3 (32 steps)
             20 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Tumbao (32 steps)
-            21 => vec![1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0], // Cascara
+            21 => vec![1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0], // Cascara extended (32 steps)
             22 => vec![0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1], // Mambo bell (32 steps)
-            23 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Cha-cha-cha
+            23 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Cha-cha-cha extended (32 steps)
             
             // Jazz Rhythms (24-31)
             24 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Jazz ride (32 steps)
-            25 => vec![1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], // Swing shuffle
+            25 => vec![1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], // Swing shuffle (32 steps)
             26 => vec![0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], // Jazz snare (32 steps)
-            27 => vec![1,1,0,1,1,0,1,1,0,1,1,0], // Brushes pattern (12 steps)
+            27 => vec![1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0], // Brushes pattern (24 steps)
             28 => vec![1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1], // Latin jazz (32 steps)
             29 => vec![1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0], // Bossa nova (32 steps)
-            30 => vec![1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1], // Samba
+            30 => vec![1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1], // Samba (32 steps)
             31 => vec![1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1], // Jazz waltz (32 steps)
             
-            _ => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // Default to 4-on-floor
+            _ => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // Default to 4-on-floor (32 steps)
         }
     }
 
@@ -1111,6 +1111,7 @@ impl Sequencer {
         self.push_undo_snapshot(format!("Preset pattern column {} on row {}", column, row));
 
         let pattern = Self::get_preset_pattern(column);
+        let pattern_length = pattern.len();
         let mut state = self.state.lock().unwrap();
 
         // Clear the entire row first
@@ -1125,7 +1126,14 @@ impl Sequencer {
             }
         }
 
-        info!("Applied preset pattern column {} to row {} (pattern length: {})", column, row, pattern.len());
+        // Set the row's euclidean length to match the pattern length
+        if let Some(row_state) = state.sequencer_a_row_states.get_mut(row) {
+            row_state.sequencer_a_euclidean_length = pattern_length - 1; // Store as 0-based index
+            info!("Applied preset pattern column {} to row {} (pattern length: {}, euclidean_length set to: {})", 
+                  column, row, pattern_length, row_state.sequencer_a_euclidean_length);
+        } else {
+            info!("Applied preset pattern column {} to row {} (pattern length: {})", column, row, pattern_length);
+        }
     }
 
     /// Advanced Sequencing Features
