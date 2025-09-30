@@ -698,12 +698,11 @@ impl SimonSaysSeeq {
                             if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
                                 row_state.sequencer_a_euclidean_length = last_step;
                                 
-                                // If last_step is 31 (full 32 steps), sync this row with row 0 (master)
+                                // If last_step is 31 (full 32 steps), sync this row with global master step counter
                                 if last_step == 31 {
-                                    if let Some(master_row_state) = self.sequencer.get_row_states(0) {
-                                        row_state.sequencer_a_current_step = master_row_state.sequencer_a_current_step;
-                                        info!("ARM SET_SEQ_A_LENGTH: Row {} synced with master row 0 (current_step={})", seq_y, row_state.sequencer_a_current_step);
-                                    }
+                                    let (master_step, _) = self.sequencer.get_current_position();
+                                    row_state.sequencer_a_current_step = master_step;
+                                    info!("ARM SET_SEQ_A_LENGTH: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
                                 }
                                 
                                 self.sequencer.set_row_states(seq_y, row_state);
