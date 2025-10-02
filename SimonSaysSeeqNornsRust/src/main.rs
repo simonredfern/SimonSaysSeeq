@@ -1192,12 +1192,12 @@ impl SimonSaysSeeq {
                 // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
                     // NEW position is on GRID_ONE: Direct coordinate mapping  
-                    info!("GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={} (row={})", grid_one_id, new_step, row, new_brightness, if row == 1 { "ROW_1" } else { "other" });
+                    // info!("GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={} (row={})", grid_one_id, new_step, row, new_brightness, if row == 1 { "ROW_1" } else { "other" });
                     self.grid.set_led(grid_one_id, new_step, row, new_brightness, "grid_update_new_1")?;
                 } else if new_step > 15 && new_step <= 31 {
                     // NEW position is on GRID_TWO: Coordinate mapping required
                     let grid_x = new_step - 16;
-                    info!("GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={}) (row={})", grid_two_id, grid_x, row, new_brightness, new_step, if row == 1 { "ROW_1" } else { "other" });
+                    // info!("GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={}) (row={})", grid_two_id, grid_x, row, new_brightness, new_step, if row == 1 { "ROW_1" } else { "other" });
                     self.grid.set_led(grid_two_id, grid_x, row, new_brightness, "grid_update_new_2")?;
                 } else {
                     // warn!("GRID_DEBUG: NEW step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", new_step, row);

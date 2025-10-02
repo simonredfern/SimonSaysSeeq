@@ -642,7 +642,7 @@ impl Sequencer {
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // DEBUG: Show row 1 current step
         if let Some(row_state) = state.sequencer_a_row_states.get(1) {
-            info!("🎯 Row 1: step {}", row_state.sequencer_a_current_step);
+            info!("Row 1: step {}", row_state.sequencer_a_current_step);
         }
         
         // Process each sequence row (0-indexed)
