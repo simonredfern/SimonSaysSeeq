@@ -668,9 +668,10 @@ impl SimonSaysSeeq {
                                 if row_state.sequencer_a_current_step > last_step {
                                     // Reset to beginning of the row's own cycle
                                     row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
+                                    let new_step = row_state.sequencer_a_current_step;
                                     self.sequencer.set_row_states(seq_y, row_state);
                                     info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
-                                          seq_y, row_state.sequencer_a_current_step, last_step);
+                                          seq_y, new_step, last_step);
                                 }
                             } else {
                                 // Fallback if row_state is not available
