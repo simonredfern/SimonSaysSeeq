@@ -1,0 +1,84 @@
+[2025-10-02T21:31:38Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=14, y=1, brightness=14 (row=ROW_1)
+[2025-10-02T21:31:38Z INFO  simon_says_seeq::sequencer] Row 1: step 15
+[2025-10-02T21:31:38Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=15, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:39Z INFO  simon_says_seeq::sequencer] Row 1: step 16
+[2025-10-02T21:31:39Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=0, y=1, brightness=6 (original_step=16) (row=ROW_1)
+[2025-10-02T21:31:39Z INFO  simon_says_seeq::sequencer] Row 1: step 17
+[2025-10-02T21:31:39Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=1, y=1, brightness=6 (original_step=17) (row=ROW_1)
+[2025-10-02T21:31:40Z INFO  simon_says_seeq::sequencer] Row 1: step 18
+[2025-10-02T21:31:40Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=2, y=1, brightness=14 (original_step=18) (row=ROW_1)
+[2025-10-02T21:31:40Z INFO  simon_says_seeq::sequencer] Row 1: step 19
+[2025-10-02T21:31:40Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=3, y=1, brightness=6 (original_step=19) (row=ROW_1)
+[2025-10-02T21:31:41Z INFO  simon_says_seeq::sequencer] Row 1: step 20
+[2025-10-02T21:31:41Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=4, y=1, brightness=6 (original_step=20) (row=ROW_1)
+[2025-10-02T21:31:41Z INFO  simon_says_seeq::sequencer] Row 1: step 21
+[2025-10-02T21:31:41Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=5, y=1, brightness=6 (original_step=21) (row=ROW_1)
+[2025-10-02T21:31:42Z INFO  simon_says_seeq::sequencer] Row 1: step 22
+[2025-10-02T21:31:42Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=6, y=1, brightness=14 (original_step=22) (row=ROW_1)
+[2025-10-02T21:31:42Z INFO  simon_says_seeq::sequencer] Row 1: step 23
+[2025-10-02T21:31:42Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=7, y=1, brightness=6 (original_step=23) (row=ROW_1)
+[2025-10-02T21:31:43Z INFO  simon_says_seeq::sequencer] Row 1: step 24
+[2025-10-02T21:31:43Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=8, y=1, brightness=6 (original_step=24) (row=ROW_1)
+[2025-10-02T21:31:43Z INFO  simon_says_seeq::sequencer] Row 1: step 25
+[2025-10-02T21:31:43Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=9, y=1, brightness=6 (original_step=25) (row=ROW_1)
+[2025-10-02T21:31:44Z INFO  simon_says_seeq::sequencer] Row 1: step 26
+[2025-10-02T21:31:44Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=10, y=1, brightness=14 (original_step=26) (row=ROW_1)
+[2025-10-02T21:31:44Z INFO  simon_says_seeq::sequencer] Row 1: step 27
+[2025-10-02T21:31:44Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=11, y=1, brightness=6 (original_step=27) (row=ROW_1)
+[2025-10-02T21:31:45Z INFO  simon_says_seeq::sequencer] Row 1: step 28
+[2025-10-02T21:31:45Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=12, y=1, brightness=6 (original_step=28) (row=ROW_1)
+[2025-10-02T21:31:45Z INFO  simon_says_seeq::sequencer] Row 1: step 29
+[2025-10-02T21:31:45Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=13, y=1, brightness=6 (original_step=29) (row=ROW_1)
+[2025-10-02T21:31:46Z INFO  simon_says_seeq::sequencer] Row 1: step 30
+[2025-10-02T21:31:46Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=14, y=1, brightness=14 (original_step=30) (row=ROW_1)
+[2025-10-02T21:31:46Z INFO  simon_says_seeq::sequencer] Row 1: step 31
+[2025-10-02T21:31:46Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=15, y=1, brightness=6 (original_step=31) (row=ROW_1)
+[2025-10-02T21:31:47Z INFO  simon_says_seeq::sequencer] Row 1: step 0
+[2025-10-02T21:31:47Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=0, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:47Z INFO  simon_says_seeq::sequencer] Row 1: step 1
+[2025-10-02T21:31:47Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=1, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:48Z INFO  simon_says_seeq::sequencer] Row 1: step 2
+[2025-10-02T21:31:48Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=2, y=1, brightness=14 (row=ROW_1)
+[2025-10-02T21:31:48Z INFO  simon_says_seeq::sequencer] Row 1: step 3
+[2025-10-02T21:31:48Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=3, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:49Z INFO  simon_says_seeq::sequencer] Row 1: step 4
+[2025-10-02T21:31:49Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=4, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:49Z INFO  simon_says_seeq::sequencer] Row 1: step 5
+[2025-10-02T21:31:49Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=5, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:50Z INFO  simon_says_seeq::sequencer] Row 1: step 6
+[2025-10-02T21:31:50Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=6, y=1, brightness=14 (row=ROW_1)
+[2025-10-02T21:31:50Z INFO  simon_says_seeq::sequencer] Row 1: step 7
+[2025-10-02T21:31:50Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=7, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:51Z INFO  simon_says_seeq::sequencer] Row 1: step 8
+[2025-10-02T21:31:51Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=8, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:51Z INFO  simon_says_seeq::sequencer] Row 1: step 9
+[2025-10-02T21:31:51Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=9, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:52Z INFO  simon_says_seeq::sequencer] Row 1: step 10
+[2025-10-02T21:31:52Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=10, y=1, brightness=14 (row=ROW_1)
+[2025-10-02T21:31:52Z INFO  simon_says_seeq::sequencer] Row 1: step 11
+[2025-10-02T21:31:52Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=11, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:53Z INFO  simon_says_seeq::sequencer] Row 1: step 12
+[2025-10-02T21:31:53Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=12, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:53Z INFO  simon_says_seeq::sequencer] Row 1: step 13
+[2025-10-02T21:31:53Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=13, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:54Z INFO  simon_says_seeq::sequencer] Row 1: step 14
+[2025-10-02T21:31:54Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=14, y=1, brightness=14 (row=ROW_1)
+[2025-10-02T21:31:54Z INFO  simon_says_seeq::sequencer] Row 1: step 15
+[2025-10-02T21:31:54Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id=m2949672, x=15, y=1, brightness=6 (row=ROW_1)
+[2025-10-02T21:31:55Z INFO  simon_says_seeq::sequencer] Row 1: step 16
+[2025-10-02T21:31:55Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=0, y=1, brightness=6 (original_step=16) (row=ROW_1)
+[2025-10-02T21:31:55Z INFO  simon_says_seeq::sequencer] Row 1: step 17
+[2025-10-02T21:31:55Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=1, y=1, brightness=6 (original_step=17) (row=ROW_1)
+[2025-10-02T21:31:56Z INFO  simon_says_seeq::sequencer] Row 1: step 18
+[2025-10-02T21:31:56Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=2, y=1, brightness=14 (original_step=18) (row=ROW_1)
+[2025-10-02T21:31:56Z INFO  simon_says_seeq::sequencer] Row 1: step 19
+[2025-10-02T21:31:56Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=3, y=1, brightness=6 (original_step=19) (row=ROW_1)
+[2025-10-02T21:31:57Z INFO  simon_says_seeq::sequencer] Row 1: step 20
+[2025-10-02T21:31:57Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=4, y=1, brightness=6 (original_step=20) (row=ROW_1)
+[2025-10-02T21:31:57Z INFO  simon_says_seeq::sequencer] Row 1: step 21
+[2025-10-02T21:31:57Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=5, y=1, brightness=6 (original_step=21) (row=ROW_1)
+[2025-10-02T21:31:58Z INFO  simon_says_seeq::sequencer] Row 1: step 22
+[2025-10-02T21:31:58Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=6, y=1, brightness=14 (original_step=22) (row=ROW_1)
+[2025-10-02T21:31:58Z INFO  simon_says_seeq::sequencer] Row 1: step 23
+[2025-10-02T21:31:58Z INFO  simon_says_seeq] GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id=m5032747, x=7, y=1, brightness=6 (original_step=23) (row=ROW_1)
+
