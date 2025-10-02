@@ -1120,8 +1120,8 @@ impl SimonSaysSeeq {
         let connected_grids = self.grid.get_connected_grids();
         
         // DEBUG: Log grid update details
-        info!("GRID_DEBUG: handle_grid_update called - row: {}, old_step: {}, new_step: {}", row, old_step, new_step);
-        info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
+        // info!("GRID_DEBUG: handle_grid_update called - row: {}, old_step: {}, new_step: {}", row, old_step, new_step);
+        // info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
 
         // DEBUG: Focused tracking for row 0 LED updates
         // if row == 0 {
@@ -1375,7 +1375,7 @@ impl SimonSaysSeeq {
     /// Get sorted grid IDs - returns (GRID_ONE, GRID_TWO)
     fn get_sorted_grid_ids(&self, connected_grids: &[String]) -> (Option<String>, Option<String>) {
         // DEBUG: Track grid ID consistency
-        info!("GRID_DEBUG: get_sorted_grid_ids called with {} grids: {:?}", connected_grids.len(), connected_grids);
+        // info!("GRID_DEBUG: get_sorted_grid_ids called with {} grids: {:?}", connected_grids.len(), connected_grids);
         
         // Always sort grids by ID for consistency
         let mut sorted_grids = connected_grids.to_vec();
@@ -1384,8 +1384,8 @@ impl SimonSaysSeeq {
         let grid_one = sorted_grids.first().cloned();
         let grid_two = if sorted_grids.len() > 1 { sorted_grids.get(1).cloned() } else { None };
         
-        info!("GRID_DEBUG: Sorted result - GRID_ONE (lowest ID): {:?}", grid_one);
-        info!("GRID_DEBUG: Sorted result - GRID_TWO (second lowest ID): {:?}", grid_two);
+        // info!("GRID_DEBUG: Sorted result - GRID_ONE (lowest ID): {:?}", grid_one);
+        // info!("GRID_DEBUG: Sorted result - GRID_TWO (second lowest ID): {:?}", grid_two);
         
         (grid_one, grid_two)
     }
