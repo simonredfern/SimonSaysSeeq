@@ -666,13 +666,11 @@ impl SimonSaysSeeq {
                                 // Reset step position if it's beyond the new length
                                 let last_step = length - 1; // Convert to 0-based
                                 if row_state.sequencer_a_current_step > last_step {
-                                    let (master_step, _) = self.sequencer.get_current_position();
-                                    // Reset to current master position, but clamp within new length
-                                    let new_step = master_step % length;
-                                    row_state.sequencer_a_current_step = new_step;
+                                    // Reset to beginning of the row's own cycle
+                                    row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
                                     self.sequencer.set_row_states(seq_y, row_state);
                                     info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
-                                          seq_y, new_step, last_step);
+                                          seq_y, row_state.sequencer_a_current_step, last_step);
                                 }
                             } else {
                                 // Fallback if row_state is not available
@@ -714,12 +712,10 @@ impl SimonSaysSeeq {
                                 
                                 // Reset step position if it's beyond the new length
                                 if row_state.sequencer_a_current_step > last_step {
-                                    let (master_step, _) = self.sequencer.get_current_position();
-                                    // Reset to current master position, but clamp within new length
-                                    let new_step = master_step % length;
-                                    row_state.sequencer_a_current_step = new_step;
+                                    // Reset to beginning of the row's own cycle
+                                    row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
                                     info!("ARM SET_SEQ_A_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
-                                          seq_y, new_step, last_step);
+                                          seq_y, row_state.sequencer_a_current_step, last_step);
                                 } else if last_step == 31 {
                                     // If last_step is 31 (full 32 steps), sync this row with global master step counter
                                     let (master_step, _) = self.sequencer.get_current_position();
