@@ -35,7 +35,7 @@ impl Crow {
         {
             // Retry USB device detection with backoff for boot reliability
             for attempt in 1..=10 {
-                info!("Crow initialization attempt {}/10", attempt);
+                // info!("Crow initialization attempt {}/10", attempt);
                 
                 if attempt > 1 {
                     std::thread::sleep(Duration::from_secs(attempt as u64));
@@ -45,16 +45,16 @@ impl Crow {
                     return Ok(());
                 }
                 
-                warn!("Crow initialization attempt {} failed, retrying in {} seconds...", attempt, attempt + 1);
+                // warn!("Crow initialization attempt {} failed, retrying in {} seconds...", attempt, attempt + 1);
             }
             
-            warn!("Failed to initialize Crow after 10 attempts");
+            // warn!("Failed to initialize Crow after 10 attempts");
             return Err(anyhow!("Failed to find Crow USB serial device after retries"));
         }
 
         #[cfg(not(feature = "hardware"))]
         {
-            warn!("Crow support disabled (hardware feature not enabled)");
+            // warn!("Crow support disabled (hardware feature not enabled)");
             return Ok(());
         }
     }
@@ -79,13 +79,13 @@ impl Crow {
             // Try to find Crow by USB vendor/product ID
             match self.find_crow_device() {
                 Ok(Some(crow_path)) => {
-                    info!("Found Crow device at: {}", crow_path);
+                    // info!("Found Crow device at: {}", crow_path);
                     match serialport::new(&crow_path, 115_200)
                         .timeout(Duration::from_millis(1000))
                         .open()
                     {
                         Ok(port) => {
-                            info!("Crow found and opened at {}", crow_path);
+                            // info!("Crow found and opened at {}", crow_path);
                             self.port = Some(port);
                             self.enabled = true;
                             
@@ -95,19 +95,19 @@ impl Crow {
                             self.send_command("output[3].volts = 0")?;
                             self.send_command("output[4].volts = 0")?;
                             
-                            info!("Crow initialized - all outputs set to 0V");
+                            // info!("Crow initialized - all outputs set to 0V");
                             return Ok(());
                         }
                         Err(e) => {
-                            warn!("Failed to open identified Crow device {}: {}", crow_path, e);
+                            // warn!("Failed to open identified Crow device {}: {}", crow_path, e);
                         }
                     }
                 }
                 Ok(None) => {
-                    debug!("No Crow device found by USB ID, trying fallback paths");
+                    // debug!("No Crow device found by USB ID, trying fallback paths");
                 }
                 Err(e) => {
-                    warn!("Error searching for Crow device: {}", e);
+                    // warn!("Error searching for Crow device: {}", e);
                 }
             }
 
@@ -133,7 +133,7 @@ impl Crow {
                     .open()
                 {
                     Ok(port) => {
-                        info!("Crow found and opened at {} (fallback detection)", path);
+                        // info!("Crow found and opened at {} (fallback detection)", path);
                         self.port = Some(port);
                         self.enabled = true;
                         
@@ -143,7 +143,7 @@ impl Crow {
                         self.send_command("output[3].volts = 0")?;
                         self.send_command("output[4].volts = 0")?;
                         
-                        info!("Crow initialized - all outputs set to 0V");
+                        // info!("Crow initialized - all outputs set to 0V");
                         return Ok(());
                     }
                     Err(_) => continue,
@@ -167,7 +167,7 @@ impl Crow {
     /// Set all 4 CV outputs to specified voltages
     pub fn set_all_outputs(&mut self, v1: f32, v2: f32, v3: f32, v4: f32) -> Result<()> {
         if !self.enabled {
-            debug!("Crow disabled - output voltages ignored");
+            // debug!("Crow disabled - output voltages ignored");
             return Ok(());
         }
 
@@ -182,7 +182,7 @@ impl Crow {
         self.send_command(&format!("output[3].volts = {:.6}", v3))?;
         self.send_command(&format!("output[4].volts = {:.6}", v4))?;
 
-        debug!("Crow outputs: {:.3}V, {:.3}V, {:.3}V, {:.3}V", v1, v2, v3, v4);
+        // debug!("Crow outputs: {:.3}V, {:.3}V, {:.3}V, {:.3}V", v1, v2, v3, v4);
         Ok(())
     }
 
@@ -194,14 +194,14 @@ impl Crow {
                 // Send the Lua command followed by newline
                 let command = format!("{}\n", lua_code);
                 
-                info!("Sending to Crow: {}", lua_code);
+                // info!("Sending to Crow: {}", lua_code);
                 
                 match port.write_all(command.as_bytes()) {
                     Ok(()) => {
-                        info!("Command written to serial port");
+                        // info!("Command written to serial port");
                     }
                     Err(e) => {
-                        error!("Failed to write to Crow serial port: {}", e);
+                        // error!("Failed to write to Crow serial port: {}", e);
                         return Err(anyhow!("Failed to send command to Crow: {}", e));
                     }
                 }
@@ -211,18 +211,18 @@ impl Crow {
                         info!("Serial port flushed successfully");
                     }
                     Err(e) => {
-                        error!("Failed to flush Crow serial port: {}", e);
+                        // error!("Failed to flush Crow serial port: {}", e);
                         return Err(anyhow!("Failed to flush Crow serial port: {}", e));
                     }
                 }
                 
                 return Ok(());
             } else {
-                error!("Crow serial port is None");
+                // error!("Crow serial port is None");
             }
         }
         
-        error!("Crow serial port not available");
+        // error!("Crow serial port not available");
         Err(anyhow!("Crow serial port not available"))
     }
 

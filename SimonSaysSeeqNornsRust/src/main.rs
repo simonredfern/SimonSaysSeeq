@@ -195,11 +195,11 @@ impl SimonSaysSeeq {
 
         // Initialize Crow USB serial communication
         if let Err(e) = self.crow.initialize() {
-            warn!("Failed to initialize Crow: {}. CV output will be disabled.", e);
+            // warn!("Failed to initialize Crow: {}. CV output will be disabled.", e);
         } else if self.crow.is_enabled() {
-            info!("🎛️  Crow USB serial initialized and ready");
+            // info!("🎛️  Crow USB serial initialized and ready");
         } else {
-            info!("🎛️  Crow CV output disabled (hardware feature not enabled)");
+            // info!("🎛️  Crow CV output disabled (hardware feature not enabled)");
         }
 
         // Display CO2 data initialization status
@@ -912,33 +912,33 @@ impl SimonSaysSeeq {
                                 7 => {
                                     self.crow_cv1_muted = !self.crow_cv1_muted;
                                     if self.crow_cv1_muted {
-                                        info!("handle_grid_press says: MUTE_CROW_1 toggled ON - Crow CV1 output muted");
+                                        // info!("handle_grid_press says: MUTE_CROW_1 toggled ON - Crow CV1 output muted");
                                     } else {
-                                        info!("handle_grid_press says: MUTE_CROW_1 toggled OFF - Crow CV1 output enabled");
+                                        // info!("handle_grid_press says: MUTE_CROW_1 toggled OFF - Crow CV1 output enabled");
                                     }
                                 }
                                 8 => {
                                     self.crow_cv2_muted = !self.crow_cv2_muted;
                                     if self.crow_cv2_muted {
-                                        info!("handle_grid_press says: MUTE_CROW_2 toggled ON - Crow CV2 output muted");
+                                        // info!("handle_grid_press says: MUTE_CROW_2 toggled ON - Crow CV2 output muted");
                                     } else {
-                                        info!("handle_grid_press says: MUTE_CROW_2 toggled OFF - Crow CV2 output enabled");
+                                        // info!("handle_grid_press says: MUTE_CROW_2 toggled OFF - Crow CV2 output enabled");
                                     }
                                 }
                                 9 => {
                                     self.crow_cv3_muted = !self.crow_cv3_muted;
                                     if self.crow_cv3_muted {
-                                        info!("handle_grid_press says: MUTE_CROW_3 toggled ON - Crow CV3 output muted");
+                                        // info!("handle_grid_press says: MUTE_CROW_3 toggled ON - Crow CV3 output muted");
                                     } else {
-                                        info!("handle_grid_press says: MUTE_CROW_3 toggled OFF - Crow CV3 output enabled");
+                                        // info!("handle_grid_press says: MUTE_CROW_3 toggled OFF - Crow CV3 output enabled");
                                     }
                                 }
                                 10 => {
                                     self.crow_cv4_muted = !self.crow_cv4_muted;
                                     if self.crow_cv4_muted {
-                                        info!("handle_grid_press says: MUTE_CROW_4 toggled ON - Crow CV4 output muted");
+                                        // info!("handle_grid_press says: MUTE_CROW_4 toggled ON - Crow CV4 output muted");
                                     } else {
-                                        info!("handle_grid_press says: MUTE_CROW_4 toggled OFF - Crow CV4 output enabled");
+                                        // info!("handle_grid_press says: MUTE_CROW_4 toggled OFF - Crow CV4 output enabled");
                                     }
                                 }
                                 _ => {}
@@ -1663,12 +1663,12 @@ impl SimonSaysSeeq {
                     } else {
                         // Only log when at least one CV output is not muted
                         if !self.crow_cv1_muted || !self.crow_cv2_muted || !self.crow_cv3_muted || !self.crow_cv4_muted {
-                            info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/YoY:{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, SeasonΔ:{:.3}V]", 
-                                  co2_manager.get_step_counter(), co2_manager.get_tick_counter(), 
-                                  co2_step_value, co2_tick_value,
-                                  co2_manager.get_step_delta(), co2_manager.get_seasonal_anomaly_delta(),
-                                  final_cv1, final_cv2, 
-                                  final_cv3, final_cv4);
+                            // info!("🎛️  CO2 CV Output - Step#{} Tick#{}: Step:{:.2}ppm Tick:{:.2}ppm Δ:{:.3}ppm/YoY:{:.3}ppm -> [Step:{:.3}V, Tick:{:.3}V, StepΔ:{:.3}V, SeasonΔ:{:.3}V]", 
+                            //       co2_manager.get_step_counter(), co2_manager.get_tick_counter(), 
+                            //       co2_step_value, co2_tick_value,
+                            //       co2_manager.get_step_delta(), co2_manager.get_seasonal_anomaly_delta(),
+                            //       final_cv1, final_cv2, 
+                            //       final_cv3, final_cv4);
                         }
                     }
                 } else {
@@ -1712,8 +1712,8 @@ impl SimonSaysSeeq {
                     } else {
                         // Only log when CV2 is not muted
                         if !self.crow_cv2_muted {
-                            info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", 
-                                  co2_manager.get_tick_counter(), co2_tick_value, final_tick_voltage);
+                            // info!("🎛️  CO2 Tick CV - Tick#{}: {:.2}ppm -> Output 2: {:.3}V", 
+                            //       co2_manager.get_tick_counter(), co2_tick_value, final_tick_voltage);
                         }
                     }
                 }
