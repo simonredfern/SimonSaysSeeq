@@ -208,7 +208,7 @@ impl Crow {
                 
                 match port.flush() {
                     Ok(()) => {
-                        info!("Serial port flushed successfully");
+                        // info!("Serial port flushed successfully");
                     }
                     Err(e) => {
                         // error!("Failed to flush Crow serial port: {}", e);

@@ -115,31 +115,31 @@ impl Co2Manager {
         };
         
         if manager.config.enabled {
-            info!("🔍 CO2 Debug: Starting data loading process");
-            info!("🔍 CO2 Debug: Data directory: {:?}", manager.config.data_dir);
-            info!("🔍 CO2 Debug: All daily path: {:?}", manager.all_daily_path);
+            // info!("🔍 CO2 Debug: Starting data loading process");
+            // info!("🔍 CO2 Debug: Data directory: {:?}", manager.config.data_dir);
+            // info!("🔍 CO2 Debug: All daily path: {:?}", manager.all_daily_path);
             
             match manager.load_data() {
                 Ok(()) => {
-                    info!("CO2 data loaded successfully");
-                    info!("🔍 CO2 Debug: Records loaded: {}", manager.records.len());
+                    // info!("CO2 data loaded successfully");
+                    // info!("🔍 CO2 Debug: Records loaded: {}", manager.records.len());
                     if !manager.records.is_empty() {
                         let first = &manager.records[0];
                         let last = &manager.records[manager.records.len() - 1];
-                        info!("🔍 CO2 Debug: First record: {}/{}/{} = {:.2} ppm", first.year, first.month, first.day, first.co2_ppm);
-                        info!("🔍 CO2 Debug: Last record: {}/{}/{} = {:.2} ppm", last.year, last.month, last.day, last.co2_ppm);
-                        info!("⏱️  CO2 timing: 6 ticks per step (1 tick = 1 MIDI clock pulse)");
+                        // info!("🔍 CO2 Debug: First record: {}/{}/{} = {:.2} ppm", first.year, first.month, first.day, first.co2_ppm);
+                        // info!("🔍 CO2 Debug: Last record: {}/{}/{} = {:.2} ppm", last.year, last.month, last.day, last.co2_ppm);
+                        // info!("⏱️  CO2 timing: 6 ticks per step (1 tick = 1 MIDI clock pulse)");
                     }
                 }
                 Err(e) => {
-                    warn!("CO2 data loading failed: {}", e);
-                    warn!("CO2 manager will continue without data");
-                    warn!("🔍 CO2 Debug: Records after failure: {}", manager.records.len());
+                    // warn!("CO2 data loading failed: {}", e);
+                    // warn!("CO2 manager will continue without data");
+                    // warn!("🔍 CO2 Debug: Records after failure: {}", manager.records.len());
                     // Continue with empty data - don't fail initialization
                 }
             }
         } else {
-            info!("CO2 features disabled in configuration");
+            // info!("CO2 features disabled in configuration");
         }
         
         Ok(manager)
@@ -159,20 +159,20 @@ impl Co2Manager {
     
     /// Load all daily CO2 records from CSV
     fn load_all_daily_records(&mut self) -> Result<()> {
-        info!("🔍 CO2 Debug: Checking all daily file: {:?}", self.all_daily_path);
-        info!("🔍 CO2 Debug: File exists: {}", self.all_daily_path.exists());
+        // info!("🔍 CO2 Debug: Checking all daily file: {:?}", self.all_daily_path);
+        // info!("🔍 CO2 Debug: File exists: {}", self.all_daily_path.exists());
         
         if !self.all_daily_path.exists() {
-            warn!("All daily CO2 file not found: {:?}", self.all_daily_path);
+            // warn!("All daily CO2 file not found: {:?}", self.all_daily_path);
             return Ok(());
         }
 
         let metadata = fs::metadata(&self.all_daily_path)?;
-        info!("🔍 CO2 Debug: File size: {} bytes", metadata.len());
+        // info!("🔍 CO2 Debug: File size: {} bytes", metadata.len());
 
         let content = fs::read_to_string(&self.all_daily_path)?;
         let total_lines = content.lines().count();
-        info!("🔍 CO2 Debug: Total lines in file: {}", total_lines);
+        // info!("🔍 CO2 Debug: Total lines in file: {}", total_lines);
         
         let mut valid_records = 0;
         let mut invalid_records = 0;
@@ -186,44 +186,44 @@ impl Co2Manager {
 
             // Log first few lines for debugging
             if line_num < 5 {
-                info!("🔍 CO2 Debug: Line {}: {:?}", line_num + 1, line);
+                // info!("🔍 CO2 Debug: Line {}: {:?}", line_num + 1, line);
             }
 
             // Parse CSV line: year,month,day,decimal_date,co2_ppm
             let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
             
             if line_num < 5 {
-                info!("🔍 CO2 Debug: Parsed parts: {:?}", parts);
+                // info!("🔍 CO2 Debug: Parsed parts: {:?}", parts);
             }
 
             if parts.len() >= 5 {
                 match self.parse_co2_record(&parts) {
                     Ok(record) => {
                         if valid_records < 3 {
-                            info!("🔍 CO2 Debug: Valid record {}: {}/{}/{} = {:.2} ppm", valid_records + 1, record.year, record.month, record.day, record.co2_ppm);
+                            // info!("🔍 CO2 Debug: Valid record {}: {}/{}/{} = {:.2} ppm", valid_records + 1, record.year, record.month, record.day, record.co2_ppm);
                         }
                         self.records.push(record);
                         valid_records += 1;
                     }
                     Err(e) => {
                         if invalid_records < 10 { // Only log first 10 errors
-                            warn!("🔍 CO2 Debug: Invalid CO2 record at line {}: {} - {}", line_num + 1, line, e);
+                            // warn!("🔍 CO2 Debug: Invalid CO2 record at line {}: {} - {}", line_num + 1, line, e);
                         }
                         invalid_records += 1;
                     }
                 }
             } else {
                 if invalid_records < 10 {
-                    warn!("🔍 CO2 Debug: Malformed CO2 record at line {} (parts: {}): {}", line_num + 1, parts.len(), line);
+                    // warn!("🔍 CO2 Debug: Malformed CO2 record at line {} (parts: {}): {}", line_num + 1, parts.len(), line);
                 }
                 invalid_records += 1;
             }
         }
 
-        info!("🔍 CO2 Debug: Processing complete - Valid: {}, Invalid: {}, Empty: {}", valid_records, invalid_records, empty_lines);
+        // info!("🔍 CO2 Debug: Processing complete - Valid: {}, Invalid: {}, Empty: {}", valid_records, invalid_records, empty_lines);
 
         if valid_records > 0 {
-            info!("Loaded {} valid CO2 records (ignored {} invalid)", valid_records, invalid_records);
+            // info!("Loaded {} valid CO2 records (ignored {} invalid)", valid_records, invalid_records);
             // Calculate max delta for bipolar voltage scaling
             self.calculate_max_delta();
             // Calculate approximate days per year from data span
@@ -231,8 +231,8 @@ impl Co2Manager {
             // Calculate max seasonal delta for year-over-year scaling
             self.calculate_max_seasonal_delta();
         } else {
-            warn!("No valid CO2 records loaded from file");
-            warn!("🔍 CO2 Debug: This is why 'no data available' appears");
+            // warn!("No valid CO2 records loaded from file");
+            // warn!("🔍 CO2 Debug: This is why 'no data available' appears");
         }
 
         Ok(())
@@ -309,7 +309,7 @@ impl Co2Manager {
         self.tempo_analysis.is_wow_stable = true;
         self.tempo_analysis.is_flutter_stable = true;
         
-        debug!("CO2 counters reset");
+        // debug!("CO2 counters reset");
     }
     
     /// Advance step counter and return current CO2 value
@@ -321,7 +321,7 @@ impl Co2Manager {
         let co2_value = self.records[self.total_step_counter].co2_ppm;
         self.total_step_counter = (self.total_step_counter + 1) % self.records.len();
         
-        debug!("Step CO2: {:.2} ppm (step counter {})", co2_value, self.total_step_counter);
+        // debug!("Step CO2: {:.2} ppm (step counter {})", co2_value, self.total_step_counter);
         Some(co2_value)
     }
     
@@ -491,7 +491,7 @@ impl Co2Manager {
         }
         
         self.max_delta = max_delta.max(0.1); // Ensure minimum value to avoid division issues
-        debug!("Calculated max CO2 delta: {:.3} ppm", self.max_delta);
+        // debug!("Calculated max CO2 delta: {:.3} ppm", self.max_delta);
     }
 
     /// Calculate approximate days per year from the data span
@@ -509,7 +509,7 @@ impl Co2Manager {
             self.days_per_year = (self.records.len() as f32 / year_diff) as usize;
             // Clamp to reasonable bounds (360-370 days to handle leap years and data gaps)
             self.days_per_year = self.days_per_year.clamp(360, 370);
-            debug!("Calculated days per year: {} (from {} years of data)", self.days_per_year, year_diff);
+            // debug!("Calculated days per year: {} (from {} years of data)", self.days_per_year, year_diff);
         }
     }
 
@@ -534,7 +534,7 @@ impl Co2Manager {
         }
         
         self.max_seasonal_delta = max_seasonal_delta.max(0.1); // Ensure minimum value
-        debug!("Calculated max seasonal anomaly delta: {:.3} ppm", self.max_seasonal_delta);
+        // debug!("Calculated max seasonal anomaly delta: {:.3} ppm", self.max_seasonal_delta);
     }
     
     /// Analyze tempo stability using CO2 data influence
@@ -567,7 +567,7 @@ impl Co2Manager {
             if self.tempo_analysis.is_wow_stable {
                 self.tempo_analysis.wow_episodes += 1;
                 self.tempo_analysis.is_wow_stable = false;
-                debug!("Wow episode detected: deviation {:.2} BPM", wow_deviation);
+                // debug!("Wow episode detected: deviation {:.2} BPM", wow_deviation);
             }
         } else {
             self.tempo_analysis.is_wow_stable = true;
@@ -579,7 +579,7 @@ impl Co2Manager {
             if self.tempo_analysis.is_flutter_stable {
                 self.tempo_analysis.flutter_episodes += 1;
                 self.tempo_analysis.is_flutter_stable = false;
-                debug!("Flutter episode detected: deviation {:.2} BPM", flutter_deviation);
+                // debug!("Flutter episode detected: deviation {:.2} BPM", flutter_deviation);
             }
         } else {
             self.tempo_analysis.is_flutter_stable = true;
@@ -605,7 +605,7 @@ impl Co2Manager {
     pub fn has_data(&self) -> bool {
         let has_data = !self.records.is_empty();
         if !has_data {
-            info!("🔍 CO2 Debug: has_data() returning false - records.len() = {}", self.records.len());
+            // info!("🔍 CO2 Debug: has_data() returning false - records.len() = {}", self.records.len());
         }
         has_data
     }
@@ -669,7 +669,7 @@ impl Co2Manager {
     
     /// Reload data from files
     pub fn reload_data(&mut self) -> Result<()> {
-        info!("Reloading CO2 data");
+        // info!("Reloading CO2 data");
         self.records.clear();
         self.load_data()
     }

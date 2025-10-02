@@ -327,10 +327,10 @@ impl Sequencer {
         // Try to load saved pattern, or create default sparse pattern if none exists
         match sequencer.load_current_pattern_from_file() {
             Ok(()) => {
-                info!("Loaded saved pattern on startup");
+                // info!("Loaded saved pattern on startup");
             }
             Err(_) => {
-                info!("No saved pattern found, creating default sparse pattern");
+                // info!("No saved pattern found, creating default sparse pattern");
                 sequencer.create_default_sparse_pattern();
             }
         }
@@ -357,7 +357,7 @@ impl Sequencer {
             }
 
 
-            info!("Sequencer started");
+            // info!("Sequencer started");
         }
     }
 
@@ -374,12 +374,12 @@ impl Sequencer {
             }
             // Log the stack trace to identify what triggered the stop
             let trace = std::backtrace::Backtrace::capture();
-            info!("Sequencer stopped and reset - Stack trace: {}", trace);
+            // info!("Sequencer stopped and reset - Stack trace: {}", trace);
             
             // Save current pattern when stopping
             drop(state); // Release the lock before calling save method
             if let Err(e) = self.save_current_pattern_to_file() {
-                warn!("Failed to save current pattern on stop: {}", e);
+                // warn!("Failed to save current pattern on stop: {}", e);
             }
         }
     }
@@ -393,7 +393,7 @@ impl Sequencer {
     pub fn set_tempo(&self, tempo: f32) {
         let mut state = self.state.lock().unwrap();
         state.tempo = tempo.clamp(20.0, 300.0);
-        debug!("set_tempo says: Tempo set to: {:.1} BPM", state.tempo);
+        // debug!("set_tempo says: Tempo set to: {:.1} BPM", state.tempo);
     }
 
     /// Get current position
@@ -445,7 +445,7 @@ impl Sequencer {
             state.sequencer_a_mozart[x - 1][y - 1] = clamped_note;
             // Clear slide for immediate response
             state.slide.slide_grid[x - 1][y - 1] = 0.0;
-            debug!("Set mozart[{}][{}] = {}", x, y, clamped_note);
+            // debug!("Set mozart[{}][{}] = {}", x, y, clamped_note);
         }
     }
 
@@ -640,9 +640,9 @@ impl Sequencer {
 
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
-        // DEBUG: Show row 0 current step
-        if let Some(row_state) = state.sequencer_a_row_states.get(0) {
-            info!("🎯 Row 0: step {}", row_state.sequencer_a_current_step);
+        // DEBUG: Show row 1 current step
+        if let Some(row_state) = state.sequencer_a_row_states.get(1) {
+            info!("🎯 Row 1: step {}", row_state.sequencer_a_current_step);
         }
         
         // Process each sequence row (0-indexed)
@@ -681,7 +681,7 @@ impl Sequencer {
                             };
 
                             if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                                warn!("Failed to send MIDI note ON event: {}", e);
+                                // warn!("Failed to send MIDI note ON event: {}", e);
                             }
                         }
                     }
@@ -699,7 +699,7 @@ impl Sequencer {
                     old_step: row_state.sequencer_a_previous_step,
                     new_step: current_step,
                 }) {
-                    warn!("Failed to send grid update event: {}", e);
+                    // warn!("Failed to send grid update event: {}", e);
                 }
             }
         }
@@ -720,7 +720,7 @@ impl Sequencer {
         let state = self.state.lock().unwrap();
         let toml_string = toml::to_string(&*state)?;
         std::fs::write(path, toml_string)?;
-        info!("Sequencer state saved to: {}", path);
+        // info!("Sequencer state saved to: {}", path);
         Ok(())
     }
 
@@ -733,9 +733,9 @@ impl Sequencer {
             let mut state = self.state.lock().unwrap();
             *state = loaded_state;
 
-            info!("Sequencer state loaded from: {}", path);
+            // info!("Sequencer state loaded from: {}", path);
         } else {
-            warn!("State file not found: {}, using defaults", path);
+            // warn!("State file not found: {}, using defaults", path);
         }
         Ok(())
     }
@@ -788,7 +788,7 @@ impl Sequencer {
         let mut redo_stack = self.redo_stack.lock().unwrap();
         redo_stack.clear();
 
-        debug!("Pushed undo snapshot: {}", description);
+        // debug!("Pushed undo snapshot: {}", description);
     }
 
     /// Undo last action
@@ -840,7 +840,7 @@ impl Sequencer {
             state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();
-            info!("Undid: {}", description);
+            // info!("Undid: {}", description);
             Ok(description)
         } else {
             Err(anyhow::anyhow!("Undo stack corruption"))
@@ -896,7 +896,7 @@ impl Sequencer {
             state.sequencer_a_row_states = snapshot.row_states;
 
             let description = snapshot.description.clone();
-            info!("Redid: {}", description);
+            // info!("Redid: {}", description);
             Ok(description)
         } else {
             Err(anyhow::anyhow!("Redo stack corruption"))
@@ -919,7 +919,7 @@ impl Sequencer {
         patterns.insert(pattern_id, pattern_state);
 
         let description = name.unwrap_or_else(|| format!("Pattern {}", pattern_id));
-        info!("Saved pattern {}: {}", pattern_id, description);
+        // info!("Saved pattern {}: {}", pattern_id, description);
 
         Ok(())
     }
@@ -948,7 +948,7 @@ impl Sequencer {
             state.is_running = is_running;
 
             // Note: current_pattern tracking would need to be moved to state if needed
-            info!("Loaded pattern {}", pattern_id);
+            // info!("Loaded pattern {}", pattern_id);
 
             Ok(())
         } else {
