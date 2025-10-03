@@ -18,6 +18,10 @@ path = "src/main.rs"
 name = "midi_clock_detector"
 path = "src/bin/midi_clock_detector.rs"
 
+[[bin]]
+name = "automated_test_clock"
+path = "utils/automated_test_clock.rs"
+
 [dependencies]
 # MIDI handling (optional for development)
 midir = { version = "0.9", optional = true }
@@ -43,6 +47,7 @@ arrayvec = "0.7"
 
 # Serialization for state persistence
 serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1.0"
 toml = "0.8"
 
@@ -59,7 +64,7 @@ rosc = { version = "0.10", optional = true }
 # Logging
 log = "0.4"
 env_logger = "0.10"
-chrono = { version = "0.4", features = ["serde"] }
+
 
 # Signal handling
 ctrlc = "3.4"

@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use crate::formal_state_logger::{log_system_init, log_sequencer_state_change, log_step_advancement};
 
 /// MIDI gate base note - matches Lua version
 /// This works well with Flame MGTV factory default settings.
@@ -613,8 +614,9 @@ impl Sequencer {
                 state.sequencer_a_current_master_bar = state.min_bar;
             }
         }
-        
-        // Advance each row's current step based on its individual settings
+
+        // Advance all row step counters and collect step info for logging
+        let mut row_steps = Vec::new();
         for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
             let old_step = row_state.sequencer_a_current_step;
             row_state.sequencer_a_previous_step = old_step;
@@ -622,12 +624,16 @@ impl Sequencer {
             if row_state.sequencer_a_current_step > row_state.sequencer_a_euclidean_length {
                 row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
             }
+            row_steps.push((row_idx, row_state.sequencer_a_current_step));
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                  // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
                  //       row_idx, old_step, row_state.sequencer_a_current_step,
                  //       row_state.sequencer_a_first_step, row_state.sequencer_a_euclidean_length);
             }
         }
+
+        // Log step advancement to formal state logger
+        log_step_advancement(state.sequencer_a_current_master_step, state.sequencer_a_current_master_bar, row_steps);
 
         // Update CO2 counters if we have data
         if state.total_step_co2_count > 0 {
@@ -1012,6 +1018,12 @@ impl Sequencer {
         state.the_current_tick_count_since_start = tick_count_since_start;
 
         info!("Current pattern loaded from: {:?}", pattern_file);
+        
+        // Log initial state to formal state logger
+        if let Ok(pattern_json) = serde_json::to_string(&*state) {
+            log_system_init(&pattern_json);
+        }
+        
         Ok(())
     }
 

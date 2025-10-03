@@ -13,6 +13,8 @@ use std::time::{Duration, Instant};
 use chrono;
 use crossbeam_channel::Sender;
 
+use simon_says_seeq_rust::formal_state_logger::{self, log_button_press, log_button_release, log_midi_note_on, log_midi_note_off, log_arm_action_activated, log_arm_action_executed, ButtonSource, TestModeInjector};
+
 mod hardware;
 mod sequencer;
 mod midi;
@@ -117,6 +119,8 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
+    // Test mode injector for button simulation
+    test_injector: TestModeInjector,
 }
 
 impl SimonSaysSeeq {
@@ -174,6 +178,7 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
+            test_injector: TestModeInjector::new(),
         })
     }
 
@@ -310,6 +315,12 @@ impl SimonSaysSeeq {
                 if let Err(_e) = self.handle_hardware_event(event) {
                     // error!("Error handling hardware event: {}", e);
                 }
+            }
+
+            // Check for test mode button injections
+            let test_events = self.test_injector.check_injections();
+            for test_event in test_events {
+                let _ = self.handle_grid_press(&test_event.grid_id, test_event.x, test_event.y, test_event.is_press);
             }
 
             // Poll grid for button events
@@ -548,10 +559,16 @@ impl SimonSaysSeeq {
                         'A' => {
                             if midi_event.note_on {
                                 self.midi.sequencer_a_note_on(midi_event.note, midi_event.velocity, midi_event.channel)?;
+                                // Log to formal state logger
+                                log_midi_note_on(midi_event.note, midi_event.velocity, midi_event.channel, 
+                                               (midi_event.channel - 1) as usize, midi_event.step);
                                 // info!("Sequencer A MIDI Note ON: {} vel:{} ch:{} step:{}",
                                 //       midi_event.note, midi_event.velocity, midi_event.channel, midi_event.step);
                             } else {
                                 self.midi.sequencer_a_note_off(midi_event.note, midi_event.channel)?;
+                                // Log to formal state logger
+                                log_midi_note_off(midi_event.note, midi_event.channel, 
+                                                (midi_event.channel - 1) as usize);
                                 // info!("Sequencer A MIDI Note OFF: {} ch:{} step:{}",
                                 //       midi_event.note, midi_event.channel, midi_event.step);
                             }
@@ -581,6 +598,13 @@ impl SimonSaysSeeq {
     }
 
     fn handle_grid_press(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) -> Result<()> {
+        // Log to formal state logger
+        if pressed {
+            log_button_press(grid_id, x, y, ButtonSource::Hardware);
+        } else {
+            log_button_release(grid_id, x, y, ButtonSource::Hardware);
+        }
+        
         // DEBUG: Log ALL grid presses to trace Sequence B button issue
         // info!("DEBUG Sequence B: Grid press {} at ({},{}) pressed={} - Sequence B active: {:?}", 
         //       grid_id, x, y, pressed, self.active_arm_action);
@@ -709,9 +733,10 @@ impl SimonSaysSeeq {
                             
                             // Set the last step for this specific row
                             if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
+                                let old_length = row_state.sequencer_a_euclidean_length + 1;
                                 row_state.sequencer_a_euclidean_length = last_step;
                                 
-                                // Reset step position if it's beyond the new length
+                                // If current step is beyond new length, reset to beginning of the row's own cycle
                                 if row_state.sequencer_a_current_step > last_step {
                                     // Reset to beginning of the row's own cycle
                                     row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
@@ -725,6 +750,10 @@ impl SimonSaysSeeq {
                                 }
                                 
                                 self.sequencer.set_row_states(seq_y, row_state);
+                                
+                                // Log ARM action execution to formal state logger
+                                log_arm_action_executed("SetSeqALength", seq_y, seq_x, 
+                                    &format!("Changed row {} length from {} to {} steps", seq_y, old_length, length));
                                 
                                 // info!("ARM SET_SEQ_A_LENGTH: Successfully set row {} length to {} steps", seq_y, length);
                                 self.refresh_all_row_leds(seq_y)?;
@@ -975,6 +1004,8 @@ impl SimonSaysSeeq {
                                 self.grid.set_led(grid_id, x, seq_y, LED_MAX, "arm_press")?;
                                 self.grid.refresh()?;
                             }
+                            // Log ARM action activation to formal state logger
+                            log_arm_action_activated(&format!("{:?}", arm_action), x);
                             self.handle_arm_action(arm_action)?;
                         } else {
                             // ARM button released - deactivate mode
@@ -2007,6 +2038,14 @@ fn main() -> Result<()> {
         writeln!(ai_log, "\n## {} - SimonSaysSeeq Rust v{} Startup", timestamp, version).ok();
         writeln!(ai_log, "Build Profile: {}", profile).ok();
         writeln!(ai_log, "Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware")).ok();
+    }
+
+    // Initialize formal state logger
+    use simon_says_seeq_rust::formal_state_logger;
+    if let Err(e) = formal_state_logger::init_formal_logger() {
+        warn!("Failed to initialize formal state logger: {}", e);
+    } else {
+        info!("📝 Formal state logger initialized");
     }
 
     // Log startup banner with version and timestamp

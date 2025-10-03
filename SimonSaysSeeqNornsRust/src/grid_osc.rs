@@ -5,6 +5,7 @@
 
 use anyhow::{Result, anyhow};
 use log::{info, debug, warn, error};
+use crate::formal_state_logger::log_led_change;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::thread;
@@ -327,6 +328,8 @@ impl GridManager {
 
         //debug!("set_led says: LED update row {}: ({}, {}) brightness={} (caller: {})", seq_y, seq_x, seq_y, brightness, caller);
 
+        // Log to formal state logger
+        log_led_change(grid_id, x, y, brightness, caller);
 
         #[cfg(not(feature = "rosc"))]
         {

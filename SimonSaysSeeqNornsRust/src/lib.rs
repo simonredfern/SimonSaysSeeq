@@ -15,6 +15,7 @@ pub mod sequencer;
 pub mod co2;
 pub mod version;
 pub mod crow;
+pub mod formal_state_logger;
 
 // Re-export commonly used types
 pub use config::Config;
@@ -26,6 +27,7 @@ pub use screen::ScreenManager;
 pub use hardware::NornsHardware;
 pub use co2::Co2Manager;
 pub use crow::Crow;
+pub use formal_state_logger::{init_formal_logger, log_event, FormalStateEvent, ButtonSource, TestModeInjector};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
