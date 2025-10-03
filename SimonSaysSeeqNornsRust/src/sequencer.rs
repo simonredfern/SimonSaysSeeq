@@ -656,7 +656,7 @@ impl Sequencer {
                 let current_step = row_state.sequencer_a_current_step;
 
                 // Get grid value for this row at current step
-                if current_step < state.cols {
+                if current_step >= row_state.sequencer_a_first_step && current_step <= row_state.sequencer_a_euclidean_length {
                     let grid_value = state.sequencer_a_grid[current_step][row_idx];
 
                     if grid_value > 0 {
