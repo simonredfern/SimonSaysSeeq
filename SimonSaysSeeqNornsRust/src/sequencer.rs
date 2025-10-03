@@ -656,33 +656,31 @@ impl Sequencer {
                 let current_step = row_state.sequencer_a_current_step;
 
                 // Get grid value for this row at current step
-                if current_step >= row_state.sequencer_a_first_step && current_step <= row_state.sequencer_a_euclidean_length {
-                    let grid_value = state.sequencer_a_grid[current_step][row_idx];
+                let grid_value = state.sequencer_a_grid[current_step][row_idx];
 
-                    if grid_value > 0 {
-                        // This step is active - send MIDI note
-                        // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
-                        
-                        // DEBUG: Track MIDI step position for row 0
-                        // if row_idx == 0 {
-                        //     info!("🎵 MIDI DEBUG Row 0: Sending MIDI note at step {} (grid_value={})", current_step, grid_value);
-                        // }
+                if grid_value > 0 {
+                    // This step is active - send MIDI note
+                    // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
+                    
+                    // DEBUG: Track MIDI step position for row 0
+                    // if row_idx == 0 {
+                    //     info!("🎵 MIDI DEBUG Row 0: Sending MIDI note at step {} (grid_value={})", current_step, grid_value);
+                    // }
 
-                        // Send MIDI note ON event for this row
-                        if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
-                            let midi_event = MidiEvent {
-                                note: row_state.sequencer_a_midi_note,
-                                velocity: 100,                // Default velocity
-                                channel: (row_idx + 1) as u8, // Row-based channel 1-7
-                                note_on: true,
-                                step: current_step,
-                                bar: state.sequencer_a_current_master_bar,
-                                sequencer_source: 'A',
-                            };
+                    // Send MIDI note ON event for this row
+                    if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
+                        let midi_event = MidiEvent {
+                            note: row_state.sequencer_a_midi_note,
+                            velocity: 100,                // Default velocity
+                            channel: (row_idx + 1) as u8, // Row-based channel 1-7
+                            note_on: true,
+                            step: current_step,
+                            bar: state.sequencer_a_current_master_bar,
+                            sequencer_source: 'A',
+                        };
 
-                            if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                                // warn!("Failed to send MIDI note ON event: {}", e);
-                            }
+                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                            // warn!("Failed to send MIDI note ON event: {}", e);
                         }
                     }
                 }
