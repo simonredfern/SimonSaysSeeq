@@ -135,19 +135,7 @@ impl SimonSaysSeeq {
             sequencer: Sequencer::new(),
             #[cfg(feature = "midi")]
             midi: MidiManager::new(&config.midi)?,
-            grid: {
-                let grid_manager = GridManager::new()?;
-                // HARD REQUIREMENT: Verify exactly 2 real grids are connected
-                grid_manager.verify_two_grids_requirement()
-                    .map_err(|e| {
-                        // error!("STARTUP FAILURE: {}", e);
-                        // error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
-                        // error!("Application cannot start without meeting this requirement.");
-                        e
-                    })?;
-                // info!("✅ HARD REQUIREMENT MET: Two real grids verified at startup");
-                grid_manager
-            },
+            grid: GridManager::new()?,
             screen: ScreenManager::new()?,
             co2: {
                 let data_dir = std::path::PathBuf::from(&config.co2.data_dir);
@@ -1264,10 +1252,12 @@ impl SimonSaysSeeq {
 
         // Normal mode: Grid will be naturally painted by selective updates during playback
         // No need for full grid refresh - let the sequencer paint the display as it runs
-        if connected_grids.len() >= 2 {
+        if connected_grids.len() == 2 {
             info!("GRID DEBUG: Dual-grid mode active - display will be painted by selective updates");
+        } else if connected_grids.len() == 0 {
+            warn!("GRID DEBUG: No grids connected - running without hardware");
         } else {
-            error!("ERROR: Dual-grid mode required - {} grids connected", connected_grids.len());
+            error!("ERROR: Invalid grid configuration - {} grids connected (need 0 or 2)", connected_grids.len());
         }
 
         // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
