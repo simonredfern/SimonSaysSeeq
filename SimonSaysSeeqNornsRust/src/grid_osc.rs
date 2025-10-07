@@ -172,14 +172,17 @@ impl GridManager {
             error!("Unexpected number of grids connected: {}", self.devices.len());
             return Err(anyhow!("Invalid configuration: {} grids connected", self.devices.len()));
         }
-        // Assign grid roles (GRID_ONE and GRID_TWO) based on device IDs
-        let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
-        grid_ids.sort(); // Sort to ensure consistent assignment
+        
+        // Assign grid roles (GRID_ONE and GRID_TWO) based on device IDs - only if we have 2 grids
+        if self.devices.len() == 2 {
+            let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
+            grid_ids.sort(); // Sort to ensure consistent assignment
 
-        // info!("GRID ASSIGNMENT:");
-        // info!("  GRID_ONE: {} ({})", grid_ids[0], self.devices[&grid_ids[0]].device_type);
-        // info!("  GRID_TWO: {} ({})", grid_ids[1], self.devices[&grid_ids[1]].device_type);
-        // info!("SUCCESS: Two real grids connected and assigned as required!");
+            // info!("GRID ASSIGNMENT:");
+            // info!("  GRID_ONE: {} ({})", grid_ids[0], self.devices[&grid_ids[0]].device_type);
+            // info!("  GRID_TWO: {} ({})", grid_ids[1], self.devices[&grid_ids[1]].device_type);
+            // info!("SUCCESS: Two real grids connected and assigned as required!");
+        }
         
         Ok(())
     }
@@ -863,6 +866,10 @@ impl GridManager {
 
     /// Check if given grid_id is GRID_TWO
     fn is_grid_two(&self, grid_id: &str) -> Result<bool> {
+        // If no grids connected, return false (no transformation needed)
+        if self.devices.is_empty() {
+            return Ok(false);
+        }
         let grid_two_id = self.get_grid_two_id()?;
         Ok(grid_id == grid_two_id)
     }
