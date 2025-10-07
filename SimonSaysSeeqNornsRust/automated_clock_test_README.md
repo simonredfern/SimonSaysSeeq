@@ -30,34 +30,21 @@ This system solves the challenge of debugging timing-sensitive sequencer issues 
 
 ## Quick Start
 
-### 1. Build the Components
-
-```bash
-cd SimonSaysSeeqNornsRust
-
-# Build main sequencer
-cargo build --release
-
-# Build automated test clock
-cd utils
-cargo build --bin automated_test_clock
-cd ..
-```
-
-### 2. Start the System
+### 1. Start the System
 
 **Terminal 1: Main Sequencer**
 ```bash
-RUST_LOG=info ./target/release/simon-says-seeq-rust
+cd SimonSaysSeeqNornsRust
+RUST_LOG=info cargo run --release --bin simon_says_seeq
 ```
 
 **Terminal 2: Automated Test Clock**
 ```bash
-cd utils
-RUST_LOG=info ./target/debug/automated_test_clock
+cd SimonSaysSeeqNornsRust/utils
+RUST_LOG=info cargo run --bin automated_test_clock
 ```
 
-### 3. Run the 16-Step MIDI Debug Test
+### 2. Run the 16-Step MIDI Debug Test
 
 In Terminal 2:
 ```

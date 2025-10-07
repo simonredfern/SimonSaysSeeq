@@ -187,16 +187,21 @@ impl SimonSaysSeeq {
 
         // Verify and display grid assignment
         let connected_grids = self.grid.get_connected_grids();
-        if connected_grids.len() != 2 {
-            // error!("RUNTIME FAILURE: Expected exactly 2 grids, found {}", connected_grids.len());
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids required"));
-        }
         
-        let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
-        // info!("🎛️  GRID ASSIGNMENT:");
-        // info!("   GRID_ONE: {}", grid_one);
-        // info!("   GRID_TWO: {}", grid_two);
-        // info!("✅ Two real grids ready for operation");
+        if connected_grids.len() == 0 {
+            warn!("🎛️  GRID ASSIGNMENT: No grids connected");
+            warn!("⚠️  Running without hardware - button presses and LEDs will be ignored");
+        } else if connected_grids.len() == 2 {
+            let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
+            info!("🎛️  GRID ASSIGNMENT:");
+            info!("   GRID_ONE: {}", grid_one);
+            info!("   GRID_TWO: {}", grid_two);
+            info!("✅ Two real grids ready for operation");
+        } else {
+            // Should never happen due to GridManager checks, but handle it
+            error!("Invalid grid configuration: {} grids connected", connected_grids.len());
+            return Err(anyhow!("Either 0 or 2 grids are required, found {}", connected_grids.len()));
+        }
 
         // Initialize Crow USB serial communication
         if let Err(e) = self.crow.initialize() {

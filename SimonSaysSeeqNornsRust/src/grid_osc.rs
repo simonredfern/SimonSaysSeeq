@@ -139,23 +139,20 @@ impl GridManager {
         }
 
         if discovered_devices.is_empty() {
-            // error!("HARD REQUIREMENT VIOLATION: No serialosc devices found!");
-            // error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
-            // error!("Make sure:");
-            // error!("  1. Both grids are connected via USB");
-            // error!("  2. serialosc is running: sudo systemctl start serialosc");
-            // error!("  3. You're in the dialout group");
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids (GRID_ONE and GRID_TWO) are required but none were found."));
+            warn!("No serialosc devices found - running without grids");
+            warn!("Button presses and LED updates will be ignored");
+            return Ok(());
+        }
+
+        if discovered_devices.len() == 1 {
+            error!("Found 1 grid, but either 0 or 2 grids are required");
+            error!("Please connect a second grid or disconnect the first one");
+            return Err(anyhow!("Invalid configuration: Found 1 grid, but either 0 or 2 grids are required"));
         }
 
         if discovered_devices.len() != 2 {
-            // error!("HARD REQUIREMENT VIOLATION: Found {} grid(s), but exactly 2 are required!", discovered_devices.len());
-            // error!("SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
-            // error!("Currently detected grids:");
-            // for (device_id, device_type, device_port) in &discovered_devices {
-            //     error!("  - {} ({}) on port {}", device_id, device_type, device_port);
-            // }
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Exactly 2 real grids are required but {} were found.", discovered_devices.len()));
+            error!("Found {} grids, but either 0 or 2 grids are required", discovered_devices.len());
+            return Err(anyhow!("Invalid configuration: Found {} grids, but either 0 or 2 grids are required", discovered_devices.len()));
         }
 
         // Connect to each discovered device
@@ -165,12 +162,16 @@ impl GridManager {
             }
         }
 
-        // Verify we have exactly 2 grids connected
-        if self.devices.len() != 2 {
-            // error!("HARD REQUIREMENT VIOLATION: Connected to {} grid(s), but exactly 2 are required!", self.devices.len());
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Exactly 2 real grids are required but only {} connected successfully.", self.devices.len()));
+        // Log the number of grids connected (should be 0 or 2 at this point)
+        if self.devices.len() == 0 {
+            warn!("No grids connected - sequencer will run without hardware");
+        } else if self.devices.len() == 2 {
+            info!("✅ Successfully connected to 2 grids");
+        } else {
+            // Should not happen due to checks above, but handle gracefully
+            error!("Unexpected number of grids connected: {}", self.devices.len());
+            return Err(anyhow!("Invalid configuration: {} grids connected", self.devices.len()));
         }
-
         // Assign grid roles (GRID_ONE and GRID_TWO) based on device IDs
         let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
         grid_ids.sort(); // Sort to ensure consistent assignment
@@ -341,8 +342,13 @@ impl GridManager {
 
         #[cfg(feature = "rosc")]
         {
-        let device = self.devices.get(grid_id)
-            .ok_or_else(|| anyhow!("Grid {} not found", grid_id))?;
+        let device = match self.devices.get(grid_id) {
+            Some(d) => d,
+            None => {
+                // Grid not connected, silently ignore LED update
+                return Ok(());
+            }
+        };
 
         // Validate transformed coordinates
         if transformed_x >= device.cols || transformed_y >= device.rows {
