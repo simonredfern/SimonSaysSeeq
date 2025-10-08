@@ -3,7 +3,7 @@
 //! Provides MIDI output capabilities with note tracking and device management.
 
 use anyhow::{Result, anyhow};
-use log::{info, debug, warn, error};
+use log::{info, debug, warn, error, trace};
 #[cfg(feature = "midi")]
 use midir::{MidiInput, MidiOutput, MidiInputConnection, MidiOutputConnection, MidiInputPort, MidiOutputPort};
 use std::collections::HashMap;
@@ -341,9 +341,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                // info!("sequencer_a_note_on says: MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                trace!("MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                // info!("sequencer_a_note_on says: MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                trace!("MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
@@ -364,7 +364,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            // info!("sequencer_a_note_on says: MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            trace!("MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -628,7 +628,7 @@ impl MidiManager {
                     
                     // Always accept tempo readings - rejection logic removed
                     clock.external_tempo = Some(weighted_bpm);
-                    debug!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks)", 
+                    trace!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks)", 
                            weighted_bpm, active_windows, total_windows, total_ticks);
                 }
                 
@@ -695,9 +695,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} OFF", note_name));
                 
-                // info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+                trace!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
             } else {
-                // info!("note_off says: MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
+                trace!("MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
             }
         }
         
@@ -711,7 +711,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF", note_name));
             
-            // info!("note_off says: MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+            trace!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())

@@ -4,7 +4,7 @@
 //! without requiring the Norns Lua environment.
 
 use anyhow::Result;
-use log::{info, warn, debug, error};
+use log::{info, warn, debug, error, trace};
 use anyhow::anyhow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -1787,7 +1787,7 @@ impl SimonSaysSeeq {
                 // Reset CO2 counters on MIDI start
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
-                    info!("🔄 CO2 counters reset on MIDI start");
+                    debug!("🔄 CO2 counters reset on MIDI start");
                 }
                 
                 // Synchronize sequencer tempo with external MIDI clock on start
@@ -1811,7 +1811,7 @@ impl SimonSaysSeeq {
                 // Reset CO2 counters on MIDI stop
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
-                    info!("🔄 CO2 counters reset on MIDI stop");
+                    debug!("🔄 CO2 counters reset on MIDI stop");
                 }
                 
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
@@ -1863,11 +1863,11 @@ impl SimonSaysSeeq {
             }
             MidiInputEvent::NoteOn { channel, note, velocity } => {
                 // Sequencer B MIDI recording functionality removed
-                info!("MIDI Note On (sequencer B removed): Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
+                trace!("MIDI Note On (sequencer B removed): Channel: {}, Note: {}, Velocity: {}", channel, note, velocity);
             }
             MidiInputEvent::NoteOff { channel, note } => {
                 // Sequencer B MIDI recording functionality removed  
-                info!("MIDI Note Off (sequencer B removed): Channel: {}, Note: {}", channel, note);
+                trace!("MIDI Note Off (sequencer B removed): Channel: {}, Note: {}", channel, note);
             }
             MidiInputEvent::ControlChange { .. } => {
                 // Control Change events - currently not handled in main app
