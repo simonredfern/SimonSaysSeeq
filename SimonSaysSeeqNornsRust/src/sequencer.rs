@@ -621,6 +621,8 @@ impl Sequencer {
             let old_step = row_state.sequencer_a_current_step;
             row_state.sequencer_a_previous_step = old_step;
             row_state.sequencer_a_current_step += 1;
+            // Wrap step counter if it exceeds the euclidean_length
+            // euclidean_length is the max valid index (e.g., 31 for 32 steps)
             if row_state.sequencer_a_current_step > row_state.sequencer_a_euclidean_length {
                 row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
             }
@@ -665,6 +667,13 @@ impl Sequencer {
 
             if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
                 let current_step = row_state.sequencer_a_current_step;
+
+                // Bounds check: ensure current_step is valid for grid access
+                if current_step >= state.sequencer_a_grid.len() {
+                    warn!("Row {} current_step {} exceeds grid bounds ({}), skipping", 
+                          row_idx, current_step, state.sequencer_a_grid.len());
+                    continue;
+                }
 
                 // Get grid value for this row at current step
                 let grid_value = state.sequencer_a_grid[current_step][row_idx];
