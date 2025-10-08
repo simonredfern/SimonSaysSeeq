@@ -1,0 +1,107 @@
+{
+  "name": "16-Step MIDI Debug Test",
+  "description": "Reproduces the 16-step MIDI silence issue with formal state logging",
+  "initial_bpm": 120.0,
+  "commands": [
+    {
+      "command": "LogMilestone",
+      "message": "Starting 16-step MIDI debug test"
+    },
+    {
+      "command": "Start"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Creating test pattern at steps 0,4,8,12,16,20,24,28"
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_a.txt",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_a.txt",
+      "x": 4,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_a.txt",
+      "x": 8,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_a.txt",
+      "x": 12,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_b.txt",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_b.txt",
+      "x": 4,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_b.txt",
+      "x": 8,
+      "y": 0
+    },
+    {
+      "command": "SimpleButton",
+      "file": "button_b.txt",
+      "x": 12,
+      "y": 0
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Running full 32-step pattern for observation"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 64
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Setting row 0 to 16 steps using ARM SetSeqALength"
+    },
+    {
+      "command": "ArmAction",
+      "arm_column": 8,
+      "target_row": 0,
+      "target_column": 15
+    },
+    {
+      "command": "Wait",
+      "ms": 1000
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Observing 16-step behavior - MIDI should be silent for steps 16,20,24,28"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 64
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Test completed - check formal_state.log for detailed analysis"
+    },
+    {
+      "command": "Stop"
+    }
+  ]
+}

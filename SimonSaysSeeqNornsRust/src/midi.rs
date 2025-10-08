@@ -402,8 +402,18 @@ impl MidiManager {
         } else if !hardware_ports.is_empty() {
             hardware_ports[0].clone()
         } else {
-            warn!("initialize_input says: No hardware MIDI input ports available - MIDI input will be disabled");
-            return Ok(());
+            // No hardware ports - try Midi Through as fallback for testing with automated_test_clock
+            info!("initialize_input says: No hardware MIDI input ports found - checking for Midi Through port for testing");
+            match self.find_input_port_by_name(&midi_in, &in_ports, "Midi Through") {
+                Ok(port) => {
+                    info!("initialize_input says: Using Midi Through port for testing/automated test clock");
+                    port
+                }
+                Err(_) => {
+                    warn!("initialize_input says: No hardware MIDI input ports or Midi Through available - MIDI input will be disabled");
+                    return Ok(());
+                }
+            }
         };
         
         let port_name = midi_in.port_name(&selected_port)

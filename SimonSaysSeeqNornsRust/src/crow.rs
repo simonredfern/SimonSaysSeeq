@@ -34,8 +34,8 @@ impl Crow {
         #[cfg(feature = "hardware")]
         {
             // Retry USB device detection with backoff for boot reliability
-            for attempt in 1..=10 {
-                // info!("Crow initialization attempt {}/10", attempt);
+            for attempt in 1..=4 {
+                // info!("Crow initialization attempt {}/4", attempt);
                 
                 if attempt > 1 {
                     std::thread::sleep(Duration::from_secs(attempt as u64));
@@ -48,7 +48,7 @@ impl Crow {
                 // warn!("Crow initialization attempt {} failed, retrying in {} seconds...", attempt, attempt + 1);
             }
             
-            // warn!("Failed to initialize Crow after 10 attempts");
+            // warn!("Failed to initialize Crow after 4 attempts");
             return Err(anyhow!("Failed to find Crow USB serial device after retries"));
         }
 

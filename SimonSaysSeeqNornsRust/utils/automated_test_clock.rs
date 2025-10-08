@@ -565,15 +565,22 @@ impl AutomatedTestClock {
                 TestCommand::LogMilestone { 
                     message: "Pattern loaded to current_pattern.json".to_string() 
                 },
+                
+                // Start the MIDI clock
                 TestCommand::LogMilestone { 
-                    message: "NOTE: Start the sequencer now - it will load this pattern".to_string() 
+                    message: "Starting MIDI clock".to_string() 
                 },
+                TestCommand::Start,
+                TestCommand::Wait { ms: 500 },
+                
+                // Advance 33 steps
                 TestCommand::LogMilestone { 
-                    message: "Then run a test that sends MIDI clock to advance the sequencer".to_string() 
+                    message: "Advancing 33 steps to verify row counters".to_string() 
                 },
+                TestCommand::WaitSteps { count: 33 },
                 
                 TestCommand::LogMilestone { 
-                    message: "Expected states after 33 steps (for manual verification):".to_string() 
+                    message: "Expected states after 33 steps:".to_string() 
                 },
                 TestCommand::LogMilestone { 
                     message: "  Row 0 (len=32): step 1 (33 % 32 = 1)".to_string() 
@@ -593,6 +600,12 @@ impl AutomatedTestClock {
                 TestCommand::LogMilestone { 
                     message: "  Row 5 (len=14): step 5 (33 % 14 = 5)".to_string() 
                 },
+                
+                // Stop the MIDI clock
+                TestCommand::LogMilestone { 
+                    message: "Test complete - stopping MIDI clock".to_string() 
+                },
+                TestCommand::Stop,
             ],
         }
     }

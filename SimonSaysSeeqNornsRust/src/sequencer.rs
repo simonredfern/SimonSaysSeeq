@@ -646,10 +646,15 @@ impl Sequencer {
 
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
-        // DEBUG: Show row 1 current step
-        if let Some(row_state) = state.sequencer_a_row_states.get(1) {
-            info!("Row 1: step {}", row_state.sequencer_a_current_step);
-        }
+        // DEBUG: Show current step for all rows
+        debug!("Steps: [{}]", 
+            state.sequencer_a_row_states.iter()
+                .enumerate()
+                .take(7) // Only show rows 0-6 (sequencer rows)
+                .map(|(i, row)| format!("R{}:{}", i, row.sequencer_a_current_step))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         
         // Process each sequence row (0-indexed)
         for row_idx in 0..state.sequencer_a_row_states.len() {
