@@ -13,16 +13,16 @@
 //! - Enables reproducible test scenarios
 
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
-
 use midir::{MidiOutput, MidiOutputConnection};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use clap::Parser;
 
 /// Test script command types
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -38,6 +38,8 @@ pub enum TestCommand {
     SetBpm { bpm: f32 },
     /// Send specific number of MIDI clock ticks
     SendTicks { count: u32 },
+    /// Load a test pattern file into the sequencer
+    LoadPattern { file: String },
     /// Inject button press via button file
     ButtonPress { file: String, grid_id: String, x: usize, y: usize },
     /// Inject button release via button file
@@ -395,6 +397,15 @@ impl AutomatedTestClock {
                     self.log_event("test_send_ticks", Some(format!("Count: {}", count)));
                 }
                 
+                TestCommand::LoadPattern { file } => {
+                    println!("📂 Loading test pattern: {}", file);
+                    // Copy test pattern to current_pattern.json so sequencer loads it
+                    let test_pattern_content = fs::read_to_string(file)?;
+                    fs::write("current_pattern.json", test_pattern_content)?;
+                    println!("✅ Pattern loaded - sequencer will use it on next start");
+                    self.log_event("test_load_pattern", Some(format!("File: {}", file)));
+                }
+                
                 TestCommand::ButtonPress { file, grid_id, x, y } => {
                     self.execute_button_command(file, grid_id, *x, *y, true)?;
                 }
@@ -504,29 +515,121 @@ impl AutomatedTestClock {
     }
 }
 
-/// Show help message
-fn show_help() {
-    println!("Commands:");
-    println!("  s/start      - Start/stop MIDI clock");
-    println!("  <bpm>        - Set BPM (e.g., '120' or '140.5')");
-    println!("  ticks <n>    - Send n MIDI clock ticks");
-    println!("  script <file> - Execute test script from JSON file");
-    println!("  create-test  - Create sample 16-step test script");
-    println!("  h/help       - Show this help");
-    println!("  q/quit       - Exit");
+/// CLI arguments structure
+#[derive(Parser, Debug)]
+#[command(name = "automated_test_clock")]
+#[command(about = "Automated Test MIDI Clock Generator", long_about = None)]
+struct Args {
+    /// Run test1: Multi-length pattern test (32, 31, 30, 16, 15, 14 lengths, run 33 steps)
+    #[arg(long)]
+    test1: bool,
+
+    /// Run test1-advance: Send MIDI clock to advance sequencer 33 steps (requires sequencer running)
+    #[arg(long)]
+    test1_advance: bool,
+
+    /// Execute a test script from a JSON file
+    #[arg(long, value_name = "FILE")]
+    script: Option<String>,
+
+    /// Create the sample 16-step MIDI test script
+    #[arg(long)]
+    create_test: bool,
+
+    /// Set initial BPM
+    #[arg(long, default_value = "120.0")]
+    bpm: f32,
+}
+
+impl AutomatedTestClock {
+    /// Create test1: Multi-length pattern test
+    /// Tests patterns of various lengths (32, 31, 30, 16, 15, 14) and runs for 33 steps
+    fn create_test1_script() -> TestScript {
+        TestScript {
+            name: "Test1: Multi-Length Pattern Test".to_string(),
+            description: "Test patterns with lengths 32, 31, 30, 16, 15, 14 and verify step counters after 33 steps".to_string(),
+            initial_bpm: Some(120.0),
+            commands: vec![
+                TestCommand::LogMilestone { 
+                    message: "Starting Test1: Multi-Length Pattern Test".to_string() 
+                },
+                
+                // Load pre-configured test pattern with row lengths: 32, 31, 30, 16, 15, 14
+                TestCommand::LogMilestone { 
+                    message: "Loading test_pattern_1.json with row lengths [32, 31, 30, 16, 15, 14]".to_string() 
+                },
+                TestCommand::LoadPattern { 
+                    file: "test_patterns/test_pattern_1.json".to_string() 
+                },
+                
+                TestCommand::LogMilestone { 
+                    message: "Pattern loaded to current_pattern.json".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "NOTE: Start the sequencer now - it will load this pattern".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "Then run a test that sends MIDI clock to advance the sequencer".to_string() 
+                },
+                
+                TestCommand::LogMilestone { 
+                    message: "Expected states after 33 steps (for manual verification):".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 0 (len=32): step 1 (33 % 32 = 1)".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 1 (len=31): step 2 (33 % 31 = 2)".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 2 (len=30): step 3 (33 % 30 = 3)".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 3 (len=16): step 1 (33 % 16 = 1)".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 4 (len=15): step 3 (33 % 15 = 3)".to_string() 
+                },
+                TestCommand::LogMilestone { 
+                    message: "  Row 5 (len=14): step 5 (33 % 14 = 5)".to_string() 
+                },
+            ],
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
     println!("🤖 Automated Test MIDI Clock Generator");
     println!("═══════════════════════════════════════════════════════");
     println!("Enhanced MIDI clock with formal state logging and test automation");
     println!();
 
-    let mut clock = AutomatedTestClock::new(120.0);
+    // Handle create-test flag
+    if args.create_test {
+        let script = AutomatedTestClock::create_16_step_midi_test_script();
+        let filename = "16_step_midi_test.json";
+        match serde_json::to_string_pretty(&script) {
+            Ok(json) => {
+                if fs::write(filename, json).is_ok() {
+                    println!("✅ Created sample test script: {}", filename);
+                    println!("Run with: --script {}", filename);
+                } else {
+                    eprintln!("❌ Error writing test script file");
+                }
+            }
+            Err(e) => {
+                eprintln!("❌ Error serializing test script: {}", e);
+            }
+        }
+        return Ok(());
+    }
+
+    let mut clock = AutomatedTestClock::new(args.bpm);
     let connection = clock.connect_midi_output()?;
     
     println!("✅ MIDI Clock initialized at {:.1} BPM", clock.get_bpm());
-    show_help();
     println!();
 
     // Handle Ctrl+C gracefully
@@ -539,102 +642,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start the clock generation thread
     let clock_thread = clock.spawn_clock_thread(connection);
 
-    // Command loop
-    loop {
-        print!("> ");
-        io::stdout().flush()?;
-        
-        let mut input = String::new();
-        if io::stdin().read_line(&mut input).is_err() {
-            break;
-        }
-        let input = input.trim();
-        
-        if input.is_empty() {
-            continue;
-        }
-        
-        let parts: Vec<&str> = input.split_whitespace().collect();
-        
-        match parts[0] {
-            "s" | "start" => {
-                if clock.is_running.load(Ordering::Relaxed) {
-                    clock.stop()?;
-                } else {
-                    clock.start()?;
-                }
+    // Execute based on flags
+    if args.test1 {
+        println!("🧪 Running Test1: Multi-Length Pattern Test");
+        let script = AutomatedTestClock::create_test1_script();
+        clock.execute_test_script(script)?;
+    } else if let Some(script_file) = args.script {
+        println!("📜 Loading test script: {}", script_file);
+        match AutomatedTestClock::load_test_script(&script_file) {
+            Ok(script) => {
+                println!("🧪 Executing: {}", script.name);
+                clock.execute_test_script(script)?;
             }
-            
-            "ticks" => {
-                if parts.len() > 1 {
-                    if let Ok(count) = parts[1].parse::<u32>() {
-                        clock.send_ticks(count)?;
-                    } else {
-                        println!("Invalid tick count. Usage: ticks <number>");
-                    }
-                } else {
-                    println!("Usage: ticks <number>");
-                }
-            }
-            
-            "script" => {
-                if parts.len() > 1 {
-                    match AutomatedTestClock::load_test_script(parts[1]) {
-                        Ok(script) => {
-                            if let Err(e) = clock.execute_test_script(script) {
-                                eprintln!("Error executing test script: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Error loading test script: {}", e);
-                        }
-                    }
-                } else {
-                    println!("Usage: script <filename.json>");
-                }
-            }
-            
-            "create-test" => {
-                let script = AutomatedTestClock::create_16_step_midi_test_script();
-                let filename = "16_step_midi_test.json";
-                match serde_json::to_string_pretty(&script) {
-                    Ok(json) => {
-                        if fs::write(filename, json).is_ok() {
-                            println!("✅ Created sample test script: {}", filename);
-                            println!("Run with: script {}", filename);
-                        } else {
-                            eprintln!("Error writing test script file");
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error serializing test script: {}", e);
-                    }
-                }
-            }
-            
-            "h" | "help" => {
-                show_help();
-            }
-            
-            "q" | "quit" => {
-                break;
-            }
-            
-            _ => {
-                // Try to parse as BPM
-                if let Ok(bpm) = input.parse::<f32>() {
-                    clock.set_bpm(bpm)?;
-                    println!("BPM: {:.1}", clock.get_bpm());
-                } else {
-                    println!("Unknown command. Type 'h' for help.");
-                }
+            Err(e) => {
+                eprintln!("❌ Error loading test script: {}", e);
+                return Err(e);
             }
         }
-        
-        // Check if we should exit due to signal
-        if clock.should_exit.load(Ordering::Relaxed) {
-            break;
-        }
+    } else {
+        println!("ℹ️  No test specified. Available options:");
+        println!("  --test1              Run multi-length pattern test");
+        println!("  --script <file>      Execute test script from JSON file");
+        println!("  --create-test        Create sample 16-step test script");
+        println!("  --bpm <value>        Set initial BPM (default: 120.0)");
+        println!();
+        println!("Use --help for more information");
     }
 
     // Clean shutdown

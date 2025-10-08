@@ -30,7 +30,9 @@ This system solves the challenge of debugging timing-sensitive sequencer issues 
 
 ## Quick Start
 
-### 1. Start the System
+### 1. Button-Injection Tests (Sequencer Running)
+
+For tests that use button injection, start the sequencer first:
 
 **Terminal 1: Main Sequencer**
 ```bash
@@ -41,19 +43,36 @@ RUST_LOG=info cargo run --release --bin simon_says_seeq
 **Terminal 2: Automated Test Clock**
 ```bash
 cd SimonSaysSeeqNornsRust/utils
-RUST_LOG=info cargo run --bin automated_test_clock
+
+# Create the sample test script
+cargo run --bin automated_test_clock -- --create-test
+
+# Run the 16-step MIDI debug test
+cargo run --bin automated_test_clock -- --script 16_step_midi_test.json
 ```
 
-### 2. Run the 16-Step MIDI Debug Test
+### 2. Pattern-Based Tests (Load Pattern First)
 
-In Terminal 2:
-```
-> create-test
-✅ Created sample test script: 16_step_midi_test.json
+For tests that load pre-configured patterns, load the pattern BEFORE starting the sequencer:
 
-> script 16_step_midi_test.json
-🧪 Executing Test Script: 16-Step MIDI Debug Test
+**Terminal 1: Load Test Pattern**
+```bash
+cd SimonSaysSeeqNornsRust/utils
+
+# Run test1 - this loads test_pattern_1.json into current_pattern.json
+cargo run --bin automated_test_clock -- --test1
 ```
+
+**Terminal 2: Start Sequencer** (after test completes)
+```bash
+cd SimonSaysSeeqNornsRust
+RUST_LOG=info cargo run --release --bin simon_says_seeq
+
+# The sequencer will load test_pattern_1.json on startup
+# Then the test will advance the clock and verify state
+```
+
+**Note**: Pattern-based tests copy the pattern to `current_pattern.json`. The sequencer loads this file on startup, so you must start the sequencer AFTER the test loads the pattern.
 
 ## How It Works
 
@@ -100,6 +119,58 @@ Every system event is logged to `formal_state.log` as structured JSON:
 {"event_type":"StepAdvancement","master_step":20,"row_steps":[[0,4],[1,20],[2,20]]}
 {"event_type":"MidiNoteOn","note":60,"source_row":0,"source_step":4}
 ```
+
+## Test Execution Order
+
+### Pattern-Based Tests
+```
+1. Test clock loads pattern → current_pattern.json
+2. Start sequencer (loads current_pattern.json)
+3. Test clock sends MIDI clock ticks
+4. Check formal_state.log for results
+```
+
+### Button-Injection Tests
+```
+1. Start sequencer (loads any existing pattern)
+2. Test clock injects buttons via button_a.txt/button_b.txt
+3. Test clock sends MIDI clock ticks
+4. Check formal_state.log for results
+```
+
+## Command-Line Usage
+
+The automated test clock now uses command-line flags instead of interactive prompts:
+
+```bash
+# Run test1: Multi-length pattern test (32, 31, 30, 16, 15, 14 lengths, 33 steps)
+cargo run --bin automated_test_clock -- --test1
+
+# Execute a custom test script
+cargo run --bin automated_test_clock -- --script my_test.json
+
+# Create the sample 16-step test script
+cargo run --bin automated_test_clock -- --create-test
+
+# Set initial BPM
+cargo run --bin automated_test_clock -- --test1 --bpm 140.0
+
+# Show help
+cargo run --bin automated_test_clock -- --help
+```
+
+### Available Tests
+
+#### Test1: Multi-Length Pattern Test
+Tests sequencer behavior with various pattern lengths:
+- Row 0: 32 steps
+- Row 1: 31 steps  
+- Row 2: 30 steps
+- Row 3: 16 steps
+- Row 4: 15 steps
+- Row 5: 14 steps
+
+Runs for exactly 33 steps and verifies step counters match expected modulo values.
 
 ## Test Script Format
 
@@ -174,7 +245,7 @@ The system includes a comprehensive test for the 16-step MIDI silence bug:
 
 ### 1. Reproduce the Issue
 ```bash
-> script 16_step_midi_test.json
+cargo run --bin automated_test_clock -- --script 16_step_midi_test.json
 ```
 
 ### 2. Analyze the Logs
@@ -219,23 +290,18 @@ Create your own test scenarios:
 }
 ```
 
+Then run it:
+```bash
+cargo run --bin automated_test_clock -- --script custom_test.json
+```
+
 ### Manual Button Injection
 
-For interactive testing:
+Test scripts can inject button presses through button files. These are automatically managed during test execution, but you can also manually create them:
 ```bash
 echo "8,7" > button_a.txt     # ARM SetSeqALength
 echo "15,0" > button_b.txt    # Row 0, 16 steps
 echo "none" > button_a.txt    # Reset
-```
-
-### MIDI Clock Commands
-
-In the test clock interface:
-```
-> start          # Start/stop MIDI clock
-> 140            # Set BPM to 140
-> ticks 24       # Send exactly 24 MIDI clock ticks
-> script my_test.json  # Run custom test script
 ```
 
 ## Simulation Mode (No Hardware)
