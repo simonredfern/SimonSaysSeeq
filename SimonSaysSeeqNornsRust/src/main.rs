@@ -1711,7 +1711,7 @@ impl SimonSaysSeeq {
                         // warn!("Failed to send zero CV to Crow: {}", e);
                     }
                 }
-                debug!("No CO2 data available - CV outputs set to 0V");
+                trace!("No CO2 data available - CV outputs set to 0V");
             }
         } else {
             // No CO2 manager, send zero voltages

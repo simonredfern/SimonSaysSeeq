@@ -22,6 +22,10 @@ path = "src/bin/midi_clock_detector.rs"
 name = "automated_test_clock"
 path = "src/automated_test_clock.rs"
 
+[[bin]]
+name = "midi_clock_generator"
+path = "src/midi_clock_generator.rs"
+
 [dependencies]
 # MIDI handling (optional for development)
 midir = { version = "0.9", optional = true }

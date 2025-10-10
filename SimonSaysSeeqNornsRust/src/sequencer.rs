@@ -649,7 +649,7 @@ impl Sequencer {
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // DEBUG: Show current step for all rows
-        debug!("Steps: [{}]", 
+        debug!("Steps: [{}]",
             state.sequencer_a_row_states.iter()
                 .enumerate()
                 .take(7) // Only show rows 0-6 (sequencer rows)
