@@ -75,7 +75,6 @@ pub struct MidiNoteEvent {
     pub velocity: u8,
     pub tick_count_since_step: u32,
     pub is_active: bool,
-    pub tick_count_since_start: u64,
 }
 
 impl Default for MidiNoteEvent {
@@ -84,7 +83,6 @@ impl Default for MidiNoteEvent {
             velocity: 0,
             tick_count_since_step: 0,
             is_active: false,
-            tick_count_since_start: 0,
         }
     }
 }
@@ -151,7 +149,6 @@ pub struct SequencerState {
     pub steps_per_bar: usize,
     pub tick_count: u64,
     pub the_current_tick_count_since_step: u32,
-    pub the_current_tick_count_since_start: u64,
     pub first_step: usize,
     pub last_step: usize,
     pub midi_first_step: usize,
@@ -225,7 +222,6 @@ impl Default for SequencerState {
             steps_per_bar: 16,
             tick_count: 0,
             the_current_tick_count_since_step: 0,
-            the_current_tick_count_since_start: 0,
             midi_first_step: 0,
             midi_last_step: 31,
             swing_mode: 1,
@@ -587,15 +583,14 @@ impl Sequencer {
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // DEBUG: Show current step for all rows
-        debug!("Master Step: {:02} | Steps: [{}] | Global Ticks: {}",
+        debug!("Master Step: {:02} | Steps: [{}]",
             state.sequencer_a_current_master_step,
             state.sequencer_a_row_states.iter()
                 .enumerate()
                 .take(7) // Only show rows 0-6 (sequencer rows)
                 .map(|(i, row)| format!("R{}:{:02}", i, row.sequencer_a_current_step))
                 .collect::<Vec<_>>()
-                .join(", "),
-            state.the_current_tick_count_since_start
+                .join(", ")
         );
         
         // Process each sequence row (0-indexed)
@@ -931,7 +926,6 @@ impl Sequencer {
         save_state.sequencer_a_current_master_bar = 0;
         save_state.tick_count = 0;
         save_state.the_current_tick_count_since_step = 0;
-        save_state.the_current_tick_count_since_start = 0;
 
         let json_content = serde_json::to_string_pretty(&save_state)?;
         std::fs::write(&pattern_file, json_content)?;
@@ -958,7 +952,6 @@ impl Sequencer {
         let is_running = state.is_running;
         let tick_count = state.tick_count;
         let tick_count_since_step = state.the_current_tick_count_since_step;
-        let tick_count_since_start = state.the_current_tick_count_since_start;
 
         // Load the pattern data
         *state = loaded_state;
@@ -969,7 +962,6 @@ impl Sequencer {
         state.is_running = is_running;
         state.tick_count = tick_count;
         state.the_current_tick_count_since_step = tick_count_since_step;
-        state.the_current_tick_count_since_start = tick_count_since_start;
 
         info!("Current pattern loaded from: {:?}", pattern_file);
         

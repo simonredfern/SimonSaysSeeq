@@ -1401,7 +1401,6 @@
   "steps_per_bar": 16,
   "tick_count": 0,
   "the_current_tick_count_since_step": 0,
-  "the_current_tick_count_since_start": 0,
   "first_step": 0,
   "last_step": 31,
   "midi_first_step": 0,
