@@ -39,7 +39,7 @@ pub enum MidiInputEvent {
 /// External clock sync state
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClockSource {
-    Internal,
+    None,
     MidiExternal,
 }
 
@@ -123,7 +123,7 @@ pub struct ClockState {
 impl Default for ClockState {
     fn default() -> Self {
         Self {
-            source: ClockSource::Internal,
+            source: ClockSource::None,
             clock_ticks: 0,
             last_clock_time: None,
             last_beat_time: None,
@@ -184,7 +184,7 @@ impl MidiManager {
             input_sender: Some(input_sender),
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
-            previous_clock_source: Arc::new(Mutex::new(ClockSource::Internal)),
+            previous_clock_source: Arc::new(Mutex::new(ClockSource::None)),
             auto_detect_clock: config.auto_detect_clock,
             last_detection_time: Arc::new(Mutex::new(None)),
             detection_retry_interval: config.detection_retry_interval,
@@ -959,7 +959,7 @@ impl MidiManager {
         if *previous_source != current_source {
             // Clock source has changed
             let transition_event = match (&*previous_source, &current_source) {
-                (ClockSource::MidiExternal, ClockSource::Internal) => {
+                (ClockSource::MidiExternal, ClockSource::None) => {
                     // External clock timeout - just stop, no internal clock to switch to
                     Some(MidiInputEvent::ExternalClockTimeout)
                 }
@@ -1139,8 +1139,8 @@ impl MidiManager {
         let clock = self.clock_state.lock().unwrap();
         let last_detection = self.last_detection_time.lock().unwrap();
 
-        // Only retry if we're on internal clock and enough time has passed
-        if matches!(clock.source, ClockSource::Internal) {
+        // Only retry if we have no clock source and enough time has passed
+        if matches!(clock.source, ClockSource::None) {
             if let Some(last_time) = *last_detection {
                 last_time.elapsed().as_secs() >= self.detection_retry_interval
             } else {
@@ -1195,7 +1195,7 @@ impl MidiManager {
         // Reset clock state to internal to ensure fresh detection
         {
             let mut clock = self.clock_state.lock().unwrap();
-            clock.source = ClockSource::Internal;
+            clock.source = ClockSource::None;
             clock.running = false;
             clock.clock_ticks = 0;
             clock.last_external_activity = None;
@@ -1288,7 +1288,7 @@ impl MidiManager {
         let clock = self.clock_state.lock().unwrap();
         
         match clock.source {
-            ClockSource::Internal => ClockHealth::NoExternalClock,
+            ClockSource::None => ClockHealth::NoExternalClock,
             ClockSource::MidiExternal => {
                 if let Some(last_activity) = clock.last_external_activity {
                     let silence_duration = last_activity.elapsed().as_millis();
@@ -1420,8 +1420,8 @@ mod tests {
     fn test_clock_source() {
         let config = MidiConfig::default();
         if let Ok(midi) = MidiManager::new(&config) {
-            // Test default internal clock
-            assert!(matches!(midi.get_clock_source(), ClockSource::Internal));
+            // Test default (no clock source)
+            assert!(matches!(midi.get_clock_source(), ClockSource::None));
             
             // Test setting external clock
             midi.set_clock_source(ClockSource::MidiExternal);
