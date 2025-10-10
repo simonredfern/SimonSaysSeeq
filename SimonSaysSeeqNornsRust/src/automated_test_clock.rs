@@ -400,13 +400,8 @@ impl AutomatedTestClock {
                 
                 TestCommand::LoadPattern { file } => {
                     println!("📂 Loading test pattern: {}", file);
-                    
-                    // Try to resolve the file path - check multiple locations
-                    let resolved_path = self.resolve_test_pattern_path(file)?;
-                    println!("📍 Resolved path: {}", resolved_path.display());
-                    
                     // Copy test pattern to current_pattern.json so sequencer loads it
-                    let test_pattern_content = fs::read_to_string(&resolved_path)?;
+                    let test_pattern_content = fs::read_to_string(file)?;
                     fs::write("current_pattern.json", test_pattern_content)?;
                     println!("✅ Pattern loaded - sequencer will use it on next start");
                     self.log_event("test_load_pattern", Some(format!("File: {}", file)));
