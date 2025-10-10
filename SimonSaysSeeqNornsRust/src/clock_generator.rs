@@ -23,6 +23,7 @@ pub enum ClockCommand {
     Stop,
     SetBpm(f32),
     ToggleTestMode,
+    SendRawMidi(Vec<u8>),
     Exit,
 }
 
@@ -190,6 +191,16 @@ impl ClockGenerator {
         }
     }
 
+    /// Send raw MIDI message (for SysEx and other special commands)
+    pub fn send_raw_midi(&self, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(ref sender) = self.command_sender {
+            sender.send(ClockCommand::SendRawMidi(data.to_vec()))?;
+            Ok(())
+        } else {
+            Err("Clock thread not initialized".into())
+        }
+    }
+
     /// Run the clock generation loop in a separate thread
     pub fn spawn_clock_thread(&mut self, mut connection: MidiOutputConnection) -> thread::JoinHandle<()> {
         let (sender, receiver) = mpsc::channel();
@@ -242,6 +253,11 @@ impl ClockGenerator {
                                 } else {
                                     println!("Test mode disabled");
                                 }
+                            }
+                        }
+                        ClockCommand::SendRawMidi(data) => {
+                            if let Err(e) = connection.send(&data) {
+                                eprintln!("Error sending raw MIDI: {}", e);
                             }
                         }
                         ClockCommand::Exit => {

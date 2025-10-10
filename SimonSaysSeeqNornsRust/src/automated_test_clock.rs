@@ -157,6 +157,19 @@ impl AutomatedTestClock {
         Ok(())
     }
 
+    /// Send SysEx command to reload pattern from file
+    /// Format: F0 7D 53 53 51 01 F7
+    /// - F0 = SysEx start
+    /// - 7D = Educational/Development use (non-commercial)
+    /// - 53 53 51 = "SSQ" in ASCII (SimonSaysSeeQ)
+    /// - 01 = Command (reload pattern)
+    /// - F7 = SysEx end
+    fn send_reload_pattern_sysex(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let sysex_message = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x01, 0xF7];
+        self.generator.send_raw_midi(&sysex_message)?;
+        Ok(())
+    }
+
     /// Wait for sequencer to advance a specified number of steps
     fn wait_for_steps(&self, step_count: u32) -> Result<(), Box<dyn std::error::Error>> {
         // Each step requires 6 MIDI clock ticks (24 PPQN ÷ 4 = 6 ticks per 16th note)
@@ -271,6 +284,13 @@ impl AutomatedTestClock {
                         println!("🔍 Verify: {} (no step number found)", description);
                         self.log_event("test_verify", Some(description.clone()));
                     }
+                }
+                
+                TestCommand::ReloadPattern => {
+                    println!("🔄 Sending SysEx reload pattern command...");
+                    self.send_reload_pattern_sysex()?;
+                    println!("✅ Reload pattern command sent");
+                    self.log_event("test_reload_pattern", Some("SysEx command sent".to_string()));
                 }
             }
             
@@ -509,6 +529,13 @@ impl AutomatedTestClock {
             TestCommand::LogMilestone { 
                 message: "Pattern loaded to current_pattern.json".to_string() 
             },
+            
+            // Send SysEx command to reload pattern into sequencer
+            TestCommand::LogMilestone { 
+                message: "Sending SysEx reload pattern command".to_string() 
+            },
+            TestCommand::ReloadPattern,
+            TestCommand::Wait { ms: 200 },
             
             // Start the MIDI clock
             TestCommand::LogMilestone { 

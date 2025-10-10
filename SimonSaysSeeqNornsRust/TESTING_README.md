@@ -131,4 +131,51 @@ cargo run --bin test_co2_cv
 - Log levels: `error`, `warn`, `info`, `debug`, `trace` (from least to most verbose)
 - Set log level with `RUST_LOG=level` environment variable
 - Automated tests require running both sequencer and test clock simultaneously
+
+## Pattern Reload Feature
+
+The test framework includes a SysEx-based pattern reload command that allows tests to dynamically load patterns without restarting the sequencer.
+
+### SysEx Message Format
+```
+F0 7D 53 53 51 01 F7
+```
+- `F0` = SysEx start
+- `7D` = Educational/Development use (non-commercial manufacturer ID)
+- `53 53 51` = "SSQ" in ASCII (SimonSaysSeeQ signature)
+- `01` = Command code (reload pattern from current_pattern.json)
+- `F7` = SysEx end
+
+### Using ReloadPattern in Test Scripts
+
+```json
+{
+  "commands": [
+    {"command": "Stop"},
+    {"command": "LoadPattern", "file": "test_pattern_1.json"},
+    {"command": "ReloadPattern"},
+    {"command": "Start"}
+  ]
+}
+```
+
+### Testing Workflow
+
+1. **Start the main sequencer** (in one terminal):
+   ```bash
+   cargo run --bin simon_says_seeq
+   ```
+
+2. **Run the test** (in another terminal):
+   ```bash
+   cargo run --bin automated_test_clock -- --test1
+   ```
+
+The test will:
+- Stop the sequencer
+- Copy the test pattern to `current_pattern.json`
+- Send SysEx reload command to the sequencer
+- Start the sequencer with the new pattern
+
+**Important**: The main sequencer application must be running to receive and process the SysEx reload command.
 - The test clock sends MIDI to the sequencer to advance steps

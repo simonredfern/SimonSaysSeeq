@@ -2,6 +2,18 @@
 //! 
 //! Shared types for automated test scripts that can be executed by
 //! both the automated test clock and the MIDI clock generator.
+//!
+//! ## SysEx Commands
+//!
+//! The `ReloadPattern` command sends a SysEx message to the sequencer:
+//! - Format: `F0 7D 53 53 51 01 F7`
+//! - `F0` = SysEx start
+//! - `7D` = Educational/Development use (non-commercial manufacturer ID)
+//! - `53 53 51` = "SSQ" in ASCII (SimonSaysSeeQ signature)
+//! - `01` = Command code (reload pattern from current_pattern.json)
+//! - `F7` = SysEx end
+//!
+//! Note: The main sequencer application must be running to receive this command.
 
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +45,9 @@ pub enum TestCommand {
     LogMilestone { message: String },
     /// Verify expected state (placeholder for future implementation)
     VerifyState { description: String },
+    /// Send SysEx command to reload pattern from current_pattern.json
+    /// Note: Requires the main sequencer application to be running to receive the command
+    ReloadPattern,
 }
 
 /// Test script structure

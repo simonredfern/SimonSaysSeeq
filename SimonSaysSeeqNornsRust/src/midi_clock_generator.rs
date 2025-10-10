@@ -172,6 +172,16 @@ fn execute_test_script(generator: &mut ClockGenerator, script_path: &str) -> Res
             TestCommand::VerifyState { description } => {
                 println!("🔍 Verify: {} (placeholder - not implemented)", description);
             }
+            
+            TestCommand::ReloadPattern => {
+                println!("🔄 Sending SysEx reload pattern command...");
+                let sysex_message = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x01, 0xF7];
+                if let Err(e) = generator.send_raw_midi(&sysex_message) {
+                    eprintln!("❌ Error sending SysEx: {}", e);
+                } else {
+                    println!("✅ Reload pattern command sent");
+                }
+            }
         }
         
         // Small delay between commands

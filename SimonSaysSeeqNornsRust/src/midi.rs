@@ -34,6 +34,7 @@ pub enum MidiInputEvent {
     ClockStop,
     ClockContinue,
     ExternalClockTimeout,
+    SysEx { data: Vec<u8> },
 }
 
 /// External clock sync state
@@ -660,6 +661,16 @@ impl MidiManager {
                 // Keep external clock source - just stop running
                 info!("handle_midi_input_message says: MIDI Stop - external clock stopped");
                 let _ = sender.send(MidiInputEvent::ClockStop);
+            }
+            0xF0 => {
+                // SysEx message
+                if message.len() >= 7 && message[message.len() - 1] == 0xF7 {
+                    // Check for SimonSaysSeeQ SysEx: F0 7D 53 53 51 <cmd> F7
+                    if message[1] == 0x7D && message[2] == 0x53 && message[3] == 0x53 && message[4] == 0x51 {
+                        debug!("handle_midi_input_message says: SimonSaysSeeQ SysEx received: {:02X?}", message);
+                        let _ = sender.send(MidiInputEvent::SysEx { data: message.to_vec() });
+                    }
+                }
             }
             _ => {
                 // Ignore other messages

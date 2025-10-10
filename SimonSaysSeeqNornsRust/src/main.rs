@@ -1830,6 +1830,30 @@ impl SimonSaysSeeq {
                 // MIDI Clock Continue - currently not handled
                 // Similar to ClockStart but resumes from current position
             }
+            MidiInputEvent::SysEx { data } => {
+                // Handle SimonSaysSeeQ SysEx commands
+                // Format: F0 7D 53 53 51 <cmd> F7
+                if data.len() >= 7 && data[1] == 0x7D && data[2] == 0x53 && data[3] == 0x53 && data[4] == 0x51 {
+                    let command = data[5];
+                    match command {
+                        0x01 => {
+                            // Reload pattern from current_pattern.json
+                            info!("🔄 SysEx reload pattern command received");
+                            match self.sequencer.load_current_pattern_from_file() {
+                                Ok(()) => {
+                                    info!("✅ Pattern reloaded successfully from current_pattern.json");
+                                }
+                                Err(e) => {
+                                    warn!("⚠️ Failed to reload pattern: {}", e);
+                                }
+                            }
+                        }
+                        _ => {
+                            debug!("Unknown SimonSaysSeeQ SysEx command: 0x{:02X}", command);
+                        }
+                    }
+                }
+            }
         }
         
         Ok(())
