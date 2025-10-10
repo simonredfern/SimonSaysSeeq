@@ -494,11 +494,11 @@ impl MidiManager {
                 let velocity = message[2];
                 
                 if velocity > 0 {
-                    debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
+                    trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
                     let _ = sender.send(MidiInputEvent::NoteOn { note, velocity, channel });
                 } else {
                     // Velocity 0 note-on is equivalent to note-off
-                    debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
+                    trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
                     let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
                 }
             }
@@ -506,7 +506,7 @@ impl MidiManager {
             0x80..=0x8F if message.len() >= 3 => {
                 let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
                 let note = message[1];
-                debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
+                trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
                 let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
             }
             // Control Change (0xB0-0xBF)
@@ -554,11 +554,11 @@ impl MidiManager {
                 let velocity = message[2];
                 
                 if velocity > 0 {
-                    debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
+                    trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note On - note={} velocity={} channel={}", note, velocity, channel);
                     let _ = sender.send(MidiInputEvent::NoteOn { note, velocity, channel });
                 } else {
                     // Velocity 0 note-on is equivalent to note-off
-                    debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
+                    trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off (vel=0) - note={} channel={}", note, channel);
                     let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
                 }
             }
@@ -566,7 +566,7 @@ impl MidiManager {
             0x80..=0x8F if message.len() >= 3 => {
                 let channel = (message[0] & 0x0F) + 1; // Convert to 1-16
                 let note = message[1];
-                debug!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
+                trace!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: Note Off - note={} channel={}", note, channel);
                 let _ = sender.send(MidiInputEvent::NoteOff { note, channel });
             }
             // Control Change (0xB0-0xBF)

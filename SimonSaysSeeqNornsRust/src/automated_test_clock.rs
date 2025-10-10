@@ -340,17 +340,23 @@ impl AutomatedTestClock {
 
     /// Wait for sequencer to advance a specified number of steps
     fn wait_for_steps(&self, step_count: u32) -> Result<(), Box<dyn std::error::Error>> {
-        println!("⏳ Waiting for {} sequencer steps...", step_count);
-        
         // Each step requires 6 MIDI clock ticks (24 PPQN ÷ 4 = 6 ticks per 16th note)
         let required_ticks = step_count * 6;
         let start_ticks = self.get_tick_count();
+        let mut last_printed_tick = start_ticks;
         
         while (self.get_tick_count() - start_ticks) < required_ticks {
+            let current_tick = self.get_tick_count();
+            // Print a dot for each new tick
+            while last_printed_tick < current_tick {
+                print!(".");
+                std::io::stdout().flush().ok();
+                last_printed_tick += 1;
+            }
             thread::sleep(Duration::from_millis(10));
         }
         
-        println!("✅ Completed {} steps ({} ticks)", step_count, required_ticks);
+        println!("\n✅ Completed {} steps ({} ticks)", step_count, required_ticks);
         Ok(())
     }
 
