@@ -389,8 +389,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let connection = generator.connect_midi_output()?;
     
     println!("MIDI Clock Generator initialized at {:.1} BPM", generator.get_bpm());
-    println!("Auto-starting clock");
-    generator.start()?;
     show_help();
     println!();
 
@@ -403,6 +401,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start the clock generation thread
     let clock_thread = generator.spawn_clock_thread(connection);
+    
+    // Auto-start the clock (must be after spawn_clock_thread so command_sender exists)
+    println!("Auto-starting clock");
+    generator.start()?;
 
     println!("Enter commands: s(start/stop), u/uu/uuu(+1/+10/+100 BPM), d/dd/ddd(-1/-10/-100 BPM), t(test), q(quit), h(help)");
     
