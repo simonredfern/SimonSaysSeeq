@@ -8,8 +8,12 @@ use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
+use std::fs;
 
 use midir::{MidiOutput, MidiOutputConnection};
+use clap::Parser;
+
+use simon_says_seeq_rust::test_script::{TestScript, TestCommand};
 
 #[derive(Debug, Clone)]
 pub enum ClockCommand {
@@ -372,17 +376,139 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
     Ok(false)
 }
 
+/// Execute a test script with the clock generator
+fn execute_test_script(generator: &mut ClockGenerator, script_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("\n🧪 Loading test script: {}", script_path);
+    
+    // Load the test script
+    let content = fs::read_to_string(script_path)?;
+    let script: TestScript = serde_json::from_str(&content)?;
+    
+    println!("📋 Test: {}", script.name);
+    println!("📝 Description: {}", script.description);
+    println!("═══════════════════════════════════════════════════════════════════");
+    
+    // Set initial BPM if specified
+    if let Some(bpm) = script.initial_bpm {
+        generator.set_bpm(bpm);
+        println!("🎚️  Initial BPM set to {:.1}", bpm);
+    }
+    
+    // Execute each command in sequence
+    for command in script.commands.iter() {
+        match command {
+            TestCommand::Wait { ms } => {
+                println!("⏱️  Waiting {} ms...", ms);
+                thread::sleep(Duration::from_millis(*ms));
+            }
+            
+            TestCommand::Start => {
+                generator.start()?;
+                println!("▶️  MIDI clock started");
+            }
+            
+            TestCommand::Stop => {
+                generator.stop()?;
+                println!("⏹️  MIDI clock stopped");
+            }
+            
+            TestCommand::SetBpm { bpm } => {
+                generator.set_bpm(*bpm);
+                println!("🎚️  BPM set to {:.1}", bpm);
+            }
+            
+            TestCommand::LoadPattern { file } => {
+                println!("📂 Loading test pattern: {}", file);
+                let test_pattern_content = fs::read_to_string(file)?;
+                fs::write("current_pattern.json", test_pattern_content)?;
+                println!("✅ Pattern loaded - sequencer will use it on next start");
+            }
+            
+            TestCommand::ButtonPress { file, grid_id, x, y } => {
+                println!("🔘 Button press: {} at ({}, {}) via {}", grid_id, x, y, file);
+                // Note: Button injection not supported in MIDI clock generator
+                println!("⚠️  Button injection only works with automated_test_clock");
+            }
+            
+            TestCommand::ButtonRelease { file, grid_id, x, y } => {
+                println!("🔘 Button release: {} at ({}, {}) via {}", grid_id, x, y, file);
+                println!("⚠️  Button injection only works with automated_test_clock");
+            }
+            
+            TestCommand::SimpleButton { file, x, y } => {
+                println!("🔘 Simple button: ({}, {}) via {}", x, y, file);
+                println!("⚠️  Button injection only works with automated_test_clock");
+            }
+            
+            TestCommand::ArmAction { arm_column, target_row, target_column } => {
+                println!("🎯 ARM action: arm={}, target=({},{})", arm_column, target_row, target_column);
+                println!("⚠️  Button injection only works with automated_test_clock");
+            }
+            
+            TestCommand::WaitSteps { count } => {
+                println!("⏳ Waiting for {} steps...", count);
+                // Calculate approximate time based on BPM
+                let bpm = generator.get_bpm();
+                let ms_per_step = (60_000.0 / bpm) / 4.0; // 4 steps per beat at 24 PPQ
+                let total_ms = ms_per_step * (*count as f32);
+                thread::sleep(Duration::from_millis(total_ms as u64));
+            }
+            
+            TestCommand::LogMilestone { message } => {
+                println!("🏁 Milestone: {}", message);
+            }
+            
+            TestCommand::VerifyState { description } => {
+                println!("🔍 Verify: {} (placeholder - not implemented)", description);
+            }
+        }
+        
+        // Small delay between commands
+        thread::sleep(Duration::from_millis(50));
+    }
+    
+    println!("\n✅ Test script completed successfully!");
+    println!("Press Ctrl+C to exit");
+    
+    // Keep the clock running until user exits
+    loop {
+        thread::sleep(Duration::from_secs(1));
+    }
+}
+
+/// Command-line arguments
+#[derive(Parser, Debug)]
+#[command(name = "MIDI Clock Generator")]
+#[command(about = "Generate MIDI clock signals for testing sequencers", long_about = None)]
+struct Args {
+    /// Optional test script file to execute
+    #[arg(short, long)]
+    script: Option<String>,
+    
+    /// Initial BPM (default: 120.0)
+    #[arg(short, long, default_value = "120.0")]
+    bpm: f32,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+    
     println!("MIDI Clock Generator");
     println!("======================");
 
-    // Start with default 120 BPM - no user input needed
-    let mut generator = ClockGenerator::new(120.0);
+    // Start with BPM from args
+    let mut generator = ClockGenerator::new(args.bpm);
     
     // Connect to MIDI output
     let connection = generator.connect_midi_output()?;
     
     println!("MIDI Clock Generator initialized at {:.1} BPM", generator.get_bpm());
+    
+    // Check if we should execute a test script
+    if let Some(script_path) = args.script {
+        return execute_test_script(&mut generator, &script_path);
+    }
+    
     show_help();
     println!();
 

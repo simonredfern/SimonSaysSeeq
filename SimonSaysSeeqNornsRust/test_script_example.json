@@ -1,0 +1,57 @@
+{
+  "name": "Simple BPM Test",
+  "description": "Test basic MIDI clock functionality with BPM changes",
+  "initial_bpm": 120.0,
+  "commands": [
+    {
+      "command": "LogMilestone",
+      "message": "Starting simple BPM test"
+    },
+    {
+      "command": "Start"
+    },
+    {
+      "command": "Wait",
+      "ms": 2000
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Increasing BPM to 140"
+    },
+    {
+      "command": "SetBpm",
+      "bpm": 140.0
+    },
+    {
+      "command": "Wait",
+      "ms": 2000
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Decreasing BPM to 100"
+    },
+    {
+      "command": "SetBpm",
+      "bpm": 100.0
+    },
+    {
+      "command": "Wait",
+      "ms": 2000
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Stopping clock"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 1000
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Test complete"
+    }
+  ]
+}

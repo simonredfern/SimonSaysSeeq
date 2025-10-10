@@ -16,6 +16,7 @@ pub mod co2;
 pub mod version;
 pub mod crow;
 pub mod formal_state_logger;
+pub mod test_script;
 
 // Re-export commonly used types
 pub use config::Config;
