@@ -15,27 +15,17 @@
 use std::fs;
 use std::io::Write;
 
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
-use std::sync::mpsc::{self, Sender};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use midir::{MidiOutput, MidiOutputConnection};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use clap::Parser;
+use std::sync::Arc;
 
-// Import shared test script types
+// Import shared types
 use simon_says_seeq_rust::test_script::{TestCommand, TestScript};
-
-/// Clock command for internal communication
-#[derive(Debug, Clone)]
-pub enum ClockCommand {
-    Start,
-    Stop,
-    SetBpm(f32),
-    Exit,
-}
+use simon_says_seeq_rust::clock_generator::{ClockGenerator, ClockConfig};
 
 /// Test event logging structure
 #[derive(Debug, Clone, Serialize)]
@@ -47,107 +37,61 @@ pub struct TestClockEvent {
     pub message: Option<String>,
 }
 
-/// Main automated test clock generator
+/// Wrapper around ClockGenerator for automated testing
 pub struct AutomatedTestClock {
-    bpm: Arc<Mutex<f32>>,
-    is_running: Arc<AtomicBool>,
-    should_exit: Arc<AtomicBool>,
-    command_sender: Option<Sender<ClockCommand>>,
-    tick_count: Arc<Mutex<u32>>,
-    start_time: Arc<Mutex<Option<Instant>>>,
+    generator: Arc<ClockGenerator>,
 }
 
 impl AutomatedTestClock {
     pub fn new(bpm: f32) -> Self {
+        let config = ClockConfig {
+            enable_tick_counting: true,
+            enable_test_mode: false,
+        };
         Self {
-            bpm: Arc::new(Mutex::new(bpm.clamp(20.0, 300.0))),
-            is_running: Arc::new(AtomicBool::new(false)),
-            should_exit: Arc::new(AtomicBool::new(false)),
-            command_sender: None,
-            tick_count: Arc::new(Mutex::new(0)),
-            start_time: Arc::new(Mutex::new(None)),
+            generator: Arc::new(ClockGenerator::new_with_config(bpm, config)),
         }
     }
 
-    /// Connect to MIDI output
-    pub fn connect_midi_output(&self) -> Result<MidiOutputConnection, Box<dyn std::error::Error>> {
-        let midi_out = MidiOutput::new("Automated Test Clock")?;
-        let out_ports = midi_out.ports();
-
-        if out_ports.is_empty() {
-            return Err("No MIDI output ports available".into());
-        }
-
-        // Try to find a port that looks like it might be the target
-        let mut selected_port = 0;
-        for (i, port) in out_ports.iter().enumerate() {
-            let port_name = midi_out.port_name(port).unwrap_or_default();
-            println!("MIDI Output Port {}: {}", i, port_name);
-            
-            // Prefer ports that might be our target sequencer
-            if port_name.to_lowercase().contains("usb") || 
-               port_name.to_lowercase().contains("midi") ||
-               port_name.to_lowercase().contains("norns") {
-                selected_port = i;
-            }
-        }
-
-        println!("Selected MIDI output port: {}", selected_port);
-        let port = &out_ports[selected_port];
-        let connection = midi_out.connect(port, "AutoTest")?;
-        
-        Ok(connection)
+    /// Initialize MIDI output connection
+    pub fn connect_midi_output(&self) -> Result<midir::MidiOutputConnection, Box<dyn std::error::Error>> {
+        self.generator.connect_midi_output()
     }
 
-    /// Start the clock
+    /// Start the MIDI clock
     pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(ref sender) = self.command_sender {
-            sender.send(ClockCommand::Start)?;
-        }
-        Ok(())
+        self.generator.start()
     }
 
-    /// Stop the clock
+    /// Stop the MIDI clock
     pub fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(ref sender) = self.command_sender {
-            sender.send(ClockCommand::Stop)?;
-        }
-        Ok(())
+        self.generator.stop()
     }
 
-    /// Set BPM
+    /// Set the BPM
     pub fn set_bpm(&self, bpm: f32) -> Result<(), Box<dyn std::error::Error>> {
-        let clamped_bpm = bpm.clamp(20.0, 300.0);
-        *self.bpm.lock().unwrap() = clamped_bpm;
-        if let Some(ref sender) = self.command_sender {
-            sender.send(ClockCommand::SetBpm(clamped_bpm))?;
-        }
+        self.generator.set_bpm(bpm);
         Ok(())
     }
 
     /// Get current BPM
     pub fn get_bpm(&self) -> f32 {
-        *self.bpm.lock().unwrap()
+        self.generator.get_bpm()
     }
-
-
 
     /// Exit the clock generator
     pub fn exit(&self) {
-        self.should_exit.store(true, Ordering::Relaxed);
-        if let Some(ref sender) = self.command_sender {
-            let _ = sender.send(ClockCommand::Exit);
-        }
+        self.generator.exit();
     }
 
     /// Get current tick count
     pub fn get_tick_count(&self) -> u32 {
-        *self.tick_count.lock().unwrap()
+        self.generator.get_tick_count()
     }
 
     /// Reset tick count
     pub fn reset_tick_count(&self) {
-        *self.tick_count.lock().unwrap() = 0;
+        self.generator.reset_tick_count();
     }
 
     /// Log a test clock event
@@ -175,76 +119,16 @@ impl AutomatedTestClock {
     }
 
     /// Spawn the clock generation thread
-    pub fn spawn_clock_thread(&mut self, mut connection: MidiOutputConnection) -> thread::JoinHandle<()> {
-        let (sender, receiver) = mpsc::channel();
-        self.command_sender = Some(sender);
-        
-        let bpm = self.bpm.clone();
-        let is_running = self.is_running.clone();
-        let should_exit = self.should_exit.clone();
-        let tick_count = self.tick_count.clone();
-        let start_time = self.start_time.clone();
+    pub fn spawn_clock_thread(&mut self, connection: midir::MidiOutputConnection) -> thread::JoinHandle<()> {
+        // Need to get mutable access to the generator
+        Arc::get_mut(&mut self.generator)
+            .expect("Cannot get mutable reference to generator")
+            .spawn_clock_thread(connection)
+    }
 
-        thread::spawn(move || {
-            println!("Automated test clock thread started");
-
-            while !should_exit.load(Ordering::Relaxed) {
-                // Handle commands from main thread
-                if let Ok(command) = receiver.try_recv() {
-                    match command {
-                        ClockCommand::Start => {
-                            is_running.store(true, Ordering::Relaxed);
-                            *start_time.lock().unwrap() = Some(Instant::now());
-                            *tick_count.lock().unwrap() = 0;
-                            
-                            if let Err(e) = connection.send(&[0xFA]) { // MIDI Start
-                                eprintln!("Error sending MIDI Start: {}", e);
-                            } else {
-                                println!("🎵 MIDI Clock Started");
-                            }
-                        }
-                        ClockCommand::Stop => {
-                            is_running.store(false, Ordering::Relaxed);
-                            if let Err(e) = connection.send(&[0xFC]) { // MIDI Stop
-                                eprintln!("Error sending MIDI Stop: {}", e);
-                            } else {
-                                println!("⏹️  MIDI Clock Stopped");
-                            }
-                        }
-                        ClockCommand::SetBpm(new_bpm) => {
-                            println!("🎚️  BPM changed to {:.1}", new_bpm);
-                        }
-                        ClockCommand::Exit => {
-                            should_exit.store(true, Ordering::Relaxed);
-                            break;
-                        }
-                    }
-                }
-
-                // Regular clock generation when running
-                if is_running.load(Ordering::Relaxed) {
-                    let current_bpm = *bpm.lock().unwrap();
-                    
-                    // Calculate tick interval: 24 PPQN (pulses per quarter note)
-                    // At 120 BPM: 120 beats/min * 24 ticks/beat = 2880 ticks/min = 48 ticks/sec
-                    let ticks_per_second = (current_bpm * 24.0) / 60.0;
-                    let tick_interval = Duration::from_secs_f64((1.0 / ticks_per_second) as f64);
-                    
-                    if let Err(e) = connection.send(&[0xF8]) { // MIDI Clock
-                        eprintln!("Error sending MIDI Clock: {}", e);
-                    } else {
-                        *tick_count.lock().unwrap() += 1;
-                    }
-                    
-                    thread::sleep(tick_interval);
-                } else {
-                    // Not running, check less frequently
-                    thread::sleep(Duration::from_millis(10));
-                }
-            }
-            
-            println!("Clock generation thread stopped");
-        })
+    /// Get a clone of the generator for signal handlers
+    pub fn get_generator_clone(&self) -> Arc<ClockGenerator> {
+        self.generator.clone()
     }
 
     /// Execute a button injection command
@@ -590,10 +474,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Handle Ctrl+C gracefully
-    let should_exit_signal = clock.should_exit.clone();
+    let generator_for_signal = clock.get_generator_clone();
     ctrlc::set_handler(move || {
         println!("\n⚡ Received Ctrl+C, stopping...");
-        should_exit_signal.store(true, Ordering::Relaxed);
+        generator_for_signal.exit();
     })?;
 
     // Start the clock generation thread

@@ -17,6 +17,7 @@ pub mod version;
 pub mod crow;
 pub mod formal_state_logger;
 pub mod test_script;
+pub mod clock_generator;
 
 // Re-export commonly used types
 pub use config::Config;
