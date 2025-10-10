@@ -1369,7 +1369,7 @@
     {
       "sequencer_a_current_step": 0,
       "sequencer_a_first_step": 0,
-      "sequencer_a_euclidean_length": 3,
+      "sequencer_a_euclidean_length": 2,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
       "sequencer_a_previous_step": 7,

@@ -156,10 +156,17 @@ impl FormalStateLogger {
         let session_start = Utc::now();
         
         // Create or append to formal_state.log
+        let log_path = std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join("formal_state.log");
+        
         let file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("formal_state.log")?;
+            .open(&log_path)?;
+        
+        // Log the actual file path
+        eprintln!("📝 Formal state log file: {}", log_path.display());
         
         let mut logger = Self {
             file,

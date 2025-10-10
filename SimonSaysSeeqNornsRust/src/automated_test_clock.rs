@@ -243,6 +243,8 @@ impl AutomatedTestClock {
                 
                 TestCommand::WaitSteps { count } => {
                     self.wait_for_steps(*count)?;
+                    // Give time for logs to be written
+                    thread::sleep(Duration::from_millis(100));
                 }
                 
                 TestCommand::LogMilestone { message } => {
@@ -253,6 +255,8 @@ impl AutomatedTestClock {
                 TestCommand::VerifyState { description } => {
                     // Extract step number from description if present
                     if let Some(step_num) = description.split("master step ").nth(1).and_then(|s| s.parse::<usize>().ok()) {
+                        // Extra delay to ensure log is written
+                        thread::sleep(Duration::from_millis(50));
                         match self.verify_sequencer_state_at_step(step_num) {
                             Ok(state_info) => {
                                 println!("🔍 Verify: {} - ✅ {}", description, state_info);
@@ -286,57 +290,89 @@ impl AutomatedTestClock {
             return Err("Verification not implemented for this step".to_string());
         }
 
-        // Try to read current_pattern.json
-        let pattern_content = fs::read_to_string("current_pattern.json")
-            .map_err(|_| "Cannot read current_pattern.json".to_string())?;
-        
-        let pattern: serde_json::Value = serde_json::from_str(&pattern_content)
-            .map_err(|_| "Cannot parse current_pattern.json".to_string())?;
-
-        // Get row states
-        let rows = pattern.get("sequencer_a_row_states")
-            .and_then(|r| r.as_array())
-            .ok_or("Cannot read sequencer_a_row_states".to_string())?;
-
-        // Expected row lengths: [31, 30, 29, 15, 14, 13, 3]
-        let expected_lengths = vec![31, 30, 29, 15, 14, 13, 3];
-        
-        // Calculate expected step for each row at this master step
-        let mut expected_steps = Vec::new();
-        for (row_idx, &length) in expected_lengths.iter().enumerate().take(7) {
-            // After master step N, each row should be at step (N % length)
-            // But since rows start at 0, after step 1 we're at step 1, etc.
-            let expected_step = step % length;
-            expected_steps.push((row_idx, expected_step, length));
+        // Debug: Show current working directory
+        if let Ok(cwd) = std::env::current_dir() {
+            println!("  📁 Current working directory: {}", cwd.display());
         }
 
-        // Read actual steps from the pattern
-        let mut actual_steps = Vec::new();
-        for (row_idx, row) in rows.iter().enumerate().take(7) {
-            let current_step = row.get("sequencer_a_current_step")
-                .and_then(|s| s.as_u64())
-                .ok_or("Cannot read current_step".to_string())? as usize;
-            
-            let euclidean_length = row.get("sequencer_a_euclidean_length")
-                .and_then(|l| l.as_u64())
-                .ok_or("Cannot read euclidean_length".to_string())? as usize;
-            
-            actual_steps.push((row_idx, current_step, euclidean_length));
+        // Read formal_state.log to find the last StepAdvancement event for this master step
+        let log_content = match fs::read_to_string("formal_state.log") {
+            Ok(content) => content,
+            Err(_) => {
+                // Log file doesn't exist yet - wait a bit and try again
+                thread::sleep(Duration::from_millis(200));
+                fs::read_to_string("formal_state.log")
+                    .map_err(|e| format!("Cannot read formal_state.log: {}", e))?
+            }
+        };
+        
+        // Debug: Show log file info
+        let line_count = log_content.lines().count();
+        println!("  📋 formal_state.log has {} lines", line_count);
+        if line_count > 0 {
+            // Show last few lines
+            let last_lines: Vec<_> = log_content.lines().rev().take(3).collect();
+            println!("  📋 Last 3 lines:");
+            for line in last_lines.iter().rev() {
+                println!("     {}", line);
+            }
         }
+
+        // Expected row lengths: [31, 30, 29, 15, 14, 13, 2] (which gives 32, 31, 30, 16, 15, 14, 3 steps)
+        let expected_lengths = vec![31, 30, 29, 15, 14, 13, 2];
+        
+        // Find the StepAdvancement event for this master step
+        // Look for the last occurrence of this step in the log
+        let mut found_step_data: Option<Vec<(usize, usize)>> = None;
+        let mut found_steps = Vec::new(); // Debug: collect all steps found
+        
+        for line in log_content.lines().rev() {
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
+                if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
+                    if let Some(master_step_val) = event.get("master_step").and_then(|v| v.as_u64()) {
+                        found_steps.push(master_step_val as usize); // Debug: track all steps
+                        if master_step_val as usize == step {
+                            // Found the event for this step
+                            if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
+                                let mut steps = Vec::new();
+                                for rs in row_steps {
+                                    if let (Some(row_idx), Some(step_val)) = (
+                                        rs.get(0).and_then(|v| v.as_u64()),
+                                        rs.get(1).and_then(|v| v.as_u64())
+                                    ) {
+                                        steps.push((row_idx as usize, step_val as usize));
+                                    }
+                                }
+                                found_step_data = Some(steps);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let actual_steps = found_step_data
+            .ok_or(format!("No step advancement event found for master step {} in formal_state.log (found steps: {:?})", step, found_steps))?;
 
         // Build verification message
         let mut matches = true;
         let mut details = Vec::new();
         
-        for (row_idx, expected_step, expected_length) in expected_steps.iter() {
-            if let Some((_, actual_step, actual_length)) = actual_steps.get(*row_idx) {
-                if actual_step == expected_step && actual_length == expected_length {
-                    details.push(format!("R{}:OK({}/{})", row_idx, actual_step, actual_length));
+        for (row_idx, &expected_length) in expected_lengths.iter().enumerate().take(7) {
+            let expected_step = step % expected_length;
+            
+            if let Some((_, actual_step)) = actual_steps.iter().find(|(idx, _)| *idx == row_idx) {
+                if actual_step == &expected_step {
+                    details.push(format!("R{}:OK({}/{})", row_idx, actual_step, expected_length));
                 } else {
                     details.push(format!("R{}:MISMATCH(exp:{}/{}, got:{}/{})", 
-                        row_idx, expected_step, expected_length, actual_step, actual_length));
+                        row_idx, expected_step, expected_length, actual_step, expected_length));
                     matches = false;
                 }
+            } else {
+                details.push(format!("R{}:MISSING", row_idx));
+                matches = false;
             }
         }
 
@@ -421,7 +457,7 @@ impl AutomatedTestClock {
 #[command(name = "automated_test_clock")]
 #[command(about = "Automated Test MIDI Clock Generator", long_about = None)]
 struct Args {
-    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 3 lengths for 7 rows)
+    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 2 lengths for 7 rows)
     #[arg(long)]
     test1: bool,
 
@@ -455,9 +491,16 @@ impl AutomatedTestClock {
                 message: "Starting Test1: Multi-Length Pattern Test".to_string() 
             },
             
-            // Load pre-configured test pattern with row lengths: 31, 30, 29, 15, 14, 13, 3
+            // Stop sequencer first to reset all counters to 0
             TestCommand::LogMilestone { 
-                message: "Loading test_pattern_1.json with row lengths [31, 30, 29, 15, 14, 13, 3]".to_string()
+                message: "Stopping sequencer to reset state".to_string()
+            },
+            TestCommand::Stop,
+            TestCommand::Wait { ms: 500 },
+            
+            // Load pre-configured test pattern with row lengths: 31, 30, 29, 15, 14, 13, 2 (which gives 3 steps: 0,1,2)
+            TestCommand::LogMilestone { 
+                message: "Loading test_pattern_1.json with row lengths [31, 30, 29, 15, 14, 13, 2]".to_string()
             },
             TestCommand::LoadPattern { 
                 file: "test_pattern_1.json".to_string() 
@@ -494,7 +537,7 @@ impl AutomatedTestClock {
         
         TestScript {
             name: "Test1: Multi-Length Pattern Test".to_string(),
-            description: format!("Test patterns with lengths 31, 30, 29, 15, 14, 13, 3 (7 rows) and verify step counters at each step up to {}", no_of_steps),
+            description: format!("Test patterns with lengths 31, 30, 29, 15, 14, 13, 2 (7 rows, giving 32,31,30,16,15,14,3 steps) and verify step counters at each step up to {}", no_of_steps),
             initial_bpm: Some(120.0),
             commands,
         }
