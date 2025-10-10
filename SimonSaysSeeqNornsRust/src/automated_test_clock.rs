@@ -14,7 +14,7 @@
 
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::sync::mpsc::{self, Sender};
 use std::thread;
@@ -37,8 +37,6 @@ pub enum TestCommand {
     Stop,
     /// Change BPM
     SetBpm { bpm: f32 },
-    /// Send specific number of MIDI clock ticks
-    SendTicks { count: u32 },
     /// Load a test pattern file into the sequencer
     LoadPattern { file: String },
     /// Inject button press via button file
@@ -72,7 +70,6 @@ pub enum ClockCommand {
     Start,
     Stop,
     SetBpm(f32),
-    SendTicks(u32),
     Exit,
 }
 
@@ -169,13 +166,7 @@ impl AutomatedTestClock {
         *self.bpm.lock().unwrap()
     }
 
-    /// Send specific number of MIDI clock ticks
-    pub fn send_ticks(&self, count: u32) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(ref sender) = self.command_sender {
-            sender.send(ClockCommand::SendTicks(count))?;
-        }
-        Ok(())
-    }
+
 
     /// Exit the clock generator
     pub fn exit(&self) {
@@ -258,17 +249,6 @@ impl AutomatedTestClock {
                         }
                         ClockCommand::SetBpm(new_bpm) => {
                             println!("🎚️  BPM changed to {:.1}", new_bpm);
-                        }
-                        ClockCommand::SendTicks(count) => {
-                            println!("⚡ Sending {} MIDI clock ticks", count);
-                            for _ in 0..count {
-                                if let Err(e) = connection.send(&[0xF8]) { // MIDI Clock
-                                    eprintln!("Error sending MIDI Clock: {}", e);
-                                    break;
-                                }
-                                *tick_count.lock().unwrap() += 1;
-                                thread::sleep(Duration::from_millis(1)); // Small delay between ticks
-                            }
                         }
                         ClockCommand::Exit => {
                             should_exit.store(true, Ordering::Relaxed);
@@ -375,9 +355,7 @@ impl AutomatedTestClock {
         }
         
         // Execute each command in sequence
-        for (i, command) in script.commands.iter().enumerate() {
-            println!("\n{}. Executing: {:?}", i + 1, command);
-            
+        for (_i, command) in script.commands.iter().enumerate() {
             match command {
                 TestCommand::Wait { ms } => {
                     println!("⏱️  Waiting {} ms...", ms);
@@ -397,11 +375,6 @@ impl AutomatedTestClock {
                 TestCommand::SetBpm { bpm } => {
                     self.set_bpm(*bpm)?;
                     self.log_event("test_set_bpm", Some(format!("BPM: {}", bpm)));
-                }
-                
-                TestCommand::SendTicks { count } => {
-                    self.send_ticks(*count)?;
-                    self.log_event("test_send_ticks", Some(format!("Count: {}", count)));
                 }
                 
                 TestCommand::LoadPattern { file } => {
