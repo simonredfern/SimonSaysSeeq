@@ -59,7 +59,7 @@ pub struct NoteEvent {
 pub struct SequencerARowStates {
     pub sequencer_a_current_step: usize,
     pub sequencer_a_first_step: usize,
-    pub sequencer_a_euclidean_length: usize,
+    pub sequencer_a_max_step: usize,
     pub sequencer_a_euclidean_events: usize,
     pub sequencer_a_euclidean_rotation: usize,
     pub sequencer_a_previous_step: usize,
@@ -92,7 +92,7 @@ impl Default for SequencerARowStates {
         Self {
             sequencer_a_current_step: 0,
             sequencer_a_first_step: 0,
-            sequencer_a_euclidean_length: 31,
+            sequencer_a_max_step: 31,
             sequencer_a_euclidean_events: 5,
             sequencer_a_euclidean_rotation: 0,
             sequencer_a_previous_step: 31,
@@ -464,7 +464,7 @@ impl Sequencer {
         let row_state = &state.sequencer_a_row_states[row];
 
         // Check if this step is within the row's range
-        if step < row_state.sequencer_a_first_step || step > row_state.sequencer_a_euclidean_length {
+        if step < row_state.sequencer_a_first_step || step > row_state.sequencer_a_max_step {
             return None;
         }
 
@@ -555,16 +555,16 @@ impl Sequencer {
             let old_step = row_state.sequencer_a_current_step;
             row_state.sequencer_a_previous_step = old_step;
             row_state.sequencer_a_current_step += 1;
-            // Wrap step counter if it exceeds the euclidean_length
-            // euclidean_length is the max valid index (e.g., 31 for 32 steps)
-            if row_state.sequencer_a_current_step > row_state.sequencer_a_euclidean_length {
+            // Wrap step counter if it exceeds the max_step
+            // max_step is the maximum valid step index (e.g., 31 for 32 steps)
+            if row_state.sequencer_a_current_step > row_state.sequencer_a_max_step {
                 row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
             }
             row_steps.push((row_idx, row_state.sequencer_a_current_step));
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                  // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
                  //       row_idx, old_step, row_state.sequencer_a_current_step,
-                 //       row_state.sequencer_a_first_step, row_state.sequencer_a_euclidean_length);
+                 //       row_state.sequencer_a_first_step, row_state.sequencer_a_max_step);
             }
         }
 
@@ -1085,9 +1085,9 @@ impl Sequencer {
 
         // Set the row's euclidean length to match the pattern length
         if let Some(row_state) = state.sequencer_a_row_states.get_mut(row) {
-            row_state.sequencer_a_euclidean_length = pattern_length - 1; // Store as 0-based index
-            info!("Applied preset pattern column {} to row {} (pattern length: {}, euclidean_length set to: {})", 
-                  column, row, pattern_length, row_state.sequencer_a_euclidean_length);
+            row_state.sequencer_a_max_step = pattern_length - 1; // Store as 0-based index
+            info!("Applied preset pattern column {} to row {} (pattern length: {}, max_step set to: {})", 
+                  column, row, pattern_length, row_state.sequencer_a_max_step);
         } else {
             info!("Applied preset pattern column {} to row {} (pattern length: {})", column, row, pattern_length);
         }
@@ -1189,7 +1189,7 @@ impl Sequencer {
 
         // Update the row's Euclidean parameters
         state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_events = events;
-        state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_length = length - 1; // Store as last valid step index (0-based)
+        state.sequencer_a_row_states[row_idx].sequencer_a_max_step = length - 1; // Store as last valid step index (0-based)
         state.sequencer_a_row_states[row_idx].sequencer_a_euclidean_rotation = rotation;
 
         // Clear the row first
@@ -1513,7 +1513,7 @@ mod tests {
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
                 assert_eq!(row_state.sequencer_a_current_step, 0, "Row {} should start at step 0", row_idx);
                 assert_eq!(row_state.sequencer_a_first_step, 0, "Row {} should have first_step=0", row_idx);
-                assert_eq!(row_state.sequencer_a_euclidean_length, 31, "Row {} should have length=31 by default", row_idx);
+                assert_eq!(row_state.sequencer_a_max_step, 31, "Row {} should have max_step=31 by default", row_idx);
                 assert_eq!(row_state.sequencer_a_previous_step, 31, "Row {} should have previous_step=31", row_idx);
             }
         }
@@ -1532,7 +1532,7 @@ mod tests {
                 // Advance step (simulating the advance_step logic)
                 row.sequencer_a_previous_step = row.sequencer_a_current_step;
                 row.sequencer_a_current_step += 1;
-                if row.sequencer_a_current_step > row.sequencer_a_euclidean_length {
+                if row.sequencer_a_current_step > row.sequencer_a_max_step {
                     row.sequencer_a_current_step = row.sequencer_a_first_step;
                 }
             }
@@ -1548,7 +1548,7 @@ mod tests {
             
             // Set custom range: steps 4-15 (12 step loop starting at step 4)
             row.sequencer_a_first_step = 4;
-            row.sequencer_a_euclidean_length = 15;
+            row.sequencer_a_max_step = 15;
             row.sequencer_a_current_step = 4;
             
             // Advance through custom range
@@ -1560,7 +1560,7 @@ mod tests {
                 // Advance
                 row.sequencer_a_previous_step = row.sequencer_a_current_step;
                 row.sequencer_a_current_step += 1;
-                if row.sequencer_a_current_step > row.sequencer_a_euclidean_length {
+                if row.sequencer_a_current_step > row.sequencer_a_max_step {
                     row.sequencer_a_current_step = row.sequencer_a_first_step;
                 }
             }

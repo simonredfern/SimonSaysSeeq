@@ -318,8 +318,8 @@ impl AutomatedTestClock {
             }
         }
 
-        // Expected row lengths: [31, 30, 29, 15, 14, 13, 2] (which gives 32, 31, 30, 16, 15, 14, 3 steps)
-        let expected_lengths = vec![31, 30, 29, 15, 14, 13, 2];
+        // Expected max_step values: [31, 30, 29, 15, 14, 13, 2] (which gives 32, 31, 30, 16, 15, 14, 3 steps)
+        let expected_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
         
         // Find the StepAdvancement event for this master step
         // Look for the last occurrence of this step in the log
@@ -359,15 +359,15 @@ impl AutomatedTestClock {
         let mut matches = true;
         let mut details = Vec::new();
         
-        for (row_idx, &expected_length) in expected_lengths.iter().enumerate().take(7) {
-            let expected_step = step % expected_length;
+        for (row_idx, &expected_max_step) in expected_max_steps.iter().enumerate().take(7) {
+            let expected_step = step % (expected_max_step + 1);
             
             if let Some((_, actual_step)) = actual_steps.iter().find(|(idx, _)| *idx == row_idx) {
                 if actual_step == &expected_step {
-                    details.push(format!("R{}:OK({}/{})", row_idx, actual_step, expected_length));
+                    details.push(format!("R{}:OK({},max:{})", row_idx, actual_step, expected_max_step));
                 } else {
-                    details.push(format!("R{}:MISMATCH(exp:{}/{}, got:{}/{})", 
-                        row_idx, expected_step, expected_length, actual_step, expected_length));
+                    details.push(format!("R{}:MISMATCH(exp:{},got:{},max:{})", 
+                        row_idx, expected_step, actual_step, expected_max_step));
                     matches = false;
                 }
             } else {
@@ -457,7 +457,7 @@ impl AutomatedTestClock {
 #[command(name = "automated_test_clock")]
 #[command(about = "Automated Test MIDI Clock Generator", long_about = None)]
 struct Args {
-    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 2 lengths for 7 rows)
+    /// Run test1: Multi-length pattern test (max_step: 31, 30, 29, 15, 14, 13, 2 for 7 rows)
     #[arg(long)]
     test1: bool,
 
@@ -498,9 +498,9 @@ impl AutomatedTestClock {
             TestCommand::Stop,
             TestCommand::Wait { ms: 500 },
             
-            // Load pre-configured test pattern with row lengths: 31, 30, 29, 15, 14, 13, 2 (which gives 3 steps: 0,1,2)
+            // Load pre-configured test pattern with max_step: 31, 30, 29, 15, 14, 13, 2 (giving 32, 31, 30, 16, 15, 14, 3 steps)
             TestCommand::LogMilestone { 
-                message: "Loading test_pattern_1.json with row lengths [31, 30, 29, 15, 14, 13, 2]".to_string()
+                message: "Loading test_pattern_1.json with max_step [31, 30, 29, 15, 14, 13, 2]".to_string()
             },
             TestCommand::LoadPattern { 
                 file: "test_pattern_1.json".to_string() 
@@ -537,7 +537,7 @@ impl AutomatedTestClock {
         
         TestScript {
             name: "Test1: Multi-Length Pattern Test".to_string(),
-            description: format!("Test patterns with lengths 31, 30, 29, 15, 14, 13, 2 (7 rows, giving 32,31,30,16,15,14,3 steps) and verify step counters at each step up to {}", no_of_steps),
+            description: format!("Test patterns with max_step [31, 30, 29, 15, 14, 13, 2] (7 rows, giving 32,31,30,16,15,14,3 steps) and verify step counters at each step up to {}", no_of_steps),
             initial_bpm: Some(120.0),
             commands,
         }
