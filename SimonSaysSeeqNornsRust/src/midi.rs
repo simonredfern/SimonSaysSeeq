@@ -112,30 +112,24 @@ impl MultiScaleTickWindows {
 #[derive(Debug, Clone)]
 pub struct ClockState {
     pub source: ClockSource,
-    pub external_tempo: Option<f32>,
     pub clock_ticks: u32,
     pub last_clock_time: Option<Instant>,
     pub last_beat_time: Option<Instant>,
     pub multi_scale_window: Option<MultiScaleTickWindows>,
     pub running: bool,
     pub last_external_activity: Option<Instant>,
-    pub last_tempo_update: Option<Instant>,
-    pub previous_tempo: Option<f32>,
 }
 
 impl Default for ClockState {
     fn default() -> Self {
         Self {
             source: ClockSource::Internal,
-            external_tempo: None,
             clock_ticks: 0,
             last_clock_time: None,
             last_beat_time: None,
             multi_scale_window: None,
             running: false,
             last_external_activity: None,
-            last_tempo_update: None,
-            previous_tempo: None,
         }
     }
 }
@@ -626,8 +620,7 @@ impl MidiManager {
                 if let Some((weighted_bpm, active_windows, total_windows)) = tempo_result {
                     let total_ticks = clock.clock_ticks;
                     
-                    // Always accept tempo readings - rejection logic removed
-                    clock.external_tempo = Some(weighted_bpm);
+                    // Tempo calculation for logging only - not used by sequencer
                     trace!("handle_midi_input_message says: External tempo detected: {:.1} BPM (weighted from {}/{} active windows, {} total ticks)", 
                            weighted_bpm, active_windows, total_windows, total_ticks);
                 }
@@ -810,46 +803,7 @@ impl MidiManager {
         clock.source.clone()
     }
     
-    /// Get external tempo (if available) with rate limiting
-    pub fn get_external_tempo(&self) -> Option<f32> {
-        let mut clock = self.clock_state.lock().unwrap();
-        if let Some(raw_tempo) = clock.external_tempo {
-            let now = Instant::now();
-            
-            // Apply rate limiting: max ±2 BPM per second
-            let rate_limited_tempo = if let (Some(prev_tempo), Some(last_update)) = 
-                (clock.previous_tempo, clock.last_tempo_update) {
-                
-                let time_delta = now.duration_since(last_update).as_secs_f32();
-                let max_change = 2.0 * time_delta; // 2 BPM per second max
-                let tempo_change = raw_tempo - prev_tempo;
-                
-                if tempo_change.abs() > max_change {
-                    // Limit the change to maximum allowed
-                    let limited_change = if tempo_change > 0.0 { max_change } else { -max_change };
-                    let limited_tempo = prev_tempo + limited_change;
-                    debug!("get_external_tempo says: Rate limiting {:.1} BPM change to {:.1} BPM (max {:.1} BPM/s)", 
-                           tempo_change, limited_change, 2.0);
-                    limited_tempo
-                } else {
-                    raw_tempo
-                }
-            } else {
-                // First tempo reading, no rate limiting needed
-                raw_tempo
-            };
-            
-            // Update tracking for next rate limiting calculation
-            clock.previous_tempo = Some(rate_limited_tempo);
-            clock.last_tempo_update = Some(now);
-            
-            debug!("get_external_tempo says: Final tempo used: {:.1} BPM", rate_limited_tempo);
-            
-            Some(rate_limited_tempo)
-        } else {
-            None
-        }
-    }
+
     
     /// Check if external clock is running
     pub fn is_external_clock_running(&self) -> bool {
@@ -885,9 +839,6 @@ impl MidiManager {
         clock.last_clock_time = None;
         clock.last_beat_time = None;
         clock.multi_scale_window = None;
-        clock.external_tempo = None;
-        clock.last_tempo_update = None;
-        clock.previous_tempo = None;
         debug!("reset_clock says: Clock state reset");
     }
     
@@ -966,9 +917,9 @@ impl MidiManager {
     }
     
     /// Get clock state information
-    pub fn get_clock_info(&self) -> (ClockSource, Option<f32>, bool) {
+    pub fn get_clock_info(&self) -> (ClockSource, bool) {
         let clock = self.clock_state.lock().unwrap();
-        (clock.source.clone(), clock.external_tempo, clock.running)
+        (clock.source.clone(), clock.running)
     }
     
     /// Get clock state for phase correction
@@ -987,16 +938,9 @@ impl MidiManager {
         if matches!(clock.source, ClockSource::MidiExternal) {
             if let Some(last_activity) = clock.last_external_activity {
                 if last_activity.elapsed() > Duration::from_secs(5) {
-                    // Preserve the last external tempo when switching to internal clock
-                    let last_external_tempo = clock.external_tempo;
                     clock.source = ClockSource::Internal;
                     clock.running = false;
-                    // Keep external_tempo available so sequencer can maintain the last known tempo
-                    if let Some(tempo) = last_external_tempo {
-                        info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock, preserving tempo {:.1} BPM", tempo);
-                    } else {
-                        info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
-                    }
+                    info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
                 }
             }
         }

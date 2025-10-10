@@ -89,54 +89,6 @@ impl Default for MidiNoteEvent {
     }
 }
 
-/// Core timing and tempo analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TempoAnalysis {
-    // Wow (large tempo instability)
-    pub wow_window_size: usize,
-    pub wow_window_tick_position: usize,
-    pub wow_tempo_sum: f32,
-    pub total_wow_tempo_ticks: u32,
-    pub wow_tempo_episodes: u32,
-    pub wow_average_tempo: f32,
-    pub tempo_wow_is_good: bool,
-    pub wow_threshold: f32,
-
-    // Flutter (small tempo instability)
-    pub flutter_window_size: usize,
-    pub flutter_window_tick_position: usize,
-    pub flutter_tempo_sum: f32,
-    pub total_flutter_tempo_ticks: u32,
-    pub flutter_tempo_episodes: u32,
-    pub flutter_average_tempo: f32,
-    pub tempo_flutter_is_good: bool,
-    pub flutter_threshold: f32,
-}
-
-impl Default for TempoAnalysis {
-    fn default() -> Self {
-        Self {
-            wow_window_size: 192,
-            wow_window_tick_position: 0,
-            wow_tempo_sum: 0.0,
-            total_wow_tempo_ticks: 0,
-            wow_tempo_episodes: 0,
-            wow_average_tempo: 0.0,
-            tempo_wow_is_good: true,
-            wow_threshold: 3.0,
-
-            flutter_window_size: 192,
-            flutter_window_tick_position: 0,
-            flutter_tempo_sum: 0.0,
-            total_flutter_tempo_ticks: 0,
-            flutter_tempo_episodes: 0,
-            flutter_average_tempo: 0.0,
-            tempo_flutter_is_good: true,
-            flutter_threshold: 0.25,
-        }
-    }
-}
-
 impl Default for SequencerARowStates {
     fn default() -> Self {
         Self {
@@ -194,7 +146,6 @@ pub struct SequencerState {
     /// Transport state
     pub is_running: bool,
     /// Core timing variables
-    pub tempo: f32,
     pub swing_amount: f32,
     pub ticks_per_step: u32,
     pub steps_per_bar: usize,
@@ -205,8 +156,6 @@ pub struct SequencerState {
     pub last_step: usize,
     pub midi_first_step: usize,
     pub midi_last_step: usize,
-    /// Tempo analysis
-    pub tempo_analysis: TempoAnalysis,
     /// Advanced features
     pub swing_mode: u8,
     pub global_transpose: i8,
@@ -269,7 +218,6 @@ impl Default for SequencerState {
             sequencer_a_current_master_bar: 0,
             sequencer_a_current_lane: 1,
             is_running: false,
-            tempo: 30.0,
             swing_amount: 0.0,
             ticks_per_step: 12,
             first_step: 0,
@@ -280,7 +228,6 @@ impl Default for SequencerState {
             the_current_tick_count_since_start: 0,
             midi_first_step: 0,
             midi_last_step: 31,
-            tempo_analysis: TempoAnalysis::default(),
             swing_mode: 1,
             global_transpose: 0,
             global_velocity_scale: 1.0,
@@ -390,12 +337,7 @@ impl Sequencer {
         self.state.lock().unwrap().is_running
     }
 
-    /// Set tempo
-    pub fn set_tempo(&self, tempo: f32) {
-        let mut state = self.state.lock().unwrap();
-        state.tempo = tempo.clamp(20.0, 300.0);
-        // debug!("set_tempo says: Tempo set to: {:.1} BPM", state.tempo);
-    }
+
 
     /// Get current position
     /// Get the current playback position (step, bar)
@@ -467,11 +409,7 @@ impl Sequencer {
         state.swing_amount = amount.clamp(0.0, 0.5);
     }
 
-    /// Get current tempo
-    pub fn get_tempo(&self) -> f32 {
-        let state = self.state.lock().unwrap();
-        state.tempo
-    }
+
 
     /// Get current step and bar
     pub fn get_current_position(&self) -> (usize, usize) {

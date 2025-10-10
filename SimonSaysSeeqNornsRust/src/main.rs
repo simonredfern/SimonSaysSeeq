@@ -103,7 +103,6 @@ pub struct SimonSaysSeeq {
     crow: simon_says_seeq_rust::crow::Crow,
     config: Config,
     running: Arc<AtomicBool>,
-    tempo: f32,
     // Active ARM action for row 7 (control row) - only one can be active at a time
     active_arm_action: Option<ArmAction>,
     // Beat LED flashing state for external MIDI clock
@@ -128,7 +127,6 @@ impl SimonSaysSeeq {
         let config_path = Config::get_config_path();
         // info!("📁 Config file location: {:?}", config_path);
         let config = Config::load_or_default()?;
-        let initial_tempo = config.sequencer.default_tempo;
 
         Ok(Self {
             hardware: NornsHardware::new()?,
@@ -157,7 +155,6 @@ impl SimonSaysSeeq {
             crow: simon_says_seeq_rust::crow::Crow::new()?,
             config,
             running: Arc::new(AtomicBool::new(false)),
-            tempo: initial_tempo,
             active_arm_action: None, // No ARM action initially active
             beat_led_flash_until: None,
             crow_cv1_muted: false, // Default CV1 not muted
@@ -250,8 +247,7 @@ impl SimonSaysSeeq {
         // Internal sequencer thread removed - external clock slave mode only
 
         // Auto-start the sequencer for desktop testing (no hardware required)
-        // info!("Auto-starting sequencer - tempo: {:.1} BPM", self.tempo);
-        self.sequencer.set_tempo(self.tempo);
+        // Sequencer is driven by external MIDI clock only
         self.sequencer.start();
 
         // Show grid connection status
@@ -414,9 +410,8 @@ impl SimonSaysSeeq {
                         // info!("Global transpose changed to: {} semitones", new_transpose);
                     }
                     3 => {
-                        // Right encoder controls tempo
-                        self.tempo = (self.tempo + delta as f32).clamp(20.0, 300.0);
-                        self.sequencer.set_tempo(self.tempo);
+                        // Right encoder - tempo control removed (sequencer uses external clock only)
+                        // self.tempo = (self.tempo + delta as f32).clamp(20.0, 300.0);
                         // info!("Tempo changed to: {:.1} BPM", self.tempo);
                     }
                     _ => {}
@@ -869,22 +864,8 @@ impl SimonSaysSeeq {
                                 14 | 15 => {
                                     // Tempo controls - only work when external clock is not active
                                     if !self.midi.is_external_clock_running() {
-                                        let current_tempo = self.sequencer.get_tempo();
-                                        let new_tempo = if x == 14 {
-                                            // Column 14: Decrease tempo
-                                            (current_tempo - 1.0).clamp(20.0, 300.0)
-                                        } else {
-                                            // Column 15: Increase tempo
-                                            (current_tempo + 1.0).clamp(20.0, 300.0)
-                                        };
-                                        
-                                        if new_tempo != current_tempo {
-                                            self.sequencer.set_tempo(new_tempo);
-                                            self.tempo = new_tempo; // Keep main tempo in sync
-                                            let snap_suffix = "";
-                                            info!("handle_grid_press says: Tempo changed from {:.1} to {:.1} BPM{} via GRID_TWO column {}", 
-                                                  current_tempo, new_tempo, snap_suffix, x);
-                                        }
+                                        // Tempo control removed - sequencer uses external clock only
+                                        info!("handle_grid_press says: Tempo control disabled - sequencer uses external MIDI clock");
                                     } else {
                                         info!("handle_grid_press says: Tempo control ignored - external MIDI clock is active");
                                     }
@@ -1092,8 +1073,8 @@ impl SimonSaysSeeq {
     fn update_screen(&mut self) -> Result<()> {
         self.screen.clear();
 
-        // Display tempo
-        self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
+        // Display tempo - removed (sequencer uses external clock)
+        // self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
 
         // Display current step/bar
         let (step, bar) = self.sequencer.get_position();
@@ -1115,9 +1096,10 @@ impl SimonSaysSeeq {
         }
 
         // Show tempo visualization if enabled
-        if self.config.display.show_tempo_viz {
-            self.screen.draw_tempo_viz(self.sequencer.get_tempo());
-        }
+        // Tempo visualization removed - sequencer uses external clock only
+        // if self.config.display.show_tempo_viz {
+        //     self.screen.draw_tempo_viz(self.sequencer.get_tempo());
+        // }
 
         self.screen.update()?;
 
@@ -1766,19 +1748,11 @@ impl SimonSaysSeeq {
                 // Synchronize sequencer tempo with external MIDI clock (less frequent logging)
                 #[cfg(feature = "midi")]
                 {
-                    if let Some(external_tempo) = self.midi.get_external_tempo() {
-                        let current_tempo = self.sequencer.get_tempo();
-                        if (external_tempo - current_tempo).abs() > 0.5 {
-                            self.sequencer.set_tempo(external_tempo);
-                            self.tempo = external_tempo; // Keep main tempo in sync
-                            info!("handle_midi_input_event says: Applied tempo to sequencer: {:.1} BPM", external_tempo);
-                        }
-                    }
+                    // Tempo application removed - sequencer uses clock ticks only
                 }
                 
-                let current_tempo = self.sequencer.get_tempo();
-                let snap_suffix = "";
-                debug!("handle_midi_input_event says: MIDI Clock Beat - flashing tempo LEDs at {:.1} BPM{}", current_tempo, snap_suffix);
+                // Tempo display removed - sequencer uses external clock
+                debug!("handle_midi_input_event says: MIDI Clock Beat");
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
@@ -1793,14 +1767,7 @@ impl SimonSaysSeeq {
                 // Synchronize sequencer tempo with external MIDI clock on start
                 #[cfg(feature = "midi")]
                 {
-                    if let Some(external_tempo) = self.midi.get_external_tempo() {
-                        let current_tempo = self.sequencer.get_tempo();
-                        if (external_tempo - current_tempo).abs() > 0.5 {
-                            self.sequencer.set_tempo(external_tempo);
-                            self.tempo = external_tempo; // Keep main tempo in sync
-                            info!("handle_midi_input_event says: Applied tempo to sequencer on start: {:.1} BPM", external_tempo);
-                        }
-                    }
+                    // Tempo application removed - sequencer uses clock ticks only
                 }
             }
             MidiInputEvent::ClockStop => {
@@ -1852,13 +1819,8 @@ impl SimonSaysSeeq {
                 // External MIDI clock timed out - preserve the last known external tempo
                 #[cfg(feature = "midi")]
                 {
-                    if let Some(last_external_tempo) = self.midi.get_external_tempo() {
-                        self.sequencer.set_tempo(last_external_tempo);
-                        self.tempo = last_external_tempo; // Keep main tempo in sync
-                        info!("handle_midi_input_event says: External clock timeout - preserving tempo: {:.1} BPM", last_external_tempo);
-                    } else {
-                        info!("handle_midi_input_event says: External clock timeout - no previous external tempo to preserve");
-                    }
+                    // Tempo preservation removed - sequencer uses clock ticks only
+                    info!("handle_midi_input_event says: External clock timeout");
                 }
             }
             MidiInputEvent::NoteOn { channel, note, velocity } => {
