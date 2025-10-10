@@ -20,7 +20,7 @@ path = "src/bin/midi_clock_detector.rs"
 
 [[bin]]
 name = "automated_test_clock"
-path = "utils/automated_test_clock.rs"
+path = "src/automated_test_clock.rs"
 
 [dependencies]
 # MIDI handling (optional for development)

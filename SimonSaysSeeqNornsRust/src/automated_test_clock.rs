@@ -565,7 +565,7 @@ impl AutomatedTestClock {
                     message: "Loading test_pattern_1.json with row lengths [32, 31, 30, 16, 15, 14]".to_string() 
                 },
                 TestCommand::LoadPattern { 
-                    file: "test_patterns/test_pattern_1.json".to_string() 
+                    file: "test_pattern_1.json".to_string() 
                 },
                 
                 TestCommand::LogMilestone { 
