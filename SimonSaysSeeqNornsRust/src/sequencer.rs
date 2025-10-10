@@ -591,7 +591,7 @@ impl Sequencer {
             state.sequencer_a_row_states.iter()
                 .enumerate()
                 .take(7) // Only show rows 0-6 (sequencer rows)
-                .map(|(i, row)| format!("R{}:{}", i, row.sequencer_a_current_step))
+                .map(|(i, row)| format!("R{}:{:02}", i, row.sequencer_a_current_step))
                 .collect::<Vec<_>>()
                 .join(", ")
         );
