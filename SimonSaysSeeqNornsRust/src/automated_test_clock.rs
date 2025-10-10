@@ -198,6 +198,13 @@ impl AutomatedTestClock {
         println!("📋 Description: {}", script.description);
         println!("═══════════════════════════════════════════════════════════════════");
         
+        // Truncate formal_state.log at the start of the test to ensure clean state
+        if let Err(e) = fs::write("formal_state.log", "") {
+            println!("⚠️  Warning: Could not truncate formal_state.log: {}", e);
+        } else {
+            println!("🗑️  Truncated formal_state.log for clean test run");
+        }
+        
         self.log_event("test_script_start", Some(format!("{}: {}", script.name, script.description)));
         
         // Set initial BPM if specified
@@ -266,8 +273,8 @@ impl AutomatedTestClock {
                 }
                 
                 TestCommand::VerifyState { description } => {
-                    // Extract step number from description if present
-                    if let Some(step_num) = description.split("master step ").nth(1).and_then(|s| s.parse::<usize>().ok()) {
+                    // Extract cumulative step number from description if present
+                    if let Some(step_num) = description.split("cumulative step ").nth(1).and_then(|s| s.parse::<usize>().ok()) {
                         // Extra delay to ensure log is written
                         thread::sleep(Duration::from_millis(50));
                         match self.verify_sequencer_state_at_step(step_num) {
@@ -303,13 +310,8 @@ impl AutomatedTestClock {
         Ok(())
     }
 
-    /// Verify sequencer state at a specific master step
-    fn verify_sequencer_state_at_step(&self, step: usize) -> Result<String, String> {
-        // Only implement for steps 1-8
-        if step > 8 {
-            return Err("Verification not implemented for this step".to_string());
-        }
-
+    /// Verify sequencer state at a specific cumulative step
+    fn verify_sequencer_state_at_step(&self, cumulative_step: usize) -> Result<String, String> {
         // Debug: Show current working directory
         if let Ok(cwd) = std::env::current_dir() {
             println!("  📁 Current working directory: {}", cwd.display());
@@ -341,31 +343,32 @@ impl AutomatedTestClock {
         // Expected max_step values: [31, 30, 29, 15, 14, 13, 2] (which gives 32, 31, 30, 16, 15, 14, 3 steps)
         let expected_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
         
-        // Find the StepAdvancement event for this master step
-        // Look for the last occurrence of this step in the log
+        // Count StepAdvancement events from the start to find the Nth one
+        let mut step_count = 0;
         let mut found_step_data: Option<Vec<(usize, usize)>> = None;
-        let mut found_steps = Vec::new(); // Debug: collect all steps found
+        let mut found_bar: Option<usize> = None;
+        let mut found_master_step: Option<usize> = None;
         
-        for line in log_content.lines().rev() {
+        for line in log_content.lines() {
             if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
                 if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
-                    if let Some(master_step_val) = event.get("master_step").and_then(|v| v.as_u64()) {
-                        found_steps.push(master_step_val as usize); // Debug: track all steps
-                        if master_step_val as usize == step {
-                            // Found the event for this step
-                            if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
-                                let mut steps = Vec::new();
-                                for rs in row_steps {
-                                    if let (Some(row_idx), Some(step_val)) = (
-                                        rs.get(0).and_then(|v| v.as_u64()),
-                                        rs.get(1).and_then(|v| v.as_u64())
-                                    ) {
-                                        steps.push((row_idx as usize, step_val as usize));
-                                    }
+                    step_count += 1;
+                    if step_count == cumulative_step {
+                        // Found the Nth step advancement
+                        found_master_step = event.get("master_step").and_then(|v| v.as_u64()).map(|s| s as usize);
+                        found_bar = event.get("master_bar").and_then(|v| v.as_u64()).map(|b| b as usize);
+                        if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
+                            let mut steps = Vec::new();
+                            for rs in row_steps {
+                                if let (Some(row_idx), Some(step_val)) = (
+                                    rs.get(0).and_then(|v| v.as_u64()),
+                                    rs.get(1).and_then(|v| v.as_u64())
+                                ) {
+                                    steps.push((row_idx as usize, step_val as usize));
                                 }
-                                found_step_data = Some(steps);
-                                break;
                             }
+                            found_step_data = Some(steps);
+                            break;
                         }
                     }
                 }
@@ -373,14 +376,15 @@ impl AutomatedTestClock {
         }
 
         let actual_steps = found_step_data
-            .ok_or(format!("No step advancement event found for master step {} in formal_state.log (found steps: {:?})", step, found_steps))?;
+            .ok_or(format!("No step advancement event found for cumulative step {} in formal_state.log (found {} step events)", cumulative_step, step_count))?;
 
         // Build verification message
         let mut matches = true;
         let mut details = Vec::new();
         
         for (row_idx, &expected_max_step) in expected_max_steps.iter().enumerate().take(7) {
-            let expected_step = step % (expected_max_step + 1);
+            // Use cumulative_step directly since we're now tracking absolute step count
+            let expected_step = cumulative_step % (expected_max_step + 1);
             
             if let Some((_, actual_step)) = actual_steps.iter().find(|(idx, _)| *idx == row_idx) {
                 if actual_step == &expected_step {
@@ -497,8 +501,8 @@ struct Args {
     #[arg(long, default_value = "120.0")]
     bpm: f32,
 
-    /// Number of steps to test (default: 5)
-    #[arg(long, default_value = "5")]
+    /// Number of steps to test (default: 33 to see all rows wrap at least once)
+    #[arg(long, default_value = "33")]
     test_length_steps: usize,
 }
 
@@ -545,14 +549,14 @@ impl AutomatedTestClock {
             TestCommand::Wait { ms: 500 },
         ];
         
-        // Advance one step at a time for specified number of steps, logging state at each master step
-        for step in 1..=no_of_steps {
+        // Advance one step at a time for specified number of steps, logging state at each cumulative step
+        for cumulative_step in 1..=no_of_steps {
             commands.push(TestCommand::LogMilestone { 
-                message: format!("Advancing to master step {}", step) 
+                message: format!("Advancing to cumulative step {}", cumulative_step) 
             });
             commands.push(TestCommand::WaitSteps { count: 1 });
             commands.push(TestCommand::VerifyState { 
-                description: format!("Check sequencer state at master step {}", step) 
+                description: format!("Check sequencer state at cumulative step {}", cumulative_step) 
             });
         }
         
