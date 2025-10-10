@@ -938,9 +938,12 @@ impl MidiManager {
         if matches!(clock.source, ClockSource::MidiExternal) {
             if let Some(last_activity) = clock.last_external_activity {
                 if last_activity.elapsed() > Duration::from_secs(5) {
+                    // Only log if clock was running (prevents spam)
+                    if clock.running {
+                        info!("check_external_clock_timeout says: External MIDI clock timeout - sequencer stopped. Waiting for clock...");
+                    }
                     // Don't switch to internal clock (doesn't exist) - just mark as not running
                     clock.running = false;
-                    info!("check_external_clock_timeout says: External MIDI clock timeout - sequencer stopped");
                 }
             }
         }
