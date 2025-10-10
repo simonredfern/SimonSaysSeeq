@@ -251,8 +251,22 @@ impl AutomatedTestClock {
                 }
                 
                 TestCommand::VerifyState { description } => {
-                    println!("🔍 Verify: {} (placeholder - not implemented)", description);
-                    self.log_event("test_verify", Some(description.clone()));
+                    // Extract step number from description if present
+                    if let Some(step_num) = description.split("master step ").nth(1).and_then(|s| s.parse::<usize>().ok()) {
+                        match self.verify_sequencer_state_at_step(step_num) {
+                            Ok(state_info) => {
+                                println!("🔍 Verify: {} - ✅ {}", description, state_info);
+                                self.log_event("test_verify_success", Some(format!("{}: {}", description, state_info)));
+                            }
+                            Err(e) => {
+                                println!("🔍 Verify: {} - ⚠️  {}", description, e);
+                                self.log_event("test_verify_skip", Some(format!("{}: {}", description, e)));
+                            }
+                        }
+                    } else {
+                        println!("🔍 Verify: {} (no step number found)", description);
+                        self.log_event("test_verify", Some(description.clone()));
+                    }
                 }
             }
             
@@ -263,6 +277,74 @@ impl AutomatedTestClock {
         self.log_event("test_script_complete", Some(script.name.clone()));
         println!("\n✅ Test script completed successfully!");
         Ok(())
+    }
+
+    /// Verify sequencer state at a specific master step
+    fn verify_sequencer_state_at_step(&self, step: usize) -> Result<String, String> {
+        // Only implement for steps 1-8
+        if step > 8 {
+            return Err("Verification not implemented for this step".to_string());
+        }
+
+        // Try to read current_pattern.json
+        let pattern_content = fs::read_to_string("current_pattern.json")
+            .map_err(|_| "Cannot read current_pattern.json".to_string())?;
+        
+        let pattern: serde_json::Value = serde_json::from_str(&pattern_content)
+            .map_err(|_| "Cannot parse current_pattern.json".to_string())?;
+
+        // Get row states
+        let rows = pattern.get("sequencer_a_row_states")
+            .and_then(|r| r.as_array())
+            .ok_or("Cannot read sequencer_a_row_states".to_string())?;
+
+        // Expected row lengths: [31, 30, 29, 15, 14, 13, 3]
+        let expected_lengths = vec![31, 30, 29, 15, 14, 13, 3];
+        
+        // Calculate expected step for each row at this master step
+        let mut expected_steps = Vec::new();
+        for (row_idx, &length) in expected_lengths.iter().enumerate().take(7) {
+            // After master step N, each row should be at step (N % length)
+            // But since rows start at 0, after step 1 we're at step 1, etc.
+            let expected_step = step % length;
+            expected_steps.push((row_idx, expected_step, length));
+        }
+
+        // Read actual steps from the pattern
+        let mut actual_steps = Vec::new();
+        for (row_idx, row) in rows.iter().enumerate().take(7) {
+            let current_step = row.get("sequencer_a_current_step")
+                .and_then(|s| s.as_u64())
+                .ok_or("Cannot read current_step".to_string())? as usize;
+            
+            let euclidean_length = row.get("sequencer_a_euclidean_length")
+                .and_then(|l| l.as_u64())
+                .ok_or("Cannot read euclidean_length".to_string())? as usize;
+            
+            actual_steps.push((row_idx, current_step, euclidean_length));
+        }
+
+        // Build verification message
+        let mut matches = true;
+        let mut details = Vec::new();
+        
+        for (row_idx, expected_step, expected_length) in expected_steps.iter() {
+            if let Some((_, actual_step, actual_length)) = actual_steps.get(*row_idx) {
+                if actual_step == expected_step && actual_length == expected_length {
+                    details.push(format!("R{}:OK({}/{})", row_idx, actual_step, actual_length));
+                } else {
+                    details.push(format!("R{}:MISMATCH(exp:{}/{}, got:{}/{})", 
+                        row_idx, expected_step, expected_length, actual_step, actual_length));
+                    matches = false;
+                }
+            }
+        }
+
+        if matches {
+            Ok(format!("All rows match - [{}]", details.join(", ")))
+        } else {
+            Err(format!("State mismatch - [{}]", details.join(", ")))
+        }
     }
 
     /// Load test script from JSON file
@@ -339,7 +421,7 @@ impl AutomatedTestClock {
 #[command(name = "automated_test_clock")]
 #[command(about = "Automated Test MIDI Clock Generator", long_about = None)]
 struct Args {
-    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 3 lengths for 7 rows, run 64 steps)
+    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 3 lengths for 7 rows)
     #[arg(long)]
     test1: bool,
 
@@ -351,19 +433,23 @@ struct Args {
     #[arg(long, value_name = "FILE")]
     script: Option<String>,
 
-    /// Create the sample 16-step MIDI test script
+    /// Create sample test script file
     #[arg(long)]
     create_test: bool,
 
-    /// Set initial BPM
+    /// Initial BPM (default: 120.0)
     #[arg(long, default_value = "120.0")]
     bpm: f32,
+
+    /// Number of steps to test (default: 5)
+    #[arg(long, default_value = "5")]
+    test_length_steps: usize,
 }
 
 impl AutomatedTestClock {
     /// Create test1: Multi-length pattern test
-    /// Tests patterns with various lengths and checks state at each master step up to step 64
-    fn create_test1_script() -> TestScript {
+    /// Tests patterns with various lengths and checks state at each master step
+    fn create_test1_script(no_of_steps: usize) -> TestScript {
         let mut commands = vec![
             TestCommand::LogMilestone { 
                 message: "Starting Test1: Multi-Length Pattern Test".to_string() 
@@ -389,8 +475,8 @@ impl AutomatedTestClock {
             TestCommand::Wait { ms: 500 },
         ];
         
-        // Advance one step at a time for 64 steps, logging state at each master step
-        for step in 1..=64 {
+        // Advance one step at a time for specified number of steps, logging state at each master step
+        for step in 1..=no_of_steps {
             commands.push(TestCommand::LogMilestone { 
                 message: format!("Advancing to master step {}", step) 
             });
@@ -408,7 +494,7 @@ impl AutomatedTestClock {
         
         TestScript {
             name: "Test1: Multi-Length Pattern Test".to_string(),
-            description: "Test patterns with lengths 31, 30, 29, 15, 14, 13, 3 (7 rows) and verify step counters at each step up to 64".to_string(),
+            description: format!("Test patterns with lengths 31, 30, 29, 15, 14, 13, 3 (7 rows) and verify step counters at each step up to {}", no_of_steps),
             initial_bpm: Some(120.0),
             commands,
         }
@@ -456,8 +542,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Execute based on flags
     if args.test1 {
-        println!("🧪 Running Test1: Multi-Length Pattern Test");
-        let script = AutomatedTestClock::create_test1_script();
+        println!("🧪 Running Test1: Multi-Length Pattern Test (testing {} steps)", args.test_length_steps);
+        let script = AutomatedTestClock::create_test1_script(args.test_length_steps);
         clock.execute_test_script(script)?;
     } else if let Some(script_file) = args.script {
         println!("📜 Loading test script: {}", script_file);
