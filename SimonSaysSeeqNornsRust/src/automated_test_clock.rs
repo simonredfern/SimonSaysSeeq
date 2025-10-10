@@ -339,7 +339,7 @@ impl AutomatedTestClock {
 #[command(name = "automated_test_clock")]
 #[command(about = "Automated Test MIDI Clock Generator", long_about = None)]
 struct Args {
-    /// Run test1: Multi-length pattern test (32, 31, 30, 16, 15, 14 lengths, run 33 steps)
+    /// Run test1: Multi-length pattern test (31, 30, 29, 15, 14, 13, 3 lengths for 7 rows, run 64 steps)
     #[arg(long)]
     test1: bool,
 
@@ -362,70 +362,55 @@ struct Args {
 
 impl AutomatedTestClock {
     /// Create test1: Multi-length pattern test
-    /// Tests patterns of various lengths (32, 31, 30, 16, 15, 14) and runs for 33 steps
+    /// Tests patterns with various lengths and checks state at each master step up to step 64
     fn create_test1_script() -> TestScript {
+        let mut commands = vec![
+            TestCommand::LogMilestone { 
+                message: "Starting Test1: Multi-Length Pattern Test".to_string() 
+            },
+            
+            // Load pre-configured test pattern with row lengths: 31, 30, 29, 15, 14, 13, 3
+            TestCommand::LogMilestone { 
+                message: "Loading test_pattern_1.json with row lengths [31, 30, 29, 15, 14, 13, 3]".to_string()
+            },
+            TestCommand::LoadPattern { 
+                file: "test_pattern_1.json".to_string() 
+            },
+            
+            TestCommand::LogMilestone { 
+                message: "Pattern loaded to current_pattern.json".to_string() 
+            },
+            
+            // Start the MIDI clock
+            TestCommand::LogMilestone { 
+                message: "Starting MIDI clock".to_string() 
+            },
+            TestCommand::Start,
+            TestCommand::Wait { ms: 500 },
+        ];
+        
+        // Advance one step at a time for 64 steps, logging state at each master step
+        for step in 1..=64 {
+            commands.push(TestCommand::LogMilestone { 
+                message: format!("Advancing to master step {}", step) 
+            });
+            commands.push(TestCommand::WaitSteps { count: 1 });
+            commands.push(TestCommand::VerifyState { 
+                description: format!("Check sequencer state at master step {}", step) 
+            });
+        }
+        
+        // Stop the MIDI clock
+        commands.push(TestCommand::LogMilestone { 
+            message: "Test complete - stopping MIDI clock".to_string() 
+        });
+        commands.push(TestCommand::Stop);
+        
         TestScript {
             name: "Test1: Multi-Length Pattern Test".to_string(),
-            description: "Test patterns with lengths 32, 31, 30, 16, 15, 14 and verify step counters after 33 steps".to_string(),
+            description: "Test patterns with lengths 31, 30, 29, 15, 14, 13, 3 (7 rows) and verify step counters at each step up to 64".to_string(),
             initial_bpm: Some(120.0),
-            commands: vec![
-                TestCommand::LogMilestone { 
-                    message: "Starting Test1: Multi-Length Pattern Test".to_string() 
-                },
-                
-                // Load pre-configured test pattern with row lengths: 32, 31, 30, 16, 15, 14
-                TestCommand::LogMilestone { 
-                    message: "Loading test_pattern_1.json with row lengths [32, 31, 30, 16, 15, 14]".to_string() 
-                },
-                TestCommand::LoadPattern { 
-                    file: "test_pattern_1.json".to_string() 
-                },
-                
-                TestCommand::LogMilestone { 
-                    message: "Pattern loaded to current_pattern.json".to_string() 
-                },
-                
-                // Start the MIDI clock
-                TestCommand::LogMilestone { 
-                    message: "Starting MIDI clock".to_string() 
-                },
-                TestCommand::Start,
-                TestCommand::Wait { ms: 500 },
-                
-                // Advance 33 steps
-                TestCommand::LogMilestone { 
-                    message: "Advancing 33 steps to verify row counters".to_string() 
-                },
-                TestCommand::WaitSteps { count: 33 },
-                
-                TestCommand::LogMilestone { 
-                    message: "Expected states after 33 steps:".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 0 (len=32): step 1 (33 % 32 = 1)".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 1 (len=31): step 2 (33 % 31 = 2)".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 2 (len=30): step 3 (33 % 30 = 3)".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 3 (len=16): step 1 (33 % 16 = 1)".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 4 (len=15): step 3 (33 % 15 = 3)".to_string() 
-                },
-                TestCommand::LogMilestone { 
-                    message: "  Row 5 (len=14): step 5 (33 % 14 = 5)".to_string() 
-                },
-                
-                // Stop the MIDI clock
-                TestCommand::LogMilestone { 
-                    message: "Test complete - stopping MIDI clock".to_string() 
-                },
-                TestCommand::Stop,
-            ],
+            commands,
         }
     }
 }
