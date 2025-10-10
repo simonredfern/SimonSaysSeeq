@@ -21,7 +21,6 @@ use std::time::Duration;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use clap::Parser;
-use std::sync::Arc;
 
 // Import shared types
 use simon_says_seeq_rust::test_script::{TestCommand, TestScript};
@@ -39,7 +38,7 @@ pub struct TestClockEvent {
 
 /// Wrapper around ClockGenerator for automated testing
 pub struct AutomatedTestClock {
-    generator: Arc<ClockGenerator>,
+    generator: ClockGenerator,
 }
 
 impl AutomatedTestClock {
@@ -49,7 +48,7 @@ impl AutomatedTestClock {
             enable_test_mode: false,
         };
         Self {
-            generator: Arc::new(ClockGenerator::new_with_config(bpm, config)),
+            generator: ClockGenerator::new_with_config(bpm, config),
         }
     }
 
@@ -120,15 +119,7 @@ impl AutomatedTestClock {
 
     /// Spawn the clock generation thread
     pub fn spawn_clock_thread(&mut self, connection: midir::MidiOutputConnection) -> thread::JoinHandle<()> {
-        // Need to get mutable access to the generator
-        Arc::get_mut(&mut self.generator)
-            .expect("Cannot get mutable reference to generator")
-            .spawn_clock_thread(connection)
-    }
-
-    /// Get a clone of the generator for signal handlers
-    pub fn get_generator_clone(&self) -> Arc<ClockGenerator> {
-        self.generator.clone()
+        self.generator.spawn_clock_thread(connection)
     }
 
     /// Execute a button injection command
@@ -473,12 +464,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ MIDI Clock initialized at {:.1} BPM", clock.get_bpm());
     println!();
 
-    // Handle Ctrl+C gracefully
-    let generator_for_signal = clock.get_generator_clone();
-    ctrlc::set_handler(move || {
-        println!("\n⚡ Received Ctrl+C, stopping...");
-        generator_for_signal.exit();
-    })?;
+    // Note: Ctrl+C handler removed - clock will be stopped on exit
 
     // Start the clock generation thread
     let clock_thread = clock.spawn_clock_thread(connection);
