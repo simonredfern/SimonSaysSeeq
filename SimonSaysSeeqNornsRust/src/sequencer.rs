@@ -587,13 +587,15 @@ impl Sequencer {
     /// Process triggers for the current step and handle selective grid updates
     fn process_step(&self, state: &SequencerState, sender: &Sender<SequencerEvent>) -> Result<()> {
         // DEBUG: Show current step for all rows
-        debug!("Steps: [{}]",
+        debug!("Master Step: {:02} | Steps: [{}] | Global Ticks: {}",
+            state.sequencer_a_current_master_step,
             state.sequencer_a_row_states.iter()
                 .enumerate()
                 .take(7) // Only show rows 0-6 (sequencer rows)
                 .map(|(i, row)| format!("R{}:{:02}", i, row.sequencer_a_current_step))
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", "),
+            state.the_current_tick_count_since_start
         );
         
         // Process each sequence row (0-indexed)
