@@ -1752,7 +1752,7 @@ impl SimonSaysSeeq {
                 }
                 
                 // Tempo display removed - sequencer uses external clock
-                debug!("handle_midi_input_event says: MIDI Clock Beat");
+                trace!("handle_midi_input_event says: MIDI Clock Beat");
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
@@ -1787,15 +1787,6 @@ impl SimonSaysSeeq {
 
             }
             MidiInputEvent::ClockTick => {
-                // Log every 100th tick for connection diagnostics
-                static mut TICK_COUNTER: u32 = 0;
-                unsafe {
-                    TICK_COUNTER += 1;
-                    if TICK_COUNTER % 100 == 0 {
-                        debug!("handle_midi_input_event says: MIDI Clock Tick #{} - connection active", TICK_COUNTER);
-                    }
-                }
-                
                 // External clock slave mode: advance sequencer directly on MIDI clock
                 if self.sequencer.is_running() {
                     // MIDI clock runs at 24 PPQ, we get 6 ticks per step (every clock, 6 clocks per step)
