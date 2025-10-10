@@ -650,7 +650,7 @@ impl SimonSaysSeeq {
                             
                             // Get current euclidean parameters to preserve length and rotation
                             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_length = row_state.sequencer_a_euclidean_length + 1; // Convert from 0-based to step count
+                                let current_length = row_state.sequencer_a_max_step + 1; // Convert from 0-based max_step to step count
                                 let current_rotation = row_state.sequencer_a_euclidean_rotation;
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, current_length, current_rotation);
                             } else {
@@ -701,7 +701,7 @@ impl SimonSaysSeeq {
                             // Get current euclidean parameters to preserve events and length
                             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                                 let current_events = row_state.sequencer_a_euclidean_events;
-                                let current_length = row_state.sequencer_a_euclidean_length + 1; // Convert from 0-based to step count
+                                let current_length = row_state.sequencer_a_max_step + 1; // Convert from 0-based max_step to step count
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, current_length, rotation);
                             } else {
                                 // Fallback if row_state is not available
@@ -721,10 +721,10 @@ impl SimonSaysSeeq {
                             
                             // Set the last step for this specific row
                             if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
-                                let old_length = row_state.sequencer_a_euclidean_length + 1;
-                                row_state.sequencer_a_euclidean_length = last_step;
+                                let old_length = row_state.sequencer_a_max_step + 1;
+                                row_state.sequencer_a_max_step = last_step;
                                 
-                                // If current step is beyond new length, reset to beginning of the row's own cycle
+                                // If current step is beyond new max_step, reset to beginning of the row's own cycle
                                 if row_state.sequencer_a_current_step > last_step {
                                     // Reset to beginning of the row's own cycle
                                     row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
