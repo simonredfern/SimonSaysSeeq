@@ -302,8 +302,8 @@ impl ClockGenerator {
 fn show_help() {
     println!("Commands:");
     println!("  s       - Start/stop clock");
-    println!("  u       - Increase BPM by 1 (uu=+10, uuu=+100)");
-    println!("  d       - Decrease BPM by 1 (dd=-10, ddd=-100)");
+    println!("  u       - Increase BPM by 1 (uu=+10, uuu=+50)");
+    println!("  d       - Decrease BPM by 1 (dd=-10, ddd=-50)");
     println!("  t       - Toggle test mode (stepped tempo + stop/start: 120->125->121->140->130->122->110)");
     println!("  q       - Quit program");
     println!("  h       - Show this help");
@@ -341,7 +341,7 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
                 let increment = match cmd.len() {
                     1 => 1.0,    // u = +1
                     2 => 10.0,   // uu = +10
-                    3 => 100.0,  // uuu = +100
+                    3 => 50.0,   // uuu = +50
                     _ => 1.0,
                 };
                 let new_bpm = generator.get_bpm() + increment;
@@ -353,7 +353,7 @@ fn handle_command(generator: &ClockGenerator, command: &str) -> Result<bool, Box
                 let decrement = match cmd.len() {
                     1 => 1.0,    // d = -1
                     2 => 10.0,   // dd = -10
-                    3 => 100.0,  // ddd = -100
+                    3 => 50.0,   // ddd = -50
                     _ => 1.0,
                 };
                 let new_bpm = generator.get_bpm() - decrement;
@@ -400,7 +400,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Auto-starting clock");
     generator.start()?;
 
-    println!("Enter commands: s(start/stop), u/uu/uuu(+1/+10/+100 BPM), d/dd/ddd(-1/-10/-100 BPM), t(test), q(quit), h(help)");
+    println!("Enter commands: s(start/stop), u/uu/uuu(+1/+10/+50 BPM), d/dd/ddd(-1/-10/-50 BPM), t(test), q(quit), h(help)");
     
     // Simple line-based input loop
     loop {
@@ -442,15 +442,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {
                 // Check for "u" pattern (increase BPM)
-                if input.chars().all(|c| c == 'u') && !input.is_empty() && input.len() <= 20 {
-                    let increment = input.len() as f32;
+                if input.chars().all(|c| c == 'u') && !input.is_empty() && input.len() <= 3 {
+                    let increment = match input.len() {
+                        1 => 1.0,    // u = +1
+                        2 => 10.0,   // uu = +10
+                        3 => 50.0,   // uuu = +50
+                        _ => 1.0,
+                    };
                     let new_bpm = generator.get_bpm() + increment;
                     generator.set_bpm(new_bpm);
                     println!("BPM: {:.1} (+{})", new_bpm, increment);
                 }
                 // Check for "d" pattern (decrease BPM)
-                else if input.chars().all(|c| c == 'd') && !input.is_empty() && input.len() <= 20 {
-                    let decrement = input.len() as f32;
+                else if input.chars().all(|c| c == 'd') && !input.is_empty() && input.len() <= 3 {
+                    let decrement = match input.len() {
+                        1 => 1.0,    // d = -1
+                        2 => 10.0,   // dd = -10
+                        3 => 50.0,   // ddd = -50
+                        _ => 1.0,
+                    };
                     let new_bpm = generator.get_bpm() - decrement;
                     generator.set_bpm(new_bpm);
                     println!("BPM: {:.1} (-{})", new_bpm, decrement);
