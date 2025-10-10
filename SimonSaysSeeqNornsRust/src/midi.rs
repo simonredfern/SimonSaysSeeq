@@ -931,16 +931,16 @@ impl MidiManager {
         }
     }
     
-    /// Check if external clock has timed out and switch back to internal
+    /// Check if external clock has timed out and stop sequencer
     fn check_external_clock_timeout(&self) {
         let mut clock = self.clock_state.lock().unwrap();
         
         if matches!(clock.source, ClockSource::MidiExternal) {
             if let Some(last_activity) = clock.last_external_activity {
                 if last_activity.elapsed() > Duration::from_secs(5) {
-                    clock.source = ClockSource::Internal;
+                    // Don't switch to internal clock (doesn't exist) - just mark as not running
                     clock.running = false;
-                    info!("check_external_clock_timeout says: External MIDI clock timeout - switching to internal clock");
+                    info!("check_external_clock_timeout says: External MIDI clock timeout - sequencer stopped");
                 }
             }
         }
@@ -960,7 +960,7 @@ impl MidiManager {
             // Clock source has changed
             let transition_event = match (&*previous_source, &current_source) {
                 (ClockSource::MidiExternal, ClockSource::Internal) => {
-                    // External to internal transition - preserve last external tempo
+                    // External clock timeout - just stop, no internal clock to switch to
                     Some(MidiInputEvent::ExternalClockTimeout)
                 }
                 _ => None
