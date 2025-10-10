@@ -49,7 +49,6 @@ q, quit       - Exit program
 ### 📊 **Visual Feedback**
 ```
 ♩♪♫♬ | 120.0 BPM
-♩♪♫♬ | 120.0 BPM
 ```
 Beat indicators show clock activity in real-time.
 

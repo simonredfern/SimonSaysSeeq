@@ -154,7 +154,8 @@ impl ClockGenerator {
                             if let Err(e) = connection.send(&[0xFA]) {
                                 eprintln!("Error sending MIDI Start: {}", e);
                             } else {
-                                println!("MIDI Clock Started");
+                                let current_bpm = *bpm.lock().unwrap();
+                                println!("MIDI Clock Started at {:.1} BPM", current_bpm);
                             }
                         }
                         ClockCommand::Stop => {
@@ -265,13 +266,6 @@ impl ClockGenerator {
                         }
 
                         tick_count = tick_count.wrapping_add(1);
-
-                        // Print BPM with timestamp every 96 ticks (1 measure at 24 PPQ)
-                        if tick_count % 96 == 0 {
-                            let now = chrono::Utc::now();
-                            let test_suffix = if test_mode.load(Ordering::Relaxed) { " [TEST]" } else { "" };
-                            println!("{} | {:.1} BPM{}", now.format("%Y-%m-%dT%H:%M:%S%.3fZ"), current_bpm, test_suffix);
-                        }
                     }
                 }
 

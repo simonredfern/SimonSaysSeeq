@@ -62,7 +62,6 @@ When the clock is running, you'll see beat indicators:
 Example output:
 ```
 ♩♪♫♬ | 120.0 BPM
-♩♪♫♬ | 120.0 BPM
 ```
 
 ## MIDI Messages
