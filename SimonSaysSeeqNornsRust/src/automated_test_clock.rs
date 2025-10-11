@@ -429,18 +429,25 @@ impl AutomatedTestClock {
         // by looking for position resets or wrapping behavior changes
         let mut detected_changes: std::collections::HashMap<usize, (usize, usize)> = std::collections::HashMap::new();
         
+        println!("  🔎 Detection: Found {} StepAdvancement events, verifying at step {}", 
+                 all_step_events.len(), total_step_count);
+        
         for row_idx in 0..7 {
             // Check if there's a recorded change for this row
             let recorded_change = self.row_config_changes.iter()
                 .find(|c| c.row == row_idx && c.total_step_count <= total_step_count);
             
             if let Some(change) = recorded_change {
+                println!("  🔎 Row {}: Recorded change to max_step={} at step {}", 
+                         row_idx, change.new_max_step, change.total_step_count);
                 // Look through the step events to find where the change took effect
                 // The change takes effect when we see a position reset or wrapping at new max_step
                 let new_max_step = change.new_max_step;
+                let old_max_step = initial_max_steps[row_idx];
                 
                 // Start looking from the recorded change step
                 let search_start = change.total_step_count.max(1);
+                let mut change_detected = false;
                 
                 for i in search_start..all_step_events.len().min(total_step_count + 5) {
                     if i == 0 { continue; }
@@ -452,19 +459,52 @@ impl AutomatedTestClock {
                         // Detect reset: position jumped backward unexpectedly
                         if prev > new_max_step && curr <= new_max_step {
                             detected_changes.insert(row_idx, (i + 1, new_max_step));
+                            change_detected = true;
                             break;
                         }
                         // Detect new wrapping: wrapped at new_max_step instead of old_max_step
                         if prev == new_max_step && curr == 0 {
                             detected_changes.insert(row_idx, (i, new_max_step));
+                            change_detected = true;
                             break;
                         }
                     }
                 }
                 
-                // If no clear detection, assume it took effect shortly after recording
-                if !detected_changes.contains_key(&row_idx) {
-                    detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
+                println!("  🔎 Row {}: change_detected={}, all_events={}, total_step={}", 
+                         row_idx, change_detected, all_step_events.len(), total_step_count);
+                
+                // Check if change has taken effect by looking at verification step position
+                if !change_detected {
+                    if total_step_count <= all_step_events.len() {
+                        if let Some(verify_pos) = all_step_events[total_step_count - 1].1.iter()
+                            .find(|(r, _)| *r == row_idx)
+                            .map(|(_, p)| *p)
+                        {
+                            println!("  🔎 Row {}: verify_pos={}, new_max_step={}, old_max_step={}", 
+                                     row_idx, verify_pos, new_max_step, old_max_step);
+                            // If position at verification > new_max_step, change hasn't taken effect
+                            // Use old config for this row
+                            if verify_pos > new_max_step {
+                                // Don't insert into detected_changes - will use old config
+                                println!("  🔎 Row {}: Change NOT in effect (pos {} > max {}), using OLD config", 
+                                         row_idx, verify_pos, new_max_step);
+                            } else {
+                                // Position is compatible with new config, assume change took effect
+                                println!("  🔎 Row {}: Change assumed in effect (pos {} <= max {})", 
+                                         row_idx, verify_pos, new_max_step);
+                                detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
+                            }
+                        } else {
+                            println!("  🔎 Row {}: Could not find verify position in events", row_idx);
+                            detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
+                        }
+                    } else {
+                        // Not enough events yet - assume change took effect
+                        println!("  🔎 Row {}: Not enough events ({} < {}), assuming change took effect", 
+                                 row_idx, all_step_events.len(), total_step_count);
+                        detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
+                    }
                 }
             }
         }
