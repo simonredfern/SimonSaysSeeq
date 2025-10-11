@@ -9,11 +9,11 @@
     "FIXED: Check happens BEFORE increment, so step 0 happens at tick 0",
     "Tick 0: step 0 processed, Tick 6: step 1 processed, Tick 12: step 2 processed, etc.",
     "Grid data from test_pattern_1.json:",
-    "  step 0: [15,0,0,0,0,0,0,0] → row 0 → note 48",
-    "  step 1: [0,0,0,0,0,0,0,0]  → no notes",
-    "  step 2: [0,1,0,0,0,0,0,0]  → row 1 → note 49",
-    "  step 3: [0,0,0,0,0,0,0,0]  → no notes",
-    "  step 4: [15,0,1,0,0,0,0,0] → rows 0,2 → notes 48,50",
+    "  step 0: [15,0,0,1,0,0,0,0] → rows 0,3 → notes 48,51",
+    "  step 1: [0,0,0,0,1,0,0,0]  → row 4 → note 52",
+    "  step 2: [0,1,0,0,0,1,0,0]  → rows 1,5 → notes 49,53",
+    "  step 3: [0,0,0,0,0,1,1,0]  → rows 5,6 → notes 53,54",
+    "  step 4: [15,0,1,0,0,0,1,0] → rows 0,2,6 → notes 48,50,54",
     "  step 5: [0,0,0,0,0,0,0,0]  → no notes",
     "  step 6: [0,1,0,0,0,0,0,0]  → row 1 → note 49",
     "  step 7: [0,0,0,0,0,0,0,0]  → no notes",
@@ -31,7 +31,7 @@
       "at_tick": 3,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 3: Checking for step 0 notes (delayed) - Grid[0]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
+        "message": "📍 Tick 3: Checking for step 0 notes (delayed) - Grid[0]=[15,0,0,1,0,0,0,0] - Expecting notes 48,51 (rows 0,3)"
       }
     },
     {
@@ -46,17 +46,39 @@
       }
     },
     {
+      "at_tick": 3,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 0,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
       "at_tick": 6,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 6: Step 1 processed - Grid[1]=[0,0,0,0,0,0,0,0] - Expecting no notes"
+        "message": "📍 Tick 6: Step 1 processed - Grid[1]=[0,0,0,0,1,0,0,0] - Expecting note 52 (row 4)"
+      }
+    },
+    {
+      "at_tick": 9,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 1,
+        "note": 52,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
       }
     },
     {
       "at_tick": 15,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 15: Checking for step 2 notes (delayed) - Grid[2]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
+        "message": "📍 Tick 15: Checking for step 2 notes (delayed) - Grid[2]=[0,1,0,0,0,1,0,0] - Expecting notes 49,53 (rows 1,5)"
       }
     },
     {
@@ -71,17 +93,50 @@
       }
     },
     {
+      "at_tick": 15,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 2,
+        "note": 53,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
       "at_tick": 18,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 18: Step 3 processed - Grid[3]=[0,0,0,0,0,0,0,0] - Expecting no notes"
+        "message": "📍 Tick 18: Step 3 processed - Grid[3]=[0,0,0,0,0,1,1,0] - Expecting notes 53,54 (rows 5,6)"
+      }
+    },
+    {
+      "at_tick": 21,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 53,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 21,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 54,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
       }
     },
     {
       "at_tick": 27,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 27: Checking for step 4 notes (delayed) - Grid[4]=[15,0,1,0,0,0,0,0] - Expecting notes 48 (row 0) and 50 (row 2)"
+        "message": "📍 Tick 27: Checking for step 4 notes (delayed) - Grid[4]=[15,0,1,0,0,0,1,0] - Expecting notes 48,50,54 (rows 0,2,6)"
       }
     },
     {
@@ -101,6 +156,17 @@
         "type": "VerifyMidiNote",
         "step": 4,
         "note": 50,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 27,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 4,
+        "note": 54,
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
