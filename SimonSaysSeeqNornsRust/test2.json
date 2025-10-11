@@ -1,136 +1,178 @@
 {
-  "name": "Test2: Single Row Max Step Change",
-  "description": "Test changing Row 0 max_step from 31 to 7 at step 3, verify at steps 4, 5, 6",
-  "initial_bpm": 30.0,
+  "name": "Test2 Direct: Single Row Max Step Change",
+  "description": "Tick-synchronized test of changing Row 0 max_step from 31 to 7 at step 3",
+  "bpm": 30.0,
   "commands": [
     {
-      "command": "LogMilestone",
-      "message": "Starting Test2: 6 steps total, change at step 3"
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "Starting Test2: Row 0 max_step change from 31 to 7 at step 3"
+      }
     },
     {
-      "command": "Stop"
+      "at_tick": 6,
+      "action": {
+        "type": "VerifyState",
+        "step": 1,
+        "row": 0,
+        "expected": 1
+      }
     },
     {
-      "command": "Wait",
-      "ms": 500
+      "at_tick": 12,
+      "action": {
+        "type": "VerifyState",
+        "step": 2,
+        "row": 0,
+        "expected": 2
+      }
     },
     {
-      "command": "LoadPattern",
-      "file": "test_pattern_1.json"
+      "at_tick": 18,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 3 reached - sending SysEx to change Row 0 max_step to 7"
+      }
     },
     {
-      "command": "ReloadPattern"
+      "at_tick": 18,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": true
+      }
     },
     {
-      "command": "Wait",
-      "ms": 200
+      "at_tick": 18,
+      "action": {
+        "type": "SysExButton",
+        "row": 0,
+        "col": 7,
+        "press": true
+      }
     },
     {
-      "command": "LogMilestone",
-      "message": "Starting sequencer - Row 0 initial max_step=31"
+      "at_tick": 18,
+      "action": {
+        "type": "SysExButton",
+        "row": 0,
+        "col": 7,
+        "press": false
+      }
     },
     {
-      "command": "Start"
+      "at_tick": 18,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": false
+      }
     },
     {
-      "command": "Wait",
-      "ms": 500
+      "at_tick": 24,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 4 - verifying if max_step change has taken effect"
+      }
     },
     {
-      "command": "LogMilestone",
-      "message": "Running 3 steps with initial configuration"
+      "at_tick": 24,
+      "action": {
+        "type": "VerifyState",
+        "step": 4,
+        "row": 0,
+        "expected": 3
+      }
     },
     {
-      "command": "WaitSteps",
-      "count": 3
+      "at_tick": 30,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 5 - continued verification"
+      }
     },
     {
-      "command": "LogMilestone",
-      "message": "At step 3: Sending SysEx to change Row 0 max_step to 7"
+      "at_tick": 30,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 0,
+        "expected": 4
+      }
     },
     {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": true
+      "at_tick": 36,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 6 - continued verification"
+      }
     },
     {
-      "command": "Wait",
-      "ms": 50
+      "at_tick": 36,
+      "action": {
+        "type": "VerifyState",
+        "step": 6,
+        "row": 0,
+        "expected": 5
+      }
     },
     {
-      "command": "SysExButton",
-      "row": 0,
-      "col": 7,
-      "press": true
+      "at_tick": 42,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 7 - continued verification"
+      }
     },
     {
-      "command": "Wait",
-      "ms": 50
+      "at_tick": 42,
+      "action": {
+        "type": "VerifyState",
+        "step": 7,
+        "row": 0,
+        "expected": 6
+      }
     },
     {
-      "command": "SysExButton",
-      "row": 0,
-      "col": 7,
-      "press": false
+      "at_tick": 48,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 8 - Row 0 should wrap to 0 (max_step=7)"
+      }
     },
     {
-      "command": "Wait",
-      "ms": 50
+      "at_tick": 48,
+      "action": {
+        "type": "VerifyState",
+        "step": 8,
+        "row": 0,
+        "expected": 7
+      }
     },
     {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": false
+      "at_tick": 54,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 9 - Row 0 should have wrapped back to 0"
+      }
     },
     {
-      "command": "RecordRowConfig",
-      "row": 0,
-      "max_step": 7
+      "at_tick": 54,
+      "action": {
+        "type": "VerifyState",
+        "step": 9,
+        "row": 0,
+        "expected": 0
+      }
     },
     {
-      "command": "LogMilestone",
-      "message": "Advancing to step 4 - should take effect now"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 1
-    },
-    {
-      "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 4"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Advancing to step 5"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 1
-    },
-    {
-      "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 5"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Advancing to step 6"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 1
-    },
-    {
-      "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 6"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Test complete"
-    },
-    {
-      "command": "Stop"
+      "at_tick": 60,
+      "action": {
+        "type": "LogMessage",
+        "message": "Test complete - max_step change verified"
+      }
     }
   ]
 }
