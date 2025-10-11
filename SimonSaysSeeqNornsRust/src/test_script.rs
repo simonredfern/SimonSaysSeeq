@@ -68,3 +68,35 @@ pub struct TestScript {
     pub initial_bpm: Option<f32>,
     pub commands: Vec<TestCommand>,
 }
+
+/// Direct test action - executed at specific tick counts
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum DirectTestAction {
+    /// Log a message
+    LogMessage { message: String },
+    /// Send SysEx button press/release
+    SysExButton { row: u8, col: u8, press: bool },
+    /// Verify sequencer state at this tick
+    VerifyState { 
+        step: u32,           // Expected step number (tick / 6)
+        row: usize,          // Which row to verify
+        expected: Option<usize>, // Expected position (None = just observe)
+    },
+}
+
+/// Direct test command - action at specific tick
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DirectTestCommand {
+    pub at_tick: u32,
+    pub action: DirectTestAction,
+}
+
+/// Direct test script - tick-synchronized testing
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DirectTestScript {
+    pub name: String,
+    pub description: String,
+    pub bpm: f32,
+    pub commands: Vec<DirectTestCommand>,
+}

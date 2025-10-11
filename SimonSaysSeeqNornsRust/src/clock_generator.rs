@@ -16,6 +16,8 @@ use std::time::{Duration, Instant};
 
 use midir::{MidiOutput, MidiOutputConnection};
 
+use crate::test_script::{DirectTestScript, DirectTestAction};
+
 /// Clock command for internal communication
 #[derive(Debug, Clone)]
 pub enum ClockCommand {
@@ -54,6 +56,7 @@ pub struct ClockGenerator {
     test_mode: Arc<AtomicBool>,
     tick_count: Arc<Mutex<u32>>,
     config: ClockConfig,
+    direct_test_script: Option<Arc<DirectTestScript>>,
 }
 
 impl Clone for ClockGenerator {
@@ -66,6 +69,7 @@ impl Clone for ClockGenerator {
             test_mode: self.test_mode.clone(),
             tick_count: self.tick_count.clone(),
             config: self.config.clone(),
+            direct_test_script: self.direct_test_script.clone(),
         }
     }
 }
@@ -86,7 +90,13 @@ impl ClockGenerator {
             test_mode: Arc::new(AtomicBool::new(false)),
             tick_count: Arc::new(Mutex::new(0)),
             config,
+            direct_test_script: None,
         }
+    }
+    
+    /// Set a direct test script to be executed during clock generation
+    pub fn set_direct_test_script(&mut self, script: DirectTestScript) {
+        self.direct_test_script = Some(Arc::new(script));
     }
 
     /// Initialize MIDI output connection
@@ -174,6 +184,87 @@ impl ClockGenerator {
     pub fn reset_tick_count(&self) {
         *self.tick_count.lock().unwrap() = 0;
     }
+    
+    /// Execute a direct test action (called from clock thread)
+    fn execute_direct_test_action(action: &DirectTestAction, connection: &mut midir::MidiOutputConnection, tick: u32) {
+        match action {
+            DirectTestAction::LogMessage { message } => {
+                println!("📍 Tick {}: {}", tick, message);
+            }
+            DirectTestAction::SysExButton { row, col, press } => {
+                let press_byte = if *press { 0x01 } else { 0x00 };
+                let sysex = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x02, *row, *col, press_byte, 0xF7];
+                let action_str = if *press { "PRESS" } else { "RELEASE" };
+                println!("📍 Tick {}: SysEx {} row={} col={}", tick, action_str, row, col);
+                if let Err(e) = connection.send(&sysex) {
+                    eprintln!("Error sending SysEx: {}", e);
+                }
+            }
+            DirectTestAction::VerifyState { step, row, expected } => {
+                println!("📍 Tick {}: Verify step={} row={} expected={:?}", tick, step, row, expected);
+                Self::verify_state_at_step(*step, *row, *expected);
+            }
+        }
+    }
+    
+    /// Verify sequencer state by reading formal_state.log
+    fn verify_state_at_step(step: u32, row: usize, expected: Option<usize>) {
+        use std::fs;
+        
+        // Read formal_state.log
+        let log_content = match fs::read_to_string("formal_state.log") {
+            Ok(content) => content,
+            Err(e) => {
+                println!("  ❌ Cannot read formal_state.log: {}", e);
+                return;
+            }
+        };
+        
+        // Find the Nth StepAdvancement event
+        let mut step_count = 0;
+        let mut found_position: Option<usize> = None;
+        
+        for line in log_content.lines() {
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
+                if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
+                    step_count += 1;
+                    if step_count == step {
+                        // Found the step - extract row position
+                        if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
+                            for rs in row_steps {
+                                if let (Some(r), Some(pos)) = (
+                                    rs.get(0).and_then(|v| v.as_u64()),
+                                    rs.get(1).and_then(|v| v.as_u64())
+                                ) {
+                                    if r as usize == row {
+                                        found_position = Some(pos as usize);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        match (found_position, expected) {
+            (Some(actual), Some(exp)) => {
+                if actual == exp {
+                    println!("  ✅ Row {} position: {} (expected {})", row, actual, exp);
+                } else {
+                    println!("  ❌ Row {} position: {} (expected {})", row, actual, exp);
+                }
+            }
+            (Some(actual), None) => {
+                println!("  📊 Row {} position: {} (observation only)", row, actual);
+            }
+            (None, _) => {
+                println!("  ⚠️  Step {} not found in log yet (only {} steps logged)", step, step_count);
+            }
+        }
+    }
 
     /// Exit the clock generator
     pub fn exit(&self) {
@@ -213,6 +304,7 @@ impl ClockGenerator {
         let tick_count = self.tick_count.clone();
         let enable_tick_counting = self.config.enable_tick_counting;
         let enable_test_mode = self.config.enable_test_mode;
+        let direct_test_script = self.direct_test_script.clone();
 
         thread::spawn(move || {
             println!("Clock generation thread started");
@@ -369,6 +461,15 @@ impl ClockGenerator {
                             // Update shared tick count if enabled
                             if enable_tick_counting {
                                 *tick_count.lock().unwrap() += 1;
+                            }
+                            
+                            // Execute direct test actions at this tick
+                            if let Some(ref script) = direct_test_script {
+                                for cmd in &script.commands {
+                                    if cmd.at_tick == tick_count_local as u32 {
+                                        Self::execute_direct_test_action(&cmd.action, &mut connection, tick_count_local as u32);
+                                    }
+                                }
                             }
                         }
                         

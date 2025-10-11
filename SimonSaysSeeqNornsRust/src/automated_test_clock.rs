@@ -366,7 +366,7 @@ impl AutomatedTestClock {
         }
         
         self.log_event("test_script_complete", Some(script.name.clone()));
-        println!("\n✅ Test script completed successfully!");
+        println!("\n🏁 Test script execution complete.");
         Ok(())
     }
 
@@ -404,33 +404,13 @@ impl AutomatedTestClock {
         // Initial max_step values: [31, 30, 29, 15, 14, 13, 2]
         let initial_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
         
-        // First pass: Parse all StepAdvancement events to detect actual config change points
-        let mut all_step_events: Vec<(usize, Vec<(usize, usize)>)> = Vec::new();
-        for line in log_content.lines() {
-            if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
-                if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
-                    if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
-                        let mut steps = Vec::new();
-                        for rs in row_steps {
-                            if let (Some(row_idx), Some(step_val)) = (
-                                rs.get(0).and_then(|v| v.as_u64()),
-                                rs.get(1).and_then(|v| v.as_u64())
-                            ) {
-                                steps.push((row_idx as usize, step_val as usize));
-                            }
-                        }
-                        all_step_events.push((all_step_events.len() + 1, steps));
-                    }
-                }
-            }
-        }
+        // Simple assumption: SysEx takes effect at the NEXT step after recording
+        // If this doesn't match reality, it's either:
+        // 1. A timing/processing delay issue
+        // 2. A sequencer bug
+        // Either way, the test should FAIL to reveal the problem
         
-        // Detect when max_step changes actually took effect for each row
-        // by looking for position resets or wrapping behavior changes
-        let mut detected_changes: std::collections::HashMap<usize, (usize, usize)> = std::collections::HashMap::new();
-        
-        println!("  🔎 Detection: Found {} StepAdvancement events, verifying at step {}", 
-                 all_step_events.len(), total_step_count);
+        let mut config_changes: std::collections::HashMap<usize, (usize, usize)> = std::collections::HashMap::new();
         
         for row_idx in 0..7 {
             // Check if there's a recorded change for this row
@@ -438,98 +418,37 @@ impl AutomatedTestClock {
                 .find(|c| c.row == row_idx && c.total_step_count <= total_step_count);
             
             if let Some(change) = recorded_change {
-                println!("  🔎 Row {}: Recorded change to max_step={} at step {}", 
-                         row_idx, change.new_max_step, change.total_step_count);
-                // Look through the step events to find where the change took effect
-                // The change takes effect when we see a position reset or wrapping at new max_step
-                let new_max_step = change.new_max_step;
-                let old_max_step = initial_max_steps[row_idx];
-                
-                // Start looking from the recorded change step
-                let search_start = change.total_step_count.max(1);
-                let mut change_detected = false;
-                
-                for i in search_start..all_step_events.len().min(total_step_count + 5) {
-                    if i == 0 { continue; }
-                    
-                    let curr_pos = all_step_events[i].1.iter().find(|(r, _)| *r == row_idx).map(|(_, p)| *p);
-                    let prev_pos = all_step_events[i-1].1.iter().find(|(r, _)| *r == row_idx).map(|(_, p)| *p);
-                    
-                    if let (Some(curr), Some(prev)) = (curr_pos, prev_pos) {
-                        // Detect reset: position jumped backward unexpectedly
-                        if prev > new_max_step && curr <= new_max_step {
-                            detected_changes.insert(row_idx, (i + 1, new_max_step));
-                            change_detected = true;
-                            break;
-                        }
-                        // Detect new wrapping: wrapped at new_max_step instead of old_max_step
-                        if prev == new_max_step && curr == 0 {
-                            detected_changes.insert(row_idx, (i, new_max_step));
-                            change_detected = true;
-                            break;
-                        }
-                    }
-                }
-                
-                println!("  🔎 Row {}: change_detected={}, all_events={}, total_step={}", 
-                         row_idx, change_detected, all_step_events.len(), total_step_count);
-                
-                // Check if change has taken effect by looking at verification step position
-                if !change_detected {
-                    if total_step_count <= all_step_events.len() {
-                        if let Some(verify_pos) = all_step_events[total_step_count - 1].1.iter()
-                            .find(|(r, _)| *r == row_idx)
-                            .map(|(_, p)| *p)
-                        {
-                            println!("  🔎 Row {}: verify_pos={}, new_max_step={}, old_max_step={}", 
-                                     row_idx, verify_pos, new_max_step, old_max_step);
-                            // If position at verification > new_max_step, change hasn't taken effect
-                            // Use old config for this row
-                            if verify_pos > new_max_step {
-                                // Don't insert into detected_changes - will use old config
-                                println!("  🔎 Row {}: Change NOT in effect (pos {} > max {}), using OLD config", 
-                                         row_idx, verify_pos, new_max_step);
-                            } else {
-                                // Position is compatible with new config, assume change took effect
-                                println!("  🔎 Row {}: Change assumed in effect (pos {} <= max {})", 
-                                         row_idx, verify_pos, new_max_step);
-                                detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
-                            }
-                        } else {
-                            println!("  🔎 Row {}: Could not find verify position in events", row_idx);
-                            detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
-                        }
-                    } else {
-                        // Not enough events yet - assume change took effect
-                        println!("  🔎 Row {}: Not enough events ({} < {}), assuming change took effect", 
-                                 row_idx, all_step_events.len(), total_step_count);
-                        detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
-                    }
-                }
+                // Assume change takes effect 1 step after it was sent
+                let change_effective_step = change.total_step_count + 1;
+                config_changes.insert(row_idx, (change_effective_step, change.new_max_step));
+                println!("  🔎 Row {}: Config change to max_step={} sent at step {}, assuming effect at step {}", 
+                         row_idx, change.new_max_step, change.total_step_count, change_effective_step);
             }
         }
         
-        // Calculate expected position for each row based on detected changes
+        // Calculate expected position for each row
         let mut expected_positions = Vec::new();
         
         for row_idx in 0..7 {
-            let expected_step = if let Some((change_step, new_max_step)) = detected_changes.get(&row_idx) {
+            let expected_step = if let Some((change_step, new_max_step)) = config_changes.get(&row_idx) {
                 if total_step_count < *change_step {
-                    // Change hasn't taken effect yet
+                    // Change hasn't taken effect yet - use old config
                     total_step_count % (initial_max_steps[row_idx] + 1)
                 } else {
-                    // Change has taken effect - calculate from actual position at change
-                    let position_at_change = if *change_step > 0 && *change_step <= all_step_events.len() {
-                        all_step_events[change_step - 1].1.iter()
-                            .find(|(r, _)| *r == row_idx)
-                            .map(|(_, p)| *p)
-                            .unwrap_or(0)
+                    // Change has taken effect
+                    // Position at change_step-1 (before change)
+                    let position_before_change = (change_step - 1) % (initial_max_steps[row_idx] + 1);
+                    
+                    // At change_step, sequencer resets if position > new_max_step
+                    let position_at_change = if position_before_change > *new_max_step {
+                        0  // Reset to start
                     } else {
-                        0
+                        position_before_change
                     };
                     
-                    let steps_since = total_step_count - change_step;
-                    (position_at_change + steps_since) % (new_max_step + 1)
+                    // Advance from there with new max_step
+                    let steps_since_change = total_step_count - change_step;
+                    (position_at_change + steps_since_change) % (new_max_step + 1)
                 }
             } else {
                 // No config change for this row
@@ -539,7 +458,7 @@ impl AutomatedTestClock {
             expected_positions.push(expected_step);
         }
         
-        // Count StepAdvancement events from the start to find the Nth one
+        // Read the actual positions from the log at the verification step
         let mut step_count = 0;
         let mut found_step_data: Option<Vec<(usize, usize)>> = None;
         
@@ -548,7 +467,7 @@ impl AutomatedTestClock {
                 if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
                     step_count += 1;
                     if step_count == total_step_count {
-                        // Found the Nth step advancement
+                        // Found the Nth step advancement - get actual positions
                         if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
                             let mut steps = Vec::new();
                             for rs in row_steps {
@@ -775,6 +694,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🤖 Automated Test MIDI Clock Generator");
     println!("═══════════════════════════════════════════════════════");
     println!("Enhanced MIDI clock with formal state logging and test automation");
+    println!("🎵 Using BPM: {}", args.bpm);
     println!();
 
     // Handle create-test1 flag

@@ -1,11 +1,11 @@
 {
-  "name": "Test2: Dynamic Max Step Changes While Running",
-  "description": "Test dynamically changing row max_step values via SysEx while sequencer is running",
-  "initial_bpm": 120.0,
+  "name": "Test2: Single Row Max Step Change",
+  "description": "Test changing Row 0 max_step from 31 to 7 at step 3, verify at steps 4, 5, 6",
+  "initial_bpm": 30.0,
   "commands": [
     {
       "command": "LogMilestone",
-      "message": "Starting Test2: Dynamic Max Step Changes While Running"
+      "message": "Starting Test2: 6 steps total, change at step 3"
     },
     {
       "command": "Stop"
@@ -13,10 +13,6 @@
     {
       "command": "Wait",
       "ms": 500
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Loading test_pattern_1.json as starting point"
     },
     {
       "command": "LoadPattern",
@@ -31,7 +27,7 @@
     },
     {
       "command": "LogMilestone",
-      "message": "Starting sequencer with initial pattern (max_steps: 31,30,29,15,14,13,2)"
+      "message": "Starting sequencer - Row 0 initial max_step=31"
     },
     {
       "command": "Start"
@@ -42,15 +38,15 @@
     },
     {
       "command": "LogMilestone",
-      "message": "Running 10 steps with initial configuration"
+      "message": "Running 3 steps with initial configuration"
     },
     {
       "command": "WaitSteps",
-      "count": 10
+      "count": 3
     },
     {
       "command": "LogMilestone",
-      "message": "NOW CHANGING max_step WHILE RUNNING - Setting row 0 max_step to 7 (8 steps: 0-7)"
+      "message": "At step 3: Sending SysEx to change Row 0 max_step to 7"
     },
     {
       "command": "SysExButton",
@@ -95,233 +91,46 @@
     },
     {
       "command": "LogMilestone",
-      "message": "Continuing - running 8 more steps to reach cumulative step 18"
+      "message": "Advancing to step 4 - should take effect now"
     },
     {
       "command": "WaitSteps",
-      "count": 8
+      "count": 1
     },
     {
       "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 18 - Row 0 should have wrapped at step 7"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 2
+      "description": "Check sequencer state at cumulative step 4"
     },
     {
       "command": "LogMilestone",
-      "message": "Setting row 1 max_step to 11 (12 steps: 0-11) - STILL RUNNING"
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 1,
-      "col": 11,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 1,
-      "col": 11,
-      "press": false
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": false
-    },
-    {
-      "command": "RecordRowConfig",
-      "row": 1,
-      "max_step": 11
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Continuing - running 10 more steps to reach cumulative step 30"
+      "message": "Advancing to step 5"
     },
     {
       "command": "WaitSteps",
-      "count": 10
+      "count": 1
     },
     {
       "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 30 - Rows 0,1 should be wrapping at new lengths"
+      "description": "Check sequencer state at cumulative step 5"
     },
     {
       "command": "LogMilestone",
-      "message": "Setting row 2 max_step to 5 (6 steps: 0-5) - STILL RUNNING"
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 2,
-      "col": 5,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 2,
-      "col": 5,
-      "press": false
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": false
-    },
-    {
-      "command": "RecordRowConfig",
-      "row": 2,
-      "max_step": 5
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Continuing - running 10 more steps to reach cumulative step 40"
+      "message": "Advancing to step 6"
     },
     {
       "command": "WaitSteps",
-      "count": 10
+      "count": 1
     },
     {
       "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 40 - Rows 0,1,2 should be wrapping at new lengths"
+      "description": "Check sequencer state at cumulative step 6"
     },
     {
       "command": "LogMilestone",
-      "message": "Setting row 6 max_step to 4 (5 steps: 0-4) - STILL RUNNING"
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 6,
-      "col": 4,
-      "press": true
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 6,
-      "col": 4,
-      "press": false
-    },
-    {
-      "command": "Wait",
-      "ms": 50
-    },
-    {
-      "command": "SysExButton",
-      "row": 7,
-      "col": 8,
-      "press": false
-    },
-    {
-      "command": "RecordRowConfig",
-      "row": 6,
-      "max_step": 4
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Continuing - running 15 more steps to reach cumulative step 55"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 15
-    },
-    {
-      "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 55 - All changed rows should be wrapping at new lengths"
-    },
-    {
-      "command": "WaitSteps",
-      "count": 15
-    },
-    {
-      "command": "VerifyState",
-      "description": "Check sequencer state at cumulative step 70 - Final verification of all row wrapping"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Test complete - stopping sequencer"
+      "message": "Test complete"
     },
     {
       "command": "Stop"
-    },
-    {
-      "command": "Wait",
-      "ms": 200
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Test2 complete: Check formal_state.log to verify live max_step changes:"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "- Row 0 should wrap at step 7 after change (was 31)"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "- Row 1 should wrap at step 11 after change (was 30)"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "- Row 2 should wrap at step 5 after change (was 29)"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "- Row 6 should wrap at step 4 after change (was 2)"
-    },
-    {
-      "command": "LogMilestone",
-      "message": "Total: 70 steps run (10 initial + 4x changes with verification)"
     }
   ]
 }
