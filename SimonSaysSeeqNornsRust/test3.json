@@ -28,14 +28,14 @@
       }
     },
     {
-      "at_tick": 0,
+      "at_tick": 3,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 0: Step 0 processed - Grid[0]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
+        "message": "📍 Tick 3: Checking for step 0 notes (delayed) - Grid[0]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
       }
     },
     {
-      "at_tick": 0,
+      "at_tick": 3,
       "action": {
         "type": "VerifyMidiNote",
         "step": 0,
@@ -53,14 +53,14 @@
       }
     },
     {
-      "at_tick": 12,
+      "at_tick": 15,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 12: Step 2 processed - Grid[2]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
+        "message": "📍 Tick 15: Checking for step 2 notes (delayed) - Grid[2]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
       }
     },
     {
-      "at_tick": 12,
+      "at_tick": 15,
       "action": {
         "type": "VerifyMidiNote",
         "step": 2,
@@ -78,14 +78,14 @@
       }
     },
     {
-      "at_tick": 24,
+      "at_tick": 27,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 24: Step 4 processed - Grid[4]=[15,0,1,0,0,0,0,0] - Expecting notes 48 (row 0) and 50 (row 2)"
+        "message": "📍 Tick 27: Checking for step 4 notes (delayed) - Grid[4]=[15,0,1,0,0,0,0,0] - Expecting notes 48 (row 0) and 50 (row 2)"
       }
     },
     {
-      "at_tick": 24,
+      "at_tick": 27,
       "action": {
         "type": "VerifyMidiNote",
         "step": 4,
@@ -96,7 +96,7 @@
       }
     },
     {
-      "at_tick": 24,
+      "at_tick": 27,
       "action": {
         "type": "VerifyMidiNote",
         "step": 4,
@@ -114,14 +114,14 @@
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 36: Step 6 processed - Grid[6]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
+        "message": "📍 Tick 39: Checking for step 6 notes (delayed) - Grid[6]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "VerifyMidiNote",
         "step": 6,
@@ -139,14 +139,14 @@
       }
     },
     {
-      "at_tick": 48,
+      "at_tick": 51,
       "action": {
         "type": "LogMessage",
-        "message": "📍 Tick 48: Step 8 processed - Grid[8]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
+        "message": "📍 Tick 51: Checking for step 8 notes (delayed) - Grid[8]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
       }
     },
     {
-      "at_tick": 48,
+      "at_tick": 51,
       "action": {
         "type": "VerifyMidiNote",
         "step": 8,

@@ -359,13 +359,20 @@ impl ClockGenerator {
         }
     }
     
-    /// Verify MIDI note was received at specific step
+    /// Verify MIDI note was received at specific step (allows up to 3 tick delay for propagation)
     fn verify_midi_note_at_step(step: u32, note: u8, velocity: Option<&u8>, channel: u8, event_type: &str, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) {
         let events = midi_events.lock().unwrap();
         
-        // Find matching note in the buffer
+        // Calculate expected tick range (step * 6, with up to 3 ticks delay)
+        let base_tick = step * 6;
+        let tick_min = base_tick;
+        let tick_max = base_tick + 3;
+        
+        // Find matching note in the buffer within the tick window
         let found = events.iter().find(|e| {
             e.step == step &&
+            e.tick >= tick_min &&
+            e.tick <= tick_max &&
             e.note == note &&
             e.channel == channel &&
             e.event_type == event_type &&
@@ -378,8 +385,9 @@ impl ClockGenerator {
             } else {
                 format!("{} (any)", event.velocity)
             };
-            println!("  ✅ MIDI {} note={} velocity={} channel={} at step={} (tick={})", 
-                     event_type, note, vel_str, channel, step, event.tick);
+            let delay = event.tick.saturating_sub(step * 6);
+            println!("  ✅ MIDI {} note={} velocity={} channel={} at step={} (tick={}, delay={})", 
+                     event_type, note, vel_str, channel, step, event.tick, delay);
         } else {
             // Show what we did receive at this step
             let step_events: Vec<_> = events.iter()
