@@ -1,0 +1,56 @@
+# Test2 Dynamic Max Step Testing - Fix Summary
+
+## Changes Made
+
+### 1. Updated Verification Logic (automated_test_clock.rs)
+   - Added detection-based verification instead of prediction
+   - Parses all StepAdvancement events from log
+   - Detects when max_step changes actually took effect by looking for:
+     * Position resets (e.g., 18 → 1)
+     * New wrapping behavior at new max_step
+   - Calculates expected positions from detected change points
+
+### 2. Reorganized Test Script (test2.json)
+   - Moved RecordRowConfig commands to IMMEDIATELY after SysEx button releases
+   - This records the change intent at the correct step (when SysEx is sent)
+   - Verification detects actual effect timing from log analysis
+
+### 3. Key Insight
+   **Problem**: SysEx commands have unpredictable processing delay (0-2 steps)
+   **Old Approach**: Try to predict when change takes effect
+   **New Approach**: Detect when change actually took effect by analyzing log data
+   
+### 4. Test Script Changes
+   Before each max_step change:
+   - Send SysEx button press/release
+   - Call RecordRowConfig (NEW LOCATION - right after SysEx)
+   - Wait N steps
+   - Call VerifyState
+   
+   Old order: SysEx → Wait → Record → Verify
+   New order: SysEx → Record → Wait → Verify
+
+## Expected Results
+
+The verification should now correctly match the actual sequencer state because:
+1. Detection finds the real change point from the log
+2. Calculation uses actual position at that point
+3. No prediction errors from timing uncertainty
+
+## How to Test
+
+```bash
+# Build the updated test framework
+cargo build --release --bin automated_test_clock
+
+# Clear the log
+rm -f formal_state.log
+
+# Run the sequencer in one terminal
+cargo run --release --bin simon_says_seeq
+
+# Run the test in another terminal
+./target/release/automated_test_clock --script test2.json
+```
+
+The test should now show ✅ "All rows match" instead of ⚠️ "Mismatch".

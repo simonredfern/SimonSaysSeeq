@@ -1,0 +1,86 @@
+# Detection Algorithm Example
+
+## Scenario: Row 0 max_step changes from 31 to 7
+
+### Timeline View
+```
+Step   | Row 0 Pos | Event
+-------|-----------|----------------------------------
+1      | 1         |
+2      | 2         |
+...    | ...       |
+10     | 10        | [SysEx sent to change max_step]
+10     | 10        | [RecordRowConfig called]
+11     | 11        |
+12     | 12        |
+13     | 13        |
+14     | 14        |
+15     | 15        |
+16     | 16        |
+17     | 17        |
+18     | 18        |
+19     | 1         | <- DETECTED! Reset from 18 to 1
+20     | 2         |
+...    | ...       |
+26     | 0         | (wrapped at max_step 7)
+27     | 1         |
+28     | 2         |
+29     | 3         |
+30     | 4         | [Verification point]
+```
+
+### Detection Logic at Step 19
+```
+prev_pos = 18 (at step 18)
+curr_pos = 1  (at step 19)
+new_max_step = 7
+
+if prev_pos > new_max_step && curr_pos <= new_max_step:
+    # 18 > 7 && 1 <= 7 → TRUE
+    # RESET DETECTED!
+    change_effective_step = 19
+```
+
+### Verification Calculation at Step 30
+```
+Detected change at step: 19
+Position at step 19: 1
+Current verification step: 30
+Steps since change: 30 - 19 = 11
+
+Expected position:
+(1 + 11) % (7 + 1) = 12 % 8 = 4
+
+Actual position from log: 4
+
+✅ MATCH!
+```
+
+## Why This Works
+
+1. **No Prediction**: We don't try to guess when the SysEx will be processed
+2. **Empirical**: We observe the actual effect in the log data
+3. **Accurate**: Position calculations start from the real change point
+4. **Robust**: Works even with variable processing delays
+
+## Alternative Detection Pattern
+
+If the change happens at a wrap boundary:
+
+```
+Step   | Row 0 Pos | Comment
+-------|-----------|----------------------------------
+24     | 6         |
+25     | 7         | <- This is new max_step
+26     | 0         | <- Wrapped at 7, not at 31!
+```
+
+Detection:
+```
+prev_pos = 7 (new max_step)
+curr_pos = 0 (wrapped)
+
+if prev_pos == new_max_step && curr_pos == 0:
+    # NEW WRAPPING BEHAVIOR DETECTED!
+    change_effective_step = 26
+```

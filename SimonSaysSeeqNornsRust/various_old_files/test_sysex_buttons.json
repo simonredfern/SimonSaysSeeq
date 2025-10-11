@@ -1,0 +1,115 @@
+{
+  "name": "SysEx Button Test",
+  "description": "Test SysEx button press/release commands to set row lengths",
+  "initial_bpm": 120.0,
+  "commands": [
+    {
+      "command": "LogMilestone",
+      "message": "Starting SysEx button test"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Loading default test pattern"
+    },
+    {
+      "command": "LoadPattern",
+      "file": "test_pattern_1.json"
+    },
+    {
+      "command": "ReloadPattern"
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Testing button press on control row (row 7, col 2 = ARM column 2)"
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 2,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 100
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 2,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 100
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Testing button press on sequencer row 0, col 8 (step 8)"
+    },
+    {
+      "command": "SysExButton",
+      "row": 0,
+      "col": 8,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 100
+    },
+    {
+      "command": "SysExButton",
+      "row": 0,
+      "col": 8,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Starting sequencer to test pattern"
+    },
+    {
+      "command": "Start"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Running for a few steps"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 10
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Stopping sequencer"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "SysEx button test complete"
+    }
+  ]
+}
