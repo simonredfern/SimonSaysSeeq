@@ -37,6 +37,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("📊 Commands: {}", script.commands.len());
     println!("═══════════════════════════════════════════════════════");
     println!();
+    
+    println!("⚠️  IMPORTANT: The main sequencer application must be running!");
+    println!("   Start it in another terminal: cargo run --release --bin simon_says_seeq");
+    println!("   The sequencer receives MIDI clock/SysEx and writes formal_state.log");
+    println!();
 
     // Truncate formal_state.log
     fs::write("formal_state.log", "")?;

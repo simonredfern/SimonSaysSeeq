@@ -11,7 +11,7 @@
       }
     },
     {
-      "at_tick": 6,
+      "at_tick": 9,
       "action": {
         "type": "VerifyState",
         "step": 1,
@@ -20,7 +20,7 @@
       }
     },
     {
-      "at_tick": 12,
+      "at_tick": 15,
       "action": {
         "type": "VerifyState",
         "step": 2,
@@ -29,7 +29,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "VerifyState",
         "step": 3,
@@ -38,7 +38,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "VerifyState",
         "step": 3,
@@ -47,7 +47,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "VerifyState",
         "step": 3,
@@ -56,7 +56,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "VerifyState",
         "step": 3,
@@ -65,7 +65,7 @@
       }
     },
     {
-      "at_tick": 24,
+      "at_tick": 27,
       "action": {
         "type": "VerifyState",
         "step": 4,
@@ -74,7 +74,7 @@
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 33,
       "action": {
         "type": "VerifyState",
         "step": 5,
@@ -83,7 +83,7 @@
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 33,
       "action": {
         "type": "VerifyState",
         "step": 5,
@@ -92,7 +92,7 @@
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 33,
       "action": {
         "type": "VerifyState",
         "step": 5,
@@ -101,7 +101,7 @@
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 33,
       "action": {
         "type": "VerifyState",
         "step": 5,
@@ -110,14 +110,14 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "LogMessage",
         "message": "Step 32 reached - Multiple rows wrapping verified"
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -126,7 +126,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -135,7 +135,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -144,7 +144,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -153,7 +153,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -162,7 +162,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
@@ -171,7 +171,7 @@
       }
     },
     {
-      "at_tick": 192,
+      "at_tick": 195,
       "action": {
         "type": "VerifyState",
         "step": 32,
