@@ -7,7 +7,7 @@
       "at_tick": 0,
       "action": {
         "type": "LogMessage",
-        "message": "Starting Test2: Row 0 max_step change from 31 to 7 at step 3"
+        "message": "Test2: Verifying max_step change from 31→7 causes wrap at position 7"
       }
     },
     {
@@ -31,8 +31,17 @@
     {
       "at_tick": 18,
       "action": {
+        "type": "VerifyState",
+        "step": 3,
+        "row": 0,
+        "expected": 3
+      }
+    },
+    {
+      "at_tick": 18,
+      "action": {
         "type": "LogMessage",
-        "message": "Step 3 reached - sending SysEx to change Row 0 max_step to 7"
+        "message": "Step 3: Position at 3, now sending SysEx to change max_step to 7"
       }
     },
     {
@@ -75,7 +84,7 @@
       "at_tick": 24,
       "action": {
         "type": "LogMessage",
-        "message": "Step 4 - verifying if max_step change has taken effect"
+        "message": "Step 4: Continuing normal advancement (max_step change processed)"
       }
     },
     {
@@ -84,14 +93,7 @@
         "type": "VerifyState",
         "step": 4,
         "row": 0,
-        "expected": 3
-      }
-    },
-    {
-      "at_tick": 30,
-      "action": {
-        "type": "LogMessage",
-        "message": "Step 5 - continued verification"
+        "expected": 4
       }
     },
     {
@@ -100,14 +102,7 @@
         "type": "VerifyState",
         "step": 5,
         "row": 0,
-        "expected": 4
-      }
-    },
-    {
-      "at_tick": 36,
-      "action": {
-        "type": "LogMessage",
-        "message": "Step 6 - continued verification"
+        "expected": 5
       }
     },
     {
@@ -116,14 +111,7 @@
         "type": "VerifyState",
         "step": 6,
         "row": 0,
-        "expected": 5
-      }
-    },
-    {
-      "at_tick": 42,
-      "action": {
-        "type": "LogMessage",
-        "message": "Step 7 - continued verification"
+        "expected": 6
       }
     },
     {
@@ -132,14 +120,14 @@
         "type": "VerifyState",
         "step": 7,
         "row": 0,
-        "expected": 6
+        "expected": 7
       }
     },
     {
       "at_tick": 48,
       "action": {
         "type": "LogMessage",
-        "message": "Step 8 - Row 0 should wrap to 0 (max_step=7)"
+        "message": "Step 8: CRITICAL TEST - Should wrap to 0 (proving max_step=7 worked)"
       }
     },
     {
@@ -148,14 +136,14 @@
         "type": "VerifyState",
         "step": 8,
         "row": 0,
-        "expected": 7
+        "expected": 0
       }
     },
     {
       "at_tick": 54,
       "action": {
         "type": "LogMessage",
-        "message": "Step 9 - Row 0 should have wrapped back to 0"
+        "message": "Step 9: Continuing from wrap - position should be 1"
       }
     },
     {
@@ -164,14 +152,23 @@
         "type": "VerifyState",
         "step": 9,
         "row": 0,
-        "expected": 0
+        "expected": 1
       }
     },
     {
       "at_tick": 60,
       "action": {
+        "type": "VerifyState",
+        "step": 10,
+        "row": 0,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 66,
+      "action": {
         "type": "LogMessage",
-        "message": "Test complete - max_step change verified"
+        "message": "✅ Test complete - max_step change verified: wrap occurred at position 7"
       }
     }
   ]

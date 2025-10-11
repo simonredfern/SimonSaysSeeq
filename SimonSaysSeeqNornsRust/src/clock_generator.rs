@@ -463,6 +463,13 @@ impl ClockGenerator {
                                 *tick_count.lock().unwrap() += 1;
                             }
                             
+                            // Print a dot for each step (every 6 ticks) in direct test mode
+                            if direct_test_script.is_some() && tick_count_local % 6 == 0 {
+                                print!(".");
+                                use std::io::Write;
+                                std::io::stdout().flush().ok();
+                            }
+                            
                             // Execute direct test actions at this tick
                             if let Some(ref script) = direct_test_script {
                                 for cmd in &script.commands {
