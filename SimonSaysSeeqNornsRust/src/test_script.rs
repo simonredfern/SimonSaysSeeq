@@ -83,6 +83,14 @@ pub enum DirectTestAction {
         row: usize,          // Which row to verify
         expected: Option<usize>, // Expected position (None = just observe)
     },
+    /// Verify MIDI note output from sequencer
+    VerifyMidiNote {
+        step: u32,           // Expected step number (note should arrive during this step's 6 ticks)
+        note: u8,            // MIDI note number (0-127)
+        velocity: Option<u8>, // Note velocity (0-127, None = any velocity)
+        channel: u8,         // MIDI channel (1-16)
+        event_type: String,  // "NoteOn" or "NoteOff"
+    },
 }
 
 /// Direct test command - action at specific tick

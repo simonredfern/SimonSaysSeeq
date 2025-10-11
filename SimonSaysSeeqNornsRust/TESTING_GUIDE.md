@@ -284,3 +284,111 @@ This ensures the sequencer has time to write the step advancement to the log bef
 2. **SysEx between steps**: Start at tick = (step × 6) - 2
 3. **Avoid step boundaries** (multiples of 6) for SysEx
 4. **Spread button events** across 3-4 ticks
+
+## MIDI Output Verification (New!)
+
+### VerifyMidiNote Action
+
+Test framework can now verify that the sequencer sends MIDI notes at the correct steps!
+
+**How it works:**
+1. `direct_test` opens MIDI input to listen for notes from sequencer
+2. All received MIDI notes are buffered with step numbers
+3. `VerifyMidiNote` checks if expected note was received during that step
+
+**Step-based verification:** A note is considered valid if received anywhere within the step's 6-tick window.
+
+### Example:
+```json
+{
+  "at_tick": 9,
+  "action": {
+    "type": "VerifyMidiNote",
+    "step": 1,
+    "note": 48,
+    "velocity": 100,
+    "channel": 1,
+    "event_type": "NoteOn"
+  }
+}
+```
+
+### Parameters:
+- `step`: Which step to check (e.g., step 1 = ticks 6-11)
+- `note`: MIDI note number (0-127, e.g., 48 = C3)
+- `velocity`: Note velocity (0-127), or `null` for any velocity
+- `channel`: MIDI channel (1-16)
+- `event_type`: "NoteOn" or "NoteOff"
+
+### MIDI Port Setup:
+
+When running test, you'll be prompted for TWO MIDI ports:
+
+```
+Available MIDI output ports:  (for sending clock TO sequencer)
+  0: Midi Through
+  1: SimonSaysSeeq Input
+Select: 1
+
+Available MIDI input ports:  (for receiving notes FROM sequencer)
+  0: Midi Through
+  1: SimonSaysSeeq Output
+Select: 1
+```
+
+**Important:** Choose ports that form a loop:
+- Clock OUT → Sequencer IN
+- Sequencer OUT → Test IN
+
+### Example Test (test3.json):
+
+```json
+{
+  "name": "MIDI Note Verification",
+  "bpm": 30.0,
+  "commands": [
+    {
+      "at_tick": 9,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 1,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    }
+  ]
+}
+```
+
+Run with:
+```bash
+cargo run --release --bin direct_test -- --script test3.json
+```
+
+### What Gets Verified:
+
+✅ **Correct note** sent (e.g., C3 = note 48)  
+✅ **Correct step** (note arrived during step 1's 6-tick window)  
+✅ **Correct channel** (e.g., channel 1)  
+✅ **Correct event type** (NoteOn vs NoteOff)  
+✅ **Optional velocity** (if specified)
+
+### Output:
+
+**Success:**
+```
+📍 Tick 9: Verify MIDI NoteOn note=48 velocity=null channel=1 at step=1
+  ✅ MIDI NoteOn note=48 velocity=100 (any) channel=1 at step=1 (tick=7)
+```
+
+**Failure:**
+```
+📍 Tick 9: Verify MIDI NoteOn note=48 velocity=null channel=1 at step=1
+  ❌ Expected MIDI NoteOn note=48 channel=1 not found at step 1
+     Received at step 1:
+       NoteOn note=49 velocity=100 channel=1 (tick=7)
+```
+
+This completes the testing framework - we can now verify both **internal state** and **MIDI output**! 🎉

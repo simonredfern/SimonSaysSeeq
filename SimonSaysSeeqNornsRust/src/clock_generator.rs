@@ -14,9 +14,20 @@ use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use midir::{MidiOutput, MidiOutputConnection};
+use midir::{MidiOutput, MidiOutputConnection, MidiInput, MidiInputConnection};
 
 use crate::test_script::{DirectTestScript, DirectTestAction};
+
+/// Received MIDI note event with step information
+#[derive(Debug, Clone)]
+pub struct ReceivedMidiNote {
+    pub note: u8,
+    pub velocity: u8,
+    pub channel: u8,
+    pub event_type: String, // "NoteOn" or "NoteOff"
+    pub step: u32,
+    pub tick: u32,
+}
 
 /// Clock command for internal communication
 #[derive(Debug, Clone)]
@@ -57,6 +68,7 @@ pub struct ClockGenerator {
     tick_count: Arc<Mutex<u32>>,
     config: ClockConfig,
     direct_test_script: Option<Arc<DirectTestScript>>,
+    midi_events: Arc<Mutex<Vec<ReceivedMidiNote>>>,
 }
 
 impl Clone for ClockGenerator {
@@ -70,6 +82,7 @@ impl Clone for ClockGenerator {
             tick_count: self.tick_count.clone(),
             config: self.config.clone(),
             direct_test_script: self.direct_test_script.clone(),
+            midi_events: self.midi_events.clone(),
         }
     }
 }
@@ -91,6 +104,7 @@ impl ClockGenerator {
             tick_count: Arc::new(Mutex::new(0)),
             config,
             direct_test_script: None,
+            midi_events: Arc::new(Mutex::new(Vec::new())),
         }
     }
     
@@ -134,6 +148,76 @@ impl ClockGenerator {
         println!("Connecting to: {}", port_name);
 
         let connection = midi_out.connect(port, "MIDI Clock")?;
+        Ok(connection)
+    }
+
+    /// Connect MIDI input to listen for notes from sequencer
+    pub fn connect_midi_input(&self) -> Result<MidiInputConnection<()>, Box<dyn std::error::Error>> {
+        let midi_in = MidiInput::new("MIDI Input")?;
+        let in_ports = midi_in.ports();
+
+        if in_ports.is_empty() {
+            return Err("No MIDI input ports available".into());
+        }
+
+        println!("\nAvailable MIDI input ports:");
+        for (i, port) in in_ports.iter().enumerate() {
+            let port_name = midi_in.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+            println!("  {}: {}", i, port_name);
+        }
+
+        let selected_port = if in_ports.len() == 1 {
+            0
+        } else {
+            println!("Select MIDI input port (0-{}): ", in_ports.len() - 1);
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            input.trim().parse::<usize>().unwrap_or(0)
+        };
+
+        if selected_port >= in_ports.len() {
+            return Err("Invalid port selection".into());
+        }
+
+        let port = &in_ports[selected_port];
+        let port_name = midi_in.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+        println!("Listening on: {}", port_name);
+
+        let midi_events = self.midi_events.clone();
+        let tick_count = self.tick_count.clone();
+
+        let connection = midi_in.connect(port, "MIDI Input", move |_timestamp, message, _| {
+            // Parse MIDI message
+            if message.len() >= 3 {
+                let status = message[0];
+                let channel = (status & 0x0F) + 1; // MIDI channels are 1-16
+                let note = message[1];
+                let velocity = message[2];
+
+                let event_type = if (status & 0xF0) == 0x90 && velocity > 0 {
+                    "NoteOn"
+                } else if (status & 0xF0) == 0x80 || ((status & 0xF0) == 0x90 && velocity == 0) {
+                    "NoteOff"
+                } else {
+                    return; // Not a note event
+                };
+
+                let current_tick = *tick_count.lock().unwrap();
+                let current_step = current_tick / 6;
+
+                let event = ReceivedMidiNote {
+                    note,
+                    velocity,
+                    channel,
+                    event_type: event_type.to_string(),
+                    step: current_step,
+                    tick: current_tick,
+                };
+
+                midi_events.lock().unwrap().push(event);
+            }
+        }, ())?;
+
         Ok(connection)
     }
 
@@ -186,7 +270,7 @@ impl ClockGenerator {
     }
     
     /// Execute a direct test action (called from clock thread)
-    fn execute_direct_test_action(action: &DirectTestAction, connection: &mut midir::MidiOutputConnection, tick: u32) {
+    fn execute_direct_test_action(action: &DirectTestAction, connection: &mut midir::MidiOutputConnection, tick: u32, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) {
         match action {
             DirectTestAction::LogMessage { message } => {
                 println!("📍 Tick {}: {}", tick, message);
@@ -203,6 +287,11 @@ impl ClockGenerator {
             DirectTestAction::VerifyState { step, row, expected } => {
                 println!("📍 Tick {}: Verify step={} row={} expected={:?}", tick, step, row, expected);
                 Self::verify_state_at_step(*step, *row, *expected);
+            }
+            DirectTestAction::VerifyMidiNote { step, note, velocity, channel, event_type } => {
+                println!("📍 Tick {}: Verify MIDI {} note={} velocity={:?} channel={} at step={}", 
+                         tick, event_type, note, velocity, channel, step);
+                Self::verify_midi_note_at_step(*step, *note, velocity.as_ref(), *channel, event_type, midi_events);
             }
         }
     }
@@ -265,6 +354,47 @@ impl ClockGenerator {
             }
         }
     }
+    
+    /// Verify MIDI note was received at specific step
+    fn verify_midi_note_at_step(step: u32, note: u8, velocity: Option<&u8>, channel: u8, event_type: &str, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) {
+        let events = midi_events.lock().unwrap();
+        
+        // Find matching note in the buffer
+        let found = events.iter().find(|e| {
+            e.step == step &&
+            e.note == note &&
+            e.channel == channel &&
+            e.event_type == event_type &&
+            velocity.map_or(true, |v| e.velocity == *v) // Match velocity if specified, otherwise any velocity
+        });
+        
+        if let Some(event) = found {
+            let vel_str = if let Some(v) = velocity {
+                format!("{}", v)
+            } else {
+                format!("{} (any)", event.velocity)
+            };
+            println!("  ✅ MIDI {} note={} velocity={} channel={} at step={} (tick={})", 
+                     event_type, note, vel_str, channel, step, event.tick);
+        } else {
+            // Show what we did receive at this step
+            let step_events: Vec<_> = events.iter()
+                .filter(|e| e.step == step)
+                .collect();
+            
+            if step_events.is_empty() {
+                println!("  ❌ No MIDI events received at step {}", step);
+            } else {
+                println!("  ❌ Expected MIDI {} note={} channel={} not found at step {}", 
+                         event_type, note, channel, step);
+                println!("     Received at step {}:", step);
+                for e in step_events {
+                    println!("       {} note={} velocity={} channel={} (tick={})", 
+                             e.event_type, e.note, e.velocity, e.channel, e.tick);
+                }
+            }
+        }
+    }
 
     /// Exit the clock generator
     pub fn exit(&self) {
@@ -305,6 +435,7 @@ impl ClockGenerator {
         let enable_tick_counting = self.config.enable_tick_counting;
         let enable_test_mode = self.config.enable_test_mode;
         let direct_test_script = self.direct_test_script.clone();
+        let midi_events = self.midi_events.clone();
 
         thread::spawn(move || {
             println!("Clock generation thread started");
@@ -474,7 +605,7 @@ impl ClockGenerator {
                             if let Some(ref script) = direct_test_script {
                                 for cmd in &script.commands {
                                     if cmd.at_tick == tick_count_local as u32 {
-                                        Self::execute_direct_test_action(&cmd.action, &mut connection, tick_count_local as u32);
+                                        Self::execute_direct_test_action(&cmd.action, &mut connection, tick_count_local as u32, &midi_events);
                                     }
                                 }
                             }

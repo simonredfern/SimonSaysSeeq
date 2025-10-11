@@ -63,9 +63,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut generator = ClockGenerator::new_with_config(script.bpm, config);
     generator.set_direct_test_script(script);
 
-    // Connect to MIDI
+    // Connect to MIDI output (for clock)
     let connection = generator.connect_midi_output()?;
     println!("✅ MIDI Clock initialized at {:.1} BPM", generator.get_bpm());
+    println!();
+
+    // Connect to MIDI input (for listening to notes from sequencer)
+    println!("🎵 Connecting MIDI input to listen for sequencer notes...");
+    let _midi_input = generator.connect_midi_input()?;
+    println!("✅ MIDI Input connected");
     println!();
 
     // Start the clock thread (needed before sending MIDI messages)
