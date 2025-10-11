@@ -1,7 +1,87 @@
 {
   "sequencer_a_grid": [
     [
-      15,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
       0,
       0,
       0,
@@ -41,7 +121,7 @@
       0
     ],
     [
-      15,
+      1,
       0,
       1,
       0,
@@ -81,33 +161,23 @@
       0
     ],
     [
-      15,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
       1,
       0,
       0,
       0,
       0,
       0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       0
     ],
     [
@@ -121,13 +191,33 @@
       0
     ],
     [
-      15,
       0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
       1,
       0,
       0,
       0,
       0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       0
     ],
     [
@@ -142,31 +232,21 @@
     ],
     [
       0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
       1,
       0,
       0,
       0,
       0,
       0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      15,
-      0,
-      0,
-      0,
-      0,
-      0,
       0,
       0
     ],
@@ -201,87 +281,7 @@
       0
     ],
     [
-      15,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      15,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      15,
+      1,
       0,
       0,
       0,
@@ -1297,10 +1297,10 @@
     {
       "sequencer_a_current_step": 0,
       "sequencer_a_first_step": 0,
-      "sequencer_a_max_step": 7,
+      "sequencer_a_max_step": 31,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 4,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 48,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1309,10 +1309,10 @@
     {
       "sequencer_a_current_step": 0,
       "sequencer_a_first_step": 0,
-      "sequencer_a_max_step": 9,
+      "sequencer_a_max_step": 30,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 6,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 49,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1324,7 +1324,7 @@
       "sequencer_a_max_step": 29,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 16,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 50,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1333,10 +1333,10 @@
     {
       "sequencer_a_current_step": 0,
       "sequencer_a_first_step": 0,
-      "sequencer_a_max_step": 4,
+      "sequencer_a_max_step": 15,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 1,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 51,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1348,7 +1348,7 @@
       "sequencer_a_max_step": 14,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 1,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 52,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1360,7 +1360,7 @@
       "sequencer_a_max_step": 13,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 6,
+      "sequencer_a_previous_step": 0,
       "sequencer_a_midi_note": 53,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1369,10 +1369,10 @@
     {
       "sequencer_a_current_step": 0,
       "sequencer_a_first_step": 0,
-      "sequencer_a_max_step": 2,
+      "sequencer_a_max_step": 4,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 1,
+      "sequencer_a_previous_step": 7,
       "sequencer_a_midi_note": 54,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
@@ -1384,7 +1384,7 @@
       "sequencer_a_max_step": 31,
       "sequencer_a_euclidean_events": 5,
       "sequencer_a_euclidean_rotation": 0,
-      "sequencer_a_previous_step": 12,
+      "sequencer_a_previous_step": 7,
       "sequencer_a_midi_note": 55,
       "sequencer_a_midi_velocity": 100,
       "sequencer_a_midi_channel": 1,
