@@ -1,0 +1,255 @@
+{
+  "name": "Test4 Direct: LED Sync Verification for Multi-Length Rows",
+  "description": "Verifies that LED positions match MIDI output when rows have different max_step values (tests the LED sync bug fix)",
+  "bpm": 30.0,
+  "comments": [
+    "This test verifies the fix for the LED sync bug where GridUpdate used master step instead of row step",
+    "Row max_step values from test_pattern_1.json:",
+    "  Row 0: max_step=31 (32 steps), Row 1: max_step=30 (31 steps), Row 2: max_step=29 (30 steps)",
+    "  Row 3: max_step=15 (16 steps), Row 4: max_step=14 (15 steps), Row 5: max_step=13 (14 steps), Row 6: max_step=4 (5 steps)",
+    "Key test points:",
+    "  - Row 6 wraps at step 5 (back to 0) - LED should show position 0, not position 5",
+    "  - Row 5 wraps at step 14 (back to 0) - LED should show position 0, not position 14",
+    "  - Row 4 wraps at step 15 (back to 0) - LED should show position 0, not position 15",
+    "  - Row 3 wraps at step 16 (back to 0) - LED should show position 0, not position 16",
+    "We verify by checking formal_state.log which logs both LED updates and MIDI output",
+    "If LED position matches row step counter, the bug is fixed!"
+  ],
+  "commands": [
+    {
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "🧪 Test4: LED Sync Verification for Multi-Length Rows"
+      }
+    },
+    {
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "Testing that LED positions match row step counters (not master step)"
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 0: All rows at position 0"
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "VerifyState",
+        "step": 0,
+        "row": 0,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "VerifyState",
+        "step": 0,
+        "row": 6,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 5: Row 6 should wrap (max_step=4) - expecting row 6 at position 0"
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 6,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 87,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 14: Row 5 should wrap (max_step=13) - expecting row 5 at position 0"
+      }
+    },
+    {
+      "at_tick": 87,
+      "action": {
+        "type": "VerifyState",
+        "step": 14,
+        "row": 5,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 93,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 15: Row 4 should wrap (max_step=14) - expecting row 4 at position 0"
+      }
+    },
+    {
+      "at_tick": 93,
+      "action": {
+        "type": "VerifyState",
+        "step": 15,
+        "row": 4,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 16: Row 3 should wrap (max_step=15) - expecting row 3 at position 0"
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "VerifyState",
+        "step": 16,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "VerifyState",
+        "step": 16,
+        "row": 0,
+        "expected": 16
+      }
+    },
+    {
+      "at_tick": 183,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 30: Row 2 should wrap (max_step=29) - expecting row 2 at position 0"
+      }
+    },
+    {
+      "at_tick": 183,
+      "action": {
+        "type": "VerifyState",
+        "step": 30,
+        "row": 2,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 189,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 31: Row 1 should wrap (max_step=30) - expecting row 1 at position 0"
+      }
+    },
+    {
+      "at_tick": 189,
+      "action": {
+        "type": "VerifyState",
+        "step": 31,
+        "row": 1,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 32: Row 0 should wrap (max_step=31) - expecting row 0 at position 0"
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 0,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 1,
+        "expected": 1
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 2,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 4,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 5,
+        "expected": 4
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 6,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 201,
+      "action": {
+        "type": "LogMessage",
+        "message": "✅ LED Sync Test Complete!"
+      }
+    },
+    {
+      "at_tick": 201,
+      "action": {
+        "type": "LogMessage",
+        "message": "All rows correctly showing their individual step positions, not master step"
+      }
+    },
+    {
+      "at_tick": 201,
+      "action": {
+        "type": "LogMessage",
+        "message": "LED positions now sync perfectly with MIDI output! 🎉"
+      }
+    }
+  ]
+}

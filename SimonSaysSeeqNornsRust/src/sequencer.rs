@@ -650,7 +650,7 @@ impl Sequencer {
                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,
                     old_step: row_state.sequencer_a_previous_step,
-                    new_step: current_step,
+                    new_step: row_state.sequencer_a_current_step,
                 }) {
                     // warn!("Failed to send grid update event: {}", e);
                 }
