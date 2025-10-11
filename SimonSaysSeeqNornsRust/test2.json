@@ -1,0 +1,279 @@
+{
+  "name": "Test2: Dynamic Max Step Changes While Running",
+  "description": "Test dynamically changing row max_step values via SysEx while sequencer is running",
+  "initial_bpm": 120.0,
+  "commands": [
+    {
+      "command": "LogMilestone",
+      "message": "Starting Test2: Dynamic Max Step Changes While Running"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Loading test_pattern_1.json as starting point"
+    },
+    {
+      "command": "LoadPattern",
+      "file": "test_pattern_1.json"
+    },
+    {
+      "command": "ReloadPattern"
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Starting sequencer with initial pattern (max_steps: 31,30,29,15,14,13,2)"
+    },
+    {
+      "command": "Start"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Running 10 steps with initial configuration"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 10
+    },
+    {
+      "command": "LogMilestone",
+      "message": "NOW CHANGING max_step WHILE RUNNING - Setting row 0 max_step to 7 (8 steps: 0-7)"
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 0,
+      "col": 7,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 0,
+      "col": 7,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": false
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Continuing - running 10 more steps with row 0 changed"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 10
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Setting row 1 max_step to 11 (12 steps: 0-11) - STILL RUNNING"
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 1,
+      "col": 11,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 1,
+      "col": 11,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": false
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Continuing - running 10 more steps with rows 0,1 changed"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 10
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Setting row 2 max_step to 5 (6 steps: 0-5) - STILL RUNNING"
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 2,
+      "col": 5,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 2,
+      "col": 5,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": false
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Continuing - running 10 more steps with rows 0,1,2 changed"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 10
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Setting row 6 max_step to 4 (5 steps: 0-4) - STILL RUNNING"
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 6,
+      "col": 4,
+      "press": true
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 6,
+      "col": 4,
+      "press": false
+    },
+    {
+      "command": "Wait",
+      "ms": 50
+    },
+    {
+      "command": "SysExButton",
+      "row": 7,
+      "col": 8,
+      "press": false
+    },
+    {
+      "command": "LogMilestone",
+      "message": "All changes made - running 30 more steps to observe full behavior"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 30
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Test complete - stopping sequencer"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Test2 complete: Check formal_state.log to verify live max_step changes:"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "- Row 0 should wrap at step 7 after change (was 31)"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "- Row 1 should wrap at step 11 after change (was 30)"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "- Row 2 should wrap at step 5 after change (was 29)"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "- Row 6 should wrap at step 4 after change (was 2)"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Total: 70 steps run (10 initial + 4x10 between changes + 30 final)"
+    }
+  ]
+}

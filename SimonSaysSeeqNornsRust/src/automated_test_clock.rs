@@ -510,6 +510,10 @@ struct Args {
     #[arg(long)]
     test1: bool,
 
+    /// Create test1.json file
+    #[arg(long)]
+    create_test1: bool,
+
     /// Run test1-advance: Send MIDI clock to advance sequencer 33 steps (requires sequencer running)
     #[arg(long)]
     test1_advance: bool,
@@ -608,6 +612,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Enhanced MIDI clock with formal state logging and test automation");
     println!();
 
+    // Handle create-test1 flag
+    if args.create_test1 {
+        let script = AutomatedTestClock::create_test1_script(args.test_length_steps);
+        let filename = "test1.json";
+        match serde_json::to_string_pretty(&script) {
+            Ok(json) => {
+                if fs::write(filename, json).is_ok() {
+                    println!("✅ Created test1.json with {} steps", args.test_length_steps);
+                    println!("Run with: --script test1.json");
+                } else {
+                    eprintln!("❌ Error writing test1.json file");
+                }
+            }
+            Err(e) => {
+                eprintln!("❌ Error serializing test1 script: {}", e);
+            }
+        }
+        return Ok(());
+    }
+
     // Handle create-test flag
     if args.create_test {
         let script = AutomatedTestClock::create_16_step_midi_test_script();
@@ -658,10 +682,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else {
         println!("ℹ️  No test specified. Available options:");
-        println!("  --test1              Run multi-length pattern test");
+        println!("  --test1              Run multi-length pattern test (generates test1 on-the-fly)");
+        println!("  --create-test1       Create test1.json file");
         println!("  --script <file>      Execute test script from JSON file");
         println!("  --create-test        Create sample 16-step test script");
         println!("  --bpm <value>        Set initial BPM (default: 120.0)");
+        println!("  --test-length-steps <n>  Number of steps for test1 (default: 33)");
         println!();
         println!("Use --help for more information");
     }

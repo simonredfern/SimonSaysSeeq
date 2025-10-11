@@ -1,0 +1,459 @@
+{
+  "name": "Test1: Multi-Length Pattern Test",
+  "description": "Test patterns with max_step [31, 30, 29, 15, 14, 13, 2] (7 rows, giving 32,31,30,16,15,14,3 steps) and verify step counters at each step up to 33",
+  "initial_bpm": 120.0,
+  "commands": [
+    {
+      "command": "LogMilestone",
+      "message": "Starting Test1: Multi-Length Pattern Test"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Stopping sequencer to reset state"
+    },
+    {
+      "command": "Stop"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Loading test_pattern_1.json with max_step [31, 30, 29, 15, 14, 13, 2]"
+    },
+    {
+      "command": "LoadPattern",
+      "file": "test_pattern_1.json"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Pattern loaded to current_pattern.json"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Sending SysEx reload pattern command"
+    },
+    {
+      "command": "ReloadPattern"
+    },
+    {
+      "command": "Wait",
+      "ms": 200
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Starting MIDI clock"
+    },
+    {
+      "command": "Start"
+    },
+    {
+      "command": "Wait",
+      "ms": 500
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 1"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 1"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 2"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 2"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 3"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 3"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 4"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 4"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 5"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 5"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 6"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 6"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 7"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 7"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 8"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 8"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 9"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 9"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 10"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 10"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 11"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 11"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 12"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 12"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 13"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 13"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 14"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 14"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 15"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 15"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 16"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 16"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 17"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 17"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 18"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 18"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 19"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 19"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 20"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 20"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 21"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 21"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 22"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 22"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 23"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 23"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 24"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 24"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 25"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 25"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 26"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 26"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 27"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 27"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 28"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 28"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 29"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 29"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 30"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 30"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 31"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 31"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 32"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 32"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Advancing to cumulative step 33"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 1
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 33"
+    },
+    {
+      "command": "LogMilestone",
+      "message": "Test complete - stopping MIDI clock"
+    },
+    {
+      "command": "Stop"
+    }
+  ]
+}
