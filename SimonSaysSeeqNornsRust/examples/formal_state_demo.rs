@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     info!("This demo shows how the formal state logging system works:");
     info!("1. Logs are written to formal_state.log in structured JSON format");
     info!("2. Button presses, LED changes, MIDI events, and state changes are tracked");
-    info!("3. Test mode can inject button presses via button_a.txt and button_b.txt");
+    info!("3. Test mode uses SysEx injection (see direct_test binary for examples)");
     info!("═══════════════════════════════════════════════════════════");
     
     // Initialize formal state logger
@@ -80,41 +80,16 @@ fn main() -> Result<()> {
     thread::sleep(Duration::from_millis(100));
     
     info!("\n🧪 Demonstrating test mode button injection...\n");
+    info!("═══════════════════════════════════════════════════════════");
     
     // 7. Test mode demonstration
     info!("7️⃣  Test mode button injection:");
-    info!("   📝 Writing test commands to button_a.txt and button_b.txt");
+    info!("   Note: Button injection now uses SysEx MIDI messages");
+    info!("   Format: F0 7D 53 53 51 02 <row> <col> <press> F7");
+    info!("   See direct_test binary and test1.json/test2.json for examples");
+    info!("   ✅ More reliable and precise than file-based injection");
     
-    // Write test commands to files
-    fs::write("button_a.txt", "press,grid_one,4,1")?;
-    fs::write("button_b.txt", "15,7")?; // Simple format: column 15, row 7
-    
-    // Create test injector and check for injections
-    let injector = formal_state_logger::TestModeInjector::new();
-    
-    // Simulate checking for injections (like the main loop would do)
-    for i in 0..3 {
-        let test_events = injector.check_injections();
-        if !test_events.is_empty() {
-            info!("   ⚡ Test injection {} detected:", i + 1);
-            for event in test_events {
-                info!("      Grid: {}, Position: ({},{}), Press: {}", 
-                      event.grid_id, event.x, event.y, event.is_press);
-                
-                // Log the injected button press
-                if event.is_press {
-                    formal_state_logger::log_button_press(&event.grid_id, event.x, event.y, event.source);
-                } else {
-                    formal_state_logger::log_button_release(&event.grid_id, event.x, event.y, event.source);
-                }
-            }
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
-    
-    // Reset test files
-    fs::write("button_a.txt", "none")?;
-    fs::write("button_b.txt", "none")?;
+    thread::sleep(Duration::from_millis(100));
     
     // 8. Test injection logging
     info!("8️⃣  Direct test injection logging:");
@@ -156,14 +131,14 @@ fn main() -> Result<()> {
     info!("   • The formal_state.log file contains all system events in JSON format");
     info!("   • Each line is a complete JSON object representing one event");
     info!("   • Events include timestamps, event types, and detailed parameters");
-    info!("   • Use button_a.txt and button_b.txt to inject test button presses");
-    info!("   • File format: 'press,grid_id,x,y' or 'x,y' (assumes press on grid_one)");
-    info!("   • Set files to 'none' to disable injection");
+    info!("   • Use SysEx MIDI messages to inject test button presses");
+    info!("   • SysEx format: F0 7D 53 53 51 02 <row> <col> <press> F7");
+    info!("   • See direct_test binary for practical examples");
     
     info!("\n🔧 Integration with main application:");
     info!("   • The main SimonSaysSeeq application now logs all critical events");
     info!("   • Button presses, LED changes, MIDI events are automatically logged");
-    info!("   • Test mode allows injection of artificial button presses during runtime");
+    info!("   • SysEx injection allows precise button simulation via MIDI");
     info!("   • This enables comprehensive debugging and automated testing");
     
     Ok(())

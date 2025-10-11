@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use chrono;
 use crossbeam_channel::Sender;
 
-use simon_says_seeq_rust::formal_state_logger::{self, log_button_press, log_button_release, log_midi_note_on, log_midi_note_off, log_arm_action_activated, log_arm_action_executed, ButtonSource, TestModeInjector};
+use simon_says_seeq_rust::formal_state_logger::{self, log_button_press, log_button_release, log_midi_note_on, log_midi_note_off, log_arm_action_activated, log_arm_action_executed, ButtonSource};
 
 mod hardware;
 mod sequencer;
@@ -118,8 +118,6 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
-    // Test mode injector for button simulation
-    test_injector: TestModeInjector,
 }
 
 impl SimonSaysSeeq {
@@ -163,7 +161,6 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
-            test_injector: TestModeInjector::new(),
         })
     }
 
@@ -304,12 +301,6 @@ impl SimonSaysSeeq {
                 if let Err(_e) = self.handle_hardware_event(event) {
                     // error!("Error handling hardware event: {}", e);
                 }
-            }
-
-            // Check for test mode button injections
-            let test_events = self.test_injector.check_injections();
-            for test_event in test_events {
-                let _ = self.handle_grid_press(&test_event.grid_id, test_event.x, test_event.y, test_event.is_press);
             }
 
             // Poll grid for button events

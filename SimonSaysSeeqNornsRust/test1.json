@@ -33,6 +33,33 @@
       "action": {
         "type": "VerifyState",
         "step": 3,
+        "row": 0,
+        "expected": 3
+      }
+    },
+    {
+      "at_tick": 18,
+      "action": {
+        "type": "VerifyState",
+        "step": 3,
+        "row": 1,
+        "expected": 3
+      }
+    },
+    {
+      "at_tick": 18,
+      "action": {
+        "type": "VerifyState",
+        "step": 3,
+        "row": 2,
+        "expected": 3
+      }
+    },
+    {
+      "at_tick": 18,
+      "action": {
+        "type": "VerifyState",
+        "step": 3,
         "row": 6,
         "expected": 0
       }
@@ -47,10 +74,46 @@
       }
     },
     {
+      "at_tick": 30,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 0,
+        "expected": 5
+      }
+    },
+    {
+      "at_tick": 30,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 1,
+        "expected": 5
+      }
+    },
+    {
+      "at_tick": 30,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 2,
+        "expected": 5
+      }
+    },
+    {
+      "at_tick": 30,
+      "action": {
+        "type": "VerifyState",
+        "step": 5,
+        "row": 6,
+        "expected": 2
+      }
+    },
+    {
       "at_tick": 192,
       "action": {
         "type": "LogMessage",
-        "message": "Step 32 reached - Row 0 should have wrapped"
+        "message": "Step 32 reached - Multiple rows wrapping verified"
       }
     },
     {
@@ -81,10 +144,46 @@
       }
     },
     {
+      "at_tick": 192,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 192,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 4,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 192,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 5,
+        "expected": 4
+      }
+    },
+    {
+      "at_tick": 192,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 6,
+        "expected": 2
+      }
+    },
+    {
       "at_tick": 198,
       "action": {
         "type": "LogMessage",
-        "message": "Test complete - all row wrapping verified"
+        "message": "✅ Test complete - all 7 rows verified at multiple steps"
       }
     }
   ]

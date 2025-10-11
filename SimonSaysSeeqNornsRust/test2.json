@@ -1,13 +1,13 @@
 {
-  "name": "Test2 Direct: Single Row Max Step Change",
-  "description": "Tick-synchronized test of changing Row 0 max_step from 31 to 7 at step 3",
+  "name": "Test2 Direct: Multi-Row Max Step Changes",
+  "description": "Tick-synchronized test of changing multiple rows' max_step values via SysEx",
   "bpm": 30.0,
   "commands": [
     {
       "at_tick": 0,
       "action": {
         "type": "LogMessage",
-        "message": "Test2: Verifying max_step change from 31→7 causes wrap at position 7"
+        "message": "Test2: Multi-row max_step changes - Row 0: 31→7, Row 1: 30→9, Row 3: 15→4"
       }
     },
     {
@@ -41,7 +41,7 @@
       "at_tick": 18,
       "action": {
         "type": "LogMessage",
-        "message": "Step 3: Position at 3, now sending SysEx to change max_step to 7"
+        "message": "Step 3: Changing Row 0 max_step 31→7"
       }
     },
     {
@@ -84,7 +84,93 @@
       "at_tick": 24,
       "action": {
         "type": "LogMessage",
-        "message": "Step 4: Continuing normal advancement (max_step change processed)"
+        "message": "Step 4: Changing Row 1 max_step 30→9"
+      }
+    },
+    {
+      "at_tick": 24,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 25,
+      "action": {
+        "type": "SysExButton",
+        "row": 1,
+        "col": 9,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 26,
+      "action": {
+        "type": "SysExButton",
+        "row": 1,
+        "col": 9,
+        "press": false
+      }
+    },
+    {
+      "at_tick": 27,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": false
+      }
+    },
+    {
+      "at_tick": 30,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 5: Changing Row 3 max_step 15→4"
+      }
+    },
+    {
+      "at_tick": 30,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 31,
+      "action": {
+        "type": "SysExButton",
+        "row": 3,
+        "col": 4,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 32,
+      "action": {
+        "type": "SysExButton",
+        "row": 3,
+        "col": 4,
+        "press": false
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": false
+      }
+    },
+    {
+      "at_tick": 36,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 6: Verifying all rows after configuration changes"
       }
     },
     {
@@ -97,12 +183,12 @@
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 36,
       "action": {
         "type": "VerifyState",
-        "step": 5,
+        "step": 6,
         "row": 0,
-        "expected": 5
+        "expected": 6
       }
     },
     {
@@ -110,8 +196,17 @@
       "action": {
         "type": "VerifyState",
         "step": 6,
-        "row": 0,
+        "row": 1,
         "expected": 6
+      }
+    },
+    {
+      "at_tick": 36,
+      "action": {
+        "type": "VerifyState",
+        "step": 6,
+        "row": 3,
+        "expected": 1
       }
     },
     {
@@ -127,7 +222,7 @@
       "at_tick": 48,
       "action": {
         "type": "LogMessage",
-        "message": "Step 8: CRITICAL TEST - Should wrap to 0 (proving max_step=7 worked)"
+        "message": "Step 8: Row 0 should wrap (max_step=7), Row 3 wrapping cycle"
       }
     },
     {
@@ -140,10 +235,19 @@
       }
     },
     {
+      "at_tick": 48,
+      "action": {
+        "type": "VerifyState",
+        "step": 8,
+        "row": 3,
+        "expected": 3
+      }
+    },
+    {
       "at_tick": 54,
       "action": {
         "type": "LogMessage",
-        "message": "Step 9: Continuing from wrap - position should be 1"
+        "message": "Step 9: Row 0 wrapped, Row 3 should wrap (max_step=4)"
       }
     },
     {
@@ -156,6 +260,15 @@
       }
     },
     {
+      "at_tick": 54,
+      "action": {
+        "type": "VerifyState",
+        "step": 9,
+        "row": 3,
+        "expected": 4
+      }
+    },
+    {
       "at_tick": 60,
       "action": {
         "type": "VerifyState",
@@ -165,10 +278,76 @@
       }
     },
     {
+      "at_tick": 60,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 10: Row 1 still advancing, Row 3 wrapped"
+      }
+    },
+    {
+      "at_tick": 60,
+      "action": {
+        "type": "VerifyState",
+        "step": 10,
+        "row": 1,
+        "expected": 10
+      }
+    },
+    {
+      "at_tick": 60,
+      "action": {
+        "type": "VerifyState",
+        "step": 10,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
       "at_tick": 66,
       "action": {
         "type": "LogMessage",
-        "message": "✅ Test complete - max_step change verified: wrap occurred at position 7"
+        "message": "Step 11: Row 1 should wrap soon (max_step=9)"
+      }
+    },
+    {
+      "at_tick": 66,
+      "action": {
+        "type": "VerifyState",
+        "step": 11,
+        "row": 1,
+        "expected": 1
+      }
+    },
+    {
+      "at_tick": 66,
+      "action": {
+        "type": "VerifyState",
+        "step": 11,
+        "row": 3,
+        "expected": 1
+      }
+    },
+    {
+      "at_tick": 72,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 12: Verifying Row 1 continues"
+      }
+    },
+    {
+      "at_tick": 72,
+      "action": {
+        "type": "VerifyState",
+        "step": 12,
+        "row": 1,
+        "expected": 2
+      }
+    },
+    {
+      "at_tick": 78,
+      "action": {
+        "type": "LogMessage",
+        "message": "✅ Test complete - 3 rows changed: Row 0 (31→7), Row 1 (30→9), Row 3 (15→4)"
       }
     }
   ]

@@ -1,111 +1,81 @@
-# Migration from automated_test_clock to direct_test
 
-## Summary
-The old `automated_test_clock` binary has been replaced with the new `direct_test` binary, which provides superior tick-synchronized testing capabilities.
+## Cleanup: Removed File-Based Button Injection System
 
-## What Was Removed
-- `src/automated_test_clock.rs` (820+ lines) - Old timing-based test framework
-- Binary entries from `Cargo.toml` and `utils/Cargo.toml`
+### What Was Removed
 
-## Why the Change?
-The old `automated_test_clock` had fundamental limitations:
-- **Timing-based**: Used `Wait` and `WaitSteps` commands with timing delays
-- **Race conditions**: Couldn't precisely verify state changes
-- **Prediction-based**: Had to predict sequencer state rather than observe it
-- **Complex**: Required separate button injection file system
+1. **Files:**
+   - `button_a.txt` - File-based button injection channel A
+   - `button_b.txt` - File-based button injection channel B
+   - `examples/test_16_step_midi_logging.rs` - Superseded by direct_test
 
-## New direct_test Advantages
-- **Tick-synchronized**: Actions execute at exact MIDI clock ticks
-- **Real-time verification**: Reads `formal_state.log` to verify actual state
-- **Precise**: No timing assumptions or race conditions
-- **Integrated**: SysEx commands sent directly via MIDI
-- **Visual feedback**: Prints dots for each step
+2. **Code:**
+   - `TestModeInjector` struct from `formal_state_logger.rs`
+   - `TestButtonEvent` struct from `formal_state_logger.rs`
+   - File polling logic from main.rs main loop
+   - References to file-based injection in lib.rs exports
 
-## Test Format Comparison
+### Why This Was Removed
 
-### Old Format (automated_test_clock)
+The file-based button injection system was an early experimental approach that had several limitations:
+
+- **File I/O overhead**: Required polling filesystem every loop iteration
+- **Timing imprecision**: File writes/reads couldn't be precisely timed
+- **Complex workflow**: Required managing separate text files for testing
+- **Legacy approach**: Created before MIDI SysEx injection was implemented
+
+### Modern Replacement: SysEx Button Injection
+
+The new SysEx-based approach is superior in every way:
+
+✅ **MIDI-native**: Sends button events as MIDI SysEx messages  
+✅ **Tick-precise**: Events execute at exact MIDI clock ticks  
+✅ **Integrated**: Works seamlessly with MIDI clock generation  
+✅ **No file I/O**: Zero filesystem overhead  
+✅ **Reliable**: No race conditions or polling delays
+
+**SysEx Format:**
+```
+F0 7D 53 53 51 02 <row> <col> <press> F7
+
+Where:
+  - F0: SysEx start
+  - 7D 53 53 51: SimonSaysSeeq manufacturer ID
+  - 02: Button command
+  - <row>: Button row (0-7)
+  - <col>: Button column (0-31)
+  - <press>: 1 = press, 0 = release
+  - F7: SysEx end
+```
+
+### Examples of New Approach
+
+See `test1.json` and `test2.json` for working examples of SysEx button injection in the `direct_test` framework.
+
+**Example from test2.json** (changing Row 0 max_step from 31 to 7):
 ```json
 {
-  "commands": [
-    {"command": "Start"},
-    {"command": "Wait", "ms": 500},
-    {"command": "WaitSteps", "count": 3},
-    {"command": "Stop"}
-  ]
+  "at_tick": 18,
+  "action": {
+    "type": "SysExButton",
+    "row": 7,
+    "col": 8,
+    "press": true
+  }
+},
+{
+  "at_tick": 19,
+  "action": {
+    "type": "SysExButton",
+    "row": 0,
+    "col": 7,
+    "press": true
+  }
 }
 ```
 
-### New Format (direct_test)
-```json
-{
-  "bpm": 30.0,
-  "commands": [
-    {
-      "at_tick": 18,
-      "action": {
-        "type": "SysExButton",
-        "row": 7,
-        "col": 8,
-        "press": true
-      }
-    },
-    {
-      "at_tick": 24,
-      "action": {
-        "type": "VerifyState",
-        "step": 4,
-        "row": 0,
-        "expected": 4
-      }
-    }
-  ]
-}
-```
+### Migration Impact
 
-## Migration Guide
-If you have old test scripts:
-1. Convert `Wait`/`WaitSteps` to specific `at_tick` values
-2. Replace button injection commands with `SysExButton` actions
-3. Use `VerifyState` actions instead of `VerifyState` commands
-4. Add visual `LogMessage` actions for test progress
-
-## Running Tests
-```bash
-# Old way (no longer available)
-cargo run --release --bin automated_test_clock -- --script test.json
-
-# New way
-cargo run --release --bin direct_test -- --script test.json
-```
-
-## Available Binaries
-After cleanup, the project provides:
-- `simon_says_seeq` - Main sequencer application
-- `direct_test` - Tick-synchronized testing framework
-- `midi_clock_generator` - Interactive MIDI clock tool
-- `midi_clock_detector` - MIDI port detection utility
-
-## State Isolation Between Tests
-
-### Problem
-Tests were failing when run in sequence because the sequencer auto-saves pattern state (including SysEx configuration changes) to `current_pattern.json` on MIDI Stop. This caused state pollution between tests.
-
-**Example**:
-1. Test2 changes max_step from 31 to 7 via SysEx
-2. Test2 finishes, sequencer saves the modified pattern
-3. Test1 runs and loads the polluted pattern with max_step=7
-4. Test1 fails because it expects max_step=31
-
-### Solution
-Each test now copies `test_pattern_1.json` to `current_pattern.json` before initialization, ensuring a clean, known-good pattern state for every test run.
-
-```rust
-// Copy clean test pattern to current_pattern.json
-fs::copy("test_pattern_1.json", "current_pattern.json")?;
-```
-
-### Result
-✅ Tests can now be run in any order without state pollution
-✅ Test1 → Test2 → Test1 all pass
-✅ Test2 → Test1 → Test2 all pass
-✅ Each test starts with a pristine pattern configuration
+- ✅ No impact on main application functionality
+- ✅ Testing is now MORE capable with direct_test
+- ✅ Examples updated to reference SysEx injection
+- ✅ Cleaner codebase with less legacy code

@@ -29,7 +29,7 @@ pub use screen::ScreenManager;
 pub use hardware::NornsHardware;
 pub use co2::Co2Manager;
 pub use crow::Crow;
-pub use formal_state_logger::{init_formal_logger, log_event, FormalStateEvent, ButtonSource, TestModeInjector};
+pub use formal_state_logger::{init_formal_logger, log_event, FormalStateEvent, ButtonSource};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
