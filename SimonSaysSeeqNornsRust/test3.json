@@ -4,7 +4,7 @@
   "bpm": 30.0,
   "comments": [
     "Grid mapping: Each step array has 8 positions for rows 0-7",
-    "Row 0 → Note 48, Row 1 → Note 49, Row 2 → Note 50, Row 3 → Note 51, Row 4 → Note 52, Row 5 → Note 53, Row 6 → Note 54",
+    "Row 0 → Note 48 (max_step=31), Row 1 → Note 49 (max_step=30), Row 2 → Note 50 (max_step=29), Row 3 → Note 51 (max_step=15), Row 4 → Note 52 (max_step=14), Row 5 → Note 53 (max_step=13), Row 6 → Note 54 (max_step=4)",
     "Timing: advance_step() is called every 6 ticks (when tick % 6 == 0)",
     "FIXED: Check happens BEFORE increment, so step 0 happens at tick 0",
     "Tick 0: step 0 processed, Tick 6: step 1 processed, Tick 12: step 2 processed, etc.",

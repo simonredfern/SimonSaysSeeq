@@ -7,7 +7,7 @@
       "at_tick": 0,
       "action": {
         "type": "LogMessage",
-        "message": "Test1 Direct starting - verifying rows with max_steps: [31,30,29,15,14,13,2]"
+        "message": "Test1 Direct starting - verifying rows with max_steps: [31,30,29,15,14,13,4]"
       }
     },
     {
@@ -61,7 +61,7 @@
         "type": "VerifyState",
         "step": 3,
         "row": 6,
-        "expected": 0
+        "expected": 3
       }
     },
     {
@@ -106,7 +106,7 @@
         "type": "VerifyState",
         "step": 5,
         "row": 6,
-        "expected": 2
+        "expected": 0
       }
     },
     {
