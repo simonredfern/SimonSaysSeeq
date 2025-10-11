@@ -627,7 +627,7 @@ impl Sequencer {
                         let midi_event = MidiEvent {
                             note: row_state.sequencer_a_midi_note,
                             velocity: 100,                // Default velocity
-                            channel: (row_idx + 1) as u8, // Row-based channel 1-7
+                            channel: row_state.sequencer_a_midi_channel,
                             note_on: true,
                             step: current_step,
                             bar: state.sequencer_a_current_master_bar,
