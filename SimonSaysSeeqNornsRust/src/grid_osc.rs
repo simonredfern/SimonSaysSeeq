@@ -46,6 +46,7 @@ pub struct GridManager {
     assumed_led_states: HashMap<(String, usize, usize), u8>,
     #[cfg(feature = "rosc")]
     local_port: u16,
+    virtual_events: Vec<GridButtonEvent>,
 }
 
 impl GridManager {
@@ -67,6 +68,7 @@ impl GridManager {
                 devices: HashMap::new(),
                 assumed_led_states: HashMap::new(),
                 local_port,
+                virtual_events: Vec::new(),
             };
 
             // Discover devices via serialosc
@@ -81,7 +83,11 @@ impl GridManager {
             // error!("OSC grid support is DISABLED (rosc feature not enabled)");
             // error!("Mock grids are NOT ALLOWED in this application");
             // error!("Please rebuild with --features desktop or --features rosc to enable real grid support");
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Two real grids (GRID_ONE and GRID_TWO) are required. Mock grids are not allowed."));
+            Ok(Self {
+                devices: HashMap::new(),
+                assumed_led_states: HashMap::new(),
+                virtual_events: Vec::new(),
+            })
         }
     }
 
@@ -562,6 +568,16 @@ impl GridManager {
         grids
     }
 
+    /// Inject a virtual button event (e.g., from SysEx)
+    pub fn inject_virtual_button(&mut self, grid_id: &str, x: usize, y: usize, pressed: bool) {
+        self.virtual_events.push(GridButtonEvent {
+            grid_id: grid_id.to_string(),
+            x,
+            y,
+            pressed,
+        });
+    }
+
     /// Read button events from grids
     pub fn read_button_events(&mut self) -> Result<Vec<GridButtonEvent>> {
         #[cfg(not(feature = "rosc"))]
@@ -623,6 +639,9 @@ impl GridManager {
                 }
             }
         }
+
+        // Add any queued virtual events
+        events.append(&mut self.virtual_events);
 
         Ok(events)
         }

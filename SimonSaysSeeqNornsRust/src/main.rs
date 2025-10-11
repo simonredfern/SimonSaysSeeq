@@ -322,8 +322,14 @@ impl SimonSaysSeeq {
                         for grid_event in grid_events {
                             // Check if this is from one of our expected grids
                             let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-                            let is_valid_grid = Some(&grid_event.grid_id) == grid_one.as_ref() || 
+                            let is_virtual_grid = grid_event.grid_id == "grid_one" || grid_event.grid_id == "grid_two";
+                            let is_valid_grid = is_virtual_grid || 
+                                              Some(&grid_event.grid_id) == grid_one.as_ref() || 
                                               Some(&grid_event.grid_id) == grid_two.as_ref();
+                            
+                            info!("GRID EVENT: grid_id={}, x={}, y={}, pressed={}, is_virtual={}, is_valid={}", 
+                                  grid_event.grid_id, grid_event.x, grid_event.y, grid_event.pressed, 
+                                  is_virtual_grid, is_valid_grid);
                             
                             if is_valid_grid {
                                 // info!("GRID DEBUG: Processing event from {} at ({},{}) pressed={}", 
@@ -599,10 +605,17 @@ impl SimonSaysSeeq {
         
         // Handle ARM buttons first (row 7), even in Sequence B mode - BOTH press and release
         if y == 7 {
+            info!("ARM BUTTON CHECK: y=7 detected, grid_id={}, x={}, pressed={}", grid_id, x, pressed);
             let connected_grids = self.grid.get_connected_grids();
             let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
-            if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+            // Accept virtual grid IDs from SysEx button commands (when no physical grids connected)
+            // or match against actual physical grid device IDs
+            let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
+            info!("ARM BUTTON: is_virtual_grid={}, grid_one={:?}", is_virtual_grid, grid_one);
+            if is_virtual_grid || Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+                info!("ARM BUTTON: Passed grid ID check");
                 if ArmAction::from_column(x).is_some() {
+                    info!("ARM BUTTON: Found ARM action for column {}", x);
                     // info!("DEBUG Sequence B: ARM button detected at column {} press={} - proceeding to ARM logic", x, pressed);
                     // This is an ARM button on GRID_ONE - process it directly
                     // Skip Sequence B mode check and go straight to ARM button logic
@@ -618,7 +631,16 @@ impl SimonSaysSeeq {
         
         // Calculate actual sequence step (0-31)
         let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-        let seq_x = if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+        // Accept virtual grid IDs from SysEx button commands
+        let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
+        let seq_x = if is_virtual_grid {
+            // Virtual grids use logical mapping: grid_one = 0-15, grid_two = 16-31
+            if grid_id == "grid_one" {
+                x
+            } else {
+                x + 16
+            }
+        } else if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
             // GRID_ONE (lowest ID): steps 0-15
             x
         } else if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
@@ -638,7 +660,9 @@ impl SimonSaysSeeq {
         // info!("GRID DEBUG: This press came from: {}", grid_id);
 
         // Handle sequence rows and ARM controls
-        if connected_grids.len() >= 2 {
+        // Accept virtual grids (from SysEx) even when no physical grids connected
+        let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
+        if is_virtual_grid || connected_grids.len() >= 2 {
             // Sequence rows 0-6 - only handle button presses, not releases
             if seq_y <= 6 && pressed {
                 // Check if there's an active Euclidean ARM action
@@ -953,7 +977,10 @@ impl SimonSaysSeeq {
                 
                 // Regular ARM control handling for GRID_ONE buttons
                 let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
-                if Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+                // Accept virtual grid IDs from SysEx button commands (when no physical grids connected)
+                // or match against actual physical grid device IDs
+                let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
+                if is_virtual_grid || Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
                     info!("ARM CONTROL: Row 7 button {} {} - Current Sequence B: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
 
                     // Check if this column corresponds to a valid ARM action (use original x, not seq_x)
@@ -1861,10 +1888,8 @@ impl SimonSaysSeeq {
                                 let grid_id = if col < 16 { "grid_one" } else { "grid_two" };
                                 let adjusted_col = if col < 16 { col } else { col - 16 };
                                 
-                                // Handle the button press/release
-                                if let Err(e) = self.handle_grid_press(grid_id, adjusted_col, row, press) {
-                                    warn!("⚠️ Failed to handle SysEx button event: {}", e);
-                                }
+                                // Inject as virtual button event
+                                self.grid.inject_virtual_button(grid_id, adjusted_col, row, press);
                             } else {
                                 warn!("⚠️ Invalid SysEx button command: insufficient data length");
                             }

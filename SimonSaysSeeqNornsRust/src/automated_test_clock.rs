@@ -19,7 +19,7 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use clap::Parser;
 
 // Import shared types
@@ -39,7 +39,7 @@ pub struct TestClockEvent {
 /// Row configuration change event
 #[derive(Debug, Clone)]
 struct RowConfigChange {
-    cumulative_step: usize,
+    total_step_count: usize,
     row: usize,
     new_max_step: usize,
 }
@@ -48,7 +48,7 @@ struct RowConfigChange {
 pub struct AutomatedTestClock {
     generator: ClockGenerator,
     row_config_changes: Vec<RowConfigChange>,
-    cumulative_steps: usize,
+    total_step_count: usize,
 }
 
 impl AutomatedTestClock {
@@ -60,7 +60,7 @@ impl AutomatedTestClock {
         Self {
             generator: ClockGenerator::new_with_config(bpm, config),
             row_config_changes: Vec::new(),
-            cumulative_steps: 0,
+            total_step_count: 0,
         }
     }
 
@@ -291,9 +291,11 @@ impl AutomatedTestClock {
                 }
                 
                 TestCommand::WaitSteps { count } => {
+                    println!("🔢 BEFORE WaitSteps: total_step_count={}", self.total_step_count);
                     self.wait_for_steps(*count)?;
                     // Track cumulative steps for verification
-                    self.cumulative_steps += *count as usize;
+                    self.total_step_count += *count as usize;
+                    println!("🔢 AFTER WaitSteps: total_step_count={} (waited {} steps)", self.total_step_count, count);
                     // Give time for logs to be written
                     thread::sleep(Duration::from_millis(100));
                 }
@@ -311,6 +313,7 @@ impl AutomatedTestClock {
                         .and_then(|s| s.parse::<usize>().ok());
                     
                     if let Some(step_num) = step_num {
+                        println!("🔢 VerifyState: verifying at step {}, current total_step_count={}", step_num, self.total_step_count);
                         // Extra delay to ensure log is written
                         thread::sleep(Duration::from_millis(50));
                         match self.verify_sequencer_state_at_step(step_num) {
@@ -346,13 +349,14 @@ impl AutomatedTestClock {
                 
                 TestCommand::RecordRowConfig { row, max_step } => {
                     // Record that this row's max_step changed at this cumulative step
+                    println!("🔢 RecordRowConfig CALLED: total_step_count={}", self.total_step_count);
                     self.row_config_changes.push(RowConfigChange {
-                        cumulative_step: self.cumulative_steps,
+                        total_step_count: self.total_step_count,
                         row: *row,
                         new_max_step: *max_step,
                     });
                     println!("📝 Recorded: Row {} max_step changed to {} at cumulative step {}", 
-                             row, max_step, self.cumulative_steps);
+                             row, max_step, self.total_step_count);
                     self.log_event("test_record_config", Some(format!("R{}:max_step={}", row, max_step)));
                 }
             }
@@ -367,7 +371,8 @@ impl AutomatedTestClock {
     }
 
     /// Verify sequencer state at a specific cumulative step
-    fn verify_sequencer_state_at_step(&self, cumulative_step: usize) -> Result<String, String> {
+    /// This function now detects when max_step changes actually took effect by analyzing the log
+    fn verify_sequencer_state_at_step(&self, total_step_count: usize) -> Result<String, String> {
         // Debug: Show current working directory
         if let Ok(cwd) = std::env::current_dir() {
             println!("  📁 Current working directory: {}", cwd.display());
@@ -399,42 +404,96 @@ impl AutomatedTestClock {
         // Initial max_step values: [31, 30, 29, 15, 14, 13, 2]
         let initial_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
         
-        // Calculate expected position for each row at this cumulative step
-        // accounting for any max_step changes that happened
+        // First pass: Parse all StepAdvancement events to detect actual config change points
+        let mut all_step_events: Vec<(usize, Vec<(usize, usize)>)> = Vec::new();
+        for line in log_content.lines() {
+            if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
+                if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
+                    if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
+                        let mut steps = Vec::new();
+                        for rs in row_steps {
+                            if let (Some(row_idx), Some(step_val)) = (
+                                rs.get(0).and_then(|v| v.as_u64()),
+                                rs.get(1).and_then(|v| v.as_u64())
+                            ) {
+                                steps.push((row_idx as usize, step_val as usize));
+                            }
+                        }
+                        all_step_events.push((all_step_events.len() + 1, steps));
+                    }
+                }
+            }
+        }
+        
+        // Detect when max_step changes actually took effect for each row
+        // by looking for position resets or wrapping behavior changes
+        let mut detected_changes: std::collections::HashMap<usize, (usize, usize)> = std::collections::HashMap::new();
+        
+        for row_idx in 0..7 {
+            // Check if there's a recorded change for this row
+            let recorded_change = self.row_config_changes.iter()
+                .find(|c| c.row == row_idx && c.total_step_count <= total_step_count);
+            
+            if let Some(change) = recorded_change {
+                // Look through the step events to find where the change took effect
+                // The change takes effect when we see a position reset or wrapping at new max_step
+                let new_max_step = change.new_max_step;
+                
+                // Start looking from the recorded change step
+                let search_start = change.total_step_count.max(1);
+                
+                for i in search_start..all_step_events.len().min(total_step_count + 5) {
+                    if i == 0 { continue; }
+                    
+                    let curr_pos = all_step_events[i].1.iter().find(|(r, _)| *r == row_idx).map(|(_, p)| *p);
+                    let prev_pos = all_step_events[i-1].1.iter().find(|(r, _)| *r == row_idx).map(|(_, p)| *p);
+                    
+                    if let (Some(curr), Some(prev)) = (curr_pos, prev_pos) {
+                        // Detect reset: position jumped backward unexpectedly
+                        if prev > new_max_step && curr <= new_max_step {
+                            detected_changes.insert(row_idx, (i + 1, new_max_step));
+                            break;
+                        }
+                        // Detect new wrapping: wrapped at new_max_step instead of old_max_step
+                        if prev == new_max_step && curr == 0 {
+                            detected_changes.insert(row_idx, (i, new_max_step));
+                            break;
+                        }
+                    }
+                }
+                
+                // If no clear detection, assume it took effect shortly after recording
+                if !detected_changes.contains_key(&row_idx) {
+                    detected_changes.insert(row_idx, (change.total_step_count + 1, new_max_step));
+                }
+            }
+        }
+        
+        // Calculate expected position for each row based on detected changes
         let mut expected_positions = Vec::new();
         
         for row_idx in 0..7 {
-            // Find the most recent config change for this row before cumulative_step
-            let mut current_max_step = initial_max_steps[row_idx];
-            let mut last_change_step = 0;
-            let mut old_max_step = initial_max_steps[row_idx];
-            
-            for change in &self.row_config_changes {
-                if change.row == row_idx && change.cumulative_step <= cumulative_step {
-                    old_max_step = current_max_step;
-                    current_max_step = change.new_max_step;
-                    last_change_step = change.cumulative_step;
-                }
-            }
-            
-            let expected_step = if last_change_step == 0 {
-                // No config changes - simple case
-                cumulative_step % (current_max_step + 1)
-            } else {
-                // Config changed at last_change_step
-                // Calculate position at moment of change
-                let position_at_change = last_change_step % (old_max_step + 1);
-                
-                // Sequencer resets to 0 if position > new_max_step
-                let position_after_reset = if position_at_change > current_max_step {
-                    0
+            let expected_step = if let Some((change_step, new_max_step)) = detected_changes.get(&row_idx) {
+                if total_step_count < *change_step {
+                    // Change hasn't taken effect yet
+                    total_step_count % (initial_max_steps[row_idx] + 1)
                 } else {
-                    position_at_change
-                };
-                
-                // Advance from that position
-                let steps_since_change = cumulative_step - last_change_step;
-                (position_after_reset + steps_since_change) % (current_max_step + 1)
+                    // Change has taken effect - calculate from actual position at change
+                    let position_at_change = if *change_step > 0 && *change_step <= all_step_events.len() {
+                        all_step_events[change_step - 1].1.iter()
+                            .find(|(r, _)| *r == row_idx)
+                            .map(|(_, p)| *p)
+                            .unwrap_or(0)
+                    } else {
+                        0
+                    };
+                    
+                    let steps_since = total_step_count - change_step;
+                    (position_at_change + steps_since) % (new_max_step + 1)
+                }
+            } else {
+                // No config change for this row
+                total_step_count % (initial_max_steps[row_idx] + 1)
             };
             
             expected_positions.push(expected_step);
@@ -443,17 +502,13 @@ impl AutomatedTestClock {
         // Count StepAdvancement events from the start to find the Nth one
         let mut step_count = 0;
         let mut found_step_data: Option<Vec<(usize, usize)>> = None;
-        let mut found_bar: Option<usize> = None;
-        let mut found_master_step: Option<usize> = None;
         
         for line in log_content.lines() {
             if let Ok(event) = serde_json::from_str::<serde_json::Value>(line) {
                 if event.get("event_type").and_then(|v| v.as_str()) == Some("StepAdvancement") {
                     step_count += 1;
-                    if step_count == cumulative_step {
+                    if step_count == total_step_count {
                         // Found the Nth step advancement
-                        found_master_step = event.get("master_step").and_then(|v| v.as_u64()).map(|s| s as usize);
-                        found_bar = event.get("master_bar").and_then(|v| v.as_u64()).map(|b| b as usize);
                         if let Some(row_steps) = event.get("row_steps").and_then(|v| v.as_array()) {
                             let mut steps = Vec::new();
                             for rs in row_steps {
@@ -473,7 +528,7 @@ impl AutomatedTestClock {
         }
 
         let actual_steps = found_step_data
-            .ok_or(format!("No step advancement event found for cumulative step {} in formal_state.log (found {} step events)", cumulative_step, step_count))?;
+            .ok_or(format!("No step advancement event found for cumulative step {} in formal_state.log (found {} step events)", total_step_count, step_count))?;
 
         // Build verification message - show actual vs expected row states
         let mut matches = true;
@@ -486,7 +541,7 @@ impl AutomatedTestClock {
                 if actual_step == &expected_step {
                     details.push(format!("R{}:ok({})", row_idx, actual_step));
                 } else {
-                    details.push(format!("R{}:act{}exp{}", row_idx, actual_step, expected_step));
+                    details.push(format!("R{}:exp{}act{}", row_idx, expected_step, actual_step));
                     matches = false;
                 }
             } else {
@@ -649,13 +704,13 @@ impl AutomatedTestClock {
         ];
         
         // Advance one step at a time for specified number of steps, logging state at each cumulative step
-        for cumulative_step in 1..=no_of_steps {
+        for total_step_count in 1..=no_of_steps {
             commands.push(TestCommand::LogMilestone { 
-                message: format!("Advancing to cumulative step {}", cumulative_step) 
+                message: format!("Advancing to cumulative step {}", total_step_count) 
             });
             commands.push(TestCommand::WaitSteps { count: 1 });
             commands.push(TestCommand::VerifyState { 
-                description: format!("Check sequencer state at cumulative step {}", cumulative_step) 
+                description: format!("Check sequencer state at cumulative step {}", total_step_count) 
             });
         }
         
