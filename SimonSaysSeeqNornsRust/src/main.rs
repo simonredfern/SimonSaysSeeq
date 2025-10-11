@@ -42,7 +42,7 @@ enum ArmAction {
     EuclidianLength,   // Column 5
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
-    SetSeqALength,     // Column 8
+    SetMaxStepForRow,  // Column 8
     PresetGrid,        // Column 10
 
 }
@@ -57,7 +57,7 @@ impl ArmAction {
             5 => Some(ArmAction::EuclidianLength),
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
-            8 => Some(ArmAction::SetSeqALength),
+            8 => Some(ArmAction::SetMaxStepForRow),
             10 => Some(ArmAction::PresetGrid),
 
             _ => None,
@@ -73,7 +73,7 @@ impl ArmAction {
             ArmAction::EuclidianLength => 5,
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
-            ArmAction::SetSeqALength => 8,
+            ArmAction::SetMaxStepForRow => 8,
             ArmAction::PresetGrid => 10,
 
         }
@@ -712,38 +712,37 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
-                        ArmAction::SetSeqALength => {
-                            let length = seq_x + 1; // Convert 0-based to 1-based (1-32)
-                            let length = length.clamp(1, 32);
-                            let last_step = length - 1; // Convert back to 0-based for internal storage (0-31)
+                        ArmAction::SetMaxStepForRow => {
+                            let max_step = seq_x; // Use column directly as max_step (0-indexed)
+                            let max_step = max_step.clamp(0, 31); // Ensure valid range 0-31
                             
-                            // info!("ARM SET_SEQ_A_LENGTH: Setting row {} length to {} steps (last_step={})", seq_y, length, last_step);
+                            // info!("ARM SET_MAX_STEP: Setting row {} max_step to {}", seq_y, max_step);
                             
-                            // Set the last step for this specific row
+                            // Set the max_step for this specific row
                             if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
-                                let old_length = row_state.sequencer_a_max_step + 1;
-                                row_state.sequencer_a_max_step = last_step;
+                                let old_max_step = row_state.sequencer_a_max_step;
+                                row_state.sequencer_a_max_step = max_step;
                                 
                                 // If current step is beyond new max_step, reset to beginning of the row's own cycle
-                                if row_state.sequencer_a_current_step > last_step {
+                                if row_state.sequencer_a_current_step > max_step {
                                     // Reset to beginning of the row's own cycle
                                     row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
-                                    // info!("ARM SET_SEQ_A_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
-                                    //       seq_y, row_state.sequencer_a_current_step, last_step);
-                                } else if last_step == 31 {
-                                    // If last_step is 31 (full 32 steps), sync this row with global master step counter
+                                    // info!("ARM SET_MAX_STEP: Row {} step position reset to {} (was beyond new max_step {})", 
+                                    //       seq_y, row_state.sequencer_a_current_step, max_step);
+                                } else if max_step == 31 {
+                                    // If max_step is 31 (full 32 steps), sync this row with global master step counter
                                     let (master_step, _) = self.sequencer.get_current_position();
                                     row_state.sequencer_a_current_step = master_step;
-                                    // info!("ARM SET_SEQ_A_LENGTH: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
+                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
                                 }
                                 
                                 self.sequencer.set_row_states(seq_y, row_state);
                                 
                                 // Log ARM action execution to formal state logger
-                                log_arm_action_executed("SetSeqALength", seq_y, seq_x, 
-                                    &format!("Changed row {} length from {} to {} steps", seq_y, old_length, length));
+                                log_arm_action_executed("SetMaxStepForRow", seq_y, seq_x, 
+                                    &format!("Changed row {} max_step from {} to {}", seq_y, old_max_step, max_step));
                                 
-                                // info!("ARM SET_SEQ_A_LENGTH: Successfully set row {} length to {} steps", seq_y, length);
+                                // info!("ARM SET_MAX_STEP: Successfully set row {} max_step to {}", seq_y, max_step);
                                 self.refresh_all_row_leds(seq_y)?;
                             }
                         },
@@ -1046,11 +1045,11 @@ impl SimonSaysSeeq {
                 // Ratchet functionality - placeholder
                 info!("ARM RATCHET: ARM button activated - not yet implemented");
             }
-            ArmAction::SetSeqALength => {
-                // Set Seq A Length ARM button activated - waiting for sequence row press
-                // info!("ARM SET_SEQ_A_LENGTH: ARM button activated - press sequence row at column N for length N+1 (max 32)");
-                // info!("ARM SET_SEQ_A_LENGTH: GRID_ONE columns 0-15 = lengths 1-16, GRID_TWO columns 0-15 = lengths 17-32");
-                // info!("ARM SET_SEQ_A_LENGTH: When set to 32 steps, row will sync with master row 0");
+            ArmAction::SetMaxStepForRow => {
+                // Set Max Step ARM button activated - waiting for sequence row press
+                // info!("ARM SET_MAX_STEP: ARM button activated - press sequence row at column N to set max_step to N (0-indexed)");
+                // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
+                // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
             ArmAction::PresetGrid => {
                 // Preset Grid ARM button activated - waiting for sequence row press

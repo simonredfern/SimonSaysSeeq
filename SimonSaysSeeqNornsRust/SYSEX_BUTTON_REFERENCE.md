@@ -37,7 +37,7 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |
 | 7 | Ratchet | `ARM_RATCHET` | Set ratchet count (note repeats) |
-| 8 | Set Length | `ARM_SET_LENGTH` | Set row length (max_step) |
+| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed) |
 | 10 | Preset Grid | `ARM_PRESET_GRID` | Apply preset pattern to row |
 
 ## Usage in Test Scripts
@@ -53,23 +53,23 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 }
 ```
 
-### Setting Row Length
+### Setting Row Max Step
 
-To set a row to 16 steps (max_step = 15):
+To set a row to wrap at step 15 (16 total steps: 0-15):
 
 ```json
 {
   "commands": [
     {
       "command": "LogMilestone",
-      "message": "Setting row 0 to 16 steps"
+      "message": "Setting row 0 max_step to 15 (16 steps total)"
     },
     {
       "command": "SysExButton",
       "row": 7,
       "col": 8,
       "press": true,
-      "comment": "Press ARM Set Length button"
+      "comment": "Press ARM Set Max Step button"
     },
     {
       "command": "Wait",
@@ -80,7 +80,7 @@ To set a row to 16 steps (max_step = 15):
       "row": 0,
       "col": 15,
       "press": true,
-      "comment": "Press step 15 on row 0 (sets max_step to 15 = 16 steps)"
+      "comment": "Press column 15 on row 0 (sets max_step to 15)"
     },
     {
       "command": "Wait",
@@ -226,13 +226,19 @@ To toggle step 8 on row 2:
 
 When using ARM actions, the column number maps to values:
 
-- **Length/Events**: Column N = Value N+1
+- **Set Max Step (ARM column 8)**: Column N = max_step N (0-indexed)
+  - Column 0 = max_step 0 (1 step: only step 0)
+  - Column 7 = max_step 7 (8 steps: 0-7)
+  - Column 15 = max_step 15 (16 steps: 0-15)
+  - Column 31 = max_step 31 (32 steps: 0-31) (use Grid Two, column 15)
+
+- **Euclidean Length/Events**: Column N = Value N+1 (1-indexed)
   - Column 0 = 1 step/event
   - Column 7 = 8 steps/events
   - Column 15 = 16 steps/events
   - Column 31 = 32 steps/events (use Grid Two, column 15)
 
-- **Rotation**: Column N = Rotation N
+- **Euclidean Rotation**: Column N = Rotation N (0-indexed)
   - Column 0 = no rotation
   - Column 15 = rotate 15 steps
   - Column 31 = rotate 31 steps (use Grid Two, column 15)
@@ -242,8 +248,9 @@ When using ARM actions, the column number maps to values:
 1. **Timing**: Add `Wait` commands between press and release (minimum 50ms recommended)
 2. **ARM Actions**: Always release ARM buttons after use to exit the mode
 3. **Two Grids**: Columns 0-15 are on Grid One, 16-31 on Grid Two
-4. **Max Step**: Setting length to 16 means max_step = 15 (0-15 = 16 steps total)
-5. **Verification**: Use `VerifyState` after setting parameters to confirm changes
+4. **Max Step**: max_step is 0-indexed (max_step 15 = 16 steps: 0-15)
+5. **Euclidean**: Euclidean length/events are 1-indexed (column 7 = 8 steps/events)
+6. **Verification**: Use `VerifyState` after setting parameters to confirm changes
 
 ## Example: Complete Test2
 
