@@ -36,9 +36,19 @@ pub struct TestClockEvent {
     pub message: Option<String>,
 }
 
+/// Row configuration change event
+#[derive(Debug, Clone)]
+struct RowConfigChange {
+    cumulative_step: usize,
+    row: usize,
+    new_max_step: usize,
+}
+
 /// Wrapper around ClockGenerator for automated testing
 pub struct AutomatedTestClock {
     generator: ClockGenerator,
+    row_config_changes: Vec<RowConfigChange>,
+    cumulative_steps: usize,
 }
 
 impl AutomatedTestClock {
@@ -49,6 +59,8 @@ impl AutomatedTestClock {
         };
         Self {
             generator: ClockGenerator::new_with_config(bpm, config),
+            row_config_changes: Vec::new(),
+            cumulative_steps: 0,
         }
     }
 
@@ -280,6 +292,8 @@ impl AutomatedTestClock {
                 
                 TestCommand::WaitSteps { count } => {
                     self.wait_for_steps(*count)?;
+                    // Track cumulative steps for verification
+                    self.cumulative_steps += *count as usize;
                     // Give time for logs to be written
                     thread::sleep(Duration::from_millis(100));
                 }
@@ -291,7 +305,12 @@ impl AutomatedTestClock {
                 
                 TestCommand::VerifyState { description } => {
                     // Extract cumulative step number from description if present
-                    if let Some(step_num) = description.split("cumulative step ").nth(1).and_then(|s| s.parse::<usize>().ok()) {
+                    let step_num = description.split("cumulative step ")
+                        .nth(1)
+                        .and_then(|s| s.split_whitespace().next())
+                        .and_then(|s| s.parse::<usize>().ok());
+                    
+                    if let Some(step_num) = step_num {
                         // Extra delay to ensure log is written
                         thread::sleep(Duration::from_millis(50));
                         match self.verify_sequencer_state_at_step(step_num) {
@@ -323,6 +342,18 @@ impl AutomatedTestClock {
                     self.send_button_sysex(*row, *col, *press)?;
                     println!("✅ Button {} command sent", action.to_lowercase());
                     self.log_event("test_sysex_button", Some(format!("{}:R{}C{}", action, row, col)));
+                }
+                
+                TestCommand::RecordRowConfig { row, max_step } => {
+                    // Record that this row's max_step changed at this cumulative step
+                    self.row_config_changes.push(RowConfigChange {
+                        cumulative_step: self.cumulative_steps,
+                        row: *row,
+                        new_max_step: *max_step,
+                    });
+                    println!("📝 Recorded: Row {} max_step changed to {} at cumulative step {}", 
+                             row, max_step, self.cumulative_steps);
+                    self.log_event("test_record_config", Some(format!("R{}:max_step={}", row, max_step)));
                 }
             }
             
@@ -365,8 +396,49 @@ impl AutomatedTestClock {
             }
         }
 
-        // Expected max_step values: [31, 30, 29, 15, 14, 13, 2] (which gives 32, 31, 30, 16, 15, 14, 3 steps)
-        let expected_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
+        // Initial max_step values: [31, 30, 29, 15, 14, 13, 2]
+        let initial_max_steps = vec![31, 30, 29, 15, 14, 13, 2];
+        
+        // Calculate expected position for each row at this cumulative step
+        // accounting for any max_step changes that happened
+        let mut expected_positions = Vec::new();
+        
+        for row_idx in 0..7 {
+            // Find the most recent config change for this row before cumulative_step
+            let mut current_max_step = initial_max_steps[row_idx];
+            let mut last_change_step = 0;
+            let mut old_max_step = initial_max_steps[row_idx];
+            
+            for change in &self.row_config_changes {
+                if change.row == row_idx && change.cumulative_step <= cumulative_step {
+                    old_max_step = current_max_step;
+                    current_max_step = change.new_max_step;
+                    last_change_step = change.cumulative_step;
+                }
+            }
+            
+            let expected_step = if last_change_step == 0 {
+                // No config changes - simple case
+                cumulative_step % (current_max_step + 1)
+            } else {
+                // Config changed at last_change_step
+                // Calculate position at moment of change
+                let position_at_change = last_change_step % (old_max_step + 1);
+                
+                // Sequencer resets to 0 if position > new_max_step
+                let position_after_reset = if position_at_change > current_max_step {
+                    0
+                } else {
+                    position_at_change
+                };
+                
+                // Advance from that position
+                let steps_since_change = cumulative_step - last_change_step;
+                (position_after_reset + steps_since_change) % (current_max_step + 1)
+            };
+            
+            expected_positions.push(expected_step);
+        }
         
         // Count StepAdvancement events from the start to find the Nth one
         let mut step_count = 0;
@@ -403,20 +475,18 @@ impl AutomatedTestClock {
         let actual_steps = found_step_data
             .ok_or(format!("No step advancement event found for cumulative step {} in formal_state.log (found {} step events)", cumulative_step, step_count))?;
 
-        // Build verification message - show actual row states
+        // Build verification message - show actual vs expected row states
         let mut matches = true;
         let mut details = Vec::new();
         
-        for (row_idx, &expected_max_step) in expected_max_steps.iter().enumerate().take(7) {
-            // Use cumulative_step directly since we're now tracking absolute step count
-            let expected_step = cumulative_step % (expected_max_step + 1);
+        for row_idx in 0..7 {
+            let expected_step = expected_positions[row_idx];
             
             if let Some((_, actual_step)) = actual_steps.iter().find(|(idx, _)| *idx == row_idx) {
                 if actual_step == &expected_step {
-                    details.push(format!("R{}:OK({},expect:{})", row_idx, actual_step, expected_step));
+                    details.push(format!("R{}:ok({})", row_idx, actual_step));
                 } else {
-                    // Show mismatch but also show what step the row is actually at
-                    details.push(format!("R{}:at_step_{}", row_idx, actual_step));
+                    details.push(format!("R{}:act{}exp{}", row_idx, actual_step, expected_step));
                     matches = false;
                 }
             } else {
@@ -426,10 +496,9 @@ impl AutomatedTestClock {
         }
 
         if matches {
-            Ok(format!("All rows match expected - [{}]", details.join(", ")))
+            Ok(format!("All rows match - [{}]", details.join(", ")))
         } else {
-            // For test2 with dynamic changes, just show current state without failing
-            Ok(format!("Row states - [{}]", details.join(", ")))
+            Err(format!("Mismatch - [{}]", details.join(", ")))
         }
     }
 

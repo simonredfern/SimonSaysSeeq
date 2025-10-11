@@ -194,10 +194,11 @@ fn execute_test_script(generator: &mut ClockGenerator, script_path: &str) -> Res
                     println!("✅ Button {} command sent", action.to_lowercase());
                 }
             }
+            
+            TestCommand::RecordRowConfig { row, max_step } => {
+                println!("📝 RecordRowConfig: row={}, max_step={} (not applicable to midi_clock_generator)", row, max_step);
+            }
         }
-        
-        // Small delay between commands
-        thread::sleep(Duration::from_millis(50));
     }
     
     println!("\n✅ Test script completed successfully!");

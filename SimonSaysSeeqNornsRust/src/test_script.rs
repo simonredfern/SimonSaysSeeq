@@ -54,6 +54,10 @@ pub enum TestCommand {
     /// Format: F0 7D 53 53 51 02 <row> <col> <press> F7
     /// row: 0-7, col: 0-31, press: 1=press, 0=release
     SysExButton { row: u8, col: u8, press: bool },
+    /// Record a row configuration change for verification tracking
+    /// This tells the test framework that a row's max_step changed
+    /// Used to predict expected sequencer state in subsequent verification steps
+    RecordRowConfig { row: usize, max_step: usize },
 }
 
 /// Test script structure

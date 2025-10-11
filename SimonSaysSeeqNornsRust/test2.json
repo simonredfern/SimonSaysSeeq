@@ -89,6 +89,11 @@
       "press": false
     },
     {
+      "command": "RecordRowConfig",
+      "row": 0,
+      "max_step": 7
+    },
+    {
       "command": "LogMilestone",
       "message": "Continuing - running 10 more steps with row 0 changed"
     },
@@ -145,6 +150,11 @@
       "press": false
     },
     {
+      "command": "RecordRowConfig",
+      "row": 1,
+      "max_step": 11
+    },
+    {
       "command": "LogMilestone",
       "message": "Continuing - running 10 more steps with rows 0,1 changed"
     },
@@ -197,6 +207,11 @@
       "press": false
     },
     {
+      "command": "RecordRowConfig",
+      "row": 2,
+      "max_step": 5
+    },
+    {
       "command": "LogMilestone",
       "message": "Continuing - running 10 more steps with rows 0,1,2 changed"
     },
@@ -247,6 +262,11 @@
       "row": 7,
       "col": 8,
       "press": false
+    },
+    {
+      "command": "RecordRowConfig",
+      "row": 6,
+      "max_step": 4
     },
     {
       "command": "LogMilestone",
