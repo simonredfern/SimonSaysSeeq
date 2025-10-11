@@ -214,6 +214,10 @@ impl ClockGenerator {
                     tick: current_tick,
                 };
 
+                // Log all received MIDI for debugging
+                println!("🎵 MIDI Received: {} note={} vel={} ch={} step={} tick={}", 
+                         event_type, note, velocity, channel, current_step, current_tick);
+
                 midi_events.lock().unwrap().push(event);
             }
         }, ())?;

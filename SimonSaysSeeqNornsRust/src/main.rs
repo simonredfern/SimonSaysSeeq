@@ -7,7 +7,7 @@ use anyhow::Result;
 use log::{info, warn, debug, error, trace};
 use anyhow::anyhow;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use chrono;
@@ -31,7 +31,10 @@ const LED_DIM: u8 = 6;      // Empty step, playhead present (position only)
 const LED_DIM_PLUS: u8 = 8; // Empty step, playhead present (enhanced visibility)
 const LED_BRIGHT: u8 = 10;  // Pattern exists, no playhead (pattern only)
 const LED_MAX: u8 = 14;     // Pattern exists, playhead present (pattern + position)
-const LED_TURBO: u8 = 15;   // Maximum brightness (ARM buttons, flashing, etc.)
+const LED_TURBO: u8 = 15;     // Maximum brightness (ARM buttons, flashing, etc.)
+
+/// External MIDI clock tick counter for step synchronization
+static EXTERNAL_CLOCK_TICK_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// ARM actions that can be triggered from row 7 (control row) of the grid
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1775,6 +1778,9 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
                 self.sequencer.start();
 
+                // Reset external clock tick counter on start
+                EXTERNAL_CLOCK_TICK_COUNTER.store(0, Ordering::SeqCst);
+
                 // Reset CO2 counters on MIDI start
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
@@ -1792,6 +1798,9 @@ impl SimonSaysSeeq {
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
                 
+                // Reset external clock tick counter on stop
+                EXTERNAL_CLOCK_TICK_COUNTER.store(0, Ordering::SeqCst);
+                
                 // Reset CO2 counters on MIDI stop
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
@@ -1807,20 +1816,20 @@ impl SimonSaysSeeq {
                 // External clock slave mode: advance sequencer directly on MIDI clock
                 if self.sequencer.is_running() {
                     // MIDI clock runs at 24 PPQ, we get 6 ticks per step (every clock, 6 clocks per step)
-                    static mut EXTERNAL_CLOCK_TICK_COUNTER: u32 = 0;
-                    unsafe {
-                        EXTERNAL_CLOCK_TICK_COUNTER += 1;
-                        
-                        // Advance CO2 tick counter on every MIDI clock (gives us 6 ticks per step)
-                        self.handle_co2_tick_advance()?;
-                        
-                        if EXTERNAL_CLOCK_TICK_COUNTER % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
-                            // Advance sequencer step based on external clock
-                            if let Err(e) = self.sequencer.external_advance_step(seq_tx) {
-                                warn!("External clock step advancement failed: {}", e);
-                            }
+                    let tick_count = EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst);
+                    
+                    // Check if we should advance step BEFORE incrementing, so step 0 happens at tick 0
+                    if tick_count % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
+                        // Advance sequencer step based on external clock
+                        if let Err(e) = self.sequencer.external_advance_step(seq_tx) {
+                            warn!("External clock step advancement failed: {}", e);
                         }
                     }
+                    
+                    EXTERNAL_CLOCK_TICK_COUNTER.fetch_add(1, Ordering::SeqCst);
+                    
+                    // Advance CO2 tick counter on every MIDI clock (gives us 6 ticks per step)
+                    self.handle_co2_tick_advance()?;
                 }
             }
             MidiInputEvent::ExternalClockTimeout => {

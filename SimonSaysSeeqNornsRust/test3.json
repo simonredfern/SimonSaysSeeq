@@ -2,16 +2,40 @@
   "name": "Test3 Direct: MIDI Note Output Verification",
   "description": "Verifies MIDI notes are sent at correct steps based on test_pattern_1.json",
   "bpm": 30.0,
+  "comments": [
+    "Grid mapping: Each step array has 8 positions for rows 0-7",
+    "Row 0 → Note 48, Row 1 → Note 49, Row 2 → Note 50, Row 3 → Note 51, Row 4 → Note 52, Row 5 → Note 53, Row 6 → Note 54",
+    "Timing: advance_step() is called every 6 ticks (when tick % 6 == 0)",
+    "FIXED: Check happens BEFORE increment, so step 0 happens at tick 0",
+    "Tick 0: step 0 processed, Tick 6: step 1 processed, Tick 12: step 2 processed, etc.",
+    "Grid data from test_pattern_1.json:",
+    "  step 0: [15,0,0,0,0,0,0,0] → row 0 → note 48",
+    "  step 1: [0,0,0,0,0,0,0,0]  → no notes",
+    "  step 2: [0,1,0,0,0,0,0,0]  → row 1 → note 49",
+    "  step 3: [0,0,0,0,0,0,0,0]  → no notes",
+    "  step 4: [15,0,1,0,0,0,0,0] → rows 0,2 → notes 48,50",
+    "  step 5: [0,0,0,0,0,0,0,0]  → no notes",
+    "  step 6: [0,1,0,0,0,0,0,0]  → row 1 → note 49",
+    "  step 7: [0,0,0,0,0,0,0,0]  → no notes",
+    "  step 8: [15,0,0,0,0,0,0,0] → row 0 → note 48"
+  ],
   "commands": [
     {
       "at_tick": 0,
       "action": {
         "type": "LogMessage",
-        "message": "Test3: Verifying MIDI note output from sequencer"
+        "message": "🧪 Test3: Verifying MIDI note output from sequencer"
       }
     },
     {
-      "at_tick": 3,
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 0: Step 0 processed - Grid[0]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
+      }
+    },
+    {
+      "at_tick": 0,
       "action": {
         "type": "VerifyMidiNote",
         "step": 0,
@@ -22,28 +46,60 @@
       }
     },
     {
-      "at_tick": 3,
+      "at_tick": 6,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 6: Step 1 processed - Grid[1]=[0,0,0,0,0,0,0,0] - Expecting no notes"
+      }
+    },
+    {
+      "at_tick": 12,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 12: Step 2 processed - Grid[2]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
+      }
+    },
+    {
+      "at_tick": 12,
       "action": {
         "type": "VerifyMidiNote",
-        "step": 0,
-        "note": 52,
+        "step": 2,
+        "note": 49,
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
       }
     },
     {
-      "at_tick": 9,
+      "at_tick": 18,
       "action": {
         "type": "LogMessage",
-        "message": "Step 1: Expecting notes 50 (C4) and 54 (F#4)"
+        "message": "📍 Tick 18: Step 3 processed - Grid[3]=[0,0,0,0,0,0,0,0] - Expecting no notes"
       }
     },
     {
-      "at_tick": 9,
+      "at_tick": 24,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 24: Step 4 processed - Grid[4]=[15,0,1,0,0,0,0,0] - Expecting notes 48 (row 0) and 50 (row 2)"
+      }
+    },
+    {
+      "at_tick": 24,
       "action": {
         "type": "VerifyMidiNote",
-        "step": 1,
+        "step": 4,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 24,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 4,
         "note": 50,
         "velocity": null,
         "channel": 1,
@@ -51,54 +107,57 @@
       }
     },
     {
-      "at_tick": 9,
-      "action": {
-        "type": "VerifyMidiNote",
-        "step": 1,
-        "note": 54,
-        "velocity": null,
-        "channel": 1,
-        "event_type": "NoteOn"
-      }
-    },
-    {
-      "at_tick": 15,
+      "at_tick": 30,
       "action": {
         "type": "LogMessage",
-        "message": "Step 2: Expecting note 52 (E4)"
+        "message": "📍 Tick 30: Step 5 processed - Grid[5]=[0,0,0,0,0,0,0,0] - Expecting no notes"
       }
     },
     {
-      "at_tick": 15,
-      "action": {
-        "type": "VerifyMidiNote",
-        "step": 2,
-        "note": 52,
-        "velocity": null,
-        "channel": 1,
-        "event_type": "NoteOn"
-      }
-    },
-    {
-      "at_tick": 27,
+      "at_tick": 36,
       "action": {
         "type": "LogMessage",
-        "message": "Step 4: Expecting note 54 (F#4)"
+        "message": "📍 Tick 36: Step 6 processed - Grid[6]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)"
       }
     },
     {
-      "at_tick": 27,
+      "at_tick": 36,
       "action": {
         "type": "VerifyMidiNote",
-        "step": 4,
-        "note": 54,
+        "step": 6,
+        "note": 49,
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
       }
     },
     {
-      "at_tick": 45,
+      "at_tick": 42,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 42: Step 7 processed - Grid[7]=[0,0,0,0,0,0,0,0] - Expecting no notes"
+      }
+    },
+    {
+      "at_tick": 48,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 48: Step 8 processed - Grid[8]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)"
+      }
+    },
+    {
+      "at_tick": 48,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 8,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 60,
       "action": {
         "type": "LogMessage",
         "message": "✅ MIDI note verification test complete"
