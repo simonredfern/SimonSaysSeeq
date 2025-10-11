@@ -54,7 +54,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 19,
       "action": {
         "type": "SysExButton",
         "row": 0,
@@ -63,7 +63,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 20,
       "action": {
         "type": "SysExButton",
         "row": 0,
@@ -72,7 +72,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "SysExButton",
         "row": 7,
