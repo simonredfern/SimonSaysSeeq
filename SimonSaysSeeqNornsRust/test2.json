@@ -11,7 +11,7 @@
       }
     },
     {
-      "at_tick": 6,
+      "at_tick": 9,
       "action": {
         "type": "VerifyState",
         "step": 1,
@@ -20,7 +20,7 @@
       }
     },
     {
-      "at_tick": 12,
+      "at_tick": 15,
       "action": {
         "type": "VerifyState",
         "step": 2,
@@ -29,7 +29,7 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 21,
       "action": {
         "type": "VerifyState",
         "step": 3,
@@ -38,14 +38,14 @@
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 22,
       "action": {
         "type": "LogMessage",
         "message": "Step 3: Changing Row 0 max_step 31→7"
       }
     },
     {
-      "at_tick": 18,
+      "at_tick": 22,
       "action": {
         "type": "SysExButton",
         "row": 7,
@@ -54,7 +54,7 @@
       }
     },
     {
-      "at_tick": 19,
+      "at_tick": 23,
       "action": {
         "type": "SysExButton",
         "row": 0,
@@ -63,93 +63,93 @@
       }
     },
     {
-      "at_tick": 20,
+      "at_tick": 24,
       "action": {
         "type": "SysExButton",
         "row": 0,
         "col": 7,
         "press": false
-      }
-    },
-    {
-      "at_tick": 21,
-      "action": {
-        "type": "SysExButton",
-        "row": 7,
-        "col": 8,
-        "press": false
-      }
-    },
-    {
-      "at_tick": 24,
-      "action": {
-        "type": "LogMessage",
-        "message": "Step 4: Changing Row 1 max_step 30→9"
-      }
-    },
-    {
-      "at_tick": 24,
-      "action": {
-        "type": "SysExButton",
-        "row": 7,
-        "col": 8,
-        "press": true
       }
     },
     {
       "at_tick": 25,
       "action": {
         "type": "SysExButton",
-        "row": 1,
-        "col": 9,
-        "press": true
-      }
-    },
-    {
-      "at_tick": 26,
-      "action": {
-        "type": "SysExButton",
-        "row": 1,
-        "col": 9,
-        "press": false
-      }
-    },
-    {
-      "at_tick": 27,
-      "action": {
-        "type": "SysExButton",
         "row": 7,
         "col": 8,
         "press": false
       }
     },
     {
-      "at_tick": 30,
+      "at_tick": 28,
       "action": {
         "type": "LogMessage",
-        "message": "Step 5: Changing Row 3 max_step 15→4"
+        "message": "Step 4: Changing Row 1 max_step 30→9"
+      }
+    },
+    {
+      "at_tick": 28,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 29,
+      "action": {
+        "type": "SysExButton",
+        "row": 1,
+        "col": 9,
+        "press": true
       }
     },
     {
       "at_tick": 30,
       "action": {
         "type": "SysExButton",
-        "row": 7,
-        "col": 8,
-        "press": true
+        "row": 1,
+        "col": 9,
+        "press": false
       }
     },
     {
       "at_tick": 31,
       "action": {
         "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": false
+      }
+    },
+    {
+      "at_tick": 34,
+      "action": {
+        "type": "LogMessage",
+        "message": "Step 5: Changing Row 3 max_step 15→4"
+      }
+    },
+    {
+      "at_tick": 34,
+      "action": {
+        "type": "SysExButton",
+        "row": 7,
+        "col": 8,
+        "press": true
+      }
+    },
+    {
+      "at_tick": 35,
+      "action": {
+        "type": "SysExButton",
         "row": 3,
         "col": 4,
         "press": true
       }
     },
     {
-      "at_tick": 32,
+      "at_tick": 36,
       "action": {
         "type": "SysExButton",
         "row": 3,
@@ -158,7 +158,7 @@
       }
     },
     {
-      "at_tick": 33,
+      "at_tick": 37,
       "action": {
         "type": "SysExButton",
         "row": 7,
@@ -167,14 +167,14 @@
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "LogMessage",
         "message": "Step 6: Verifying all rows after configuration changes"
       }
     },
     {
-      "at_tick": 24,
+      "at_tick": 27,
       "action": {
         "type": "VerifyState",
         "step": 4,
@@ -183,7 +183,7 @@
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "VerifyState",
         "step": 6,
@@ -192,7 +192,7 @@
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "VerifyState",
         "step": 6,
@@ -201,7 +201,7 @@
       }
     },
     {
-      "at_tick": 36,
+      "at_tick": 39,
       "action": {
         "type": "VerifyState",
         "step": 6,
@@ -210,7 +210,7 @@
       }
     },
     {
-      "at_tick": 42,
+      "at_tick": 45,
       "action": {
         "type": "VerifyState",
         "step": 7,
@@ -219,14 +219,14 @@
       }
     },
     {
-      "at_tick": 48,
+      "at_tick": 51,
       "action": {
         "type": "LogMessage",
         "message": "Step 8: Row 0 should wrap (max_step=7), Row 3 wrapping cycle"
       }
     },
     {
-      "at_tick": 48,
+      "at_tick": 51,
       "action": {
         "type": "VerifyState",
         "step": 8,
@@ -235,7 +235,7 @@
       }
     },
     {
-      "at_tick": 48,
+      "at_tick": 51,
       "action": {
         "type": "VerifyState",
         "step": 8,
@@ -244,14 +244,14 @@
       }
     },
     {
-      "at_tick": 54,
+      "at_tick": 57,
       "action": {
         "type": "LogMessage",
         "message": "Step 9: Row 0 wrapped, Row 3 should wrap (max_step=4)"
       }
     },
     {
-      "at_tick": 54,
+      "at_tick": 57,
       "action": {
         "type": "VerifyState",
         "step": 9,
@@ -260,7 +260,7 @@
       }
     },
     {
-      "at_tick": 54,
+      "at_tick": 57,
       "action": {
         "type": "VerifyState",
         "step": 9,
@@ -269,7 +269,7 @@
       }
     },
     {
-      "at_tick": 60,
+      "at_tick": 63,
       "action": {
         "type": "VerifyState",
         "step": 10,
@@ -278,23 +278,23 @@
       }
     },
     {
-      "at_tick": 60,
+      "at_tick": 63,
       "action": {
         "type": "LogMessage",
-        "message": "Step 10: Row 1 still advancing, Row 3 wrapped"
+        "message": "Step 10: Row 1 wrapped (max_step=9), Row 3 wrapped"
       }
     },
     {
-      "at_tick": 60,
+      "at_tick": 63,
       "action": {
         "type": "VerifyState",
         "step": 10,
         "row": 1,
-        "expected": 10
+        "expected": 0
       }
     },
     {
-      "at_tick": 60,
+      "at_tick": 63,
       "action": {
         "type": "VerifyState",
         "step": 10,
@@ -303,14 +303,14 @@
       }
     },
     {
-      "at_tick": 66,
+      "at_tick": 69,
       "action": {
         "type": "LogMessage",
         "message": "Step 11: Row 1 should wrap soon (max_step=9)"
       }
     },
     {
-      "at_tick": 66,
+      "at_tick": 69,
       "action": {
         "type": "VerifyState",
         "step": 11,
@@ -319,7 +319,7 @@
       }
     },
     {
-      "at_tick": 66,
+      "at_tick": 69,
       "action": {
         "type": "VerifyState",
         "step": 11,
@@ -328,14 +328,14 @@
       }
     },
     {
-      "at_tick": 72,
+      "at_tick": 75,
       "action": {
         "type": "LogMessage",
         "message": "Step 12: Verifying Row 1 continues"
       }
     },
     {
-      "at_tick": 72,
+      "at_tick": 75,
       "action": {
         "type": "VerifyState",
         "step": 12,
@@ -344,7 +344,7 @@
       }
     },
     {
-      "at_tick": 78,
+      "at_tick": 81,
       "action": {
         "type": "LogMessage",
         "message": "✅ Test complete - 3 rows changed: Row 0 (31→7), Row 1 (30→9), Row 3 (15→4)"

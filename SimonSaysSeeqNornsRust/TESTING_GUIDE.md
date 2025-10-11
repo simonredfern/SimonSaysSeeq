@@ -255,3 +255,32 @@ Step N timing:
   - Step 32: verify at tick 195 (not 192)
 
 This ensures the sequencer has time to write the step advancement to the log before we try to read it.
+
+### SysEx Button Timing
+
+**Best Practice**: Send SysEx button sequences **between** step boundaries, not at them.
+
+**Why**: Step boundaries are when the sequencer is advancing state and writing to the log. Sending configuration changes at the same time can cause timing conflicts.
+
+**Good Timing** (buttons between steps):
+```json
+// Step 3 ends at tick 23, Step 4 starts at tick 24
+{"at_tick": 22, "action": {"type": "SysExButton", "row": 7, "col": 8, "press": true}},
+{"at_tick": 23, "action": {"type": "SysExButton", "row": 0, "col": 7, "press": true}},
+{"at_tick": 24, "action": {"type": "SysExButton", "row": 0, "col": 7, "press": false}},
+{"at_tick": 25, "action": {"type": "SysExButton", "row": 7, "col": 8, "press": false}}
+```
+
+**Bad Timing** (buttons at step boundary):
+```json
+// Conflicts with step 4 start at tick 24!
+{"at_tick": 24, "action": {"type": "SysExButton", "row": 7, "col": 8, "press": true}},
+{"at_tick": 25, "action": {"type": "SysExButton", "row": 0, "col": 7, "press": true}},
+```
+
+### Summary: Timing Best Practices
+
+1. **Verify in mid-step**: tick = (step × 6) + 3
+2. **SysEx between steps**: Start at tick = (step × 6) - 2
+3. **Avoid step boundaries** (multiples of 6) for SysEx
+4. **Spread button events** across 3-4 ticks
