@@ -1,11 +1,11 @@
 //! Shared MIDI Clock Generator
 //! 
 //! This module provides a precise MIDI clock generator that can be used by
-//! both the interactive midi_clock_generator and automated_test_clock binaries.
+//! both the interactive midi_clock_generator and direct_test binaries.
 //! 
 //! Features:
 //! - Drift-corrected timing for accurate clock generation
-//! - Optional tick counting for automated tests
+//! - Tick counting for tick-synchronized tests
 //! - Optional test mode with tempo changes
 //! - Thread-safe BPM control
 

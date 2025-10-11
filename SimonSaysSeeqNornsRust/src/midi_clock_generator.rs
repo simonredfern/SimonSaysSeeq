@@ -138,22 +138,22 @@ fn execute_test_script(generator: &mut ClockGenerator, script_path: &str) -> Res
             TestCommand::ButtonPress { file, grid_id, x, y } => {
                 println!("🔘 Button press: {} at ({}, {}) via {}", grid_id, x, y, file);
                 // Note: Button injection not supported in MIDI clock generator
-                println!("⚠️  Button injection only works with automated_test_clock");
+                println!("⚠️  Button injection only works with direct_test (use SysExButton action)");
             }
             
             TestCommand::ButtonRelease { file, grid_id, x, y } => {
                 println!("🔘 Button release: {} at ({}, {}) via {}", grid_id, x, y, file);
-                println!("⚠️  Button injection only works with automated_test_clock");
+                println!("⚠️  Button injection only works with direct_test (use SysExButton action)");
             }
             
             TestCommand::SimpleButton { file, x, y } => {
                 println!("🔘 Simple button: ({}, {}) via {}", x, y, file);
-                println!("⚠️  Button injection only works with automated_test_clock");
+                println!("⚠️  Button injection only works with direct_test (use SysExButton action)");
             }
             
             TestCommand::ArmAction { arm_column, target_row, target_column } => {
                 println!("🎯 ARM action: arm={}, target=({},{})", arm_column, target_row, target_column);
-                println!("⚠️  Button injection only works with automated_test_clock");
+                println!("⚠️  Button injection only works with direct_test (use SysExButton action)");
             }
             
             TestCommand::WaitSteps { count } => {

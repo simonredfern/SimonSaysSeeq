@@ -19,10 +19,6 @@ name = "midi_clock_detector"
 path = "src/bin/midi_clock_detector.rs"
 
 [[bin]]
-name = "automated_test_clock"
-path = "src/automated_test_clock.rs"
-
-[[bin]]
 name = "midi_clock_generator"
 path = "src/midi_clock_generator.rs"
 

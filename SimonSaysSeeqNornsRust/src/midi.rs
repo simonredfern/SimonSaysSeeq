@@ -397,11 +397,11 @@ impl MidiManager {
         } else if !hardware_ports.is_empty() {
             hardware_ports[0].clone()
         } else {
-            // No hardware ports - try Midi Through as fallback for testing with automated_test_clock
+            // No hardware ports - try Midi Through as fallback for testing with direct_test
             info!("initialize_input says: No hardware MIDI input ports found - checking for Midi Through port for testing");
             match self.find_input_port_by_name(&midi_in, &in_ports, "Midi Through") {
                 Ok(port) => {
-                    info!("initialize_input says: Using Midi Through port for testing/automated test clock");
+                    info!("initialize_input says: Using Midi Through port for testing/direct_test");
                     port
                 }
                 Err(_) => {
