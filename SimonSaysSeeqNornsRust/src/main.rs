@@ -1848,6 +1848,28 @@ impl SimonSaysSeeq {
                                 }
                             }
                         }
+                        0x02 => {
+                            // Button press/release: F0 7D 53 53 51 02 <row> <col> <press> F7
+                            if data.len() >= 10 {
+                                let row = data[6] as usize;
+                                let col = data[7] as usize;
+                                let press = data[8] != 0;
+                                
+                                info!("🔘 SysEx button {} received: row={}, col={}", 
+                                      if press { "press" } else { "release" }, row, col);
+                                
+                                // Determine grid_id based on column
+                                let grid_id = if col < 16 { "grid_one" } else { "grid_two" };
+                                let adjusted_col = if col < 16 { col } else { col - 16 };
+                                
+                                // Handle the button press/release
+                                if let Err(e) = self.handle_grid_press(grid_id, adjusted_col, row, press) {
+                                    warn!("⚠️ Failed to handle SysEx button event: {}", e);
+                                }
+                            } else {
+                                warn!("⚠️ Invalid SysEx button command: insufficient data length");
+                            }
+                        }
                         _ => {
                             debug!("Unknown SimonSaysSeeQ SysEx command: 0x{:02X}", command);
                         }

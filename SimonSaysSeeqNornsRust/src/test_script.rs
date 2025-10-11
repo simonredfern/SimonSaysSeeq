@@ -5,15 +5,17 @@
 //!
 //! ## SysEx Commands
 //!
-//! The `ReloadPattern` command sends a SysEx message to the sequencer:
-//! - Format: `F0 7D 53 53 51 01 F7`
+//! SysEx command format: `F0 7D 53 53 51 <cmd> [params...] F7`
 //! - `F0` = SysEx start
 //! - `7D` = Educational/Development use (non-commercial manufacturer ID)
 //! - `53 53 51` = "SSQ" in ASCII (SimonSaysSeeQ signature)
-//! - `01` = Command code (reload pattern from current_pattern.json)
+//! - `<cmd>` = Command code:
+//!   - `01` = Reload pattern from current_pattern.json
+//!   - `02` = Button press/release: `02 <row> <col> <press>`
 //! - `F7` = SysEx end
 //!
-//! Note: The main sequencer application must be running to receive this command.
+
+//! Note: The main sequencer application must be running to receive commands.
 
 use serde::{Deserialize, Serialize};
 
@@ -48,6 +50,10 @@ pub enum TestCommand {
     /// Send SysEx command to reload pattern from current_pattern.json
     /// Note: Requires the main sequencer application to be running to receive the command
     ReloadPattern,
+    /// Send SysEx command to press/release a button
+    /// Format: F0 7D 53 53 51 02 <row> <col> <press> F7
+    /// row: 0-7, col: 0-31, press: 1=press, 0=release
+    SysExButton { row: u8, col: u8, press: bool },
 }
 
 /// Test script structure

@@ -170,6 +170,23 @@ impl AutomatedTestClock {
         Ok(())
     }
 
+    /// Send SysEx command to press/release a button
+    /// Format: F0 7D 53 53 51 02 <row> <col> <press> F7
+    /// - F0 = SysEx start
+    /// - 7D = Educational/Development use (non-commercial)
+    /// - 53 53 51 = "SSQ" in ASCII (SimonSaysSeeQ)
+    /// - 02 = Command (button press/release)
+    /// - row = Row number (0-7)
+    /// - col = Column number (0-31)
+    /// - press = 1 for press, 0 for release
+    /// - F7 = SysEx end
+    fn send_button_sysex(&self, row: u8, col: u8, press: bool) -> Result<(), Box<dyn std::error::Error>> {
+        let press_byte = if press { 0x01 } else { 0x00 };
+        let sysex_message = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x02, row, col, press_byte, 0xF7];
+        self.generator.send_raw_midi(&sysex_message)?;
+        Ok(())
+    }
+
     /// Wait for sequencer to advance a specified number of steps
     fn wait_for_steps(&self, step_count: u32) -> Result<(), Box<dyn std::error::Error>> {
         // Each step requires 6 MIDI clock ticks (24 PPQN ÷ 4 = 6 ticks per 16th note)
@@ -298,6 +315,14 @@ impl AutomatedTestClock {
                     self.send_reload_pattern_sysex()?;
                     println!("✅ Reload pattern command sent");
                     self.log_event("test_reload_pattern", Some("SysEx command sent".to_string()));
+                }
+                
+                TestCommand::SysExButton { row, col, press } => {
+                    let action = if *press { "Press" } else { "Release" };
+                    println!("🔘 Sending SysEx button {}: row={}, col={}", action, row, col);
+                    self.send_button_sysex(*row, *col, *press)?;
+                    println!("✅ Button {} command sent", action.to_lowercase());
+                    self.log_event("test_sysex_button", Some(format!("{}:R{}C{}", action, row, col)));
                 }
             }
             

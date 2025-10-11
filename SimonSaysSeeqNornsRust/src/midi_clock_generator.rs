@@ -182,6 +182,18 @@ fn execute_test_script(generator: &mut ClockGenerator, script_path: &str) -> Res
                     println!("✅ Reload pattern command sent");
                 }
             }
+            
+            TestCommand::SysExButton { row, col, press } => {
+                let action = if *press { "Press" } else { "Release" };
+                println!("🔘 Sending SysEx button {}: row={}, col={}", action, row, col);
+                let press_byte = if *press { 0x01 } else { 0x00 };
+                let sysex_message = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x02, *row, *col, press_byte, 0xF7];
+                if let Err(e) = generator.send_raw_midi(&sysex_message) {
+                    eprintln!("❌ Error sending SysEx: {}", e);
+                } else {
+                    println!("✅ Button {} command sent", action.to_lowercase());
+                }
+            }
         }
         
         // Small delay between commands
