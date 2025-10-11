@@ -84,3 +84,28 @@ After cleanup, the project provides:
 - `direct_test` - Tick-synchronized testing framework
 - `midi_clock_generator` - Interactive MIDI clock tool
 - `midi_clock_detector` - MIDI port detection utility
+
+## State Isolation Between Tests
+
+### Problem
+Tests were failing when run in sequence because the sequencer auto-saves pattern state (including SysEx configuration changes) to `current_pattern.json` on MIDI Stop. This caused state pollution between tests.
+
+**Example**:
+1. Test2 changes max_step from 31 to 7 via SysEx
+2. Test2 finishes, sequencer saves the modified pattern
+3. Test1 runs and loads the polluted pattern with max_step=7
+4. Test1 fails because it expects max_step=31
+
+### Solution
+Each test now copies `test_pattern_1.json` to `current_pattern.json` before initialization, ensuring a clean, known-good pattern state for every test run.
+
+```rust
+// Copy clean test pattern to current_pattern.json
+fs::copy("test_pattern_1.json", "current_pattern.json")?;
+```
+
+### Result
+✅ Tests can now be run in any order without state pollution
+✅ Test1 → Test2 → Test1 all pass
+✅ Test2 → Test1 → Test2 all pass
+✅ Each test starts with a pristine pattern configuration

@@ -4,6 +4,7 @@ use std::fs;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
+use std::path::Path;
 
 use clap::Parser;
 
@@ -40,6 +41,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Truncate formal_state.log
     fs::write("formal_state.log", "")?;
     println!("🗑️  Truncated formal_state.log for clean test run");
+    println!();
+
+    // Copy clean test pattern to current_pattern.json to ensure clean state
+    // This prevents state pollution from previous tests
+    println!("📋 Copying test_pattern_1.json to current_pattern.json for clean state...");
+    fs::copy("test_pattern_1.json", "current_pattern.json")?;
+    println!("✅ Clean pattern loaded");
     println!();
 
     // Create clock generator
