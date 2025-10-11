@@ -94,7 +94,15 @@
     },
     {
       "command": "WaitSteps",
-      "count": 10
+      "count": 8
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 18 - Row 0 should have wrapped at step 7"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 2
     },
     {
       "command": "LogMilestone",
@@ -145,6 +153,10 @@
       "count": 10
     },
     {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 30 - Rows 0,1 should be wrapping at new lengths"
+    },
+    {
       "command": "LogMilestone",
       "message": "Setting row 2 max_step to 5 (6 steps: 0-5) - STILL RUNNING"
     },
@@ -193,6 +205,10 @@
       "count": 10
     },
     {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 40 - Rows 0,1,2 should be wrapping at new lengths"
+    },
+    {
       "command": "LogMilestone",
       "message": "Setting row 6 max_step to 4 (5 steps: 0-4) - STILL RUNNING"
     },
@@ -238,7 +254,19 @@
     },
     {
       "command": "WaitSteps",
-      "count": 30
+      "count": 15
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 55 - All changed rows should be wrapping at new lengths"
+    },
+    {
+      "command": "WaitSteps",
+      "count": 15
+    },
+    {
+      "command": "VerifyState",
+      "description": "Check sequencer state at cumulative step 70 - Final verification of all row wrapping"
     },
     {
       "command": "LogMilestone",

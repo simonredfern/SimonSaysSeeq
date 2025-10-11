@@ -2,6 +2,64 @@
 
 Simple guide for running and testing SimonSaysSeeq.
 
+## Running Automated Tests
+
+### Test Scripts
+
+SimonSaysSeeq includes automated test scripts that can be executed to verify sequencer behavior:
+
+- **test1.json** - Multi-length pattern test (verifies row wrapping at different lengths)
+- **test2.json** - Dynamic max_step changes (tests changing max_step while sequencer is running)
+
+### Running Tests
+
+**Terminal 1 (start the sequencer):**
+```bash
+cargo run --bin simon_says_seeq
+```
+
+**Terminal 2 (run a test):**
+```bash
+# Run test1 (multi-length pattern test - 33 steps)
+cargo run --bin automated_test_clock -- --script test1.json
+
+# Run test2 (dynamic max_step changes while running)
+cargo run --bin automated_test_clock -- --script test2.json
+
+# Run any custom test script
+cargo run --bin automated_test_clock -- --script your_test.json
+```
+
+
+### Creating/Regenerating Test Files
+
+**Generate test1.json with default 33 steps:**
+```bash
+cargo run --bin automated_test_clock -- --create-test1
+```
+
+**Generate test1.json with custom number of steps:**
+```bash
+cargo run --bin automated_test_clock -- --create-test1 --test-length-steps 50
+```
+
+### Test Output
+
+Tests log their results to:
+- **formal_state.log** - Detailed sequencer state at each step
+- **test_clock.log** - Test execution events and milestones
+- Console output - Real-time test progress
+
+### Example Test Output
+
+```
+🧪 Executing Test Script: Test1: Multi-Length Pattern Test
+🗑️  Truncated formal_state.log for clean test run
+🏁 Milestone: Starting Test1: Multi-Length Pattern Test
+...
+🔍 Verify: Check sequencer state at cumulative step 3 - ✅ All rows match
+```
+
 ## Running the Sequencer
 
 ### Basic Run (Desktop/Development)
@@ -131,6 +189,9 @@ cargo run --bin test_co2_cv
 - Log levels: `error`, `warn`, `info`, `debug`, `trace` (from least to most verbose)
 - Set log level with `RUST_LOG=level` environment variable
 - Automated tests require running both sequencer and test clock simultaneously
+- All tests use `--script <file>.json` for consistency
+- Test scripts are JSON files that define sequences of commands
+- See `SYSEX_BUTTON_REFERENCE.md` for details on button commands in test scripts
 
 ## Pattern Reload Feature
 
