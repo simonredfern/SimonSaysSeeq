@@ -618,9 +618,9 @@ impl Sequencer {
                     // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
                     
                     // DEBUG: Track MIDI step position for row 0
-                    // if row_idx == 0 {
-                    //     info!("🎵 MIDI DEBUG Row 0: Sending MIDI note at step {} (grid_value={})", current_step, grid_value);
-                    // }
+                    if row_idx == 0 || row_idx == 6 {
+                        info!("🎵 MIDI DEBUG Row {}: Sending MIDI note at step {} (grid_value={})", row_idx, current_step, grid_value);
+                    }
 
                     // Send MIDI note ON event for this row
                     if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
@@ -642,10 +642,10 @@ impl Sequencer {
 
                 // Send selective grid update event for this row
                 // DEBUG: Track LED step position for row 0
-                // if row_idx == 0 {
-                //     info!("💡 LED DEBUG Row 0: Sending grid update old_step={} -> new_step={}", 
-                //           row_state.sequencer_a_previous_step, current_step);
-                // }
+                if row_idx == 0 || row_idx == 6 {
+                    info!("💡 LED DEBUG Row {}: Sending grid update old_step={} -> new_step={}", 
+                          row_idx, row_state.sequencer_a_previous_step, row_state.sequencer_a_current_step);
+                }
                 
                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,

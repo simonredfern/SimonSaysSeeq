@@ -1145,14 +1145,11 @@ impl SimonSaysSeeq {
         
         let connected_grids = self.grid.get_connected_grids();
         
-        // DEBUG: Log grid update details
-        // info!("GRID_DEBUG: handle_grid_update called - row: {}, old_step: {}, new_step: {}", row, old_step, new_step);
-        // info!("GRID_DEBUG: Connected grids: {:?}", connected_grids);
-
-        // DEBUG: Focused tracking for row 0 LED updates
-        // if row == 0 {
-        //     info!("🔥 LED HANDLER Row 0: Processing LED update old_step={} -> new_step={}", old_step, new_step);
-        // }
+        // DEBUG: Log grid update details for rows 0 and 6
+        if row == 0 || row == 6 {
+            info!("🔥 LED HANDLER Row {}: Processing LED update old_step={} -> new_step={}", row, old_step, new_step);
+            info!("   Connected grids: {} grids", connected_grids.len());
+        }
         
         if connected_grids.len() >= 2 {
             // DUAL-GRID MODE (32-step sequences):
@@ -1187,13 +1184,17 @@ impl SimonSaysSeeq {
                 // This creates a seamless 32-step sequence across two 16-step grids
                 if old_step <= 15 {
                     // OLD position is on GRID_ONE (left grid): Direct coordinate mapping
-                    // info!("GRID_DEBUG: Setting OLD LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, old_step, row, old_brightness);
+                    if row == 0 || row == 6 {
+                        info!("   🔴 Setting OLD LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, old_step, row, old_brightness);
+                    }
                     self.grid.set_led(grid_one_id, old_step, row, old_brightness, "grid_update_old_1")?;
                 } else if old_step > 15 && old_step <= 31 {
                     // OLD position is on GRID_TWO (right grid): Coordinate mapping required
                     // Step 16 becomes grid_x=0, step 17 becomes grid_x=1, etc.
                     let grid_x = old_step - 16;
-                    // info!("GRID_DEBUG: Setting OLD LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, old_brightness, old_step);
+                    if row == 0 || row == 6 {
+                        info!("   🔴 Setting OLD LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, old_brightness, old_step);
+                    }
                     self.grid.set_led(grid_two_id, grid_x, row, old_brightness, "grid_update_old_2")?;
                 } else {
                     // warn!("GRID_DEBUG: OLD step {} is out of bounds (valid range: 0-31), skipping LED update for row {}", old_step, row);
@@ -1217,16 +1218,16 @@ impl SimonSaysSeeq {
                 
                 // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
-                    // NEW position is on GRID_ONE: Direct coordinate mapping  
-                    if row == 1 {
-                        info!("GRID_DEBUG: Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={} (row=ROW_1)", grid_one_id, new_step, row, new_brightness);
+                    // NEW position is on GRID_ONE: Direct coordinate mapping
+                    if row == 0 || row == 6 {
+                        info!("   🟢 Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, new_step, row, new_brightness);
                     }
                     self.grid.set_led(grid_one_id, new_step, row, new_brightness, "grid_update_new_1")?;
                 } else if new_step > 15 && new_step <= 31 {
                     // NEW position is on GRID_TWO: Coordinate mapping required
                     let grid_x = new_step - 16;
-                    if row == 1 {
-                        info!("GRID_DEBUG: Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={}) (row=ROW_1)", grid_two_id, grid_x, row, new_brightness, new_step);
+                    if row == 0 || row == 6 {
+                        info!("   🟢 Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, new_brightness, new_step);
                     }
                     self.grid.set_led(grid_two_id, grid_x, row, new_brightness, "grid_update_new_2")?;
                 } else {
