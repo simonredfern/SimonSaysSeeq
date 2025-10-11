@@ -55,6 +55,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("✅ MIDI Clock initialized at {:.1} BPM", generator.get_bpm());
     println!();
 
+    // Start the clock thread (needed before sending MIDI messages)
+    let _clock_thread = generator.spawn_clock_thread(connection);
+    thread::sleep(Duration::from_millis(100)); // Give thread time to initialize
+    
     // Initialize sequencer: Stop, Reload Pattern
     println!("🔧 Initializing sequencer...");
     
@@ -72,9 +76,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!();
     println!("🚀 Starting clock and test execution...");
     println!();
-
-    // Start the clock thread
-    let _clock_thread = generator.spawn_clock_thread(connection);
     
     // Start the clock
     generator.start()?;
