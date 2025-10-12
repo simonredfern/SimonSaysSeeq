@@ -1,13 +1,13 @@
 {
   "name": "Test1 Direct: Multi-Length Pattern Verification",
-  "description": "Tick-synchronized verification of rows with different max_step values",
+  "description": "Tick-synchronized verification of rows with different max_step values - Row 6 has max_step=4 (5 steps: 0-4)",
   "bpm": 30.0,
   "commands": [
     {
       "at_tick": 0,
       "action": {
         "type": "LogMessage",
-        "message": "Test1 Direct starting - verifying rows with max_steps: [31,30,29,15,14,13,4]"
+        "message": "Test1 Direct starting - verifying rows with max_steps: [31,30,29,15,14,13,4] - Row 6 loops 0,1,2,3,4,0..."
       }
     },
     {
@@ -70,7 +70,7 @@
         "type": "VerifyState",
         "step": 4,
         "row": 6,
-        "expected": 1
+        "expected": 4
       }
     },
     {

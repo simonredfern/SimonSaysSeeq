@@ -4,7 +4,7 @@ use std::fs;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
-use std::path::Path;
+
 
 use clap::Parser;
 
@@ -31,7 +31,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let script_content = fs::read_to_string(&args.script)?;
     let script: DirectTestScript = serde_json::from_str(&script_content)?;
     
-    println!("🧪 Test: {}", script.name);
+    let test_name = script.name.clone();
+    let script_file = args.script.clone();
+    
+    println!("🧪 Test: {}", test_name);
     println!("📋 Description: {}", script.description);
     println!("🎵 BPM: {}", script.bpm);
     println!("📊 Commands: {}", script.commands.len());
@@ -100,6 +103,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     generator.start()?;
     
     println!("Press Ctrl+C to stop test");
+    println!();
+    println!("═══════════════════════════════════════════════════════");
+    println!("🧪 Running Test: {}", test_name);
+    println!("📄 Script File: {}", script_file);
+    println!("═══════════════════════════════════════════════════════");
     println!();
     
     // Keep running until user stops
