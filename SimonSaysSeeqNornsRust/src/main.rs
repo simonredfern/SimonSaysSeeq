@@ -492,14 +492,14 @@ impl SimonSaysSeeq {
 
     fn handle_sequencer_event(&mut self, event: SequencerEvent) -> Result<()> {
         match event {
-            SequencerEvent::Step { step, bar } => {
+            SequencerEvent::Step { step } => {
                 // Step event - display updates handled
 
                 // CO2 data will be handled in handle_co2_cv_per_step function
 
                 // Process step for all active rows
                 for row in 0..=6 { // Rows 0-6 are sequence rows
-                    if let Some(note_events) = self.sequencer.get_step_events(row, bar, step) {
+                    if let Some(note_events) = self.sequencer.get_step_events(row, 0, step) {
                         for note_event in note_events {
                             #[cfg(feature = "midi")]
                             {
