@@ -12,6 +12,7 @@ RUST_VERSION="stable"
 BUILD_TYPE="${BUILD_TYPE:-release}"
 RPI_FEATURES="${RPI_FEATURES:-hardware,midi,desktop}"
 AI_LOG_ENABLED="false"
+TEST_MODE="false"
 
 # Colors for output
 RED='\033[0;31m'
@@ -740,19 +741,34 @@ run_application() {
     log_run "Environment: RUST_LOG=$RUST_LOG"
     log_run "Binary: $binary_path"
     log_run "Features: $RPI_FEATURES"
+    
+    if [ "$TEST_MODE" = "true" ]; then
+        log_run "Test mode: ENABLED"
+    fi
 
     echo
-    log_run "🎵 Starting SimonSaysSeeq on Raspberry Pi 5..."
+    if [ "$TEST_MODE" = "true" ]; then
+        log_run "🧪 Starting SimonSaysSeeq in TEST MODE on Raspberry Pi 5..."
+    else
+        log_run "🎵 Starting SimonSaysSeeq on Raspberry Pi 5..."
+    fi
     echo -e "${CYAN}Press Ctrl+C to stop${NC}"
     echo
+
+    # Build command line arguments
+    local app_args=()
+    if [ "$TEST_MODE" = "true" ]; then
+        app_args+=("--test-mode")
+    fi
+    app_args+=("$@")
 
     # Run the application with optional AI logging
     if [ "$AI_LOG_ENABLED" = "true" ]; then
         local startup_log="ai_startup_output"
         log_run "AI logging enabled - writing startup output to: $startup_log"
-        "$binary_path" "$@" 2>&1 | tee "$startup_log"
+        "$binary_path" "${app_args[@]}" 2>&1 | tee "$startup_log"
     else
-        "$binary_path" "$@"
+        "$binary_path" "${app_args[@]}"
     fi
 }
 
@@ -803,12 +819,14 @@ OPTIONS:
     --features FEATURES Specify cargo features (default: hardware,midi,desktop)
     --update-rust       Update Rust toolchain before building
     --ai-log            Write startup output to ai_startup_output file
+    --test-mode         Enable test mode (auto-load test_pattern_1.json, disable auto-save)
 
 EXAMPLES:
     $0 setup                           # Install dependencies and setup environment (includes grid support)
     $0 build                          # Build in release mode
     $0 --debug build                  # Build in debug mode
     $0 run                            # Build and run
+    $0 --test-mode run                # Run in test mode (for clock-driven tests)
     $0 run -- --simulation            # Run with simulation mode
     $0 --ai-log run                   # Run with AI logging enabled
     $0 service install                # Install systemd service
@@ -851,6 +869,10 @@ parse_args() {
                 ;;
             --ai-log)
                 AI_LOG_ENABLED="true"
+                shift
+                ;;
+            --test-mode)
+                TEST_MODE="true"
                 shift
                 ;;
             --help|-h)
