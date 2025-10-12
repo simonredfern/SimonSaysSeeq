@@ -154,7 +154,7 @@ pub struct SequencerState {
     pub swing_amount: f32,
     pub ticks_per_step: u32,
     pub steps_per_bar: usize,
-    pub tick_count: u64,
+    pub tick_count_since_midi_clock_start: u64,
     pub the_current_tick_count_since_step: u32,
     pub first_step: usize,
     pub last_step: usize,
@@ -222,7 +222,7 @@ impl Default for SequencerState {
             first_step: 0,
             last_step: 31,
             steps_per_bar: 16,
-            tick_count: 0,
+            tick_count_since_midi_clock_start: 0,
             the_current_tick_count_since_step: 0,
             midi_first_step: 0,
             midi_last_step: 31,
@@ -550,7 +550,7 @@ impl Sequencer {
         state.the_current_tick_count_since_step = 0;
 
         // Process pending note-offs for current tick
-        self.process_pending_note_offs(state.tick_count, sender)?;
+        self.process_pending_note_offs(state.tick_count_since_midi_clock_start, sender)?;
 
         // Process current step for all sequence rows
         self.process_step(&*state, sender)?;
@@ -660,7 +660,7 @@ impl Sequencer {
                             note: seq_a_row_state.midi_note,
                             channel: seq_a_row_state.midi_channel,
                             row: row_idx,
-                            target_tick: state.tick_count + 1,
+                            target_tick: state.tick_count_since_midi_clock_start + 1,
                         };
                         if let Ok(mut pending) = self.pending_note_offs.lock() {
                             pending.push(note_off);
@@ -942,7 +942,7 @@ impl Sequencer {
         let mut save_state = state.clone();
         save_state.is_running = false;
         save_state.sequencer_a_current_master_step = 0;
-        save_state.tick_count = 0;
+        save_state.tick_count_since_midi_clock_start = 0;
         save_state.the_current_tick_count_since_step = 0;
 
         let json_content = serde_json::to_string_pretty(&save_state)?;
@@ -968,7 +968,7 @@ impl Sequencer {
         // Preserve transport state while loading
         let current_step = state.sequencer_a_current_master_step;
         let is_running = state.is_running;
-        let tick_count = state.tick_count;
+        let tick_count = state.tick_count_since_midi_clock_start;
         let tick_count_since_step = state.the_current_tick_count_since_step;
 
         // Load the pattern data
@@ -977,7 +977,7 @@ impl Sequencer {
         // Restore transport state
         state.sequencer_a_current_master_step = current_step;
         state.is_running = is_running;
-        state.tick_count = tick_count;
+        state.tick_count_since_midi_clock_start = tick_count;
         state.the_current_tick_count_since_step = tick_count_since_step;
 
         // DEBUG: Log Row 3 grid values after loading
@@ -1010,7 +1010,7 @@ impl Sequencer {
         // Preserve transport state while loading
         let current_step = state.sequencer_a_current_master_step;
         let is_running = state.is_running;
-        let tick_count = state.tick_count;
+        let tick_count = state.tick_count_since_midi_clock_start;
         let tick_count_since_step = state.the_current_tick_count_since_step;
 
         // Load the pattern data
@@ -1019,7 +1019,7 @@ impl Sequencer {
         // Restore transport state
         state.sequencer_a_current_master_step = current_step;
         state.is_running = is_running;
-        state.tick_count = tick_count;
+        state.tick_count_since_midi_clock_start = tick_count;
         state.the_current_tick_count_since_step = tick_count_since_step;
 
         // DEBUG: Log Row 3 grid values after loading
@@ -1170,10 +1170,16 @@ impl Sequencer {
         self.test_mode
     }
 
+    /// Increment tick count on every MIDI clock tick
+    pub fn increment_tick_count(&self) {
+        let mut state = self.state.lock().unwrap();
+        state.tick_count_since_midi_clock_start += 1;
+    }
+
     /// Process pending note-offs on every tick (public interface)
     pub fn process_pending_note_offs_on_tick(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
         let state = self.state.lock().unwrap();
-        let current_tick = state.tick_count;
+        let current_tick = state.tick_count_since_midi_clock_start;
         drop(state);
         self.process_pending_note_offs(current_tick, sender)
     }

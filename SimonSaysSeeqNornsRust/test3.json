@@ -57,7 +57,7 @@
       }
     },
     {
-      "at_tick": 4,
+      "at_tick": 2,
       "action": {
         "type": "VerifyMidiNote",
         "step": 0,
@@ -68,7 +68,7 @@
       }
     },
     {
-      "at_tick": 4,
+      "at_tick": 2,
       "action": {
         "type": "VerifyMidiNote",
         "step": 0,
@@ -108,7 +108,7 @@
       }
     },
     {
-      "at_tick": 10,
+      "at_tick": 8,
       "action": {
         "type": "VerifyMidiNote",
         "step": 1,
@@ -119,7 +119,7 @@
       }
     },
     {
-      "at_tick": 10,
+      "at_tick": 8,
       "action": {
         "type": "VerifyMidiNote",
         "step": 1,
@@ -170,6 +170,39 @@
       }
     },
     {
+      "at_tick": 16,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 2,
+        "note": 49,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 16,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 2,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 16,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 2,
+        "note": 53,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
       "at_tick": 21,
       "action": {
         "type": "LogMessage",
@@ -207,6 +240,39 @@
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 22,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 22,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 53,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 22,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 54,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
       }
     },
     {
@@ -353,10 +419,21 @@
       }
     },
     {
-      "at_tick": 106,
+      "at_tick": 104,
       "action": {
         "type": "VerifyMidiNote",
         "step": 17,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 100,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 16,
         "note": 51,
         "velocity": null,
         "channel": 1,
@@ -382,6 +459,17 @@
       }
     },
     {
+      "at_tick": 112,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 18,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
       "at_tick": 117,
       "action": {
         "type": "LogMessage",
@@ -400,7 +488,18 @@
       }
     },
     {
-      "at_tick": 195,
+      "at_tick": 118,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 19,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 121,
       "action": {
         "type": "LogMessage",
         "message": "📍 Step 32: Row 3 wraps again to step 0 - Expecting note 51"
@@ -427,7 +526,18 @@
       }
     },
     {
-      "at_tick": 291,
+      "at_tick": 196,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 32,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 201,
       "action": {
         "type": "LogMessage",
         "message": "📍 Step 48: Row 3 wraps again to step 0 - Expecting note 51"
@@ -455,7 +565,18 @@
       }
     },
     {
-      "at_tick": 387,
+      "at_tick": 292,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 48,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 297,
       "action": {
         "type": "LogMessage",
         "message": "📍 Step 64: Row 3 wraps again to step 0 - Expecting note 51"
@@ -479,6 +600,17 @@
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 388,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 64,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
       }
     },
     {
