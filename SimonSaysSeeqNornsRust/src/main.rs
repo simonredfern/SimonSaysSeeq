@@ -667,13 +667,13 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_EVENTS: Generating rhythm on row {} with {} events (step {})", seq_y, events, seq_x);
                             
                             // Get current euclidean parameters to preserve length and rotation
-                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_length = row_state.sequencer_a_max_step + 1; // Convert from 0-based max_step to step count
-                                let current_rotation = row_state.sequencer_a_euclidean_rotation;
+                            if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_length = seq_a_row_state.max_step + 1; // Convert from 0-based max_step to step count
+                                let current_rotation = seq_a_row_state.euclidean_rotation;
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, current_length, current_rotation);
                             } else {
-                                // Fallback if row_state is not available
-                                // warn!("EuclidianEvents: Could not get row_state for row {}, using fallback defaults", seq_y);
+                                // Fallback if seq_a_row_state is not available
+                                // warn!("EuclidianEvents: Could not get seq_a_row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, events, 32, 0);
                             }
                             
@@ -686,26 +686,26 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
                             
                             // Get current euclidean parameters to preserve events and rotation
-                            if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_events = row_state.sequencer_a_euclidean_events;
-                                let current_rotation = row_state.sequencer_a_euclidean_rotation;
+                            if let Some(mut seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_events = seq_a_row_state.euclidean_events;
+                                let current_rotation = seq_a_row_state.euclidean_rotation;
                                 
                                 // Generate the rhythm first
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
                                 
                                 // Reset step position if it's beyond the new length
                                 let last_step = length - 1; // Convert to 0-based
-                                if row_state.sequencer_a_current_row_step > last_step {
+                                if seq_a_row_state.current_row_step > last_step {
                                     // Reset to beginning of the row's own cycle
-                                    row_state.sequencer_a_current_row_step = row_state.sequencer_a_first_step;
-                                    let new_step = row_state.sequencer_a_current_row_step;
-                                    self.sequencer.set_row_states(seq_y, row_state);
+                                    seq_a_row_state.current_row_step = seq_a_row_state.first_step;
+                                    let new_step = seq_a_row_state.current_row_step;
+                                    self.sequencer.set_row_states(seq_y, seq_a_row_state);
                                     // info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
                                     //       seq_y, new_step, last_step);
                                 }
                             } else {
-                                // Fallback if row_state is not available
-                                // warn!("EuclidianLength: Could not get row_state for row {}, using fallback defaults", seq_y);
+                                // Fallback if seq_a_row_state is not available
+                                // warn!("EuclidianLength: Could not get seq_a_row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, 5, length, 0);
                             }
                             
@@ -717,13 +717,13 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_ROTATION: Generating rhythm on row {} with rotation {} (step {})", seq_y, rotation, seq_x);
                             
                             // Get current euclidean parameters to preserve events and length
-                            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
-                                let current_events = row_state.sequencer_a_euclidean_events;
-                                let current_length = row_state.sequencer_a_max_step + 1; // Convert from 0-based max_step to step count
+                            if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+                                let current_events = seq_a_row_state.euclidean_events;
+                                let current_length = seq_a_row_state.max_step + 1; // Convert from 0-based max_step to step count
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, current_length, rotation);
                             } else {
-                                // Fallback if row_state is not available
-                                // warn!("EuclidianRotation: Could not get row_state for row {}, using fallback defaults", seq_y);
+                                // Fallback if seq_a_row_state is not available
+                                // warn!("EuclidianRotation: Could not get seq_a_row_state for row {}, using fallback defaults", seq_y);
                                 self.sequencer.generate_euclidean_rhythm(seq_y, 5, 32, rotation);
                             }
                             
@@ -737,24 +737,24 @@ impl SimonSaysSeeq {
                             // info!("ARM SET_MAX_STEP: Setting row {} max_step to {}", seq_y, max_step);
                             
                             // Set the max_step for this specific row
-                            if let Some(mut row_state) = self.sequencer.get_row_states(seq_y) {
-                                let old_max_step = row_state.sequencer_a_max_step;
-                                row_state.sequencer_a_max_step = max_step;
+                            if let Some(mut seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+                                let old_max_step = seq_a_row_state.max_step;
+                                seq_a_row_state.max_step = max_step;
                                 
                                 // If current step is beyond new max_step, reset to beginning of the row's own cycle
-                                if row_state.sequencer_a_current_row_step > max_step {
+                                if seq_a_row_state.current_row_step > max_step {
                                     // Reset to beginning of the row's own cycle
-                                    row_state.sequencer_a_current_row_step = row_state.sequencer_a_first_step;
+                                    seq_a_row_state.current_row_step = seq_a_row_state.first_step;
                                     // info!("ARM SET_MAX_STEP: Row {} step position reset to {} (was beyond new max_step {})", 
-                                    //       seq_y, row_state.sequencer_a_current_row_step, max_step);
+                                    //       seq_y, seq_a_row_state.current_row_step, max_step);
                                 } else if max_step == 31 {
                                     // If max_step is 31 (full 32 steps), sync this row with global master step counter
                                     let master_step = self.sequencer.get_current_position();
-                                    row_state.sequencer_a_current_row_step = master_step;
-                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_row_step);
+                                    seq_a_row_state.current_row_step = master_step;
+                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, seq_a_row_state.current_row_step);
                                 }
                                 
-                                self.sequencer.set_row_states(seq_y, row_state);
+                                self.sequencer.set_row_states(seq_y, seq_a_row_state);
                                 
                                 // Log ARM action execution to formal state logger
                                 log_arm_action_executed("SetMaxStepForRow", seq_y, seq_x, 
@@ -1279,21 +1279,21 @@ impl SimonSaysSeeq {
         // Grid display with position scrolling - 4 brightness levels - ROWS 0-6 (0-indexed)
         for seq_y in 0..=6 {
             let row_states = self.sequencer.get_row_states(seq_y);
-            if let Some(row_state) = row_states {
+            if let Some(seq_a_row_state) = row_states {
                 // Debug row state every few updates
                 static mut DEBUG_COUNTER: u32 = 0;
                 unsafe {
                     DEBUG_COUNTER += 1;
                     if DEBUG_COUNTER % 20 == 0 && seq_y <= 6 { // Debug all 7 sequencer rows, every 20 updates
                         // info!("🎯 Row {} current_step = {} (first_step={}, euclidean_length={}) [display: row {}]",
-                        //       seq_y, row_state.current_step, row_state.first_step, row_state.euclidean_length, seq_y + 1);
+                        //       seq_y, seq_a_row_state.current_step, seq_a_row_state.first_step, seq_a_row_state.euclidean_length, seq_y + 1);
                     }
                 }
 
                 // Update this row's LEDs based on pattern values and current step
                 for seq_x in 0..=15 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
+                    let is_current_step = seq_x == seq_a_row_state.current_row_step;
 
                     // Calculate brightness based on pattern and current position
                     // Enhanced brightness for better scroll position visibility
@@ -1333,9 +1333,9 @@ impl SimonSaysSeeq {
             let grid_one_id = grid_one.as_ref().unwrap();
             let grid_two_id = grid_two.as_ref().unwrap();
             
-            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+            if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
+                let is_current_step = seq_x == seq_a_row_state.current_row_step;
 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => LED_OFF,
@@ -1368,9 +1368,9 @@ impl SimonSaysSeeq {
             let grid_one_id = grid_one.as_ref().unwrap();
             let grid_two_id = grid_two.as_ref().unwrap();
             
-            if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+            if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
+                let is_current_step = seq_x == seq_a_row_state.current_row_step;
                 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => LED_OFF,     // No pattern, not current position
@@ -1498,10 +1498,10 @@ impl SimonSaysSeeq {
             info!("ARM DEBUG: Using dual-grid mode - GRID_ONE: {}, GRID_TWO: {}", grid_one_id, grid_two_id);
             
             for seq_y in 0..=6 {
-                if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
+                if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
                     for seq_x in 0..=31 {
                         let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
+                        let is_current_step = seq_x == seq_a_row_state.current_row_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
                             (false, false) => LED_OFF,     // No pattern, not current position
@@ -1547,12 +1547,12 @@ impl SimonSaysSeeq {
             
             info!("ARM DEBUG: refresh_all_row_leds() called for row {} on both grids", row);
             
-            if let Some(row_state) = self.sequencer.get_row_states(row) {
-                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, row_state.sequencer_a_current_row_step);
+            if let Some(seq_a_row_state) = self.sequencer.get_row_states(row) {
+                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, seq_a_row_state.current_row_step);
                 
                 for seq_x in 0..=31 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
+                    let is_current_step = seq_x == seq_a_row_state.current_row_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => LED_OFF,
