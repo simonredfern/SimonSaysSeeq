@@ -695,10 +695,10 @@ impl SimonSaysSeeq {
                                 
                                 // Reset step position if it's beyond the new length
                                 let last_step = length - 1; // Convert to 0-based
-                                if row_state.sequencer_a_current_step > last_step {
+                                if row_state.sequencer_a_current_row_step > last_step {
                                     // Reset to beginning of the row's own cycle
-                                    row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
-                                    let new_step = row_state.sequencer_a_current_step;
+                                    row_state.sequencer_a_current_row_step = row_state.sequencer_a_first_step;
+                                    let new_step = row_state.sequencer_a_current_row_step;
                                     self.sequencer.set_row_states(seq_y, row_state);
                                     // info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})", 
                                     //       seq_y, new_step, last_step);
@@ -742,16 +742,16 @@ impl SimonSaysSeeq {
                                 row_state.sequencer_a_max_step = max_step;
                                 
                                 // If current step is beyond new max_step, reset to beginning of the row's own cycle
-                                if row_state.sequencer_a_current_step > max_step {
+                                if row_state.sequencer_a_current_row_step > max_step {
                                     // Reset to beginning of the row's own cycle
-                                    row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
+                                    row_state.sequencer_a_current_row_step = row_state.sequencer_a_first_step;
                                     // info!("ARM SET_MAX_STEP: Row {} step position reset to {} (was beyond new max_step {})", 
-                                    //       seq_y, row_state.sequencer_a_current_step, max_step);
+                                    //       seq_y, row_state.sequencer_a_current_row_step, max_step);
                                 } else if max_step == 31 {
                                     // If max_step is 31 (full 32 steps), sync this row with global master step counter
                                     let master_step = self.sequencer.get_current_position();
-                                    row_state.sequencer_a_current_step = master_step;
-                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
+                                    row_state.sequencer_a_current_row_step = master_step;
+                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_row_step);
                                 }
                                 
                                 self.sequencer.set_row_states(seq_y, row_state);
@@ -1293,7 +1293,7 @@ impl SimonSaysSeeq {
                 // Update this row's LEDs based on pattern values and current step
                 for seq_x in 0..=15 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
 
                     // Calculate brightness based on pattern and current position
                     // Enhanced brightness for better scroll position visibility
@@ -1335,7 +1335,7 @@ impl SimonSaysSeeq {
             
             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.sequencer_a_current_step;
+                let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => LED_OFF,
@@ -1370,7 +1370,7 @@ impl SimonSaysSeeq {
             
             if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                 let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                let is_current_step = seq_x == row_state.sequencer_a_current_step;
+                let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
                 
                 let brightness = match (pattern_value > 0, is_current_step) {
                     (false, false) => LED_OFF,     // No pattern, not current position
@@ -1501,7 +1501,7 @@ impl SimonSaysSeeq {
                 if let Some(row_state) = self.sequencer.get_row_states(seq_y) {
                     for seq_x in 0..=31 {
                         let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
-                        let is_current_step = seq_x == row_state.sequencer_a_current_step;
+                        let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
                         
                         let brightness = match (pattern_value > 0, is_current_step) {
                             (false, false) => LED_OFF,     // No pattern, not current position
@@ -1548,11 +1548,11 @@ impl SimonSaysSeeq {
             info!("ARM DEBUG: refresh_all_row_leds() called for row {} on both grids", row);
             
             if let Some(row_state) = self.sequencer.get_row_states(row) {
-                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, row_state.sequencer_a_current_step);
+                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, row_state.sequencer_a_current_row_step);
                 
                 for seq_x in 0..=31 {
                     let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == row_state.sequencer_a_current_step;
+                    let is_current_step = seq_x == row_state.sequencer_a_current_row_step;
                     
                     let brightness = match (pattern_value > 0, is_current_step) {
                         (false, false) => LED_OFF,

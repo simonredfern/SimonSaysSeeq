@@ -56,12 +56,12 @@ pub struct NoteEvent {
 /// Row settings for each sequence row
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SequencerARowStates {
-    pub sequencer_a_current_step: usize,
+    pub sequencer_a_current_row_step: usize,
     pub sequencer_a_first_step: usize,
     pub sequencer_a_max_step: usize,
     pub sequencer_a_euclidean_events: usize,
     pub sequencer_a_euclidean_rotation: usize,
-    pub sequencer_a_previous_step: usize,
+    pub sequencer_a_previous_row_step: usize,
     pub sequencer_a_midi_note: u8,
     pub sequencer_a_midi_velocity: u8,
     pub sequencer_a_midi_channel: u8,
@@ -89,12 +89,12 @@ impl Default for MidiNoteEvent {
 impl Default for SequencerARowStates {
     fn default() -> Self {
         Self {
-            sequencer_a_current_step: 0,
+            sequencer_a_current_row_step: 0,
             sequencer_a_first_step: 0,
             sequencer_a_max_step: 31,
             sequencer_a_euclidean_events: 5,
             sequencer_a_euclidean_rotation: 0,
-            sequencer_a_previous_step: 31,
+            sequencer_a_previous_row_step: 31,
             sequencer_a_midi_note: LOWEST_MIDI_NOTE_NUMBER_FOR_GATE + 1, // Default to first gate note (48)
             sequencer_a_midi_velocity: 100,
             sequencer_a_midi_channel: 1,
@@ -287,7 +287,7 @@ impl Sequencer {
             // Reset to beginning
             state.sequencer_a_current_master_step = 0;
             for row_state in &mut state.sequencer_a_row_states {
-                row_state.sequencer_a_current_step = 0;
+                row_state.sequencer_a_current_row_step = 0;
             }
 
 
@@ -303,7 +303,7 @@ impl Sequencer {
             // Reset to beginning
             state.sequencer_a_current_master_step = 0;
             for row_state in &mut state.sequencer_a_row_states {
-                row_state.sequencer_a_current_step = 0;
+                row_state.sequencer_a_current_row_step = 0;
             }
             // Log the stack trace to identify what triggered the stop
             let trace = std::backtrace::Backtrace::capture();
@@ -530,18 +530,18 @@ impl Sequencer {
         // Advance all row step counters and collect step info for logging
         let mut row_steps = Vec::new();
         for (row_idx, row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
-            let old_step = row_state.sequencer_a_current_step;
-            row_state.sequencer_a_previous_step = old_step;
-            row_state.sequencer_a_current_step += 1;
+            let old_step = row_state.sequencer_a_current_row_step;
+            row_state.sequencer_a_previous_row_step = old_step;
+            row_state.sequencer_a_current_row_step += 1;
             // Wrap step counter if it exceeds the max_step
             // max_step is the maximum valid step index (e.g., 31 for 32 steps)
-            if row_state.sequencer_a_current_step > row_state.sequencer_a_max_step {
-                row_state.sequencer_a_current_step = row_state.sequencer_a_first_step;
+            if row_state.sequencer_a_current_row_step > row_state.sequencer_a_max_step {
+                row_state.sequencer_a_current_row_step = row_state.sequencer_a_first_step;
             }
-            row_steps.push((row_idx, row_state.sequencer_a_current_step));
+            row_steps.push((row_idx, row_state.sequencer_a_current_row_step));
             if row_idx <= 6 { // Debug all 7 sequencer rows (0-indexed)
                  // debug!("🎯 Row {} step advancement: {} -> {} (range: {}-{})",
-                 //       row_idx, old_step, row_state.sequencer_a_current_step,
+                 //       row_idx, old_step, row_state.sequencer_a_current_row_step,
                  //       row_state.sequencer_a_first_step, row_state.sequencer_a_max_step);
             }
         }
@@ -566,7 +566,7 @@ impl Sequencer {
             state.sequencer_a_row_states.iter()
                 .enumerate()
                 .take(7) // Only show rows 0-6 (sequencer rows)
-                .map(|(i, row)| format!("R{}:{:02}", i, row.sequencer_a_current_step))
+                .map(|(i, row)| format!("R{}:{:02}", i, row.sequencer_a_current_row_step))
                 .collect::<Vec<_>>()
                 .join(", ")
         );
@@ -579,7 +579,7 @@ impl Sequencer {
             }
 
             if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
-                let row_step = row_state.sequencer_a_current_step;
+                let row_step = row_state.sequencer_a_current_row_step;
 
                 // Bounds check: ensure row_step is valid for grid access
                 if row_step >= state.sequencer_a_grid.len() {
@@ -621,13 +621,13 @@ impl Sequencer {
                 // DEBUG: Track LED step position for row 0
                 if row_idx == 0 || row_idx == 6 {
                     info!("💡 LED DEBUG Row {}: Sending grid update old_step={} -> new_step={}",
-                          row_idx, row_state.sequencer_a_previous_step, row_state.sequencer_a_current_step);
+                          row_idx, row_state.sequencer_a_previous_row_step, row_state.sequencer_a_current_row_step);
                 }
 
                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,
-                    old_step: row_state.sequencer_a_previous_step,
-                    new_step: row_state.sequencer_a_current_step,
+                    old_step: row_state.sequencer_a_previous_row_step,
+                    new_step: row_state.sequencer_a_current_row_step,
                 }) {
                     // warn!("Failed to send grid update event: {}", e);
                 }
@@ -694,8 +694,8 @@ impl Sequencer {
         let mut row_states_snapshot = state.sequencer_a_row_states.clone();
         for row_state in &mut row_states_snapshot {
             // Don't save current step positions - these should not be undone
-            row_state.sequencer_a_current_step = 0;
-            row_state.sequencer_a_previous_step = 0;
+            row_state.sequencer_a_current_row_step = 0;
+            row_state.sequencer_a_previous_row_step = 0;
         }
 
         let snapshot = StateSnapshot {
@@ -734,8 +734,8 @@ impl Sequencer {
         let current_state = self.state.lock().unwrap();
         let mut current_row_states = current_state.sequencer_a_row_states.clone();
         for row_state in &mut current_row_states {
-            row_state.sequencer_a_current_step = 0;
-            row_state.sequencer_a_previous_step = 0;
+            row_state.sequencer_a_current_row_step = 0;
+            row_state.sequencer_a_previous_row_step = 0;
         }
 
         let current_snapshot = StateSnapshot {
@@ -748,7 +748,7 @@ impl Sequencer {
 
         // Preserve current positions before restoring
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
+            .map(|rs| (rs.sequencer_a_current_row_step, rs.sequencer_a_previous_row_step))
             .collect();
         drop(current_state);
 
@@ -763,8 +763,8 @@ impl Sequencer {
             // Restore row states but keep current positions
             for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
                 if i < current_positions.len() {
-                    row_state.sequencer_a_current_step = current_positions[i].0;
-                    row_state.sequencer_a_previous_step = current_positions[i].1;
+                    row_state.sequencer_a_current_row_step = current_positions[i].0;
+                    row_state.sequencer_a_previous_row_step = current_positions[i].1;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -790,8 +790,8 @@ impl Sequencer {
         let current_state = self.state.lock().unwrap();
         let mut current_row_states = current_state.sequencer_a_row_states.clone();
         for row_state in &mut current_row_states {
-            row_state.sequencer_a_current_step = 0;
-            row_state.sequencer_a_previous_step = 0;
+            row_state.sequencer_a_current_row_step = 0;
+            row_state.sequencer_a_previous_row_step = 0;
         }
 
         let current_snapshot = StateSnapshot {
@@ -804,7 +804,7 @@ impl Sequencer {
 
         // Preserve current positions before restoring
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
+            .map(|rs| (rs.sequencer_a_current_row_step, rs.sequencer_a_previous_row_step))
             .collect();
         drop(current_state);
 
@@ -819,8 +819,8 @@ impl Sequencer {
             // Restore row states but keep current positions
             for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
                 if i < current_positions.len() {
-                    row_state.sequencer_a_current_step = current_positions[i].0;
-                    row_state.sequencer_a_previous_step = current_positions[i].1;
+                    row_state.sequencer_a_current_row_step = current_positions[i].0;
+                    row_state.sequencer_a_previous_row_step = current_positions[i].1;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -1426,14 +1426,14 @@ mod tests {
             let mut state = sequencer.state.lock().unwrap();
             // Simulate some rows having advanced to different positions
             if state.sequencer_a_row_states.len() >= 8 {
-                state.sequencer_a_row_states[0].sequencer_a_current_step = 5;
-                state.sequencer_a_row_states[1].sequencer_a_current_step = 8;
-                state.sequencer_a_row_states[2].sequencer_a_current_step = 12;
-                state.sequencer_a_row_states[3].sequencer_a_current_step = 3;
-                state.sequencer_a_row_states[4].sequencer_a_current_step = 15;
-                state.sequencer_a_row_states[5].sequencer_a_current_step = 7;
-                state.sequencer_a_row_states[6].sequencer_a_current_step = 20;
-                state.sequencer_a_row_states[7].sequencer_a_current_step = 11;
+                state.sequencer_a_row_states[0].sequencer_a_current_row_step = 5;
+                state.sequencer_a_row_states[1].sequencer_a_current_row_step = 8;
+                state.sequencer_a_row_states[2].sequencer_a_current_row_step = 12;
+                state.sequencer_a_row_states[3].sequencer_a_current_row_step = 3;
+                state.sequencer_a_row_states[4].sequencer_a_current_row_step = 15;
+                state.sequencer_a_row_states[5].sequencer_a_current_row_step = 7;
+                state.sequencer_a_row_states[6].sequencer_a_current_row_step = 20;
+                state.sequencer_a_row_states[7].sequencer_a_current_row_step = 11;
             }
         }
 
@@ -1441,10 +1441,10 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             if state.sequencer_a_row_states.len() >= 8 {
-                assert_eq!(state.sequencer_a_row_states[0].sequencer_a_current_step, 5);
-                assert_eq!(state.sequencer_a_row_states[1].sequencer_a_current_step, 8);
-                assert_eq!(state.sequencer_a_row_states[2].sequencer_a_current_step, 12);
-                assert_eq!(state.sequencer_a_row_states[7].sequencer_a_current_step, 11);
+                assert_eq!(state.sequencer_a_row_states[0].sequencer_a_current_row_step, 5);
+                assert_eq!(state.sequencer_a_row_states[1].sequencer_a_current_row_step, 8);
+                assert_eq!(state.sequencer_a_row_states[2].sequencer_a_current_row_step, 12);
+                assert_eq!(state.sequencer_a_row_states[7].sequencer_a_current_row_step, 11);
             }
         }
 
@@ -1455,7 +1455,7 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
-                assert_eq!(row_state.sequencer_a_current_step, 0,
+                assert_eq!(row_state.sequencer_a_current_row_step, 0,
                     "Row {} counter should be reset to 0 after stop", row_idx);
             }
         }
@@ -1465,7 +1465,7 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
-                assert_eq!(row_state.sequencer_a_current_step, 0,
+                assert_eq!(row_state.sequencer_a_current_row_step, 0,
                     "Row {} counter should remain at 0 after restart", row_idx);
             }
         }
@@ -1479,10 +1479,10 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
-                assert_eq!(row_state.sequencer_a_current_step, 0, "Row {} should start at step 0", row_idx);
+                assert_eq!(row_state.sequencer_a_current_row_step, 0, "Row {} should start at step 0", row_idx);
                 assert_eq!(row_state.sequencer_a_first_step, 0, "Row {} should have first_step=0", row_idx);
                 assert_eq!(row_state.sequencer_a_max_step, 31, "Row {} should have max_step=31 by default", row_idx);
-                assert_eq!(row_state.sequencer_a_previous_step, 31, "Row {} should have previous_step=31", row_idx);
+                assert_eq!(row_state.sequencer_a_previous_row_step, 31, "Row {} should have previous_step=31", row_idx);
             }
         }
 
@@ -1494,19 +1494,19 @@ mod tests {
 
             // Simulate advancing through the full range
             for expected_step in 0..=31 {
-                assert_eq!(row.sequencer_a_current_step, expected_step,
+                assert_eq!(row.sequencer_a_current_row_step, expected_step,
                     "Row step counter should be {} at position {}", expected_step, expected_step);
 
                 // Advance step (simulating the advance_step logic)
-                row.sequencer_a_previous_step = row.sequencer_a_current_step;
-                row.sequencer_a_current_step += 1;
-                if row.sequencer_a_current_step > row.sequencer_a_max_step {
-                    row.sequencer_a_current_step = row.sequencer_a_first_step;
+                row.sequencer_a_previous_row_step = row.sequencer_a_current_row_step;
+                row.sequencer_a_current_row_step += 1;
+                if row.sequencer_a_current_row_step > row.sequencer_a_max_step {
+                    row.sequencer_a_current_row_step = row.sequencer_a_first_step;
                 }
             }
 
             // After 32 steps (0-31), should wrap back to 0
-            assert_eq!(row.sequencer_a_current_step, 0, "Should wrap back to 0 after step 31");
+            assert_eq!(row.sequencer_a_current_row_step, 0, "Should wrap back to 0 after step 31");
         }
 
         // Test with custom range
@@ -1517,19 +1517,19 @@ mod tests {
             // Set custom range: steps 4-15 (12 step loop starting at step 4)
             row.sequencer_a_first_step = 4;
             row.sequencer_a_max_step = 15;
-            row.sequencer_a_current_step = 4;
+            row.sequencer_a_current_row_step = 4;
 
             // Advance through custom range
             for i in 0..20 { // Test more than one full cycle
                 let expected = if i <= 11 { 4 + i } else { 4 + ((i - 12) % 12) };
-                assert_eq!(row.sequencer_a_current_step, expected,
+                assert_eq!(row.sequencer_a_current_row_step, expected,
                     "Custom range: step {} should be at position {}", i, expected);
 
                 // Advance
-                row.sequencer_a_previous_step = row.sequencer_a_current_step;
-                row.sequencer_a_current_step += 1;
-                if row.sequencer_a_current_step > row.sequencer_a_max_step {
-                    row.sequencer_a_current_step = row.sequencer_a_first_step;
+                row.sequencer_a_previous_row_step = row.sequencer_a_current_row_step;
+                row.sequencer_a_current_row_step += 1;
+                if row.sequencer_a_current_row_step > row.sequencer_a_max_step {
+                    row.sequencer_a_current_row_step = row.sequencer_a_first_step;
                 }
             }
         }
