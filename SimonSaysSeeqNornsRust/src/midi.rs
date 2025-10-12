@@ -362,7 +362,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} ON vel:{} (sim)", note_name, velocity));
             
-            trace!("MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+            debug!("MIDI Note ON (no device): {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
         }
         
         Ok(())
@@ -702,9 +702,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} OFF", note_name));
                 
-                trace!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+                debug!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
             } else {
-                trace!("MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
+                debug!("MIDI Note OFF (no device): {} ch: {}", note, channel + 1);
             }
         }
         
@@ -718,7 +718,7 @@ impl MidiManager {
             let mut last_note = self.last_note_sent.lock().unwrap();
             *last_note = Some(format!("{} OFF", note_name));
             
-            trace!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
+            debug!("MIDI Note OFF: {} ({}), ch: {}", note, note_name, channel + 1);
         }
         
         Ok(())

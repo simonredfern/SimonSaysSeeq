@@ -1154,8 +1154,8 @@ impl SimonSaysSeeq {
         
         // DEBUG: Log grid update details for rows 0 and 6
         if row == 0 || row == 6 {
-            info!("🔥 LED HANDLER Row {}: Processing LED update old_step={} -> new_step={}", row, old_step, new_step);
-            info!("   Connected grids: {} grids", connected_grids.len());
+            trace!("🔥 LED HANDLER Row {}: Processing LED update old_step={} -> new_step={}", row, old_step, new_step);
+            trace!("   Connected grids: {} grids", connected_grids.len());
         }
         
         if connected_grids.len() >= 2 {
