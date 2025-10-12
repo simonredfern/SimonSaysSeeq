@@ -42,7 +42,10 @@
 5. Provide concise summary to user
 
 ## Code Standards
-- Prefer working solutions over perfect code
+- Don't fake results
+- Don't Mock unless explicitly asked to.
+- Keep it simple (KISS)
+- Don't Repeat Yourself (DRY)
 - Test changes incrementally
 - Document significant findings in ai.log
 - Use appropriate feature flags (--features desktop for grid testing)
