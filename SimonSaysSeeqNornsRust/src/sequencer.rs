@@ -528,7 +528,10 @@ impl Sequencer {
         }
 
         // Advance all row step counters and collect step info for logging
-        let mut row_steps = Vec::new();
+        // formal_state_row_steps will contain tuples of (row_index, new_step_position) for each row
+        // e.g., [(0, 5), (1, 5), (2, 5), ..., (6, 0), ...] 
+        // This is logged to formal_state.log as StepAdvancement event for debugging
+        let mut formal_state_row_steps = Vec::new();
         for (row_idx, seq_a_row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
             seq_a_row_state.previous_row_step = seq_a_row_state.current_row_step;
             seq_a_row_state.current_row_step += 1;
@@ -537,11 +540,12 @@ impl Sequencer {
             if seq_a_row_state.current_row_step > seq_a_row_state.max_step {
                 seq_a_row_state.current_row_step = seq_a_row_state.first_step;
             }
-            row_steps.push((row_idx, seq_a_row_state.current_row_step));
+            // Collect the row's new position for logging (doesn't affect sequencer logic)
+            formal_state_row_steps.push((row_idx, seq_a_row_state.current_row_step));
         }
 
         // Log step advancement to formal state logger
-        log_step_advancement(state.sequencer_a_current_master_step, 0, row_steps);
+        log_step_advancement(state.sequencer_a_current_master_step, 0, formal_state_row_steps);
 
         // Update CO2 counters if we have data
         if state.total_step_co2_count > 0 {
