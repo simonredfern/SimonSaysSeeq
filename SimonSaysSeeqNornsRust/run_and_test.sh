@@ -59,8 +59,8 @@ echo -e "${GREEN}✅ Sequencer started (PID: $SEQUENCER_PID)${NC}"
 echo
 
 # Wait for sequencer to initialize
-echo -e "${YELLOW}⏳ Waiting 3 seconds for sequencer initialization...${NC}"
-sleep 3
+echo -e "${YELLOW}⏳ Waiting 60 seconds for sequencer initialization...${NC}"
+sleep 60
 
 # Function to run a test
 run_test() {

@@ -8,6 +8,8 @@
 - Do NOT create excessive documentation files unless explicitly requested
 - Do NOT write lengthy summaries or guides after making simple changes
 - Respond briefly - just state what was done and if it worked
+- Assume the worse.
+- Assume things a not working unless explicitly stated otherwise.
 
 ## Logging Protocol
 - Always update ai.log with commands run and results
