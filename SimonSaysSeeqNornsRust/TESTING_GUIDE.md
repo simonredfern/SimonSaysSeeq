@@ -2,17 +2,17 @@
 
 ## Overview
 
-The `direct_test` framework provides tick-synchronized testing of the SimonSaysSeeq sequencer using MIDI clock and SysEx injection.
+The `clock_driven_test` framework provides tick-synchronized testing of the SimonSaysSeeq sequencer using MIDI clock and SysEx injection.
 
 ## Prerequisites
 
 ⚠️ **CRITICAL**: The main sequencer application MUST be running for tests to work!
 
 The test framework works by:
-1. `direct_test` sends MIDI clock and SysEx commands
+1. `clock_driven_test` sends MIDI clock and SysEx commands
 2. `simon_says_seeq` receives these commands and updates state
 3. `simon_says_seeq` writes state changes to `formal_state.log`
-4. `direct_test` reads `formal_state.log` to verify state
+4. `clock_driven_test` reads `formal_state.log` to verify state
 
 ## Running Tests
 
@@ -31,7 +31,7 @@ Wait for it to fully start (you'll see grid connection messages, etc.)
 In terminal 2:
 ```bash
 cd SimonSaysSeeqNornsRust
-cargo run --release --bin direct_test -- --script test1.json
+cargo run --release --bin clock_driven_test -- --script test1.json
 ```
 
 When prompted, select the same MIDI port for both applications (usually "Midi Through").
@@ -213,7 +213,7 @@ Spread button events across 3-4 ticks for realistic timing:
 
 ## See Also
 
-- `MIGRATION_TO_DIRECT_TEST.md` - Framework design and migration guide
+- `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` - Framework design and migration guide
 - `CLEANUP_SUMMARY.md` - What was removed and why
 - `test1.json` - Working example of multi-row verification
 - `test2.json` - Working example of SysEx configuration changes
@@ -292,7 +292,7 @@ This ensures the sequencer has time to write the step advancement to the log bef
 Test framework can now verify that the sequencer sends MIDI notes at the correct steps!
 
 **How it works:**
-1. `direct_test` opens MIDI input to listen for notes from sequencer
+1. `clock_driven_test` opens MIDI input to listen for notes from sequencer
 2. All received MIDI notes are buffered with step numbers
 3. `VerifyMidiNote` checks if expected note was received during that step
 
@@ -364,7 +364,7 @@ Select: 1
 
 Run with:
 ```bash
-cargo run --release --bin direct_test -- --script test3.json
+cargo run --release --bin clock_driven_test -- --script test3.json
 ```
 
 ### What Gets Verified:

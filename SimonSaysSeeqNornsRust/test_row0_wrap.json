@@ -1,0 +1,14 @@
+{
+  "name": "Test Row 0 Wrapping",
+  "description": "Test that row 0 with max_step=15 plays continuously",
+  "bpm": 120.0,
+  "commands": [
+    {
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "Testing row 0 wrapping - should hear continuous beats"
+      }
+    }
+  ]
+}

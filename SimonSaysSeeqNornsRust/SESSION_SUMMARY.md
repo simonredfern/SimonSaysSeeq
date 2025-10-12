@@ -2,7 +2,7 @@
 
 ## Major Accomplishments
 
-### 1. ✅ Migrated from automated_test_clock to direct_test
+### 1. ✅ Migrated from automated_test_clock to clock_driven_test
 - Removed 820+ line timing-based test framework
 - Created tick-synchronized test framework
 - Eliminated race conditions and timing assumptions
@@ -28,7 +28,7 @@
 
 ### 5. ✅ Comprehensive Documentation
 - `TESTING_GUIDE.md` - Complete guide for running tests
-- `MIGRATION_TO_DIRECT_TEST.md` - Framework migration details
+- `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` - Framework migration details
 - `CLEANUP_SUMMARY.md` - What was removed and why
 - `SESSION_SUMMARY.md` - This summary
 
@@ -47,7 +47,7 @@
 - Legacy test examples
 
 ### Files Modified
-- `src/bin/direct_test.rs` - Added sequencer requirement warning
+- `src/bin/clock_driven_test.rs` - Added sequencer requirement warning
 - `src/clock_generator.rs` - Tick-synchronized test execution
 - `src/formal_state_logger.rs` - Removed TestModeInjector
 - `src/main.rs` - Removed file injection polling
@@ -105,7 +105,7 @@ Spread across ticks: 18 (press shift) → 19 (press button) → 20 (release butt
 
 ## Key Learnings
 
-1. **Tests require sequencer running** - `direct_test` sends MIDI, `simon_says_seeq` processes it
+1. **Tests require sequencer running** - `clock_driven_test` sends MIDI, `simon_says_seeq` processes it
 2. **State isolation is critical** - Config changes persist unless pattern is reloaded
 3. **Button timing matters** - Spread press/release across ticks for realistic simulation
 4. **Tick-synchronized > time-based** - Eliminates race conditions and timing assumptions
@@ -119,7 +119,7 @@ Spread across ticks: 18 (press shift) → 19 (press button) → 20 (release butt
 cargo run --release --bin simon_says_seeq
 
 # Terminal 2: Run test
-cargo run --release --bin direct_test -- --script test1.json
+cargo run --release --bin clock_driven_test -- --script test1.json
 ```
 
 ### Creating Tests

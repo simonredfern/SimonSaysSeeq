@@ -12,8 +12,8 @@ use simon_says_seeq_rust::clock_generator::{ClockGenerator, ClockConfig};
 use simon_says_seeq_rust::test_script::DirectTestScript;
 
 #[derive(Parser, Debug)]
-#[clap(name = "direct_test")]
-#[clap(about = "Run direct tick-synchronized tests")]
+#[clap(name = "clock_driven_test")]
+#[clap(about = "Run clock-driven tick-synchronized tests")]
 struct Args {
     #[arg(long)]
     script: String,
@@ -22,7 +22,7 @@ struct Args {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    println!("🧪 Direct Test Runner");
+    println!("🧪 Clock-Driven Test Runner");
     println!("═══════════════════════════════════════════════════════");
     println!();
 
@@ -41,8 +41,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("═══════════════════════════════════════════════════════");
     println!();
     
-    println!("⚠️  IMPORTANT: The main sequencer application must be running!");
-    println!("   Start it in another terminal: cargo run --release --bin simon_says_seeq");
+    println!("⚠️  IMPORTANT: The main sequencer application must be running in test mode!");
+    println!("   Start it in another terminal: cargo run --release --bin simon_says_seeq -- --test-mode");
     println!("   The sequencer receives MIDI clock/SysEx and writes formal_state.log");
     println!();
 

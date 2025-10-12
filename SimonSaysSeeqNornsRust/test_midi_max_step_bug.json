@@ -1,0 +1,181 @@
+{
+  "name": "MIDI Max Step Bug Test",
+  "description": "Tests MIDI output for row with max_step=15 to verify it triggers every 16 steps, not every 32 steps",
+  "bpm": 30.0,
+  "comments": [
+    "This test specifically checks for the 'MIDI silent half the time' bug",
+    "Row 3 has max_step=15 (16-step cycle) with a note programmed on step 0",
+    "Expected: MIDI note 51 should trigger at master steps 0, 16, 32, 48, 64",
+    "Bug symptom: MIDI note 51 only triggers at master steps 0, 32, 64 (every 32 steps instead of 16)",
+    "",
+    "The row should play its 16-step pattern twice per 32 master steps",
+    "If it only plays once per 32 master steps, that's the 'half the time' bug"
+  ],
+  "commands": [
+    {
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "🧪 MIDI Max Step Bug Test - Row 3 (max_step=15, note on step 0)"
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 0: Row 3 at step 0 - Expecting MIDI note 51"
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "VerifyState",
+        "step": 0,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 0,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 16: Row 3 should wrap to step 0 - Expecting MIDI note 51"
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "VerifyState",
+        "step": 16,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 99,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 16,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn",
+        "comment": "CRITICAL: Row 3 cycles every 16 steps, so should trigger here!"
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 32: Row 3 wrapped again to step 0 - Expecting MIDI note 51"
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyState",
+        "step": 32,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 195,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 32,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 291,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 48: Row 3 wrapped to step 0 again - Expecting MIDI note 51"
+      }
+    },
+    {
+      "at_tick": 291,
+      "action": {
+        "type": "VerifyState",
+        "step": 48,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 291,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 48,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn",
+        "comment": "CRITICAL: Should trigger here at step 48"
+      }
+    },
+    {
+      "at_tick": 387,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Master Step 64: Row 3 wrapped to step 0 again - Expecting MIDI note 51"
+      }
+    },
+    {
+      "at_tick": 387,
+      "action": {
+        "type": "VerifyState",
+        "step": 64,
+        "row": 3,
+        "expected": 0
+      }
+    },
+    {
+      "at_tick": 387,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 64,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 393,
+      "action": {
+        "type": "LogMessage",
+        "message": "✅ Test Complete"
+      }
+    },
+    {
+      "at_tick": 393,
+      "action": {
+        "type": "LogMessage",
+        "message": "Expected: 5 MIDI triggers (at steps 0, 16, 32, 48, 64)"
+      }
+    },
+    {
+      "at_tick": 393,
+      "action": {
+        "type": "LogMessage",
+        "message": "Bug would show: 3 MIDI triggers (only at steps 0, 32, 64)"
+      }
+    }
+  ]
+}

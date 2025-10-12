@@ -6,8 +6,8 @@ Removed legacy file-based button injection system in favor of superior SysEx MID
 ## Files Deleted
 - ✅ `button_a.txt` - Legacy button injection file A
 - ✅ `button_b.txt` - Legacy button injection file B  
-- ✅ `examples/test_16_step_midi_logging.rs` - Superseded by direct_test
-- ✅ `src/automated_test_clock.rs` - Superseded by direct_test (removed earlier)
+- ✅ `examples/test_16_step_midi_logging.rs` - Superseded by clock_driven_test
+- ✅ `src/automated_test_clock.rs` - Superseded by clock_driven_test (removed earlier)
 
 ## Code Removed
 - ✅ `TestModeInjector` struct (110 lines)
@@ -43,7 +43,7 @@ Removed legacy file-based button injection system in favor of superior SysEx MID
 All key binaries build successfully:
 ```bash
 ✅ cargo build --release --bin simon_says_seeq
-✅ cargo build --release --bin direct_test
+✅ cargo build --release --bin clock_driven_test
 ✅ cargo build --release --bin midi_clock_generator
 ✅ cargo build --release --bin midi_clock_detector
 ```
@@ -88,7 +88,7 @@ let test_events = self.test_injector.check_injections();
 
 ## Documentation
 
-See `MIGRATION_TO_DIRECT_TEST.md` for complete documentation of:
+See `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` for complete documentation of:
 - Old vs new test framework comparison
 - SysEx injection format and examples
 - State isolation between tests

@@ -8,7 +8,7 @@ Successfully migrated from timing-based testing to tick-synchronized testing wit
 
 ### 1. ✅ Test Framework Migration
 - **Removed**: `automated_test_clock` (820+ lines, timing-based)
-- **Created**: `direct_test` (tick-synchronized)
+- **Created**: `clock_driven_test` (tick-synchronized)
 - **Result**: Precise, reliable testing with zero timing ambiguity
 
 ### 2. ✅ Legacy Code Cleanup
@@ -42,7 +42,7 @@ Successfully migrated from timing-based testing to tick-synchronized testing wit
 ### 5. ✅ Comprehensive Documentation
 Created 6 markdown files:
 1. `TESTING_GUIDE.md` - Complete guide for running tests
-2. `MIGRATION_TO_DIRECT_TEST.md` - Framework design and migration
+2. `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` - Framework design and migration
 3. `CLEANUP_SUMMARY.md` - What was removed and why
 4. `SESSION_SUMMARY.md` - Session overview
 5. `QUICK_START_TESTING.md` - Quick reference
@@ -109,7 +109,7 @@ Press/release over 3-4 ticks (e.g., 22-25)
 - TestModeInjector struct
 
 ### Files Updated (10)
-- `src/bin/direct_test.rs` - Added warnings and clean state
+- `src/bin/clock_driven_test.rs` - Added warnings and clean state
 - `src/clock_generator.rs` - Tick-synchronized execution
 - `src/formal_state_logger.rs` - Removed TestModeInjector
 - `src/main.rs` - Removed file injection polling
@@ -171,10 +171,10 @@ cargo run --release --bin simon_says_seeq
 cd SimonSaysSeeqNornsRust
 
 # Test 1: Multi-row verification
-cargo run --release --bin direct_test -- --script test1.json
+cargo run --release --bin clock_driven_test -- --script test1.json
 
 # Test 2: Multi-row SysEx changes
-cargo run --release --bin direct_test -- --script test2.json
+cargo run --release --bin clock_driven_test -- --script test2.json
 ```
 
 **Both must use same MIDI port** (usually "Midi Through")

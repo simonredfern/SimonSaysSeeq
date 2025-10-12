@@ -11,9 +11,9 @@ cargo run --release --bin simon_says_seeq
 ### Terminal 2: Run Test
 ```bash
 cd SimonSaysSeeqNornsRust
-cargo run --release --bin direct_test -- --script test1.json
+cargo run --release --bin clock_driven_test -- --script test1.json
 # or
-cargo run --release --bin direct_test -- --script test2.json
+cargo run --release --bin clock_driven_test -- --script test2.json
 ```
 
 **Important**: Both must use the same MIDI port (usually "Midi Through:Midi Through Port-0")
@@ -33,4 +33,4 @@ cargo run --release --bin direct_test -- --script test2.json
 
 - `TESTING_GUIDE.md` - Complete testing guide
 - `SESSION_SUMMARY.md` - What was accomplished
-- `MIGRATION_TO_DIRECT_TEST.md` - Technical details
+- `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` - Technical details

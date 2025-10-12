@@ -1,4 +1,4 @@
-# Test Mode Guide
+# Test Mode Guide (Clock-Driven Tests)
 
 ## Overview
 
@@ -76,13 +76,13 @@ cd SimonSaysSeeqNornsRust
 cargo run --release --bin simon_says_seeq -- --test-mode
 ```
 
-### Terminal 2: Run Test
+### Terminal 2: Run Clock-Driven Test
 ```bash
 cd SimonSaysSeeqNornsRust
-cargo run --release --bin direct_test -- --script test3.json
+cargo run --release --bin clock_driven_test -- --script test3.json
 ```
 
-The test will automatically:
+The clock-driven test will automatically:
 1. Send SysEx query `0x10` to verify test mode
 2. Fail immediately if sequencer is not in test mode
 3. Proceed with test execution if verified
@@ -145,7 +145,7 @@ let mut app = SimonSaysSeeq::new_with_test_mode(test_mode)?;
 }
 ```
 
-### Direct Test Framework
+### Clock-Driven Test Framework
 
 **Test Initialization:**
 ```rust
@@ -203,6 +203,6 @@ Potential improvements to test mode:
 ## Related Documentation
 
 - `TESTING_GUIDE.md` - Overview of testing framework
-- `MIGRATION_TO_DIRECT_TEST.md` - Technical details of direct_test
+- `MIGRATION_TO_CLOCK_DRIVEN_TEST.md` - Technical details of clock_driven_test
 - `SYSEX_BUTTON_REFERENCE.md` - SysEx command reference
-- `test3.json` - Example test script using test mode
+- `test3.json` - Example test script using test mode with clock-driven tests

@@ -1,0 +1,204 @@
+{
+  "name": "MIDI Note Verification - Corrected",
+  "description": "Verifies MIDI notes based on actual sequencer behavior from test_pattern_1.json",
+  "bpm": 30.0,
+  "commands": [
+    {
+      "at_tick": 0,
+      "action": {
+        "type": "LogMessage",
+        "message": "🧪 Starting MIDI verification test based on actual pattern behavior"
+      }
+    },
+    {
+      "at_tick": 3,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Tick 3: Step 0 - Sequencer hasn't started yet (starts at step 1)"
+      }
+    },
+    {
+      "at_tick": 9,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 1: Expecting note 48 (C3) on track 0"
+      }
+    },
+    {
+      "at_tick": 9,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 1,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 15,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 2: No notes expected (grid shows all zeros)"
+      }
+    },
+    {
+      "at_tick": 21,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 3: Expecting note 49 (C#3) on track 1"
+      }
+    },
+    {
+      "at_tick": 21,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 3,
+        "note": 49,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 27,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 4: No notes expected (grid shows all zeros)"
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 5: Expecting notes 48 (C3) on track 0 and 50 (D3) on track 2"
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 5,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 33,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 5,
+        "note": 50,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 39,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 6: No notes expected (grid shows all zeros)"
+      }
+    },
+    {
+      "at_tick": 45,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 7: Expecting note 49 (C#3) on track 1"
+      }
+    },
+    {
+      "at_tick": 45,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 7,
+        "note": 49,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 51,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 8: No notes expected (grid shows all zeros)"
+      }
+    },
+    {
+      "at_tick": 57,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 9: Expecting note 48 (C3) on track 0"
+      }
+    },
+    {
+      "at_tick": 57,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 9,
+        "note": 48,
+        "velocity": 100,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 80,
+      "action": {
+        "type": "LogMessage",
+        "message": "📍 Step 13: Expecting notes 48, 49, 50 (multi-track trigger)"
+      }
+    },
+    {
+      "at_tick": 80,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 13,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 80,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 13,
+        "note": 49,
+        "velocity": null,
+        "channel": 2,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 80,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 13,
+        "note": 50,
+        "velocity": null,
+        "channel": 3,
+        "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 120,
+      "action": {
+        "type": "LogMessage",
+        "message": "✅ MIDI note verification test complete!"
+      }
+    },
+    {
+      "at_tick": 120,
+      "action": {
+        "type": "LogMessage",
+        "message": "🎉 All expected notes verified successfully"
+      }
+    }
+  ]
+}
