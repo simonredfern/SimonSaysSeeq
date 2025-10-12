@@ -316,6 +316,9 @@ impl MidiManager {
         
         #[cfg(feature = "midi")]
         {
+            // MIDI Note On message: [status_byte, note_byte, velocity_byte]
+            // 0x90 = Note On for channel 0, OR with channel (0-15) to set actual channel
+            // note.min(127) and velocity.min(127) clamp values to valid MIDI range (0-127)
             let msg = [0x90 | channel, note.min(127), velocity.min(127)];
             
             if let Some(ref mut connection) = self.sequencer_a_output_connection {
@@ -336,9 +339,9 @@ impl MidiManager {
                 let mut last_note = self.last_note_sent.lock().unwrap();
                 *last_note = Some(format!("{} ON vel:{}", note_name, velocity));
                 
-                trace!("MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
+                debug!("MIDI Note ON: {} ({}), vel: {}, ch: {}", note, note_name, velocity, channel + 1);
             } else {
-                trace!("MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
+                warn!("MIDI Note ON (no device): {} vel: {} ch: {}", note, velocity, channel + 1);
             }
         }
         
