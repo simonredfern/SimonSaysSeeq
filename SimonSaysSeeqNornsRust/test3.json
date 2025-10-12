@@ -57,6 +57,28 @@
       }
     },
     {
+      "at_tick": 4,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 0,
+        "note": 48,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 4,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 0,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
       "at_tick": 6,
       "action": {
         "type": "LogMessage",
@@ -83,6 +105,28 @@
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 10,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 1,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
+      }
+    },
+    {
+      "at_tick": 10,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 1,
+        "note": 52,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
       }
     },
     {
@@ -306,6 +350,17 @@
         "velocity": null,
         "channel": 1,
         "event_type": "NoteOn"
+      }
+    },
+    {
+      "at_tick": 106,
+      "action": {
+        "type": "VerifyMidiNote",
+        "step": 17,
+        "note": 51,
+        "velocity": null,
+        "channel": 1,
+        "event_type": "NoteOff"
       }
     },
     {
