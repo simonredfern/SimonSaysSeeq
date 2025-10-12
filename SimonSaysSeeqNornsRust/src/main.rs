@@ -749,7 +749,7 @@ impl SimonSaysSeeq {
                                     //       seq_y, row_state.sequencer_a_current_step, max_step);
                                 } else if max_step == 31 {
                                     // If max_step is 31 (full 32 steps), sync this row with global master step counter
-                                    let (master_step, _) = self.sequencer.get_current_position();
+                                    let master_step = self.sequencer.get_current_position();
                                     row_state.sequencer_a_current_step = master_step;
                                     // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, row_state.sequencer_a_current_step);
                                 }
@@ -1096,9 +1096,9 @@ impl SimonSaysSeeq {
         // Display tempo - removed (sequencer uses external clock)
         // self.screen.draw_text(1, 7, &format!("Tempo: {:.1}", self.sequencer.get_tempo()));
 
-        // Display current step/bar
-        let (step, bar) = self.sequencer.get_position();
-        self.screen.draw_text(1, 21, &format!("Step: {} Bar: {}", step, bar));
+        // Display current step
+        let step = self.sequencer.get_position();
+        self.screen.draw_text(1, 21, &format!("Step: {}", step));
 
         // Display transport state
         let transport_text = if self.sequencer.is_running() { "RUNNING" } else { "STOPPED" };

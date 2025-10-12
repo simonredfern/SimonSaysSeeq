@@ -325,10 +325,10 @@ impl Sequencer {
 
 
     /// Get current position
-    /// Get the current playback position (step, bar always 0)
-    pub fn get_position(&self) -> (usize, usize) {
+    /// Get the current playback position (step only)
+    pub fn get_position(&self) -> usize {
         let state = self.state.lock().unwrap();
-        (state.sequencer_a_current_master_step, 0)
+        state.sequencer_a_current_master_step
     }
 
 
@@ -396,10 +396,10 @@ impl Sequencer {
 
 
 
-    /// Get current step and bar (bar always 0)
-    pub fn get_current_position(&self) -> (usize, usize) {
+    /// Get current step
+    pub fn get_current_position(&self) -> usize {
         let state = self.state.lock().unwrap();
-        (state.sequencer_a_current_master_step, 0)
+        state.sequencer_a_current_master_step
     }
 
 
@@ -1295,7 +1295,7 @@ mod tests {
         let sequencer = Sequencer::new();
         assert!(!sequencer.is_running());
 
-        let (step, _bar) = sequencer.get_position();
+        let step = sequencer.get_position();
         assert_eq!(step, 0);
     }
 
@@ -1328,7 +1328,7 @@ mod tests {
         assert!(!sequencer.is_running());
 
         // Position should reset after stop
-        let (step, _bar) = sequencer.get_position();
+        let step = sequencer.get_position();
         assert_eq!(step, 0);
     }
 
