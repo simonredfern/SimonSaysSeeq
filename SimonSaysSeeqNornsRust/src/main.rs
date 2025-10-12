@@ -1192,7 +1192,7 @@ impl SimonSaysSeeq {
                 if old_step <= 15 {
                     // OLD position is on GRID_ONE (left grid): Direct coordinate mapping
                     if row == 0 || row == 6 {
-                        info!("   🔴 Setting OLD LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, old_step, row, old_brightness);
+                        trace!("   🔴 Setting OLD LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, old_step, row, old_brightness);
                     }
                     self.grid.set_led(grid_one_id, old_step, row, old_brightness, "grid_update_old_1")?;
                 } else if old_step > 15 && old_step <= 31 {
@@ -1200,7 +1200,7 @@ impl SimonSaysSeeq {
                     // Step 16 becomes grid_x=0, step 17 becomes grid_x=1, etc.
                     let grid_x = old_step - 16;
                     if row == 0 || row == 6 {
-                        info!("   🔴 Setting OLD LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, old_brightness, old_step);
+                        trace!("   🔴 Setting OLD LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, old_brightness, old_step);
                     }
                     self.grid.set_led(grid_two_id, grid_x, row, old_brightness, "grid_update_old_2")?;
                 } else {
@@ -1227,14 +1227,14 @@ impl SimonSaysSeeq {
                 if new_step <= 15 {
                     // NEW position is on GRID_ONE: Direct coordinate mapping
                     if row == 0 || row == 6 {
-                        info!("   🟢 Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, new_step, row, new_brightness);
+                        trace!("   🟢 Setting NEW LED on GRID_ONE: grid_id={}, x={}, y={}, brightness={}", grid_one_id, new_step, row, new_brightness);
                     }
                     self.grid.set_led(grid_one_id, new_step, row, new_brightness, "grid_update_new_1")?;
                 } else if new_step > 15 && new_step <= 31 {
                     // NEW position is on GRID_TWO: Coordinate mapping required
                     let grid_x = new_step - 16;
                     if row == 0 || row == 6 {
-                        info!("   🟢 Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, new_brightness, new_step);
+                        trace!("   🟢 Setting NEW LED on GRID_TWO: grid_id={}, x={}, y={}, brightness={} (original_step={})", grid_two_id, grid_x, row, new_brightness, new_step);
                     }
                     self.grid.set_led(grid_two_id, grid_x, row, new_brightness, "grid_update_new_2")?;
                 } else {
