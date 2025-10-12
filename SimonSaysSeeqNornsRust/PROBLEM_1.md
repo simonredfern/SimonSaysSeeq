@@ -4,7 +4,27 @@
 
 When setting max_step < 31 for a row, that row's **MIDI output is broken** (not working correctly).
 
-### Example
+### User Observation (Actual Hardware Test)
+
+**Setup:**
+- Row 0 (0-indexed): Column 0 LED ON, playing kick drum, max_step = 31 (32 steps)
+- Row 3 (0-indexed): Columns 0,1,2,3 LEDs ON, playing clap sound, max_step = 3 (4 steps)
+
+**Expected Behavior:**
+- Kick drum: Plays every 32 beats (at step 0)
+- Clap sound: Plays every 4 beats (at steps 0,1,2,3 of Row 3's cycle)
+
+**Actual Behavior:**
+- Kick drum: ✓ Plays correctly every 32 beats
+- Clap sound: ✗ ONLY plays every 32 beats, right after the kick on column 0
+- LEDs: ✓ Show CORRECT scrolling over the 4 lit LEDs on Row 3
+
+**The Bug:**
+Row 3 with max_step=3 should trigger 8 times per 32-step master cycle (at master steps 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 mapped to row steps 0,1,2,3,0,1,2,3,...).
+
+Instead, Row 3 ONLY triggers at master step 0 (once per 32 beats).
+
+### Original Example
 - Set row 1 max_step = 15 (16 steps: 0-15)
 - Row 1 MIDI output only plays **half the time**
 - Expected: MIDI triggers on programmed steps continuously

@@ -30,6 +30,15 @@ pub struct MidiEvent {
     pub sequencer_source: char, // 'A' for sequencer_a
 }
 
+/// Pending note-off event scheduled for a specific tick
+#[derive(Debug, Clone)]
+pub struct PendingNoteOff {
+    pub note: u8,
+    pub channel: u8,
+    pub row: usize,
+    pub target_tick: u64,
+}
+
 /// Events that the sequencer can send to the main application
 #[derive(Debug, Clone)]
 pub enum SequencerEvent {
@@ -247,6 +256,8 @@ pub struct Sequencer {
     current_pattern: usize,
     /// Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
     test_mode: bool,
+    /// Pending note-off events scheduled by tick
+    pending_note_offs: Arc<Mutex<Vec<PendingNoteOff>>>,
 }
 
 impl Sequencer {
@@ -264,6 +275,7 @@ impl Sequencer {
             patterns: Arc::new(std::sync::Mutex::new(HashMap::new())),
             current_pattern: 0,
             test_mode,
+            pending_note_offs: Arc::new(Mutex::new(Vec::new())),
         };
 
         // In test mode, load test_pattern_1.json
@@ -531,11 +543,14 @@ impl Sequencer {
     /// Advance to next step and process triggers
     fn advance_step(
         &self,
-        state: &mut SequencerState,
+        state: &mut std::sync::MutexGuard<SequencerState>,
         sender: &Sender<SequencerEvent>,
     ) -> Result<()> {
         // Reset tick count since step
         state.the_current_tick_count_since_step = 0;
+
+        // Process pending note-offs for current tick
+        self.process_pending_note_offs(state.tick_count, sender)?;
 
         // Process current step for all sequence rows
         self.process_step(&*state, sender)?;
@@ -638,6 +653,17 @@ impl Sequencer {
 
                         if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
                             warn!("Failed to send MIDI note ON event: {}", e);
+                        }
+
+                        // Schedule note OFF for next tick
+                        let note_off = PendingNoteOff {
+                            note: seq_a_row_state.midi_note,
+                            channel: seq_a_row_state.midi_channel,
+                            row: row_idx,
+                            target_tick: state.tick_count + 1,
+                        };
+                        if let Ok(mut pending) = self.pending_note_offs.lock() {
+                            pending.push(note_off);
                         }
                     }
                 }
@@ -1142,6 +1168,35 @@ impl Sequencer {
     /// Check if sequencer is in test mode
     pub fn is_test_mode(&self) -> bool {
         self.test_mode
+    }
+
+    /// Process pending note-offs that should trigger at current tick
+    fn process_pending_note_offs(&self, current_tick: u64, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let mut pending = self.pending_note_offs.lock().unwrap();
+        
+        // Find and send note-offs for current tick
+        let mut i = 0;
+        while i < pending.len() {
+            if pending[i].target_tick <= current_tick {
+                let note_off = pending.remove(i);
+                let midi_event = MidiEvent {
+                    note: note_off.note,
+                    velocity: 0,
+                    channel: note_off.channel,
+                    note_on: false,
+                    step: 0, // Not used for note-off
+                    sequencer_source: 'A',
+                };
+                
+                if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                    warn!("Failed to send MIDI note OFF event: {}", e);
+                }
+            } else {
+                i += 1;
+            }
+        }
+        
+        Ok(())
     }
 
     /// Set global velocity scale
