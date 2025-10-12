@@ -212,7 +212,7 @@ impl Default for SequencerState {
             held,
             sequencer_a_row_states: row_states,
             sequencer_a_current_master_step: 0,
-            sequencer_a_current_master_bar: 0,
+            sequencer_a_current_master_bar: 0, // Always 0 for sequencer_a
             sequencer_a_current_lane: 1,
             is_running: false,
             swing_amount: 0.0,
@@ -319,7 +319,7 @@ impl Sequencer {
             // Log the stack trace to identify what triggered the stop
             let trace = std::backtrace::Backtrace::capture();
             // info!("Sequencer stopped and reset - Stack trace: {}", trace);
-            
+
             // Save current pattern when stopping
             drop(state); // Release the lock before calling save method
             if let Err(e) = self.save_current_pattern_to_file() {
@@ -524,29 +524,19 @@ impl Sequencer {
         // Reset tick count since step
         state.the_current_tick_count_since_step = 0;
 
-        // Store current step values BEFORE increment for MIDI synchronization
-        let current_step = state.sequencer_a_current_master_step;
-        let current_bar = state.sequencer_a_current_master_bar;
-
         // Process current step for all sequence rows
         self.process_step(&*state, sender)?;
 
         // Send step event with CURRENT step values (before increment) for MIDI sync
         let _ = sender.try_send(SequencerEvent::Step {
-            step: current_step,
-            bar: current_bar,
+            step: state.sequencer_a_current_master_step,
+            bar: 0,
         });
 
         // Advance sequencer master step
         state.sequencer_a_current_master_step += 1;
         if state.sequencer_a_current_master_step > state.last_step {
             state.sequencer_a_current_master_step = state.first_step;
-
-            // Advance master bar
-            state.sequencer_a_current_master_bar += 1;
-            if state.sequencer_a_current_master_bar > state.max_bar {
-                state.sequencer_a_current_master_bar = state.min_bar;
-            }
         }
 
         // Advance all row step counters and collect step info for logging
@@ -592,7 +582,7 @@ impl Sequencer {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        
+
         // Process each sequence row (0-indexed)
         for row_idx in 0..state.sequencer_a_row_states.len() {
             // Only process rows 0-6 (sequencer rows, row 7 is control)
@@ -601,25 +591,25 @@ impl Sequencer {
             }
 
             if let Some(row_state) = state.sequencer_a_row_states.get(row_idx) {
-                let current_step = row_state.sequencer_a_current_step;
+                let row_step = row_state.sequencer_a_current_step;
 
-                // Bounds check: ensure current_step is valid for grid access
-                if current_step >= state.sequencer_a_grid.len() {
-                    warn!("Row {} current_step {} exceeds grid bounds ({}), skipping", 
-                          row_idx, current_step, state.sequencer_a_grid.len());
+                // Bounds check: ensure row_step is valid for grid access
+                if row_step >= state.sequencer_a_grid.len() {
+                    warn!("Row {} row_step {} exceeds grid bounds ({}), skipping",
+                          row_idx, row_step, state.sequencer_a_grid.len());
                     continue;
                 }
 
                 // Get grid value for this row at current step
-                let grid_value = state.sequencer_a_grid[current_step][row_idx];
+                let grid_value = state.sequencer_a_grid[row_step][row_idx];
 
                 if grid_value > 0 {
                     // This step is active - send MIDI note
                     // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
-                    
+
                     // DEBUG: Track MIDI step position for row 0
                     if row_idx == 0 || row_idx == 6 {
-                        info!("🎵 MIDI DEBUG Row {}: Sending MIDI note at step {} (grid_value={})", row_idx, current_step, grid_value);
+                        info!("🎵 MIDI DEBUG Row {}: Sending MIDI note at step {} (grid_value={})", row_idx, row_step, grid_value);
                     }
 
                     // Send MIDI note ON event for this row
@@ -629,13 +619,13 @@ impl Sequencer {
                             velocity: 100,                // Default velocity
                             channel: row_state.sequencer_a_midi_channel,
                             note_on: true,
-                            step: current_step,
-                            bar: state.sequencer_a_current_master_bar,
+                            step: row_step,
+                            bar: 0,
                             sequencer_source: 'A',
                         };
 
                         if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                            // warn!("Failed to send MIDI note ON event: {}", e);
+                            warn!("Failed to send MIDI note ON event: {}", e);
                         }
                     }
                 }
@@ -643,10 +633,10 @@ impl Sequencer {
                 // Send selective grid update event for this row
                 // DEBUG: Track LED step position for row 0
                 if row_idx == 0 || row_idx == 6 {
-                    info!("💡 LED DEBUG Row {}: Sending grid update old_step={} -> new_step={}", 
+                    info!("💡 LED DEBUG Row {}: Sending grid update old_step={} -> new_step={}",
                           row_idx, row_state.sequencer_a_previous_step, row_state.sequencer_a_current_step);
                 }
-                
+
                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
                     row: row_idx,
                     old_step: row_state.sequencer_a_previous_step,
@@ -712,7 +702,7 @@ impl Sequencer {
     /// Push current state to undo stack
     fn push_undo_snapshot(&self, description: String) {
         let state = self.state.lock().unwrap();
-        
+
         // Clone row states but preserve current step positions
         let mut row_states_snapshot = state.sequencer_a_row_states.clone();
         for row_state in &mut row_states_snapshot {
@@ -720,7 +710,7 @@ impl Sequencer {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
         }
-        
+
         let snapshot = StateSnapshot {
             grid: state.sequencer_a_grid.clone(),
             mozart: state.sequencer_a_mozart.clone(),
@@ -760,7 +750,7 @@ impl Sequencer {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
         }
-        
+
         let current_snapshot = StateSnapshot {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
@@ -768,7 +758,7 @@ impl Sequencer {
             timestamp: std::time::SystemTime::now(),
             description: "Current state before undo".to_string(),
         };
-        
+
         // Preserve current positions before restoring
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
@@ -782,7 +772,7 @@ impl Sequencer {
             let mut state = self.state.lock().unwrap();
             state.sequencer_a_grid = snapshot.grid;
             state.sequencer_a_mozart = snapshot.mozart;
-            
+
             // Restore row states but keep current positions
             for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
                 if i < current_positions.len() {
@@ -816,7 +806,7 @@ impl Sequencer {
             row_state.sequencer_a_current_step = 0;
             row_state.sequencer_a_previous_step = 0;
         }
-        
+
         let current_snapshot = StateSnapshot {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
@@ -824,7 +814,7 @@ impl Sequencer {
             timestamp: std::time::SystemTime::now(),
             description: "State before redo".to_string(),
         };
-        
+
         // Preserve current positions before restoring
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.sequencer_a_current_step, rs.sequencer_a_previous_step))
@@ -838,7 +828,7 @@ impl Sequencer {
             let mut state = self.state.lock().unwrap();
             state.sequencer_a_grid = snapshot.grid;
             state.sequencer_a_mozart = snapshot.mozart;
-            
+
             // Restore row states but keep current positions
             for (i, row_state) in snapshot.row_states.iter_mut().enumerate() {
                 if i < current_positions.len() {
@@ -918,7 +908,7 @@ impl Sequencer {
     pub fn save_current_pattern_to_file(&self) -> Result<()> {
         let state = self.state.lock().unwrap();
         let pattern_file = Self::get_pattern_file_path();
-        
+
         // Create a copy of the state for saving (without transport state)
         let mut save_state = state.clone();
         save_state.is_running = false;
@@ -929,7 +919,7 @@ impl Sequencer {
 
         let json_content = serde_json::to_string_pretty(&save_state)?;
         std::fs::write(&pattern_file, json_content)?;
-        
+
         info!("Current pattern saved to: {:?}", pattern_file);
         Ok(())
     }
@@ -937,14 +927,14 @@ impl Sequencer {
     /// Load current pattern from file
     pub fn load_current_pattern_from_file(&self) -> Result<()> {
         let pattern_file = Self::get_pattern_file_path();
-        
+
         if !pattern_file.exists() {
             return Err(anyhow::anyhow!("No saved pattern found at: {:?}", pattern_file));
         }
 
         let json_content = std::fs::read_to_string(&pattern_file)?;
         let loaded_state: SequencerState = serde_json::from_str(&json_content)?;
-        
+
         // Save current transport state before loading
         let mut state = self.state.lock().unwrap();
         let current_step = state.sequencer_a_current_master_step;
@@ -955,7 +945,7 @@ impl Sequencer {
 
         // Load the pattern data
         *state = loaded_state;
-        
+
         // Restore transport state
         state.sequencer_a_current_master_step = current_step;
         state.sequencer_a_current_master_bar = current_bar;
@@ -964,19 +954,19 @@ impl Sequencer {
         state.the_current_tick_count_since_step = tick_count_since_step;
 
         info!("Current pattern loaded from: {:?}", pattern_file);
-        
+
         // Log initial state to formal state logger
         if let Ok(pattern_json) = serde_json::to_string(&*state) {
             log_system_init(&pattern_json);
         }
-        
+
         Ok(())
     }
 
     /// Create a sparse default pattern across both grids
     pub fn create_default_sparse_pattern(&self) {
         let mut state = self.state.lock().unwrap();
-        
+
         // Create sparse pattern - just a few notes across both grids
         // Main grid (sequencer_a_grid) - add some sparse beats
         if state.sequencer_a_grid.len() >= 16 && state.sequencer_a_grid[0].len() >= 8 {
@@ -985,7 +975,7 @@ impl Sequencer {
             state.sequencer_a_grid[4][0] = 1;  // Step 5
             state.sequencer_a_grid[8][0] = 1;  // Step 9
             state.sequencer_a_grid[12][0] = 1; // Step 13
-            
+
             // Row 1: Hi-hat pattern - every 4th step offset
             state.sequencer_a_grid[2][1] = 1;  // Step 3
             state.sequencer_a_grid[6][1] = 1;  // Step 7
@@ -1020,7 +1010,7 @@ impl Sequencer {
             1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat with variation (32 steps)
             2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0], // Techno open hi-hat with accents (32 steps)
             3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0], // Techno clap/snare with ghost notes (32 steps)
-            
+
             // African Rhythms (4-15)
             4 => vec![1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0], // Kagan with variation (32 steps)
             5 => vec![1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1], // Soukous (32 steps)
@@ -1034,7 +1024,7 @@ impl Sequencer {
             13 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Kpanlogo extended (32 steps)
             14 => vec![1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0], // Agbadza extended (32 steps)
             15 => vec![1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0], // Gahu (32 steps)
-            
+
             // Salsa Rhythms (16-23)
             16 => vec![1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], // Son Clave 3-2 (32 steps)
             17 => vec![0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1], // Son Clave 2-3 extended (32 steps)
@@ -1044,7 +1034,7 @@ impl Sequencer {
             21 => vec![1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0], // Cascara extended (32 steps)
             22 => vec![0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1], // Mambo bell (32 steps)
             23 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Cha-cha-cha extended (32 steps)
-            
+
             // Jazz Rhythms (24-31)
             24 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Jazz ride (32 steps)
             25 => vec![1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], // Swing shuffle (32 steps)
@@ -1054,7 +1044,7 @@ impl Sequencer {
             29 => vec![1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0], // Bossa nova (32 steps)
             30 => vec![1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1], // Samba (32 steps)
             31 => vec![1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1], // Jazz waltz (32 steps)
-            
+
             _ => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // Default to 4-on-floor (32 steps)
         }
     }
@@ -1086,7 +1076,7 @@ impl Sequencer {
         // Set the row's euclidean length to match the pattern length
         if let Some(row_state) = state.sequencer_a_row_states.get_mut(row) {
             row_state.sequencer_a_max_step = pattern_length - 1; // Store as 0-based index
-            info!("Applied preset pattern column {} to row {} (pattern length: {}, max_step set to: {})", 
+            info!("Applied preset pattern column {} to row {} (pattern length: {}, max_step set to: {})",
                   column, row, pattern_length, row_state.sequencer_a_max_step);
         } else {
             info!("Applied preset pattern column {} to row {} (pattern length: {})", column, row, pattern_length);
@@ -1175,7 +1165,7 @@ impl Sequencer {
         // Auto-reduce events if they exceed the new length
         if events > length {
             events = length;
-            info!("generate_euclidean_rhythm says: Auto-reduced events from {} to {} to match length {}", 
+            info!("generate_euclidean_rhythm says: Auto-reduced events from {} to {} to match length {}",
                   events, length, length);
         }
 
@@ -1452,7 +1442,7 @@ mod tests {
 
         // Simulate advancing individual row counters by starting and letting them advance
         sequencer.start();
-        
+
         // Manually advance row states to simulate playback
         {
             let mut state = sequencer.state.lock().unwrap();
@@ -1487,7 +1477,7 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
-                assert_eq!(row_state.sequencer_a_current_step, 0, 
+                assert_eq!(row_state.sequencer_a_current_step, 0,
                     "Row {} counter should be reset to 0 after stop", row_idx);
             }
         }
@@ -1497,7 +1487,7 @@ mod tests {
         {
             let state = sequencer.state.lock().unwrap();
             for (row_idx, row_state) in state.sequencer_a_row_states.iter().enumerate() {
-                assert_eq!(row_state.sequencer_a_current_step, 0, 
+                assert_eq!(row_state.sequencer_a_current_step, 0,
                     "Row {} counter should remain at 0 after restart", row_idx);
             }
         }
@@ -1523,12 +1513,12 @@ mod tests {
         {
             let mut state = sequencer.state.lock().unwrap();
             let row = &mut state.sequencer_a_row_states[0];
-            
+
             // Simulate advancing through the full range
             for expected_step in 0..=31 {
-                assert_eq!(row.sequencer_a_current_step, expected_step, 
+                assert_eq!(row.sequencer_a_current_step, expected_step,
                     "Row step counter should be {} at position {}", expected_step, expected_step);
-                
+
                 // Advance step (simulating the advance_step logic)
                 row.sequencer_a_previous_step = row.sequencer_a_current_step;
                 row.sequencer_a_current_step += 1;
@@ -1536,7 +1526,7 @@ mod tests {
                     row.sequencer_a_current_step = row.sequencer_a_first_step;
                 }
             }
-            
+
             // After 32 steps (0-31), should wrap back to 0
             assert_eq!(row.sequencer_a_current_step, 0, "Should wrap back to 0 after step 31");
         }
@@ -1545,18 +1535,18 @@ mod tests {
         {
             let mut state = sequencer.state.lock().unwrap();
             let row = &mut state.sequencer_a_row_states[1];
-            
+
             // Set custom range: steps 4-15 (12 step loop starting at step 4)
             row.sequencer_a_first_step = 4;
             row.sequencer_a_max_step = 15;
             row.sequencer_a_current_step = 4;
-            
+
             // Advance through custom range
             for i in 0..20 { // Test more than one full cycle
                 let expected = if i <= 11 { 4 + i } else { 4 + ((i - 12) % 12) };
-                assert_eq!(row.sequencer_a_current_step, expected, 
+                assert_eq!(row.sequencer_a_current_step, expected,
                     "Custom range: step {} should be at position {}", i, expected);
-                
+
                 // Advance
                 row.sequencer_a_previous_step = row.sequencer_a_current_step;
                 row.sequencer_a_current_step += 1;
