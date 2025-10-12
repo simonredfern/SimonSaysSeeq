@@ -5,6 +5,9 @@
 - Avoid excessive enthusiasm or chattiness
 - Focus on technical facts and actionable information
 - Use clear, professional language
+- Do NOT create excessive documentation files unless explicitly requested
+- Do NOT write lengthy summaries or guides after making simple changes
+- Respond briefly - just state what was done and if it worked
 
 ## Logging Protocol
 - Always update ai.log with commands run and results
