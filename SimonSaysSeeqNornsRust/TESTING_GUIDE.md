@@ -44,7 +44,58 @@ When prompted, select the same MIDI port for both applications (usually "Midi Th
 - Tests wrapping behavior at step 32
 - Verifies all rows wrap correctly
 
-**Expected Result**: All ✅ (21 verifications pass)
+**Expected Result**: All ✅ (12 verifications pass)
+
+## Test Output and Statistics
+
+Each test now automatically prints statistics at the end showing:
+- **Total Verifications**: Total number of verification checks performed
+- **✅ Passed**: Number of verifications that succeeded
+- **❌ Failed**: Number of verifications that failed
+
+### Example Output (All Tests Passing)
+
+```
+═══════════════════════════════════════════════════════
+📊 Test Results for: Test1 Direct: Multi-Length Pattern Verification
+═══════════════════════════════════════════════════════
+Total Verifications: 12
+✅ Passed: 12
+❌ Failed: 0
+
+🎉 ALL TESTS PASSED!
+═══════════════════════════════════════════════════════
+```
+
+### Example Output (Some Tests Failing)
+
+```
+═══════════════════════════════════════════════════════
+📊 Test Results for: Test2 Config Changes
+═══════════════════════════════════════════════════════
+Total Verifications: 15
+✅ Passed: 13
+❌ Failed: 2
+
+❌ TEST FAILED - 2 verification(s) failed
+═══════════════════════════════════════════════════════
+```
+
+### Exit Codes
+
+The test runner returns proper exit codes:
+- **Exit 0**: All verifications passed (for CI/CD integration)
+- **Exit 1**: One or more verifications failed OR no verifications were run
+
+### Auto-Exit
+
+Tests now automatically exit after completion:
+- The test runner calculates the maximum tick from the test script
+- Adds a grace period of 12 ticks (2 steps)
+- Exits automatically when all commands have completed
+- Detects stalled tests (no progress for 10 seconds)
+
+You no longer need to press Ctrl+C to stop tests!
 
 ### test2.json - Multi-Row SysEx Configuration Changes
 - Changes Row 0: max_step 31→7 (at step 3)

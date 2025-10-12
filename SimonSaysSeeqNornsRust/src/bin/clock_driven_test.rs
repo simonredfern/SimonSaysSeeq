@@ -57,6 +57,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         enable_test_mode: false,
     };
     let mut generator = ClockGenerator::new_with_config(script.bpm, config);
+    
+    // Calculate max tick from script for auto-exit
+    let max_tick = script.commands.iter().map(|cmd| cmd.at_tick).max().unwrap_or(0);
+    let grace_ticks = 12; // Wait 2 extra steps after last command
+    let exit_tick = max_tick + grace_ticks;
+    
     generator.set_direct_test_script(script);
 
     // Connect to MIDI output (for clock)
@@ -122,8 +128,70 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("═══════════════════════════════════════════════════════");
     println!();
     
-    // Keep running until user stops
+    // Monitor test progress and wait for completion
+    let mut last_tick = 0;
+    let mut no_progress_count = 0;
+    
     loop {
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(500));
+        
+        let current_tick = generator.get_tick_count();
+        
+        // Check if we've reached the exit tick
+        if current_tick >= exit_tick {
+            println!();
+            println!("═══════════════════════════════════════════════════════");
+            println!("📊 Test Complete - Reached tick {} (exit at {})", current_tick, exit_tick);
+            break;
+        }
+        
+        // Detect if test is stalled (no progress for 10 seconds)
+        if current_tick == last_tick {
+            no_progress_count += 1;
+            if no_progress_count >= 20 { // 20 * 500ms = 10 seconds
+                println!();
+                println!("⚠️  Warning: No progress detected for 10 seconds at tick {}", current_tick);
+                println!("   Test may have stalled. Exiting...");
+                break;
+            }
+        } else {
+            no_progress_count = 0;
+            last_tick = current_tick;
+        }
+    }
+    
+    // Get test statistics
+    let (passed, failed) = generator.get_test_stats();
+    let total = passed + failed;
+    
+    println!();
+    println!("═══════════════════════════════════════════════════════");
+    println!("📊 Test Results for: {}", test_name);
+    println!("═══════════════════════════════════════════════════════");
+    println!("Total Verifications: {}", total);
+    println!("✅ Passed: {}", passed);
+    println!("❌ Failed: {}", failed);
+    
+    if failed == 0 && total > 0 {
+        println!();
+        println!("🎉 ALL TESTS PASSED!");
+        println!("═══════════════════════════════════════════════════════");
+        Ok(())
+    } else if total == 0 {
+        println!();
+        println!("⚠️  No verifications were run");
+        println!("═══════════════════════════════════════════════════════");
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "No verifications run"
+        )))
+    } else {
+        println!();
+        println!("❌ TEST FAILED - {} verification(s) failed", failed);
+        println!("═══════════════════════════════════════════════════════");
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("{} test(s) failed", failed)
+        )))
     }
 }

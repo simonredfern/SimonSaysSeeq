@@ -9,7 +9,7 @@
 //! - Optional test mode with tempo changes
 //! - Thread-safe BPM control
 
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering}};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -70,6 +70,8 @@ pub struct ClockGenerator {
     direct_test_script: Option<Arc<DirectTestScript>>,
     midi_events: Arc<Mutex<Vec<ReceivedMidiNote>>>,
     sysex_messages: Arc<Mutex<Vec<Vec<u8>>>>,
+    test_passed: Arc<AtomicUsize>,
+    test_failed: Arc<AtomicUsize>,
 }
 
 impl Clone for ClockGenerator {
@@ -85,6 +87,8 @@ impl Clone for ClockGenerator {
             direct_test_script: self.direct_test_script.clone(),
             midi_events: self.midi_events.clone(),
             sysex_messages: self.sysex_messages.clone(),
+            test_passed: self.test_passed.clone(),
+            test_failed: self.test_failed.clone(),
         }
     }
 }
@@ -108,6 +112,8 @@ impl ClockGenerator {
             direct_test_script: None,
             midi_events: Arc::new(Mutex::new(Vec::new())),
             sysex_messages: Arc::new(Mutex::new(Vec::new())),
+            test_passed: Arc::new(AtomicUsize::new(0)),
+            test_failed: Arc::new(AtomicUsize::new(0)),
         }
     }
     
@@ -320,9 +326,23 @@ impl ClockGenerator {
     pub fn reset_tick_count(&self) {
         *self.tick_count.lock().unwrap() = 0;
     }
+
+    /// Get test statistics
+    pub fn get_test_stats(&self) -> (usize, usize) {
+        (
+            self.test_passed.load(Ordering::Relaxed),
+            self.test_failed.load(Ordering::Relaxed)
+        )
+    }
+
+    /// Reset test statistics
+    pub fn reset_test_stats(&self) {
+        self.test_passed.store(0, Ordering::Relaxed);
+        self.test_failed.store(0, Ordering::Relaxed);
+    }
     
     /// Execute a direct test action (called from clock thread)
-    fn execute_direct_test_action(action: &DirectTestAction, connection: &mut midir::MidiOutputConnection, tick: u32, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) {
+    fn execute_direct_test_action(action: &DirectTestAction, connection: &mut midir::MidiOutputConnection, tick: u32, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>, test_passed: &Arc<AtomicUsize>, test_failed: &Arc<AtomicUsize>) {
         match action {
             DirectTestAction::LogMessage { message } => {
                 println!("📍 Tick {}: {}", tick, message);
@@ -338,18 +358,29 @@ impl ClockGenerator {
             }
             DirectTestAction::VerifyState { step, row, expected } => {
                 println!("📍 Tick {}: Verify step={} row={} expected={:?}", tick, step, row, expected);
-                Self::verify_state_at_step(*step, *row, *expected);
+                let passed = Self::verify_state_at_step(*step, *row, *expected);
+                if passed {
+                    test_passed.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    test_failed.fetch_add(1, Ordering::Relaxed);
+                }
             }
             DirectTestAction::VerifyMidiNote { step, note, velocity, channel, event_type } => {
                 println!("📍 Tick {}: Verify MIDI {} note={} velocity={:?} channel={} at step={}", 
                          tick, event_type, note, velocity, channel, step);
-                Self::verify_midi_note_at_step(*step, *note, velocity.as_ref(), *channel, event_type, midi_events);
+                let passed = Self::verify_midi_note_at_step(*step, *note, velocity.as_ref(), *channel, event_type, midi_events);
+                if passed {
+                    test_passed.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    test_failed.fetch_add(1, Ordering::Relaxed);
+                }
             }
         }
     }
     
     /// Verify sequencer state by reading formal_state.log
-    fn verify_state_at_step(step: u32, row: usize, expected: Option<usize>) {
+    /// Returns true if verification passed, false otherwise
+    fn verify_state_at_step(step: u32, row: usize, expected: Option<usize>) -> bool {
         use std::fs;
         
         // Read formal_state.log
@@ -357,7 +388,7 @@ impl ClockGenerator {
             Ok(content) => content,
             Err(e) => {
                 println!("  ❌ Cannot read formal_state.log: {}", e);
-                return;
+                return false;
             }
         };
         
@@ -394,21 +425,26 @@ impl ClockGenerator {
             (Some(actual), Some(exp)) => {
                 if actual == exp {
                     println!("  ✅ Row {} position: {} (expected {})", row, actual, exp);
+                    true
                 } else {
                     println!("  ❌ Row {} position: {} (expected {})", row, actual, exp);
+                    false
                 }
             }
             (Some(actual), None) => {
                 println!("  📊 Row {} position: {} (observation only)", row, actual);
+                true // Observation only, count as passed
             }
             (None, _) => {
                 println!("  ⚠️  Step {} not found in log yet (only {} steps logged)", step, step_count);
+                false
             }
         }
     }
     
     /// Verify MIDI note was received at specific step (allows up to 3 tick delay for propagation)
-    fn verify_midi_note_at_step(step: u32, note: u8, velocity: Option<&u8>, channel: u8, event_type: &str, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) {
+    /// Returns true if verification passed, false otherwise
+    fn verify_midi_note_at_step(step: u32, note: u8, velocity: Option<&u8>, channel: u8, event_type: &str, midi_events: &Arc<Mutex<Vec<ReceivedMidiNote>>>) -> bool {
         let events = midi_events.lock().unwrap();
         
         // Calculate expected tick range (step * 6, with up to 3 ticks delay)
@@ -436,6 +472,7 @@ impl ClockGenerator {
             let delay = event.tick.saturating_sub(step * 6);
             println!("  ✅ MIDI {} note={} velocity={} channel={} at step={} (tick={}, delay={})", 
                      event_type, note, vel_str, channel, step, event.tick, delay);
+            return true;
         } else {
             // Show what we did receive at this step
             let step_events: Vec<_> = events.iter()
@@ -453,8 +490,10 @@ impl ClockGenerator {
                              e.event_type, e.note, e.velocity, e.channel, e.tick);
                 }
             }
+            return false;
         }
     }
+
 
     /// Exit the clock generator
     pub fn exit(&self) {
@@ -494,6 +533,8 @@ impl ClockGenerator {
         let tick_count = self.tick_count.clone();
         let enable_tick_counting = self.config.enable_tick_counting;
         let enable_test_mode = self.config.enable_test_mode;
+        let test_passed = self.test_passed.clone();
+        let test_failed = self.test_failed.clone();
         let direct_test_script = self.direct_test_script.clone();
         let midi_events = self.midi_events.clone();
 
@@ -665,7 +706,7 @@ impl ClockGenerator {
                             if let Some(ref script) = direct_test_script {
                                 for cmd in &script.commands {
                                     if cmd.at_tick == tick_count_local as u32 {
-                                        Self::execute_direct_test_action(&cmd.action, &mut connection, tick_count_local as u32, &midi_events);
+                                        Self::execute_direct_test_action(&cmd.action, &mut connection, tick_count_local as u32, &midi_events, &test_passed, &test_failed);
                                     }
                                 }
                             }
