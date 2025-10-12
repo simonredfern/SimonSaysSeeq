@@ -276,6 +276,11 @@ impl ClockGenerator {
     pub fn check_test_mode_response(&self) -> bool {
         let sysex_messages = self.sysex_messages.lock().unwrap();
         
+        println!("DEBUG: Checking {} SysEx messages in buffer", sysex_messages.len());
+        for (i, msg) in sysex_messages.iter().enumerate() {
+            println!("DEBUG: SysEx message {}: {:?}", i, msg);
+        }
+        
         // Look for SimonSaysSeeQ SysEx response: F0 7D 53 53 51 <cmd> F7
         for msg in sysex_messages.iter() {
             if msg.len() >= 7 
