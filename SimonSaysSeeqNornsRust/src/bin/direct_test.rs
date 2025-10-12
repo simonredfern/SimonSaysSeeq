@@ -51,13 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("🗑️  Truncated formal_state.log for clean test run");
     println!();
 
-    // Copy clean test pattern to current_pattern.json to ensure clean state
-    // This prevents state pollution from previous tests
-    println!("📋 Copying test_pattern_1.json to current_pattern.json for clean state...");
-    fs::copy("test_pattern_1.json", "current_pattern.json")?;
-    println!("✅ Clean pattern loaded");
-    println!();
-
     // Create clock generator
     let config = ClockConfig {
         enable_tick_counting: true,
@@ -81,19 +74,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     let _clock_thread = generator.spawn_clock_thread(connection);
     thread::sleep(Duration::from_millis(100)); // Give thread time to initialize
     
-    // Initialize sequencer: Stop, Reload Pattern
+    // Initialize sequencer: Verify Test Mode, Stop
     println!("🔧 Initializing sequencer...");
     
-    // Send MIDI Stop
+    // Verify sequencer is in test mode FIRST
+    println!("  🧪 Querying sequencer test mode...");
+    let test_mode_query = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x10, 0xF7];
+    generator.send_raw_midi(&test_mode_query)?;
+    thread::sleep(Duration::from_millis(500)); // Wait for response
+    
+    // Check if we received test mode confirmation (0x11) or rejection (0x12)
+    // The response will be in the MIDI input buffer
+    let test_mode_verified = generator.check_test_mode_response();
+    if !test_mode_verified {
+        println!();
+        println!("❌ TEST FAILED: Sequencer is NOT in test mode!");
+        println!("   Please restart the sequencer with: cargo run --release --bin simon_says_seeq -- --test-mode");
+        println!();
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Sequencer not in test mode"
+        )));
+    }
+    println!("  ✅ Sequencer is in test mode");
+    
+    // Send MIDI Stop (in test mode, this will NOT auto-save)
     println!("  ⏹️  Sending MIDI Stop");
     generator.send_raw_midi(&[0xFC])?;
     thread::sleep(Duration::from_millis(500));
     
-    // Send SysEx to reload pattern (resets sequencer state)
-    println!("  🔄 Sending SysEx ReloadPattern");
-    let reload_sysex = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x01, 0xF7];
-    generator.send_raw_midi(&reload_sysex)?;
-    thread::sleep(Duration::from_millis(500));
+    // In test mode, the sequencer already loaded test_pattern_1.json at startup
+    // No need to copy or reload - just proceed with test
+    println!("  ✅ Test pattern already loaded (test mode auto-loads test_pattern_1.json)");
     
     println!();
     println!("🚀 Starting clock and test execution...");

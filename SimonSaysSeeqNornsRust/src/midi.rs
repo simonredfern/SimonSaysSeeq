@@ -804,6 +804,21 @@ impl MidiManager {
         Ok(())
     }
     
+    /// Send SysEx message
+    pub fn send_sysex(&mut self, data: &[u8]) -> Result<()> {
+        #[cfg(feature = "midi")]
+        {
+            if let Some(ref mut connection) = self.sequencer_a_output_connection {
+                connection.send(data)?;
+                debug!("send_sysex says: SysEx sent: {:?}", data);
+            }
+        }
+        #[cfg(not(feature = "midi"))]
+        debug!("send_sysex says: SysEx (simulation): {:?}", data);
+        
+        Ok(())
+    }
+    
     /// Set clock source
     pub fn set_clock_source(&self, source: ClockSource) {
         let mut clock = self.clock_state.lock().unwrap();

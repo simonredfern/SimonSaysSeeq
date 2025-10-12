@@ -69,6 +69,7 @@ pub struct ClockGenerator {
     config: ClockConfig,
     direct_test_script: Option<Arc<DirectTestScript>>,
     midi_events: Arc<Mutex<Vec<ReceivedMidiNote>>>,
+    sysex_messages: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
 impl Clone for ClockGenerator {
@@ -83,6 +84,7 @@ impl Clone for ClockGenerator {
             config: self.config.clone(),
             direct_test_script: self.direct_test_script.clone(),
             midi_events: self.midi_events.clone(),
+            sysex_messages: self.sysex_messages.clone(),
         }
     }
 }
@@ -105,6 +107,7 @@ impl ClockGenerator {
             config,
             direct_test_script: None,
             midi_events: Arc::new(Mutex::new(Vec::new())),
+            sysex_messages: Arc::new(Mutex::new(Vec::new())),
         }
     }
     
@@ -184,9 +187,18 @@ impl ClockGenerator {
         println!("Listening on: {}", port_name);
 
         let midi_events = self.midi_events.clone();
+        let sysex_messages = self.sysex_messages.clone();
         let tick_count = self.tick_count.clone();
 
         let connection = midi_in.connect(port, "MIDI Input", move |_timestamp, message, _| {
+            // Check for SysEx messages
+            if message.len() > 0 && message[0] == 0xF0 {
+                // This is a SysEx message
+                sysex_messages.lock().unwrap().push(message.to_vec());
+                println!("🎵 SysEx Received: {:?}", message);
+                return;
+            }
+            
             // Parse MIDI message
             if message.len() >= 3 {
                 let status = message[0];
@@ -256,6 +268,37 @@ impl ClockGenerator {
     /// Get the current BPM
     pub fn get_bpm(&self) -> f32 {
         *self.bpm.lock().unwrap()
+    }
+
+    /// Check for test mode response from sequencer
+    /// Returns true if sequencer responded with "test mode active" (0x11)
+    /// Returns false if sequencer responded with "test mode NOT active" (0x12) or no response
+    pub fn check_test_mode_response(&self) -> bool {
+        let sysex_messages = self.sysex_messages.lock().unwrap();
+        
+        // Look for SimonSaysSeeQ SysEx response: F0 7D 53 53 51 <cmd> F7
+        for msg in sysex_messages.iter() {
+            if msg.len() >= 7 
+                && msg[0] == 0xF0 
+                && msg[1] == 0x7D 
+                && msg[2] == 0x53 
+                && msg[3] == 0x53 
+                && msg[4] == 0x51 
+                && msg[6] == 0xF7 
+            {
+                let command = msg[5];
+                if command == 0x11 {
+                    // Test mode active
+                    return true;
+                } else if command == 0x12 {
+                    // Test mode NOT active
+                    return false;
+                }
+            }
+        }
+        
+        // No response received
+        false
     }
 
     /// Check if the clock is currently running

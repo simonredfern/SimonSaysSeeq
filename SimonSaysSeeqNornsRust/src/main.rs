@@ -121,17 +121,23 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
+    // Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
+    test_mode: bool,
 }
 
 impl SimonSaysSeeq {
     pub fn new() -> Result<Self> {
+        Self::new_with_test_mode(false)
+    }
+
+    pub fn new_with_test_mode(test_mode: bool) -> Result<Self> {
         let config_path = Config::get_config_path();
         // info!("📁 Config file location: {:?}", config_path);
         let config = Config::load_or_default()?;
 
         Ok(Self {
             hardware: NornsHardware::new()?,
-            sequencer: Sequencer::new(),
+            sequencer: Sequencer::new_with_test_mode(test_mode)?,
             #[cfg(feature = "midi")]
             midi: MidiManager::new(&config.midi)?,
             grid: GridManager::new()?,
@@ -164,6 +170,7 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
+            test_mode,
         })
     }
 
@@ -1895,6 +1902,23 @@ impl SimonSaysSeeq {
                                 warn!("⚠️ Invalid SysEx button command: insufficient data length");
                             }
                         }
+                        0x10 => {
+                            // Test mode query: F0 7D 53 53 51 10 F7
+                            // Respond with 0x11 (test mode active) or 0x12 (test mode NOT active)
+                            info!("🧪 SysEx test mode query received");
+                            let is_test_mode = self.sequencer.is_test_mode();
+                            let response_command = if is_test_mode { 0x11 } else { 0x12 };
+                            let response = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, response_command, 0xF7];
+                            
+                            #[cfg(feature = "midi")]
+                            if let Err(e) = self.midi.send_sysex(&response) {
+                                warn!("⚠️ Failed to send test mode response: {}", e);
+                            } else {
+                                info!("✅ Sent test mode response: {} (0x{:02X})", 
+                                      if is_test_mode { "ACTIVE" } else { "NOT ACTIVE" }, 
+                                      response_command);
+                            }
+                        }
                         _ => {
                             debug!("Unknown SimonSaysSeeQ SysEx command: 0x{:02X}", command);
                         }
@@ -2011,7 +2035,8 @@ fn main() -> Result<()> {
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
 
-    // Parse other arguments if needed (currently none)
+    // Check for test mode flag
+    let test_mode = args.iter().any(|arg| arg == "--test-mode");
 
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
@@ -2026,6 +2051,7 @@ fn main() -> Result<()> {
         println!("    --config <FILE>      Use custom configuration file");
         println!("    --no-hardware        Disable hardware features");
         println!("    --no-midi            Disable MIDI features");
+        println!("    --test-mode          Enable test mode (auto-load test_pattern_1.json, disable auto-save)");
 
 
         return Ok(());
@@ -2076,10 +2102,13 @@ fn main() -> Result<()> {
     info!("🔧 Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
     info!("⚙️  Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware"));
     info!("⏰ Timing Mode: EXTERNAL CLOCK SLAVE ONLY (basic sync)");
+    if test_mode {
+        info!("🧪 TEST MODE ENABLED - auto-load test_pattern_1.json, no auto-save");
+    }
     info!("════════════════════════════════════════════════════════");
 
     // Create and run application
-    let mut app = SimonSaysSeeq::new()?;
+    let mut app = SimonSaysSeeq::new_with_test_mode(test_mode)?;
 
     // Single-grid mode removed - application now requires exactly 2 grids
 

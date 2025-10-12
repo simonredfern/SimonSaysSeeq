@@ -245,10 +245,16 @@ pub struct Sequencer {
     /// Pattern storage (multiple patterns)
     patterns: Arc<std::sync::Mutex<HashMap<usize, SequencerState>>>,
     current_pattern: usize,
+    /// Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
+    test_mode: bool,
 }
 
 impl Sequencer {
     pub fn new() -> Self {
+        Self::new_with_test_mode(false).expect("Failed to create sequencer")
+    }
+
+    pub fn new_with_test_mode(test_mode: bool) -> Result<Self> {
         let sequencer = Self {
             state: Arc::new(std::sync::Mutex::new(SequencerState::default())),
             note_events: Arc::new(std::sync::Mutex::new(HashMap::new())),
@@ -257,23 +263,37 @@ impl Sequencer {
             max_undo_history: 50,
             patterns: Arc::new(std::sync::Mutex::new(HashMap::new())),
             current_pattern: 0,
+            test_mode,
         };
 
-        // Try to load saved pattern, or create default sparse pattern if none exists
-        match sequencer.load_current_pattern_from_file() {
-            Ok(()) => {
-                // info!("Loaded saved pattern on startup");
+        // In test mode, load test_pattern_1.json
+        if test_mode {
+            info!("🧪 Test mode: Loading test_pattern_1.json");
+            match sequencer.load_pattern_from_file("test_pattern_1.json") {
+                Ok(()) => {
+                    info!("✅ Test pattern loaded successfully");
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("Failed to load test_pattern_1.json: {}", e));
+                }
             }
-            Err(_) => {
-                // info!("No saved pattern found, creating default sparse pattern");
-                sequencer.create_default_sparse_pattern();
+        } else {
+            // Normal mode: Try to load saved pattern, or create default sparse pattern if none exists
+            match sequencer.load_current_pattern_from_file() {
+                Ok(()) => {
+                    // info!("Loaded saved pattern on startup");
+                }
+                Err(_) => {
+                    // info!("No saved pattern found, creating default sparse pattern");
+                    sequencer.create_default_sparse_pattern();
+                }
             }
         }
 
         // Initialize with a snapshot for undo/redo
         sequencer.push_undo_snapshot("Initial state".to_string());
 
-        sequencer
+        Ok(sequencer)
     }
 
     /// Start the sequencer
@@ -309,10 +329,14 @@ impl Sequencer {
             let trace = std::backtrace::Backtrace::capture();
             // info!("Sequencer stopped and reset - Stack trace: {}", trace);
 
-            // Save current pattern when stopping
+            // Save current pattern when stopping (unless in test mode)
             drop(state); // Release the lock before calling save method
-            if let Err(e) = self.save_current_pattern_to_file() {
-                // warn!("Failed to save current pattern on stop: {}", e);
+            if !self.test_mode {
+                if let Err(e) = self.save_current_pattern_to_file() {
+                    // warn!("Failed to save current pattern on stop: {}", e);
+                }
+            } else {
+                info!("🧪 Test mode: Skipping auto-save on stop (pattern protection enabled)");
             }
         }
     }
@@ -588,6 +612,13 @@ impl Sequencer {
 
                 // Get grid value for this row at current step
                 let grid_value = state.sequencer_a_grid[row_step][row_idx];
+
+                // DEBUG: Log grid reads for Row 3
+                if row_idx == 3 {
+                    info!("🔍 Row 3: master_step={}, row_step={}, max_step={}, grid[{}][{}]={}", 
+                          state.sequencer_a_current_master_step, row_step, 
+                          seq_a_row_state.max_step, row_step, row_idx, grid_value);
+                }
 
                 if grid_value > 0 {
                     // This step is active - send MIDI note
@@ -895,6 +926,48 @@ impl Sequencer {
         Ok(())
     }
 
+    /// Load pattern from specified file path
+    pub fn load_pattern_from_file(&self, path: &str) -> Result<()> {
+        let pattern_file = std::path::PathBuf::from(path);
+
+        if !pattern_file.exists() {
+            return Err(anyhow::anyhow!("Pattern file not found at: {:?}", pattern_file));
+        }
+
+        let json_content = std::fs::read_to_string(&pattern_file)?;
+        let loaded_state: SequencerState = serde_json::from_str(&json_content)?;
+
+        // Save current transport state before loading
+        let mut state = self.state.lock().unwrap();
+        // Preserve transport state while loading
+        let current_step = state.sequencer_a_current_master_step;
+        let is_running = state.is_running;
+        let tick_count = state.tick_count;
+        let tick_count_since_step = state.the_current_tick_count_since_step;
+
+        // Load the pattern data
+        *state = loaded_state;
+
+        // Restore transport state
+        state.sequencer_a_current_master_step = current_step;
+        state.is_running = is_running;
+        state.tick_count = tick_count;
+        state.the_current_tick_count_since_step = tick_count_since_step;
+
+        // DEBUG: Log Row 3 grid values after loading
+        info!("Pattern loaded from: {:?}", pattern_file);
+        info!("🔍 LOADED Row 3 grid values: [0]={}, [1]={}, [2]={}, [3]={}", 
+              state.sequencer_a_grid[0][3], state.sequencer_a_grid[1][3], 
+              state.sequencer_a_grid[2][3], state.sequencer_a_grid[3][3]);
+
+        // Log initial state to formal state logger
+        if let Ok(pattern_json) = serde_json::to_string(&*state) {
+            log_system_init(&pattern_json);
+        }
+
+        Ok(())
+    }
+
     /// Load current pattern from file
     pub fn load_current_pattern_from_file(&self) -> Result<()> {
         let pattern_file = Self::get_pattern_file_path();
@@ -923,7 +996,11 @@ impl Sequencer {
         state.tick_count = tick_count;
         state.the_current_tick_count_since_step = tick_count_since_step;
 
+        // DEBUG: Log Row 3 grid values after loading
         info!("Current pattern loaded from: {:?}", pattern_file);
+        info!("🔍 LOADED Row 3 grid values: [0]={}, [1]={}, [2]={}, [3]={}", 
+              state.sequencer_a_grid[0][3], state.sequencer_a_grid[1][3], 
+              state.sequencer_a_grid[2][3], state.sequencer_a_grid[3][3]);
 
         // Log initial state to formal state logger
         if let Ok(pattern_json) = serde_json::to_string(&*state) {
@@ -1060,6 +1137,11 @@ impl Sequencer {
         let mut state = self.state.lock().unwrap();
         state.global_transpose = semitones.clamp(-24, 24);
         debug!("Set global transpose: {} semitones", state.global_transpose);
+    }
+
+    /// Check if sequencer is in test mode
+    pub fn is_test_mode(&self) -> bool {
+        self.test_mode
     }
 
     /// Set global velocity scale
