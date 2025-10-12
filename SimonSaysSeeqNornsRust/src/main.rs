@@ -1826,6 +1826,11 @@ impl SimonSaysSeeq {
                     // MIDI clock runs at 24 PPQ, we get 6 ticks per step (every clock, 6 clocks per step)
                     let tick_count = EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst);
                     
+                    // Process pending note-offs on every tick
+                    if let Err(e) = self.sequencer.process_pending_note_offs_on_tick(seq_tx) {
+                        warn!("Failed to process pending note-offs: {}", e);
+                    }
+                    
                     // Check if we should advance step BEFORE incrementing, so step 0 happens at tick 0
                     if tick_count % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
                         // Advance sequencer step based on external clock

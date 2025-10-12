@@ -1170,6 +1170,14 @@ impl Sequencer {
         self.test_mode
     }
 
+    /// Process pending note-offs on every tick (public interface)
+    pub fn process_pending_note_offs_on_tick(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let state = self.state.lock().unwrap();
+        let current_tick = state.tick_count;
+        drop(state);
+        self.process_pending_note_offs(current_tick, sender)
+    }
+
     /// Process pending note-offs that should trigger at current tick
     fn process_pending_note_offs(&self, current_tick: u64, sender: &Sender<SequencerEvent>) -> Result<()> {
         let mut pending = self.pending_note_offs.lock().unwrap();
