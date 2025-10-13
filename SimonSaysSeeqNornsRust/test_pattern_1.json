@@ -1399,8 +1399,6 @@
   "swing_amount": 0.0,
   "ticks_per_step": 12,
   "steps_per_bar": 16,
-  "tick_count_since_midi_clock_start": 0,
-  "tick_in_step": 0,
   "first_step": 0,
   "last_step": 31,
   "midi_first_step": 0,
