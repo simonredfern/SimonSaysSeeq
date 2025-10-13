@@ -4,12 +4,97 @@ use std::fs;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
-use std::io::Write;
+use std::io::{self, Write};
 
 use clap::Parser;
 
 use simon_says_seeq_rust::clock_generator::{ClockGenerator, ClockConfig};
 use simon_says_seeq_rust::test_script::DirectTestScript;
+
+/// Load saved MIDI port selections from file
+fn load_saved_ports() -> Option<(usize, usize)> {
+    if let Ok(content) = fs::read_to_string("midi_ports.conf") {
+        let lines: Vec<&str> = content.lines().collect();
+        if lines.len() >= 2 {
+            if let (Ok(out_port), Ok(in_port)) = (lines[0].parse(), lines[1].parse()) {
+                println!("📁 Loaded saved MIDI ports: output={}, input={}", out_port, in_port);
+                return Some((out_port, in_port));
+            }
+        }
+    }
+    None
+}
+
+/// Save MIDI port selections to file
+fn save_ports(out_port: usize, in_port: usize) -> Result<(), Box<dyn Error>> {
+    let content = format!("{}\n{}\n", out_port, in_port);
+    fs::write("midi_ports.conf", content)?;
+    println!("💾 Saved MIDI port selections to midi_ports.conf (will be used for --all runs)");
+    Ok(())
+}
+
+/// Prompt user to select output port and save selection
+fn prompt_and_save_output_port() -> Result<usize, Box<dyn Error>> {
+    use midir::MidiOutput;
+    
+    let midi_out = MidiOutput::new("MIDI Clock Generator")?;
+    let out_ports = midi_out.ports();
+    
+    if out_ports.is_empty() {
+        return Err("No MIDI output ports available".into());
+    }
+    
+    println!("\nAvailable MIDI output ports:");
+    for (i, port) in out_ports.iter().enumerate() {
+        let port_name = midi_out.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+        println!("  {}: {}", i, port_name);
+    }
+    
+    print!("Select MIDI output port (0-{}): ", out_ports.len() - 1);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let selected = input.trim().parse::<usize>().unwrap_or(0);
+    
+    if selected >= out_ports.len() {
+        return Err(format!("Invalid port selection: {}", selected).into());
+    }
+    
+    Ok(selected)
+}
+
+/// Prompt user to select input port and save both selections
+fn prompt_and_save_input_port(out_port: usize) -> Result<usize, Box<dyn Error>> {
+    use midir::MidiInput;
+    
+    let midi_in = MidiInput::new("MIDI Input")?;
+    let in_ports = midi_in.ports();
+    
+    if in_ports.is_empty() {
+        return Err("No MIDI input ports available".into());
+    }
+    
+    println!("\nAvailable MIDI input ports:");
+    for (i, port) in in_ports.iter().enumerate() {
+        let port_name = midi_in.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+        println!("  {}: {}", i, port_name);
+    }
+    
+    print!("Select MIDI input port (0-{}): ", in_ports.len() - 1);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let selected = input.trim().parse::<usize>().unwrap_or(0);
+    
+    if selected >= in_ports.len() {
+        return Err(format!("Invalid port selection: {}", selected).into());
+    }
+    
+    // Save both ports
+    save_ports(out_port, selected)?;
+    
+    Ok(selected)
+}
 
 #[derive(Parser, Debug)]
 #[clap(name = "clock_driven_test")]
@@ -74,14 +159,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     generator.set_direct_test_script(script);
 
-    // Connect to MIDI output (for clock)
-    let connection = generator.connect_midi_output()?;
+    // Connect to MIDI - use saved ports or prompt and save
+    let (connection, midi_input) = if let Some((out_port, in_port)) = load_saved_ports() {
+        // Use saved ports
+        let conn = connect_midi_output_by_index(&generator, out_port)?;
+        let input = connect_midi_input_by_index(&generator, in_port)?;
+        (conn, input)
+    } else {
+        // First run - prompt for both ports and save
+        println!("No saved MIDI ports found. Please select ports (will be saved for future runs):");
+        let out_port = prompt_and_save_output_port()?;
+        let conn = connect_midi_output_by_index(&generator, out_port)?;
+        let in_port = prompt_and_save_input_port(out_port)?;
+        let input = connect_midi_input_by_index(&generator, in_port)?;
+        (conn, input)
+    };
+    
+    let _midi_input = midi_input;
     println!("✅ MIDI Clock initialized at {:.1} BPM", generator.get_bpm());
-    println!();
-
-    // Connect to MIDI input (for listening to notes from sequencer)
-    println!("🎵 Connecting MIDI input to listen for sequencer notes...");
-    let _midi_input = generator.connect_midi_input()?;
     println!("✅ MIDI Input connected");
     println!();
 
@@ -308,9 +403,23 @@ fn run_single_test(script_path: &str, log_file: &mut fs::File) -> Result<(), Box
     
     generator.set_direct_test_script(script);
     
-    // Connect MIDI
-    let connection = generator.connect_midi_output()?;
-    let _midi_input = generator.connect_midi_input()?;
+    // Connect MIDI using saved ports (or prompt and save on first run)
+    let connection = if let Some((out_port, _)) = load_saved_ports() {
+        // Use saved output port
+        connect_midi_output_by_index(&generator, out_port)?
+    } else {
+        // First run - prompt user and save selection
+        println!("First run - please select MIDI ports (will be saved for future runs)");
+        let conn = generator.connect_midi_output()?;
+        conn
+    };
+    
+    let _midi_input = if let Some((_, in_port)) = load_saved_ports() {
+        // Use saved input port
+        connect_midi_input_by_index(&generator, in_port)?
+    } else {
+        generator.connect_midi_input()?
+    };
     
     // Start clock thread
     let _clock_thread = generator.spawn_clock_thread(connection);
@@ -376,4 +485,50 @@ fn run_single_test(script_path: &str, log_file: &mut fs::File) -> Result<(), Box
     } else {
         Ok(())
     }
+}
+
+/// Connect MIDI output by port index
+fn connect_midi_output_by_index(generator: &ClockGenerator, port_index: usize) -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
+    use midir::MidiOutput;
+    
+    let midi_out = MidiOutput::new("MIDI Clock Generator")?;
+    let out_ports = midi_out.ports();
+    
+    if port_index >= out_ports.len() {
+        return Err(format!("Saved output port {} not available (only {} ports)", port_index, out_ports.len()).into());
+    }
+    
+    let port = &out_ports[port_index];
+    let port_name = midi_out.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+    println!("Using saved MIDI output port {}: {}", port_index, port_name);
+    
+    let connection = midi_out.connect(port, "MIDI Clock")?;
+    Ok(connection)
+}
+
+/// Connect MIDI input by port index
+fn connect_midi_input_by_index(generator: &ClockGenerator, port_index: usize) -> Result<midir::MidiInputConnection<()>, Box<dyn Error>> {
+    use midir::MidiInput;
+    
+    let midi_in = MidiInput::new("MIDI Input")?;
+    let in_ports = midi_in.ports();
+    
+    if port_index >= in_ports.len() {
+        return Err(format!("Saved input port {} not available (only {} ports)", port_index, in_ports.len()).into());
+    }
+    
+    let port = &in_ports[port_index];
+    let port_name = midi_in.port_name(port).unwrap_or_else(|_| "Unknown".to_string());
+    println!("Using saved MIDI input port {}: {}", port_index, port_name);
+    
+    let connection = midi_in.connect(
+        port,
+        "MIDI Input",
+        |_timestamp, _message, _| {
+            // No-op: for testing we just need the connection open
+        },
+        (),
+    )?;
+    
+    Ok(connection)
 }
