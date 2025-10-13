@@ -1225,10 +1225,8 @@ impl Sequencer {
     /// Tick 1: Send Note OFF for any active resets
     pub fn process_clock_division_resets_on_tick(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
         let mut state = self.state.lock().unwrap();
-        let tick_in_step = state.tick_in_step;
-        let reset_step = state.global_reset_step_counter;
         
-        if tick_in_step == 0 {
+        if state.tick_in_step == 0 {
             // Tick 0: Check conditions and send Note ON
             
             // reset_1 always fires (every step)
@@ -1236,19 +1234,19 @@ impl Sequencer {
             Self::send_reset_note_on(RESET_1_NOTE, sender)?;
             
             // Nested checks for longer divisions
-            if reset_step % 16 == 0 {
+            if state.global_reset_step_counter % 16 == 0 {
                 state.reset_16_active = true;
                 Self::send_reset_note_on(RESET_16_NOTE, sender)?;
                 
-                if reset_step % 32 == 0 {
+                if state.global_reset_step_counter % 32 == 0 {
                     state.reset_32_active = true;
                     Self::send_reset_note_on(RESET_32_NOTE, sender)?;
                     
-                    if reset_step % 64 == 0 {
+                    if state.global_reset_step_counter % 64 == 0 {
                         state.reset_64_active = true;
                         Self::send_reset_note_on(RESET_64_NOTE, sender)?;
                         
-                        if reset_step == 0 {
+                        if state.global_reset_step_counter == 0 {
                             state.reset_128_active = true;
                             Self::send_reset_note_on(RESET_128_NOTE, sender)?;
                         }
@@ -1256,7 +1254,7 @@ impl Sequencer {
                 }
             }
             
-        } else if tick_in_step == 1 {
+        } else if state.tick_in_step == 1 {
             // Tick 1: Send Note OFF for any active resets
             
             if state.reset_1_active {
