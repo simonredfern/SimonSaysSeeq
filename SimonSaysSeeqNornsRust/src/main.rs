@@ -1829,6 +1829,11 @@ impl SimonSaysSeeq {
                     // Increment sequencer tick count on every MIDI clock tick
                     self.sequencer.increment_tick_count();
                     
+                    // Process clock division resets on every tick
+                    if let Err(e) = self.sequencer.process_clock_division_resets_on_tick(seq_tx) {
+                        warn!("Failed to process clock division resets: {}", e);
+                    }
+                    
                     // Process pending note-offs on every tick
                     if let Err(e) = self.sequencer.process_pending_note_offs_on_tick(seq_tx) {
                         warn!("Failed to process pending note-offs: {}", e);

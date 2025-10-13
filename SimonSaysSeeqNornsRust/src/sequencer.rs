@@ -19,6 +19,15 @@ use crate::formal_state_logger::{log_system_init, log_sequencer_state_change, lo
 /// http://flame.fortschritt-musik.de/pdf/Manual_Flame_MGTV_module_v100_eng.pdf
 const LOWEST_MIDI_NOTE_NUMBER_FOR_GATE: u8 = 47;
 
+/// Clock division reset outputs - MIDI notes for clock-synced reset signals
+const RESET_1_NOTE: u8 = 55;      // Triggers every 1 step
+const RESET_16_NOTE: u8 = 56;     // Triggers every 16 steps
+const RESET_32_NOTE: u8 = 57;     // Triggers every 32 steps
+const RESET_64_NOTE: u8 = 58;     // Triggers every 64 steps
+const RESET_128_NOTE: u8 = 59;    // Triggers every 128 steps
+const RESET_CHANNEL: u8 = 1;      // MIDI channel for reset outputs
+const RESET_VELOCITY: u8 = 100;   // Velocity for reset note-ons
+
 /// MIDI event for hardware output
 #[derive(Debug, Clone)]
 pub struct MidiEvent {
@@ -156,6 +165,13 @@ pub struct SequencerState {
     pub steps_per_bar: usize,
     pub tick_count_since_midi_clock_start: u64,
     pub the_current_tick_count_since_step: u32,
+    /// Clock division reset tracking
+    pub global_reset_step_counter: usize,
+    pub reset_1_active: bool,
+    pub reset_16_active: bool,
+    pub reset_32_active: bool,
+    pub reset_64_active: bool,
+    pub reset_128_active: bool,
     pub first_step: usize,
     pub last_step: usize,
     pub midi_first_step: usize,
@@ -238,6 +254,12 @@ impl Default for SequencerState {
             max_lane: MAX_LANE,
             max_step: MAX_STEP,
             reset_tick_counter: false,
+            global_reset_step_counter: 0,
+            reset_1_active: false,
+            reset_16_active: false,
+            reset_32_active: false,
+            reset_64_active: false,
+            reset_128_active: false,
         }
     }
 }
@@ -322,6 +344,13 @@ impl Sequencer {
                 seq_a_row_state.current_row_step = 0;
             }
 
+            // Reset clock division counters
+            state.global_reset_step_counter = 0;
+            state.reset_1_active = false;
+            state.reset_16_active = false;
+            state.reset_32_active = false;
+            state.reset_64_active = false;
+            state.reset_128_active = false;
 
             // info!("Sequencer started");
         }
@@ -585,6 +614,12 @@ impl Sequencer {
 
         // Log step advancement to formal state logger
         log_step_advancement(state.sequencer_a_current_master_step, 0, formal_state_row_steps);
+
+        // Advance global reset step counter
+        state.global_reset_step_counter += 1;
+        if state.global_reset_step_counter > 127 {
+            state.global_reset_step_counter = 0;
+        }
 
         // Update CO2 counters if we have data
         if state.total_step_co2_count > 0 {
@@ -1182,6 +1217,98 @@ impl Sequencer {
         let current_tick = state.tick_count_since_midi_clock_start;
         drop(state);
         self.process_pending_note_offs(current_tick, sender)
+    }
+
+    /// Process clock division resets on every tick
+    /// Tick 0: Send Note ON if reset condition met
+    /// Tick 1: Send Note OFF for any active resets
+    pub fn process_clock_division_resets_on_tick(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let mut state = self.state.lock().unwrap();
+        let tick_in_step = state.the_current_tick_count_since_step;
+        let reset_step = state.global_reset_step_counter;
+        
+        if tick_in_step == 0 {
+            // Tick 0: Check conditions and send Note ON
+            
+            // reset_1 always fires (every step)
+            state.reset_1_active = true;
+            Self::send_reset_note_on(RESET_1_NOTE, sender)?;
+            
+            // Nested checks for longer divisions
+            if reset_step % 16 == 0 {
+                state.reset_16_active = true;
+                Self::send_reset_note_on(RESET_16_NOTE, sender)?;
+                
+                if reset_step % 32 == 0 {
+                    state.reset_32_active = true;
+                    Self::send_reset_note_on(RESET_32_NOTE, sender)?;
+                    
+                    if reset_step % 64 == 0 {
+                        state.reset_64_active = true;
+                        Self::send_reset_note_on(RESET_64_NOTE, sender)?;
+                        
+                        if reset_step == 0 {
+                            state.reset_128_active = true;
+                            Self::send_reset_note_on(RESET_128_NOTE, sender)?;
+                        }
+                    }
+                }
+            }
+            
+        } else if tick_in_step == 1 {
+            // Tick 1: Send Note OFF for any active resets
+            
+            if state.reset_1_active {
+                Self::send_reset_note_off(RESET_1_NOTE, sender)?;
+                state.reset_1_active = false;
+            }
+            if state.reset_16_active {
+                Self::send_reset_note_off(RESET_16_NOTE, sender)?;
+                state.reset_16_active = false;
+            }
+            if state.reset_32_active {
+                Self::send_reset_note_off(RESET_32_NOTE, sender)?;
+                state.reset_32_active = false;
+            }
+            if state.reset_64_active {
+                Self::send_reset_note_off(RESET_64_NOTE, sender)?;
+                state.reset_64_active = false;
+            }
+            if state.reset_128_active {
+                Self::send_reset_note_off(RESET_128_NOTE, sender)?;
+                state.reset_128_active = false;
+            }
+        }
+        
+        Ok(())
+    }
+
+    /// Helper function to send reset note ON
+    fn send_reset_note_on(note: u8, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let midi_event = MidiEvent {
+            note,
+            velocity: RESET_VELOCITY,
+            channel: RESET_CHANNEL,
+            note_on: true,
+            step: 0,
+            sequencer_source: 'A',
+        };
+        sender.try_send(SequencerEvent::MidiEvent(midi_event))?;
+        Ok(())
+    }
+
+    /// Helper function to send reset note OFF
+    fn send_reset_note_off(note: u8, sender: &Sender<SequencerEvent>) -> Result<()> {
+        let midi_event = MidiEvent {
+            note,
+            velocity: 0,
+            channel: RESET_CHANNEL,
+            note_on: false,
+            step: 0,
+            sequencer_source: 'A',
+        };
+        sender.try_send(SequencerEvent::MidiEvent(midi_event))?;
+        Ok(())
     }
 
     /// Process pending note-offs that should trigger at current tick
