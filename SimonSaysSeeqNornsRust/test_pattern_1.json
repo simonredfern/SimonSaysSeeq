@@ -1434,5 +1434,11 @@
   "min_lane": 1,
   "max_lane": 2,
   "max_step": 31,
-  "reset_tick_counter": true
+  "reset_tick_counter": true,
+  "global_reset_step_counter": 0,
+  "reset_1_active": false,
+  "reset_16_active": false,
+  "reset_32_active": false,
+  "reset_64_active": false,
+  "reset_128_active": false
 }
