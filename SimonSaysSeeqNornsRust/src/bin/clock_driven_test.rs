@@ -308,6 +308,22 @@ fn run_multiple_tests(test_files: Vec<String>) -> Result<(), Box<dyn Error>> {
     writeln!(log_file, "═══════════════════════════════════════════════════════")?;
     writeln!(log_file)?;
     
+    // Create single generator and connect MIDI once for all tests
+    let config = ClockConfig {
+        enable_tick_counting: true,
+        enable_test_mode: false,
+    };
+    let mut generator = ClockGenerator::new_with_config(30.0, config);
+    
+    println!("Connecting MIDI for batch test run...");
+    let connection = generator.connect_midi_output()?;
+    let _midi_input = generator.connect_midi_input()?;
+    println!("✅ MIDI Connected - will be reused for all tests");
+    println!();
+    
+    let _clock_thread = generator.spawn_clock_thread(connection);
+    thread::sleep(Duration::from_millis(100));
+    
     for test_file in &test_files {
         writeln!(log_file, "Running: {}", test_file)?;
         writeln!(log_file, "───────────────────────────────────────────────────────")?;
@@ -319,8 +335,8 @@ fn run_multiple_tests(test_files: Vec<String>) -> Result<(), Box<dyn Error>> {
             continue;
         }
         
-        // Run the test
-        match run_single_test(test_file, &mut log_file) {
+        // Run the test with shared generator
+        match run_single_test_with_generator(test_file, &mut log_file, &mut generator) {
             Ok(_) => {
                 results.push((test_file, true));
                 writeln!(log_file, "✅ PASSED: {}", test_file)?;
@@ -368,7 +384,7 @@ fn run_multiple_tests(test_files: Vec<String>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn run_single_test(script_path: &str, log_file: &mut fs::File) -> Result<(), Box<dyn Error>> {
+fn run_single_test_with_generator(script_path: &str, log_file: &mut fs::File, generator: &mut ClockGenerator) -> Result<(), Box<dyn Error>> {
     // Load test script
     let script_content = fs::read_to_string(script_path)?;
     let script: DirectTestScript = serde_json::from_str(&script_content)?;
@@ -380,27 +396,14 @@ fn run_single_test(script_path: &str, log_file: &mut fs::File) -> Result<(), Box
     // Truncate formal_state.log
     fs::write("formal_state.log", "")?;
     
-    // Create clock generator
-    let config = ClockConfig {
-        enable_tick_counting: true,
-        enable_test_mode: false,
-    };
-    let mut generator = ClockGenerator::new_with_config(script.bpm, config);
-    
     // Calculate max tick for auto-exit
     let max_tick = script.commands.iter().map(|cmd| cmd.at_tick).max().unwrap_or(0);
     let grace_ticks = 12;
     let exit_tick = max_tick + grace_ticks;
     
+    // Update generator with new script
+    generator.set_bpm(script.bpm);
     generator.set_direct_test_script(script);
-    
-    // Connect MIDI - use regular methods which properly handle SysEx
-    let connection = generator.connect_midi_output()?;
-    let _midi_input = generator.connect_midi_input()?;
-    
-    // Start clock thread
-    let _clock_thread = generator.spawn_clock_thread(connection);
-    thread::sleep(Duration::from_millis(100));
     
     // Verify test mode
     let test_mode_query = vec![0xF0, 0x7D, 0x53, 0x53, 0x51, 0x10, 0xF7];
