@@ -100,21 +100,20 @@ fn prompt_and_save_input_port(out_port: usize) -> Result<usize, Box<dyn Error>> 
 #[clap(name = "clock_driven_test")]
 #[clap(about = "Run clock-driven tick-synchronized tests")]
 struct Args {
-    #[arg(long)]
-    script: Option<String>,
-    
-    #[arg(long)]
-    all: bool,
+    /// Test script files to run (e.g., test1.json test2.json test3.json)
+    #[arg(required = true)]
+    scripts: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    if args.all {
-        return run_all_tests();
+    // If multiple scripts provided, run them all
+    if args.scripts.len() > 1 {
+        return run_multiple_tests(args.scripts);
     }
 
-    let script_path = args.script.as_ref().ok_or("--script is required when not using --all")?;
+    let script_path = &args.scripts[0];
 
     println!("🧪 Clock-Driven Test Runner");
     println!("═══════════════════════════════════════════════════════");
@@ -300,24 +299,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn run_all_tests() -> Result<(), Box<dyn Error>> {
-    let test_files = vec![
-        "test1.json",
-        "test2.json",
-        "test3.json",
-        "test4.json",
-        "test5.json",
-    ];
-    
+fn run_multiple_tests(test_files: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut log_file = fs::File::create("latest_tests.log")?;
     let mut all_passed = true;
     let mut results = Vec::new();
     
-    writeln!(log_file, "🧪 Running All Tests")?;
+    writeln!(log_file, "🧪 Running Multiple Tests")?;
     writeln!(log_file, "═══════════════════════════════════════════════════════")?;
     writeln!(log_file)?;
     
-    for test_file in test_files {
+    for test_file in &test_files {
         writeln!(log_file, "Running: {}", test_file)?;
         writeln!(log_file, "───────────────────────────────────────────────────────")?;
         
@@ -403,23 +394,9 @@ fn run_single_test(script_path: &str, log_file: &mut fs::File) -> Result<(), Box
     
     generator.set_direct_test_script(script);
     
-    // Connect MIDI using saved ports (or prompt and save on first run)
-    let connection = if let Some((out_port, _)) = load_saved_ports() {
-        // Use saved output port
-        connect_midi_output_by_index(&generator, out_port)?
-    } else {
-        // First run - prompt user and save selection
-        println!("First run - please select MIDI ports (will be saved for future runs)");
-        let conn = generator.connect_midi_output()?;
-        conn
-    };
-    
-    let _midi_input = if let Some((_, in_port)) = load_saved_ports() {
-        // Use saved input port
-        connect_midi_input_by_index(&generator, in_port)?
-    } else {
-        generator.connect_midi_input()?
-    };
+    // Connect MIDI - use regular methods which properly handle SysEx
+    let connection = generator.connect_midi_output()?;
+    let _midi_input = generator.connect_midi_input()?;
     
     // Start clock thread
     let _clock_thread = generator.spawn_clock_thread(connection);
