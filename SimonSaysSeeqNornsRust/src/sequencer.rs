@@ -164,7 +164,7 @@ pub struct SequencerState {
     pub ticks_per_step: u32,
     pub steps_per_bar: usize,
     pub tick_count_since_midi_clock_start: u64,
-    pub the_current_tick_count_since_step: u32,
+    pub tick_in_step: u32,
     /// Clock division reset tracking
     pub global_reset_step_counter: usize,
     pub reset_1_active: bool,
@@ -239,7 +239,7 @@ impl Default for SequencerState {
             last_step: 31,
             steps_per_bar: 16,
             tick_count_since_midi_clock_start: 0,
-            the_current_tick_count_since_step: 0,
+            tick_in_step: 0,
             midi_first_step: 0,
             midi_last_step: 31,
             swing_mode: 1,
@@ -576,7 +576,7 @@ impl Sequencer {
         sender: &Sender<SequencerEvent>,
     ) -> Result<()> {
         // Reset tick count since step
-        state.the_current_tick_count_since_step = 0;
+        state.tick_in_step = 0;
 
         // Process pending note-offs for current tick
         self.process_pending_note_offs(state.tick_count_since_midi_clock_start, sender)?;
@@ -978,7 +978,7 @@ impl Sequencer {
         save_state.is_running = false;
         save_state.sequencer_a_current_master_step = 0;
         save_state.tick_count_since_midi_clock_start = 0;
-        save_state.the_current_tick_count_since_step = 0;
+        save_state.tick_in_step = 0;
 
         let json_content = serde_json::to_string_pretty(&save_state)?;
         std::fs::write(&pattern_file, json_content)?;
@@ -1004,7 +1004,7 @@ impl Sequencer {
         let current_step = state.sequencer_a_current_master_step;
         let is_running = state.is_running;
         let tick_count = state.tick_count_since_midi_clock_start;
-        let tick_count_since_step = state.the_current_tick_count_since_step;
+        let tick_count_since_step = state.tick_in_step;
 
         // Load the pattern data
         *state = loaded_state;
@@ -1013,7 +1013,7 @@ impl Sequencer {
         state.sequencer_a_current_master_step = current_step;
         state.is_running = is_running;
         state.tick_count_since_midi_clock_start = tick_count;
-        state.the_current_tick_count_since_step = tick_count_since_step;
+        state.tick_in_step = tick_count_since_step;
 
         // DEBUG: Log Row 3 grid values after loading
         info!("Pattern loaded from: {:?}", pattern_file);
@@ -1046,7 +1046,7 @@ impl Sequencer {
         let current_step = state.sequencer_a_current_master_step;
         let is_running = state.is_running;
         let tick_count = state.tick_count_since_midi_clock_start;
-        let tick_count_since_step = state.the_current_tick_count_since_step;
+        let tick_count_since_step = state.tick_in_step;
 
         // Load the pattern data
         *state = loaded_state;
@@ -1055,7 +1055,7 @@ impl Sequencer {
         state.sequencer_a_current_master_step = current_step;
         state.is_running = is_running;
         state.tick_count_since_midi_clock_start = tick_count;
-        state.the_current_tick_count_since_step = tick_count_since_step;
+        state.tick_in_step = tick_count_since_step;
 
         // DEBUG: Log Row 3 grid values after loading
         info!("Current pattern loaded from: {:?}", pattern_file);
@@ -1209,6 +1209,7 @@ impl Sequencer {
     pub fn increment_tick_count(&self) {
         let mut state = self.state.lock().unwrap();
         state.tick_count_since_midi_clock_start += 1;
+        state.tick_in_step += 1;
     }
 
     /// Process pending note-offs on every tick (public interface)
@@ -1224,7 +1225,7 @@ impl Sequencer {
     /// Tick 1: Send Note OFF for any active resets
     pub fn process_clock_division_resets_on_tick(&self, sender: &Sender<SequencerEvent>) -> Result<()> {
         let mut state = self.state.lock().unwrap();
-        let tick_in_step = state.the_current_tick_count_since_step;
+        let tick_in_step = state.tick_in_step;
         let reset_step = state.global_reset_step_counter;
         
         if tick_in_step == 0 {
