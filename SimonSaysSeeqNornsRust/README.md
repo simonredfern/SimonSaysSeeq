@@ -289,6 +289,31 @@ cargo test --features="simulation"
 cargo test --features="hardware,midi"
 ```
 
+### Clock-Driven Integration Tests
+
+The `clock_driven_test` runner executes tick-synchronized tests against a running sequencer:
+
+```bash
+# Terminal 1: Start sequencer in test mode
+cargo run --release --bin simon_says_seeq -- --test-mode
+
+# Terminal 2: Run a test and save output to log file
+cargo run --release --bin clock_driven_test -- --script test1.json 2>&1 | tee latest_test_results_test1.log
+
+# Run other tests
+cargo run --release --bin clock_driven_test -- --script test2.json 2>&1 | tee latest_test_results_test2.log
+cargo run --release --bin clock_driven_test -- --script test3.json 2>&1 | tee latest_test_results_test3.log
+```
+
+Available test scripts:
+- `test1.json` - Multi-Length Pattern Verification
+- `test2.json` - Multi-Row Max Step Changes
+- `test3.json` - MIDI Note Output Verification
+- `test4.json` - LED Sync Verification
+- `test5.json` - Clock Division Reset Verification
+
+The `tee` command writes output to both the terminal and the log file for later review.
+
 ### Simulation Mode Details
 
 When running in simulation mode, the application provides rich console feedback:
