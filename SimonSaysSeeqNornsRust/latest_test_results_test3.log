@@ -1,0 +1,903 @@
+warning: unused manifest key: target.aarch64-unknown-linux-gnu.linker
+warning: unused manifest key: target.armv7-unknown-linux-gnueabihf.linker
+warning: unused manifest key: target.cfg(target_arch = "arm").rustflags
+warning: unused imports: `AtomicBool` and `Ordering`
+  --> src/sequencer.rs:11:25
+   |
+11 | use std::sync::atomic::{AtomicBool, Ordering};
+   |                         ^^^^^^^^^^  ^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::thread`
+  --> src/sequencer.rs:13:5
+   |
+13 | use std::thread;
+   |     ^^^^^^^^^^^
+
+warning: unused imports: `Duration` and `Instant`
+  --> src/sequencer.rs:14:17
+   |
+14 | use std::time::{Duration, Instant};
+   |                 ^^^^^^^^  ^^^^^^^
+
+warning: unused import: `log_sequencer_state_change`
+  --> src/sequencer.rs:15:51
+   |
+15 | use crate::formal_state_logger::{log_system_init, log_sequencer_state_change, log_step_advancement};
+   |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `debug`, `info`, and `warn`
+ --> src/co2.rs:7:11
+  |
+7 | use log::{info, warn, debug, error};
+  |           ^^^^  ^^^^  ^^^^^
+
+warning: unused imports: `error` and `warn`
+ --> src/crow.rs:7:18
+  |
+7 | use log::{debug, error, info, warn};
+  |                  ^^^^^        ^^^^
+
+warning: unused import: `Receiver`
+  --> src/clock_generator.rs:13:37
+   |
+13 | use std::sync::mpsc::{self, Sender, Receiver};
+   |                                     ^^^^^^^^
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:141:21
+    |
+141 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:166:24
+    |
+166 |             if let Err(e) = self.connect_to_device(&device_id, &device_type, device_port) {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:269:21
+    |
+269 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:309:20
+    |
+309 |         if let Err(e) = self.clear_all(device_id) {
+    |                    ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `seq_x`
+   --> src/grid_osc.rs:329:13
+    |
+329 |         let seq_x = transformed_x;
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_seq_x`
+
+warning: unused variable: `trace`
+   --> src/sequencer.rs:366:17
+    |
+366 |             let trace = std::backtrace::Backtrace::capture();
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_trace`
+
+warning: unused variable: `e`
+   --> src/sequencer.rs:372:28
+    |
+372 |                 if let Err(e) = self.save_current_pattern_to_file() {
+    |                            ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/sequencer.rs:701:28
+    |
+701 |                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
+    |                            ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `description`
+   --> src/sequencer.rs:924:13
+    |
+924 |         let description = name.unwrap_or_else(|| format!("Pattern {}", pattern_id));
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_description`
+
+warning: unused variable: `first`
+   --> src/co2.rs:127:29
+    |
+127 |                         let first = &manager.records[0];
+    |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_first`
+
+warning: unused variable: `last`
+   --> src/co2.rs:128:29
+    |
+128 |                         let last = &manager.records[manager.records.len() - 1];
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_last`
+
+warning: unused variable: `e`
+   --> src/co2.rs:134:21
+    |
+134 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `metadata`
+   --> src/co2.rs:170:13
+    |
+170 |         let metadata = fs::metadata(&self.all_daily_path)?;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metadata`
+
+warning: unused variable: `total_lines`
+   --> src/co2.rs:174:13
+    |
+174 |         let total_lines = content.lines().count();
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_total_lines`
+
+warning: variable `empty_lines` is assigned to, but never used
+   --> src/co2.rs:179:17
+    |
+179 |         let mut empty_lines = 0;
+    |                 ^^^^^^^^^^^
+    |
+    = note: consider using `_empty_lines` instead
+
+warning: unused variable: `e`
+   --> src/co2.rs:208:25
+    |
+208 |                     Err(e) => {
+    |                         ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/crow.rs:101:29
+    |
+101 |                         Err(e) => {
+    |                             ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/crow.rs:109:21
+    |
+109 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: method `schedule_redetection` is never used
+    --> src/midi.rs:1161:8
+     |
+168  | impl MidiManager {
+     | ---------------- method in this implementation
+...
+1161 |     fn schedule_redetection(&self) {
+     |        ^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: constant `TOTAL_STEPS` is never used
+   --> src/sequencer.rs:202:15
+    |
+202 |         const TOTAL_STEPS: usize = 32;
+    |               ^^^^^^^^^^^
+
+warning: field `current_pattern` is never read
+   --> src/sequencer.rs:274:5
+    |
+265 | pub struct Sequencer {
+    |            --------- field in this struct
+...
+274 |     current_pattern: usize,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `Sequencer` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: comparison is useless due to type limits
+    --> src/midi.rs:1398:12
+     |
+1398 |         if midi_note <= 127 {
+     |            ^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(unused_comparisons)]` on by default
+
+warning: creating a shared reference to mutable static
+   --> src/clock_generator.rs:604:28
+    |
+604 |                         if START_TIME.is_none() {
+    |                            ^^^^^^^^^^^^^^^^^^^^ shared reference to mutable static
+    |
+    = note: for more information, see <https://doc.rust-lang.org/nightly/edition-guide/rust-2024/static-mut-references.html>
+    = note: shared references to mutable statics are dangerous; it's undefined behavior if the static is mutated or if a mutable reference is created for it while the shared reference lives
+    = note: `#[warn(static_mut_refs)]` on by default
+
+warning: `simon-says-seeq-rust` (lib) generated 30 warnings (run `cargo fix --lib -p simon-says-seeq-rust` to apply 7 suggestions)
+    Finished `release` profile [optimized] target(s) in 0.05s
+     Running `target/release/clock_driven_test --script test3.json`
+🧪 Clock-Driven Test Runner
+═══════════════════════════════════════════════════════
+
+📜 Loading test script: test3.json
+🧪 Test: Test3 Direct: MIDI Note Output Verification
+📋 Description: Verifies MIDI notes are sent at correct steps based on test_pattern_1.json
+🎵 BPM: 30
+📊 Commands: 62
+═══════════════════════════════════════════════════════
+
+⚠️  IMPORTANT: The main sequencer application must be running in test mode!
+   Start it in another terminal: cargo run --release --bin simon_says_seeq -- --test-mode
+   The sequencer receives MIDI clock/SysEx and writes formal_state.log
+
+🗑️  Truncated formal_state.log for clean test run
+
+Available MIDI output ports:
+  0: Midi Through:Midi Through Port-0 14:0
+  1: Sonic Visualiser:Input 128:0
+  2: SimonSaysSeeq Input:SimonSaysSeeq Input 130:0
+Select MIDI output port (0-2): 
+Connecting to: Midi Through:Midi Through Port-0 14:0
+✅ MIDI Clock initialized at 30.0 BPM
+
+🎵 Connecting MIDI input to listen for sequencer notes...
+
+Available MIDI input ports:
+  0: Midi Through:Midi Through Port-0 14:0
+  1: MIDI Clock Generator:MIDI Clock 129:0
+  2: SimonSaysSeeq Sequencer A:SimonSaysSeeq Sequencer A 131:0
+Select MIDI input port (0-2): 
+Listening on: Midi Through:Midi Through Port-0 14:0
+✅ MIDI Input connected
+
+Clock generation thread started
+🔧 Initializing sequencer...
+  🧪 Querying sequencer test mode...
+🎵 SysEx Received: [240, 125, 83, 83, 81, 16, 247]
+🎵 SysEx Received: [240, 125, 83, 83, 81, 17, 247]
+DEBUG: Checking 2 SysEx messages in buffer
+DEBUG: SysEx message 0: [240, 125, 83, 83, 81, 16, 247]
+DEBUG: SysEx message 1: [240, 125, 83, 83, 81, 17, 247]
+  ✅ Sequencer is in test mode
+  ⏹️  Sending MIDI Stop
+  ✅ Test pattern already loaded (test mode auto-loads test_pattern_1.json)
+
+🚀 Starting clock and test execution...
+
+Press Ctrl+C to stop test
+
+═══════════════════════════════════════════════════════
+🧪 Running Test: Test3 Direct: MIDI Note Output Verification
+📄 Script File: test3.json
+═══════════════════════════════════════════════════════
+
+MIDI Clock Started at 30.0 BPM
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=57 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=58 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=59 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=0 tick=1
+📍 Tick 2: Verify MIDI NoteOff note=48 velocity=None channel=1 at step=0
+  ✅ MIDI NoteOff note=48 velocity=0 (any) channel=1 at step=0 (tick=1, delay=1)
+📍 Tick 2: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=0
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=0 (tick=1, delay=1)
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=57 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=58 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=59 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=0 tick=2
+📍 Tick 3: 📍 Tick 3: Checking for step 0 notes (delayed) - Grid[0]=[15,0,0,1,0,0,0,0] - Expecting notes 48,51 (rows 0,3)
+📍 Tick 3: Verify MIDI NoteOn note=48 velocity=None channel=1 at step=0
+  ✅ MIDI NoteOn note=48 velocity=100 (any) channel=1 at step=0 (tick=1, delay=1)
+📍 Tick 3: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=0
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=0 (tick=1, delay=1)
+.📍 Tick 6: 📍 Tick 6: Step 1 processed - Grid[1]=[0,0,0,1,1,0,0,0] - Expecting notes 51,52 (rows 3,4)
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=1 tick=7
+📍 Tick 8: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=1
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=1 (tick=7, delay=1)
+📍 Tick 8: Verify MIDI NoteOff note=52 velocity=None channel=1 at step=1
+  ✅ MIDI NoteOff note=52 velocity=0 (any) channel=1 at step=1 (tick=7, delay=1)
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=1 tick=8
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=1 tick=8
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=1 tick=8
+📍 Tick 9: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=1
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=1 (tick=7, delay=1)
+📍 Tick 9: Verify MIDI NoteOn note=52 velocity=None channel=1 at step=1
+  ✅ MIDI NoteOn note=52 velocity=100 (any) channel=1 at step=1 (tick=7, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=2 tick=14
+📍 Tick 15: 📍 Tick 15: Checking for step 2 notes (delayed) - Grid[2]=[0,1,0,1,0,1,0,0] - Expecting notes 49,51,53 (rows 1,3,5)
+📍 Tick 15: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=2 (tick=13, delay=1)
+📍 Tick 15: Verify MIDI NoteOn note=49 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOn note=49 velocity=100 (any) channel=1 at step=2 (tick=13, delay=1)
+📍 Tick 15: Verify MIDI NoteOn note=53 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOn note=53 velocity=100 (any) channel=1 at step=2 (tick=13, delay=1)
+📍 Tick 16: Verify MIDI NoteOff note=49 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOff note=49 velocity=0 (any) channel=1 at step=2 (tick=13, delay=1)
+📍 Tick 16: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=2 (tick=13, delay=1)
+📍 Tick 16: Verify MIDI NoteOff note=53 velocity=None channel=1 at step=2
+  ✅ MIDI NoteOff note=53 velocity=0 (any) channel=1 at step=2 (tick=13, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=3 tick=20
+📍 Tick 21: 📍 Tick 18: Step 3 processed - Grid[3]=[0,0,0,1,0,1,1,0] - Expecting notes 51,53,54 (rows 3,5,6)
+📍 Tick 21: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=3 (tick=19, delay=1)
+📍 Tick 21: Verify MIDI NoteOn note=53 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOn note=53 velocity=100 (any) channel=1 at step=3 (tick=19, delay=1)
+📍 Tick 21: Verify MIDI NoteOn note=54 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOn note=54 velocity=100 (any) channel=1 at step=3 (tick=19, delay=1)
+📍 Tick 22: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=3 (tick=19, delay=1)
+📍 Tick 22: Verify MIDI NoteOff note=53 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOff note=53 velocity=0 (any) channel=1 at step=3 (tick=19, delay=1)
+📍 Tick 22: Verify MIDI NoteOff note=54 velocity=None channel=1 at step=3
+  ✅ MIDI NoteOff note=54 velocity=0 (any) channel=1 at step=3 (tick=19, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=4 tick=26
+📍 Tick 27: 📍 Tick 27: Checking for step 4 notes (delayed) - Grid[4]=[15,0,1,0,0,0,1,0] - Expecting notes 48,50,54 (rows 0,2,6)
+📍 Tick 27: Verify MIDI NoteOn note=48 velocity=None channel=1 at step=4
+  ✅ MIDI NoteOn note=48 velocity=100 (any) channel=1 at step=4 (tick=25, delay=1)
+📍 Tick 27: Verify MIDI NoteOn note=50 velocity=None channel=1 at step=4
+  ✅ MIDI NoteOn note=50 velocity=100 (any) channel=1 at step=4 (tick=25, delay=1)
+📍 Tick 27: Verify MIDI NoteOn note=54 velocity=None channel=1 at step=4
+  ✅ MIDI NoteOn note=54 velocity=100 (any) channel=1 at step=4 (tick=25, delay=1)
+.📍 Tick 30: 📍 Tick 30: Step 5 processed - Grid[5]=[0,0,0,0,0,0,0,0] - Expecting no notes
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=5 tick=31
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=5 tick=31
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=5 tick=32
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=5 tick=32
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=6 tick=38
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=6 tick=38
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=6 tick=38
+📍 Tick 39: 📍 Tick 39: Checking for step 6 notes (delayed) - Grid[6]=[0,1,0,0,0,0,0,0] - Expecting note 49 (row 1)
+📍 Tick 39: Verify MIDI NoteOn note=49 velocity=None channel=1 at step=6
+  ✅ MIDI NoteOn note=49 velocity=100 (any) channel=1 at step=6 (tick=37, delay=1)
+.📍 Tick 42: 📍 Tick 42: Step 7 processed - Grid[7]=[0,0,0,0,0,0,0,0] - Expecting no notes
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=7 tick=43
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=7 tick=43
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=7 tick=44
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=7 tick=44
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=8 tick=50
+📍 Tick 51: 📍 Tick 51: Checking for step 8 notes (delayed) - Grid[8]=[15,0,0,0,0,0,0,0] - Expecting note 48 (row 0)
+📍 Tick 51: Verify MIDI NoteOn note=48 velocity=None channel=1 at step=8
+  ✅ MIDI NoteOn note=48 velocity=100 (any) channel=1 at step=8 (tick=49, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=9 tick=55
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=9 tick=55
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=9 tick=56
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=9 tick=56
+.📍 Tick 60: 📍 Continuing test to verify Row 3 (max_step=15) wraps correctly...
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=10 tick=61
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=10 tick=61
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=10 tick=62
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=10 tick=62
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=11 tick=67
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=11 tick=67
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=11 tick=68
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=11 tick=68
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=12 tick=74
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=13 tick=80
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=13 tick=80
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=13 tick=80
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=14 tick=85
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=14 tick=85
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=14 tick=86
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=14 tick=86
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=15 tick=91
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=15 tick=91
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=15 tick=92
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=15 tick=92
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=16 tick=98
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=16 tick=98
+📍 Tick 99: 📍 Step 16: Row 3 should wrap back to step 0 - Expecting note 51
+📍 Tick 99: Verify step=16 row=3 expected=Some(0)
+  ❌ Row 3 position: 1 (expected 0)
+📍 Tick 99: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=16
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=16 (tick=97, delay=1)
+📍 Tick 100: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=16
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=16 (tick=98, delay=2)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=17 tick=103
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=17 tick=103
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=17 tick=103
+📍 Tick 104: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=17
+  ❌ Expected MIDI NoteOff note=51 channel=1 not found at step 17
+     Received at step 17:
+       NoteOn note=55 velocity=100 channel=1 (tick=103)
+       NoteOn note=51 velocity=100 channel=1 (tick=103)
+       NoteOn note=53 velocity=100 channel=1 (tick=103)
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=17 tick=104
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=17 tick=104
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=17 tick=104
+📍 Tick 105: 📍 Step 17: Row 3 at step 1 - Expecting note 51
+📍 Tick 105: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=17
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=17 (tick=103, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=18 tick=109
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=18 tick=109
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=18 tick=109
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=18 tick=110
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=18 tick=110
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=18 tick=110
+📍 Tick 111: 📍 Step 18: Row 3 at step 2 - Expecting note 51
+📍 Tick 111: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=18
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=18 (tick=109, delay=1)
+📍 Tick 112: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=18
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=18 (tick=110, delay=2)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=19 tick=115
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=19 tick=115
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=19 tick=116
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=19 tick=116
+📍 Tick 117: 📍 Step 19: Row 3 at step 3 - Expecting note 51
+📍 Tick 117: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=19
+  ❌ Expected MIDI NoteOn note=51 channel=1 not found at step 19
+     Received at step 19:
+       NoteOn note=55 velocity=100 channel=1 (tick=115)
+       NoteOn note=54 velocity=100 channel=1 (tick=115)
+       NoteOff note=55 velocity=0 channel=1 (tick=116)
+       NoteOff note=54 velocity=0 channel=1 (tick=116)
+📍 Tick 118: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=19
+  ❌ Expected MIDI NoteOff note=51 channel=1 not found at step 19
+     Received at step 19:
+       NoteOn note=55 velocity=100 channel=1 (tick=115)
+       NoteOn note=54 velocity=100 channel=1 (tick=115)
+       NoteOff note=55 velocity=0 channel=1 (tick=116)
+       NoteOff note=54 velocity=0 channel=1 (tick=116)
+.📍 Tick 121: 📍 Step 32: Row 3 wraps again to step 0 - Expecting note 51
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=20 tick=121
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=20 tick=121
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=20 tick=121
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=20 tick=122
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=20 tick=122
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=20 tick=122
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=21 tick=127
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=21 tick=127
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=21 tick=128
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=21 tick=128
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=22 tick=133
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=22 tick=133
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=22 tick=133
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=22 tick=134
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=22 tick=134
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=22 tick=134
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=23 tick=139
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=23 tick=139
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=23 tick=139
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=23 tick=140
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=23 tick=140
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=23 tick=140
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=24 tick=145
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=24 tick=145
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=24 tick=145
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=24 tick=146
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=24 tick=146
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=24 tick=146
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=25 tick=151
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=25 tick=151
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=25 tick=152
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=25 tick=152
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=26 tick=157
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=26 tick=157
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=26 tick=157
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=26 tick=158
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=26 tick=158
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=26 tick=158
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=27 tick=163
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=27 tick=163
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=27 tick=164
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=27 tick=164
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=28 tick=169
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=28 tick=169
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=28 tick=169
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=28 tick=169
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=28 tick=170
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=28 tick=170
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=28 tick=170
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=28 tick=170
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=29 tick=175
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=29 tick=175
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=29 tick=176
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=29 tick=176
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=30 tick=181
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=30 tick=181
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=30 tick=181
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=30 tick=182
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=30 tick=182
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=30 tick=182
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=31 tick=187
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=31 tick=187
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=31 tick=187
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=31 tick=187
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=31 tick=188
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=31 tick=188
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=31 tick=188
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=31 tick=188
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=57 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=32 tick=193
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=32 tick=194
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=32 tick=194
+🎵 MIDI Received: NoteOff note=57 vel=0 ch=1 step=32 tick=194
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=32 tick=194
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=32 tick=194
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=32 tick=194
+📍 Tick 195: Verify step=32 row=3 expected=Some(0)
+  ❌ Row 3 position: 2 (expected 0)
+📍 Tick 195: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=32
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=32 (tick=193, delay=1)
+📍 Tick 196: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=32
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=32 (tick=193, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=33 tick=199
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=33 tick=200
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=33 tick=200
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=33 tick=200
+📍 Tick 201: 📍 Step 48: Row 3 wraps again to step 0 - Expecting note 51
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=34 tick=205
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=34 tick=206
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=34 tick=206
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=34 tick=206
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=35 tick=211
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=35 tick=212
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=35 tick=212
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=36 tick=217
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=36 tick=218
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=36 tick=218
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=36 tick=218
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=36 tick=218
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=37 tick=223
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=37 tick=223
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=37 tick=224
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=37 tick=224
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=38 tick=229
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=38 tick=229
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=38 tick=229
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=38 tick=229
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=38 tick=229
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=38 tick=230
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=38 tick=230
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=38 tick=230
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=39 tick=235
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=39 tick=235
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=39 tick=236
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=39 tick=236
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=40 tick=241
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=40 tick=241
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=40 tick=241
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=40 tick=242
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=40 tick=242
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=40 tick=242
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=41 tick=247
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=41 tick=247
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=41 tick=248
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=41 tick=248
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=42 tick=253
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=42 tick=253
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=42 tick=253
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=42 tick=253
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=42 tick=254
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=42 tick=254
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=42 tick=254
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=42 tick=254
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=43 tick=259
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=43 tick=259
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=43 tick=259
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=43 tick=260
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=43 tick=260
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=43 tick=260
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=44 tick=265
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=44 tick=266
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=44 tick=266
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=44 tick=266
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=44 tick=266
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=45 tick=271
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=45 tick=271
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=45 tick=271
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=45 tick=272
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=45 tick=272
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=45 tick=272
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=46 tick=277
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=46 tick=277
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=46 tick=277
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=46 tick=277
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=46 tick=278
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=46 tick=278
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=46 tick=278
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=46 tick=278
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=47 tick=283
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=47 tick=283
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=47 tick=284
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=47 tick=284
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=48 tick=289
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=48 tick=289
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=48 tick=289
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=48 tick=289
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=48 tick=289
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=48 tick=290
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=48 tick=290
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=48 tick=290
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=48 tick=290
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=48 tick=290
+📍 Tick 291: Verify step=48 row=3 expected=Some(0)
+  ❌ Row 3 position: 3 (expected 0)
+📍 Tick 291: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=48
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=48 (tick=289, delay=1)
+📍 Tick 292: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=48
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=48 (tick=290, delay=2)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=49 tick=295
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=49 tick=295
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=49 tick=296
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=49 tick=296
+📍 Tick 297: 📍 Step 64: Row 3 wraps again to step 0 - Expecting note 51
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=50 tick=301
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=50 tick=301
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=50 tick=302
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=50 tick=302
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=51 tick=307
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=51 tick=307
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=51 tick=308
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=51 tick=308
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=52 tick=313
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=52 tick=313
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=52 tick=313
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=52 tick=313
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=52 tick=314
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=52 tick=314
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=52 tick=314
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=52 tick=314
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=53 tick=319
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=53 tick=319
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=53 tick=319
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=53 tick=320
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=53 tick=320
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=53 tick=320
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=54 tick=325
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=54 tick=325
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=54 tick=326
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=54 tick=326
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=55 tick=331
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=55 tick=331
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=55 tick=332
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=55 tick=332
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=56 tick=337
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=56 tick=337
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=56 tick=337
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=56 tick=337
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=56 tick=338
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=56 tick=338
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=56 tick=338
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=56 tick=338
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=57 tick=343
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=57 tick=343
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=57 tick=344
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=57 tick=344
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=58 tick=349
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=58 tick=349
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=58 tick=349
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=58 tick=349
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=58 tick=350
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=58 tick=350
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=58 tick=350
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=58 tick=350
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=59 tick=355
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=59 tick=355
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=59 tick=355
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=59 tick=356
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=59 tick=356
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=59 tick=356
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=60 tick=361
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=60 tick=361
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=60 tick=361
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=60 tick=362
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=60 tick=362
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=60 tick=362
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=61 tick=367
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=61 tick=367
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=61 tick=367
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=61 tick=368
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=61 tick=368
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=61 tick=368
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=62 tick=373
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=62 tick=373
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=62 tick=373
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=62 tick=374
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=62 tick=374
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=62 tick=374
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=63 tick=379
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=63 tick=379
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=63 tick=379
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=63 tick=380
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=63 tick=380
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=63 tick=380
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=57 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=58 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=64 tick=385
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=57 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=58 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=64 tick=386
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=64 tick=386
+📍 Tick 387: Verify step=64 row=3 expected=Some(0)
+  ❌ Row 3 position: 4 (expected 0)
+📍 Tick 387: Verify MIDI NoteOn note=51 velocity=None channel=1 at step=64
+  ✅ MIDI NoteOn note=51 velocity=100 (any) channel=1 at step=64 (tick=385, delay=1)
+📍 Tick 388: Verify MIDI NoteOff note=51 velocity=None channel=1 at step=64
+  ✅ MIDI NoteOff note=51 velocity=0 (any) channel=1 at step=64 (tick=385, delay=1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=65 tick=391
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=65 tick=392
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=65 tick=392
+📍 Tick 393: ✅ MIDI note verification test complete - Row 3 triggered at steps 0,1,2,3,16,17,18,19,32,48,64
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=66 tick=397
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=66 tick=398
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=66 tick=398
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=66 tick=398
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=67 tick=403
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=67 tick=404
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=67 tick=404
+.
+═══════════════════════════════════════════════════════
+📊 Test Complete - Reached tick 408 (exit at 405)
+
+═══════════════════════════════════════════════════════
+📊 Test Results for: Test3 Direct: MIDI Note Output Verification
+═══════════════════════════════════════════════════════
+Total Verifications: 43
+✅ Passed: 36
+❌ Failed: 7
+
+❌ TEST FAILED - 7 verification(s) failed
+═══════════════════════════════════════════════════════
+Error: Custom { kind: Other, error: "7 test(s) failed" }

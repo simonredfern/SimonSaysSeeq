@@ -24,6 +24,7 @@ Thumbs.db
 
 # Logs and temporary files
 *.log
+!latest_test_results_test*.log
 *.tmp
 *.temp
 

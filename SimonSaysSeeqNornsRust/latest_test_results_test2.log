@@ -1,0 +1,485 @@
+warning: unused manifest key: target.aarch64-unknown-linux-gnu.linker
+warning: unused manifest key: target.armv7-unknown-linux-gnueabihf.linker
+warning: unused manifest key: target.cfg(target_arch = "arm").rustflags
+warning: unused imports: `AtomicBool` and `Ordering`
+  --> src/sequencer.rs:11:25
+   |
+11 | use std::sync::atomic::{AtomicBool, Ordering};
+   |                         ^^^^^^^^^^  ^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::thread`
+  --> src/sequencer.rs:13:5
+   |
+13 | use std::thread;
+   |     ^^^^^^^^^^^
+
+warning: unused imports: `Duration` and `Instant`
+  --> src/sequencer.rs:14:17
+   |
+14 | use std::time::{Duration, Instant};
+   |                 ^^^^^^^^  ^^^^^^^
+
+warning: unused import: `log_sequencer_state_change`
+  --> src/sequencer.rs:15:51
+   |
+15 | use crate::formal_state_logger::{log_system_init, log_sequencer_state_change, log_step_advancement};
+   |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `debug`, `info`, and `warn`
+ --> src/co2.rs:7:11
+  |
+7 | use log::{info, warn, debug, error};
+  |           ^^^^  ^^^^  ^^^^^
+
+warning: unused imports: `error` and `warn`
+ --> src/crow.rs:7:18
+  |
+7 | use log::{debug, error, info, warn};
+  |                  ^^^^^        ^^^^
+
+warning: unused import: `Receiver`
+  --> src/clock_generator.rs:13:37
+   |
+13 | use std::sync::mpsc::{self, Sender, Receiver};
+   |                                     ^^^^^^^^
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:141:21
+    |
+141 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:166:24
+    |
+166 |             if let Err(e) = self.connect_to_device(&device_id, &device_type, device_port) {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:269:21
+    |
+269 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/grid_osc.rs:309:20
+    |
+309 |         if let Err(e) = self.clear_all(device_id) {
+    |                    ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `seq_x`
+   --> src/grid_osc.rs:329:13
+    |
+329 |         let seq_x = transformed_x;
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_seq_x`
+
+warning: unused variable: `trace`
+   --> src/sequencer.rs:366:17
+    |
+366 |             let trace = std::backtrace::Backtrace::capture();
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_trace`
+
+warning: unused variable: `e`
+   --> src/sequencer.rs:372:28
+    |
+372 |                 if let Err(e) = self.save_current_pattern_to_file() {
+    |                            ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/sequencer.rs:701:28
+    |
+701 |                 if let Err(e) = sender.try_send(SequencerEvent::GridUpdate {
+    |                            ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `description`
+   --> src/sequencer.rs:924:13
+    |
+924 |         let description = name.unwrap_or_else(|| format!("Pattern {}", pattern_id));
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_description`
+
+warning: unused variable: `first`
+   --> src/co2.rs:127:29
+    |
+127 |                         let first = &manager.records[0];
+    |                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_first`
+
+warning: unused variable: `last`
+   --> src/co2.rs:128:29
+    |
+128 |                         let last = &manager.records[manager.records.len() - 1];
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_last`
+
+warning: unused variable: `e`
+   --> src/co2.rs:134:21
+    |
+134 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `metadata`
+   --> src/co2.rs:170:13
+    |
+170 |         let metadata = fs::metadata(&self.all_daily_path)?;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metadata`
+
+warning: unused variable: `total_lines`
+   --> src/co2.rs:174:13
+    |
+174 |         let total_lines = content.lines().count();
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_total_lines`
+
+warning: variable `empty_lines` is assigned to, but never used
+   --> src/co2.rs:179:17
+    |
+179 |         let mut empty_lines = 0;
+    |                 ^^^^^^^^^^^
+    |
+    = note: consider using `_empty_lines` instead
+
+warning: unused variable: `e`
+   --> src/co2.rs:208:25
+    |
+208 |                     Err(e) => {
+    |                         ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/crow.rs:101:29
+    |
+101 |                         Err(e) => {
+    |                             ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `e`
+   --> src/crow.rs:109:21
+    |
+109 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: method `schedule_redetection` is never used
+    --> src/midi.rs:1161:8
+     |
+168  | impl MidiManager {
+     | ---------------- method in this implementation
+...
+1161 |     fn schedule_redetection(&self) {
+     |        ^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: constant `TOTAL_STEPS` is never used
+   --> src/sequencer.rs:202:15
+    |
+202 |         const TOTAL_STEPS: usize = 32;
+    |               ^^^^^^^^^^^
+
+warning: field `current_pattern` is never read
+   --> src/sequencer.rs:274:5
+    |
+265 | pub struct Sequencer {
+    |            --------- field in this struct
+...
+274 |     current_pattern: usize,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `Sequencer` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: comparison is useless due to type limits
+    --> src/midi.rs:1398:12
+     |
+1398 |         if midi_note <= 127 {
+     |            ^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(unused_comparisons)]` on by default
+
+warning: creating a shared reference to mutable static
+   --> src/clock_generator.rs:604:28
+    |
+604 |                         if START_TIME.is_none() {
+    |                            ^^^^^^^^^^^^^^^^^^^^ shared reference to mutable static
+    |
+    = note: for more information, see <https://doc.rust-lang.org/nightly/edition-guide/rust-2024/static-mut-references.html>
+    = note: shared references to mutable statics are dangerous; it's undefined behavior if the static is mutated or if a mutable reference is created for it while the shared reference lives
+    = note: `#[warn(static_mut_refs)]` on by default
+
+warning: `simon-says-seeq-rust` (lib) generated 30 warnings (run `cargo fix --lib -p simon-says-seeq-rust` to apply 7 suggestions)
+    Finished `release` profile [optimized] target(s) in 0.05s
+     Running `target/release/clock_driven_test --script test2.json`
+🧪 Clock-Driven Test Runner
+═══════════════════════════════════════════════════════
+
+📜 Loading test script: test2.json
+🧪 Test: Test2 Direct: Multi-Row Max Step Changes
+📋 Description: Tick-synchronized test of changing multiple rows' max_step values via SysEx
+🎵 BPM: 30
+📊 Commands: 41
+═══════════════════════════════════════════════════════
+
+⚠️  IMPORTANT: The main sequencer application must be running in test mode!
+   Start it in another terminal: cargo run --release --bin simon_says_seeq -- --test-mode
+   The sequencer receives MIDI clock/SysEx and writes formal_state.log
+
+🗑️  Truncated formal_state.log for clean test run
+
+Available MIDI output ports:
+  0: Midi Through:Midi Through Port-0 14:0
+  1: Sonic Visualiser:Input 128:0
+  2: SimonSaysSeeq Input:SimonSaysSeeq Input 130:0
+Select MIDI output port (0-2): 
+Connecting to: Midi Through:Midi Through Port-0 14:0
+✅ MIDI Clock initialized at 30.0 BPM
+
+🎵 Connecting MIDI input to listen for sequencer notes...
+
+Available MIDI input ports:
+  0: Midi Through:Midi Through Port-0 14:0
+  1: MIDI Clock Generator:MIDI Clock 129:0
+  2: SimonSaysSeeq Sequencer A:SimonSaysSeeq Sequencer A 131:0
+Select MIDI input port (0-2): 
+Listening on: Midi Through:Midi Through Port-0 14:0
+✅ MIDI Input connected
+
+Clock generation thread started
+🔧 Initializing sequencer...
+  🧪 Querying sequencer test mode...
+🎵 SysEx Received: [240, 125, 83, 83, 81, 16, 247]
+🎵 SysEx Received: [240, 125, 83, 83, 81, 17, 247]
+DEBUG: Checking 2 SysEx messages in buffer
+DEBUG: SysEx message 0: [240, 125, 83, 83, 81, 16, 247]
+DEBUG: SysEx message 1: [240, 125, 83, 83, 81, 17, 247]
+  ✅ Sequencer is in test mode
+  ⏹️  Sending MIDI Stop
+  ✅ Test pattern already loaded (test mode auto-loads test_pattern_1.json)
+
+🚀 Starting clock and test execution...
+
+Press Ctrl+C to stop test
+
+═══════════════════════════════════════════════════════
+🧪 Running Test: Test2 Direct: Multi-Row Max Step Changes
+📄 Script File: test2.json
+═══════════════════════════════════════════════════════
+
+MIDI Clock Started at 30.0 BPM
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=57 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=58 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=59 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=0 tick=1
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=56 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=57 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=58 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=59 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=0 tick=2
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=0 tick=2
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=1 tick=7
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=1 tick=8
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=1 tick=8
+🎵 MIDI Received: NoteOff note=52 vel=0 ch=1 step=1 tick=8
+📍 Tick 9: Verify step=1 row=0 expected=Some(1)
+  ✅ Row 0 position: 1 (expected 1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=2 tick=13
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=2 tick=14
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=2 tick=14
+📍 Tick 15: Verify step=2 row=0 expected=Some(2)
+  ✅ Row 0 position: 2 (expected 2)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=3 tick=19
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=53 vel=0 ch=1 step=3 tick=20
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=3 tick=20
+📍 Tick 21: Verify step=3 row=0 expected=Some(3)
+  ✅ Row 0 position: 3 (expected 3)
+📍 Tick 22: Step 3: Changing Row 0 max_step 31→7
+📍 Tick 22: SysEx PRESS row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 1, 247]
+📍 Tick 23: SysEx PRESS row=0 col=7
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 0, 7, 1, 247]
+.📍 Tick 24: SysEx RELEASE row=0 col=7
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 0, 7, 0, 247]
+📍 Tick 25: SysEx RELEASE row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 0, 247]
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=4 tick=25
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=4 tick=26
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=4 tick=26
+📍 Tick 27: Verify step=4 row=0 expected=Some(4)
+  ✅ Row 0 position: 4 (expected 4)
+📍 Tick 28: Step 4: Changing Row 1 max_step 30→9
+📍 Tick 28: SysEx PRESS row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 1, 247]
+📍 Tick 29: SysEx PRESS row=1 col=9
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 1, 9, 1, 247]
+.📍 Tick 30: SysEx RELEASE row=1 col=9
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 1, 9, 0, 247]
+📍 Tick 31: SysEx RELEASE row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 0, 247]
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=5 tick=31
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=5 tick=32
+📍 Tick 34: Step 5: Changing Row 3 max_step 15→4
+📍 Tick 34: SysEx PRESS row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 1, 247]
+📍 Tick 35: SysEx PRESS row=3 col=4
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 3, 4, 1, 247]
+.📍 Tick 36: SysEx RELEASE row=3 col=4
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 3, 4, 0, 247]
+📍 Tick 37: SysEx RELEASE row=7 col=8
+🎵 SysEx Received: [240, 125, 83, 83, 81, 2, 7, 8, 0, 247]
+🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=6 tick=37
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=6 tick=38
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=6 tick=38
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=6 tick=38
+📍 Tick 39: Step 6: Verifying all rows after configuration changes
+📍 Tick 39: Verify step=6 row=0 expected=Some(6)
+  ✅ Row 0 position: 6 (expected 6)
+📍 Tick 39: Verify step=6 row=1 expected=Some(6)
+  ✅ Row 1 position: 6 (expected 6)
+📍 Tick 39: Verify step=6 row=3 expected=Some(1)
+  ❌ Row 3 position: 6 (expected 1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=7 tick=43
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=7 tick=43
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=7 tick=44
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=7 tick=44
+📍 Tick 45: Verify step=7 row=0 expected=Some(7)
+  ✅ Row 0 position: 7 (expected 7)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=8 tick=49
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=8 tick=50
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=8 tick=50
+📍 Tick 51: Step 8: Row 0 should wrap (max_step=7), Row 3 wrapping cycle
+📍 Tick 51: Verify step=8 row=0 expected=Some(0)
+  ✅ Row 0 position: 0 (expected 0)
+📍 Tick 51: Verify step=8 row=3 expected=Some(3)
+  ❌ Row 3 position: 2 (expected 3)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=9 tick=55
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=9 tick=55
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=9 tick=55
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=9 tick=56
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=9 tick=56
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=9 tick=56
+📍 Tick 57: Step 9: Row 0 wrapped, Row 3 should wrap (max_step=4)
+📍 Tick 57: Verify step=9 row=0 expected=Some(1)
+  ✅ Row 0 position: 1 (expected 1)
+📍 Tick 57: Verify step=9 row=3 expected=Some(4)
+  ❌ Row 3 position: 3 (expected 4)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=10 tick=61
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=10 tick=62
+📍 Tick 63: Verify step=10 row=0 expected=Some(2)
+  ✅ Row 0 position: 2 (expected 2)
+📍 Tick 63: Step 10: Row 1 wrapped (max_step=9), Row 3 wrapped
+📍 Tick 63: Verify step=10 row=1 expected=Some(0)
+  ✅ Row 1 position: 0 (expected 0)
+📍 Tick 63: Verify step=10 row=3 expected=Some(0)
+  ❌ Row 3 position: 4 (expected 0)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=11 tick=67
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=11 tick=67
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=11 tick=68
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=11 tick=68
+📍 Tick 69: Step 11: Row 1 should wrap soon (max_step=9)
+📍 Tick 69: Verify step=11 row=1 expected=Some(1)
+  ✅ Row 1 position: 1 (expected 1)
+📍 Tick 69: Verify step=11 row=3 expected=Some(1)
+  ❌ Row 3 position: 0 (expected 1)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOn note=50 vel=100 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=12 tick=73
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=48 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=49 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=50 vel=0 ch=1 step=12 tick=74
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=12 tick=74
+📍 Tick 75: Step 12: Verifying Row 1 continues
+📍 Tick 75: Verify step=12 row=1 expected=Some(2)
+  ✅ Row 1 position: 2 (expected 2)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=13 tick=79
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=13 tick=80
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=13 tick=80
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=13 tick=80
+📍 Tick 81: ✅ Test complete - 3 rows changed: Row 0 (31→7), Row 1 (30→9), Row 3 (15→4)
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=14 tick=85
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=14 tick=85
+🎵 MIDI Received: NoteOn note=54 vel=100 ch=1 step=14 tick=85
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=14 tick=86
+🎵 MIDI Received: NoteOff note=51 vel=0 ch=1 step=14 tick=86
+🎵 MIDI Received: NoteOff note=54 vel=0 ch=1 step=14 tick=86
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=15 tick=91
+🎵 MIDI Received: NoteOff note=55 vel=0 ch=1 step=15 tick=92
+.🎵 MIDI Received: NoteOn note=55 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=56 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=48 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=49 vel=100 ch=1 step=16 tick=97
+🎵 MIDI Received: NoteOn note=51 vel=100 ch=1 step=16 tick=97
+
+═══════════════════════════════════════════════════════
+🎵 MIDI Received: NoteOn note=52 vel=100 ch=1 step=16 tick=97
+📊 Test Complete - Reached tick 97 (exit at 93)
+🎵 MIDI Received: NoteOn note=53 vel=100 ch=1 step=16 tick=97
+
+═══════════════════════════════════════════════════════
+📊 Test Results for: Test2 Direct: Multi-Row Max Step Changes
+═══════════════════════════════════════════════════════
+Total Verifications: 18
+✅ Passed: 13
+❌ Failed: 5
+
+❌ TEST FAILED - 5 verification(s) failed
+═══════════════════════════════════════════════════════
+Error: Custom { kind: Other, error: "5 test(s) failed" }
