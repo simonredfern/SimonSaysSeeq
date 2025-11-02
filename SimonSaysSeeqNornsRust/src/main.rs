@@ -189,7 +189,9 @@ impl SimonSaysSeeq {
                 } else {
                     warn!("   No previous configuration available");
                 }
-                warn!("⚠️  Running without hardware - button presses and LEDs will be ignored");
+                warn!("📝 Sequencer WILL run and generate MIDI output normally");
+                warn!("🎛️  Grid control disabled - no button input or LED feedback");
+                warn!("🔌 Plug in grids and send MIDI STOP to enable grid control");
             }
             1 => {
                 warn!("🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)");
@@ -211,7 +213,9 @@ impl SimonSaysSeeq {
                 } else {
                     warn!("   No previous configuration available");
                 }
-                warn!("⚠️  Partial operation - some button presses and LEDs may not work");
+                warn!("📝 Sequencer WILL run and generate MIDI output normally");
+                warn!("⚠️  Partial grid control - only connected grid will respond");
+                warn!("🔌 Plug in second grid and send MIDI STOP to detect it");
             }
             2 => {
                 let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
@@ -1296,7 +1300,7 @@ impl SimonSaysSeeq {
         if connected_grids.len() == 2 {
             info!("GRID DEBUG: Dual-grid mode active - display will be painted by selective updates");
         } else if connected_grids.len() == 0 {
-            warn!("GRID DEBUG: No grids connected - running without hardware");
+            warn!("GRID DEBUG: No grids connected - running in headless mode");
         } else {
             error!("ERROR: Invalid grid configuration - {} grids connected (need 0 or 2)", connected_grids.len());
         }

@@ -4,7 +4,7 @@
 
 SimonSaysSeeq now supports resilient startup when grids are not fully connected. The sequencer will start even if 0 or 1 grids are detected, using the last known configuration from when 2 grids were present.
 
-**Grid Rediscovery Trigger**: Grid rediscovery is triggered **only on MIDI stop events**. This ensures minimal performance impact during playback while providing a natural opportunity to detect newly connected grids when the sequencer stops.
+**Grid Rediscovery Trigger**: Grid rediscovery is triggered **only on MIDI stop events**. This ensures minimal performance impact during playback while providing a natural opportunity to detect newly connected grids when the sequencer stops. **Grids do NOT automatically connect when plugged in during operation** - you must send MIDI stop to trigger detection.
 
 **Visual Feedback**: When a grid is detected (at startup or during rediscovery), it **flashes 2 times quickly** (150ms timing) to provide immediate visual confirmation of successful connection.
 
@@ -119,13 +119,26 @@ All scenarios include **LED flash feedback** when grids are detected.
 ```
 ⚠️  No grids detected at startup
    Will use last known configuration: GRID_ONE=..., GRID_TWO=...
+   📝 Sequencer will run normally and generate MIDI output
+   🎛️  Grid control and LED feedback disabled
+   🔌 Plug in grids and send MIDI STOP to enable grid control
 🎛️  GRID ASSIGNMENT: No grids connected
    Using last known configuration:
    GRID_ONE: ... (not connected)
    GRID_TWO: ... (not connected)
-⚠️  Running without hardware - button presses and LEDs will be ignored
+📝 Sequencer WILL run and generate MIDI output normally
+🎛️  Grid control disabled - no button input or LED feedback
+🔌 Plug in grids and send MIDI STOP to enable grid control
 ```
 No LED flashes (no grids to flash).
+
+**Important**: The sequencer continues to run normally:
+- ✅ MIDI notes are generated and sent
+- ✅ MIDI clock sync works
+- ✅ Patterns play back
+- ✅ Crow CV output works (if enabled)
+- ❌ No grid button input
+- ❌ No grid LED feedback
 
 ### 1 Grid Connected
 ```
@@ -134,14 +147,24 @@ No LED flashes (no grids to flash).
    ✨ Grid ... connected and flashed
    Will use last known configuration: GRID_ONE=..., GRID_TWO=...
    Missing: GRID_TWO (...)
+   📝 Sequencer will run with partial grid control
+   🔌 Plug in second grid and send MIDI STOP to detect it
 🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)
    Connected: ...
    Using last known configuration:
    GRID_ONE: ... ✓
    GRID_TWO: ... (not connected)
-⚠️  Partial operation - some button presses and LEDs may not work
+📝 Sequencer WILL run and generate MIDI output normally
+⚠️  Partial grid control - only connected grid will respond
+🔌 Plug in second grid and send MIDI STOP to detect it
 ```
 The connected grid will flash 2 times quickly.
+
+**Important**: To detect the second grid after plugging it in:
+1. Plug in the missing grid
+2. Send MIDI stop (stop MIDI clock)
+3. Grid will be detected and flash
+4. Resume MIDI clock
 
 ### 2 Grids Connected (Normal)
 ```
@@ -171,6 +194,7 @@ Both grids will flash 2 times quickly in sequence.
 - LED updates to disconnected grids are silently ignored
 - If no grids have ever been connected, configuration will be unavailable
 - Grid flashing during connection takes ~600ms (2 flashes × 150ms on + 150ms off)
+- **Grids are NOT detected automatically when plugged in** - requires MIDI stop trigger
 
 ## Performance Considerations
 
@@ -180,7 +204,8 @@ Both grids will flash 2 times quickly in sequence.
   - Potential disruption to ongoing grid operations
   - Performance degradation during playback
 - MIDI stop is a natural pause point where rediscovery won't interrupt sequencing
-- Users can trigger rediscovery by stopping/starting MIDI clock
+- **No automatic polling** - grids plugged in during operation won't be detected until MIDI stop
+- Users must actively trigger rediscovery by sending MIDI stop
 
 ## Future Enhancements
 
@@ -198,10 +223,13 @@ To test resilient startup:
 1. **With 2 grids**: Normal operation, configuration saved, both grids flash on startup
 2. **Disconnect 1 grid and restart**: Should use last config, show warnings, connected grid flashes
 3. **Disconnect both grids and restart**: Should use last config, show warnings, no flashes
-4. **Reconnect grids while running**: Send MIDI stop to trigger rediscovery
+4. **Reconnect grids while running**: 
+   - Plug in the grid(s)
+   - **Send MIDI stop** to trigger rediscovery
    - Grid rediscovery happens when MIDI clock stops
-   - Simply stop and restart MIDI clock to detect newly connected grids
    - **Watch for the LED flash** - this confirms the grid was detected
+   - Restart MIDI clock to resume operation
+   - **Note**: Grids will NOT be detected until you send MIDI stop
 
 ## Technical Notes
 
@@ -210,3 +238,5 @@ To test resilient startup:
 - File writes are atomic (temporary file + rename pattern via `fs::write`)
 - Grid ID ordering is alphabetical for consistency
 - No virtual/mock grids are created - only real hardware or degraded operation
+- Grid detection is explicit, not automatic - provides predictable behavior
+- MIDI stop as trigger ensures detection happens at a safe point in the workflow

@@ -106,8 +106,11 @@ impl GridManager {
                 if let Some((grid_one, grid_two)) = &manager.last_known_grid_ids {
                     warn!("   Will use last known configuration: GRID_ONE={}, GRID_TWO={}", grid_one, grid_two);
                 } else {
-                    warn!("   No previous configuration found - grid operations will be limited");
+                    warn!("   No previous configuration found");
                 }
+                warn!("   📝 Sequencer will run normally and generate MIDI output");
+                warn!("   🎛️  Grid control and LED feedback disabled");
+                warn!("   🔌 Plug in grids and send MIDI STOP to enable grid control");
             } else if manager.devices.len() == 1 {
                 warn!("⚠️  Only 1 grid detected at startup (expected 2)");
                 let connected_id = manager.devices.keys().next().unwrap().clone();
@@ -122,8 +125,10 @@ impl GridManager {
                         warn!("   Connected grid doesn't match last known configuration");
                     }
                 } else {
-                    warn!("   No previous configuration found - grid operations will be limited");
+                    warn!("   No previous configuration found");
                 }
+                warn!("   📝 Sequencer will run with partial grid control");
+                warn!("   🔌 Plug in second grid and send MIDI STOP to detect it");
             }
 
             Ok(manager)
@@ -269,7 +274,7 @@ impl GridManager {
 
         // Log the number of grids connected (should be 0 or 2 at this point)
         if self.devices.len() == 0 {
-            warn!("No grids connected - sequencer will run without hardware");
+            warn!("No grids connected - sequencer will run in headless mode");
         } else if self.devices.len() == 2 {
             info!("✅ Successfully connected to 2 grids");
         } else {
