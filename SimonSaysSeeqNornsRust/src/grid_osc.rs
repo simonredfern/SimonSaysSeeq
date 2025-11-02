@@ -326,6 +326,12 @@ impl GridManager {
     /// Connect to a specific grid device and get its configuration
     #[cfg(feature = "rosc")]
     fn connect_to_device(&mut self, device_id: &str, device_type: &str, device_port: u16) -> Result<()> {
+        // Skip if device is already connected
+        if self.devices.contains_key(device_id) {
+            debug!("Device {} already connected, skipping reconnection", device_id);
+            return Ok(());
+        }
+
         // info!("connect_to_device says: Connecting to grid device: {} ({})", device_id, device_type);
 
         let device_addr = format!("127.0.0.1:{}", device_port);
@@ -791,9 +797,29 @@ impl GridManager {
 
         // If we detected a hotplug event, trigger rediscovery
         if should_rediscover {
+            let previous_count = self.devices.len();
             info!("🔍 Hotplug detected - triggering automatic grid rediscovery...");
+            info!("   Previous grid count: {}", previous_count);
+            
             if let Err(e) = self.discover_devices() {
                 warn!("Failed to rediscover grids after hotplug: {}", e);
+            } else {
+                let current_count = self.devices.len();
+                info!("   New grid count: {}", current_count);
+                
+                // Log the transition
+                if current_count != previous_count {
+                    info!("🔄 Grid count changed: {} → {}", previous_count, current_count);
+                }
+                
+                // Save config if we now have 2 grids
+                if current_count == 2 && previous_count != 2 {
+                    if let Err(e) = self.save_grid_config() {
+                        warn!("Failed to save grid config after hotplug: {}", e);
+                    } else {
+                        info!("💾 Grid configuration saved: 2 grids now connected");
+                    }
+                }
             }
         }
 
