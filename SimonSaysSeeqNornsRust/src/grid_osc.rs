@@ -411,6 +411,12 @@ impl GridManager {
         // info!("connect_to_device says: Grid {} connected: {} ({}x{}, varibright: {})",
         //       device_id, device_type, cols, rows, is_varibright);
 
+        // Flash the grid quickly to indicate successful connection (2 quick flashes, 150ms timing)
+        if let Err(e) = self.flash_grid_with_timing(device_id, 2, 150) {
+            debug!("Failed to flash grid {} on connection: {}", device_id, e);
+        }
+        info!("✨ Grid {} connected and flashed", device_id);
+
         Ok(())
     }
 
@@ -897,14 +903,19 @@ impl GridManager {
 
     /// Flash a specific grid
     pub fn flash_grid(&mut self, grid_id: &str, flash_count: usize) -> Result<()> {
+        self.flash_grid_with_timing(grid_id, flash_count, 400)
+    }
+
+    /// Flash a specific grid with custom timing
+    pub fn flash_grid_with_timing(&mut self, grid_id: &str, flash_count: usize, delay_ms: u64) -> Result<()> {
         #[cfg(not(feature = "rosc"))]
         {
             info!("💡 SIMULATION: Flashing grid {} {} time(s)", grid_id, flash_count);
             for i in 0..flash_count {
                 info!("💡 SIMULATION: Grid {} flash {} - ON", grid_id, i + 1);
-                thread::sleep(Duration::from_millis(400));
+                thread::sleep(Duration::from_millis(delay_ms));
                 info!("💡 SIMULATION: Grid {} flash {} - OFF", grid_id, i + 1);
-                thread::sleep(Duration::from_millis(400));
+                thread::sleep(Duration::from_millis(delay_ms));
             }
             return Ok(());
         }
@@ -952,7 +963,7 @@ impl GridManager {
                 let msg_buf = rosc::encoder::encode(&packet)?;
                 self.socket.send_to(&msg_buf, &device_addr)?;
 
-                thread::sleep(Duration::from_millis(400));
+                thread::sleep(Duration::from_millis(delay_ms));
             }
 
             debug!("Flashed grid {}", grid_id);

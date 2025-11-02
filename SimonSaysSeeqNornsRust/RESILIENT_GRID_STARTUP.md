@@ -6,6 +6,8 @@ SimonSaysSeeq now supports resilient startup when grids are not fully connected.
 
 **Grid Rediscovery Trigger**: Grid rediscovery is triggered **only on MIDI stop events**. This ensures minimal performance impact during playback while providing a natural opportunity to detect newly connected grids when the sequencer stops.
 
+**Visual Feedback**: When a grid is detected (at startup or during rediscovery), it **flashes 2 times quickly** (150ms timing) to provide immediate visual confirmation of successful connection.
+
 ## Changes Made
 
 ### 1. Grid Configuration Persistence
@@ -87,7 +89,18 @@ All grid ID methods now fall back to last known configuration:
 - Logs grid count changes
 - Natural pause point that won't disrupt playback
 
-### 6. Updated Main Application
+### 6. Visual Feedback on Grid Connection
+
+#### LED Flash on Connection
+- When a grid is successfully connected, it flashes **2 quick times** (150ms timing)
+- Provides immediate visual confirmation that the grid was detected
+- Happens during:
+  - Initial startup (if grids are connected)
+  - Rediscovery via MIDI stop (if new grids are found)
+- Flash uses full brightness for varibright grids, on/off for non-varibright
+- Non-blocking - uses `flash_grid_with_timing()` method
+
+### 7. Updated Main Application
 
 **File**: `src/main.rs`
 
@@ -100,6 +113,8 @@ All grid ID methods now fall back to last known configuration:
 
 ## Behavior by Grid Count
 
+All scenarios include **LED flash feedback** when grids are detected.
+
 ### 0 Grids Connected
 ```
 ⚠️  No grids detected at startup
@@ -110,11 +125,13 @@ All grid ID methods now fall back to last known configuration:
    GRID_TWO: ... (not connected)
 ⚠️  Running without hardware - button presses and LEDs will be ignored
 ```
+No LED flashes (no grids to flash).
 
 ### 1 Grid Connected
 ```
 ⚠️  Only 1 grid detected at startup (expected 2)
    Connected: ...
+   ✨ Grid ... connected and flashed
    Will use last known configuration: GRID_ONE=..., GRID_TWO=...
    Missing: GRID_TWO (...)
 🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)
@@ -124,9 +141,12 @@ All grid ID methods now fall back to last known configuration:
    GRID_TWO: ... (not connected)
 ⚠️  Partial operation - some button presses and LEDs may not work
 ```
+The connected grid will flash 2 times quickly.
 
 ### 2 Grids Connected (Normal)
 ```
+✨ Grid ... connected and flashed
+✨ Grid ... connected and flashed
 ✅ Successfully connected to 2 grids
 💾 Saved grid configuration to ~/.config/simonsaysseeq/grid_config.json
 🎛️  GRID ASSIGNMENT:
@@ -134,20 +154,23 @@ All grid ID methods now fall back to last known configuration:
    GRID_TWO: ...
 ✅ Two real grids ready for operation
 ```
+Both grids will flash 2 times quickly in sequence.
 
 ## Benefits
 
 1. **Loose Connection Tolerance**: Sequencer starts even with loose connections at startup
-2. **Hot Reconnection**: Use `refresh()` to detect newly connected grids without restarting
+2. **Hot Reconnection**: Use MIDI stop to detect newly connected grids without restarting
 3. **Consistent Grid Assignment**: Last known configuration ensures consistent GRID_ONE/GRID_TWO assignment
 4. **Clear User Feedback**: Detailed warnings show exactly which grids are missing
-5. **No Crashes**: LED operations gracefully handle missing grids without panicking
+5. **Visual Confirmation**: Grids flash when detected, providing immediate feedback
+6. **No Crashes**: LED operations gracefully handle missing grids without panicking
 
 ## Limitations
 
 - Button presses from disconnected grids won't be registered
 - LED updates to disconnected grids are silently ignored
 - If no grids have ever been connected, configuration will be unavailable
+- Grid flashing during connection takes ~600ms (2 flashes × 150ms on + 150ms off)
 
 ## Performance Considerations
 
@@ -172,12 +195,13 @@ Potential improvements:
 
 To test resilient startup:
 
-1. **With 2 grids**: Normal operation, configuration saved
-2. **Disconnect 1 grid and restart**: Should use last config, show warnings
-3. **Disconnect both grids and restart**: Should use last config, show warnings
+1. **With 2 grids**: Normal operation, configuration saved, both grids flash on startup
+2. **Disconnect 1 grid and restart**: Should use last config, show warnings, connected grid flashes
+3. **Disconnect both grids and restart**: Should use last config, show warnings, no flashes
 4. **Reconnect grids while running**: Send MIDI stop to trigger rediscovery
    - Grid rediscovery happens when MIDI clock stops
    - Simply stop and restart MIDI clock to detect newly connected grids
+   - **Watch for the LED flash** - this confirms the grid was detected
 
 ## Technical Notes
 
