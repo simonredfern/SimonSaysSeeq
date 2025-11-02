@@ -350,8 +350,9 @@ impl SimonSaysSeeq {
 
             // Poll grid for button events
             let _poll_start = Instant::now();
-            // Only allow hotplug detection when sequencer is NOT running
-            let allow_hotplug = !self.sequencer.is_running();
+            // Only allow hotplug detection when MIDI clock is NOT running
+            // (sequencer.is_running() auto-starts on app launch, but MIDI clock may be stopped)
+            let allow_hotplug = !self.midi.is_external_clock_running();
                 match self.grid.read_button_events(allow_hotplug) {
                     Ok(grid_events) => {
                         // Process events from both grids - each should only report its own presses

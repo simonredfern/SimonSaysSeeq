@@ -746,45 +746,46 @@ impl GridManager {
                 Ok((size, addr)) => {
                     if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                         if let OscPacket::Message(msg) = packet {
-                            // Parse grid key events - match by source port to specific device
                             let source_port = addr.port();
                             
-                            // Find the device that matches this source port
-                            let matching_device = self.devices.values().find(|device| device.port == source_port);
-                            
-                            if let Some(device) = matching_device {
-                                let key_addr = format!("{}/grid/key", device.prefix);
-                                if msg.addr == key_addr && msg.args.len() >= 3 {
-                                    if let (Some(OscType::Int(x)), Some(OscType::Int(y)), Some(OscType::Int(state))) =
-                                        (msg.args.get(0), msg.args.get(1), msg.args.get(2)) {
-                                        // Always apply inverse 180-degree transformation for GRID_TWO button events
-                                        let (logical_x, logical_y) = if self.is_grid_two(&device.id).unwrap_or(false) {
-                                            (15 - (*x as usize), 7 - (*y as usize))
-                                        } else {
-                                            (*x as usize, *y as usize)
-                                        };
-                                    
-                                        events.push(GridButtonEvent {
-                                            grid_id: device.id.clone(),
-                                            x: logical_x,
-                                            y: logical_y,
-                                            pressed: *state != 0,
-                                        });
-                                        debug!("Grid {} button event: hardware ({}, {}) -> logical ({}, {}) = {} (from port {})",
-                                               device.id, x, y, logical_x, logical_y, *state != 0, source_port);
-                                    }
-                                }
+                            // Check for hotplug messages FIRST, regardless of source port
+                            // This ensures we don't miss hotplug notifications
+                            if msg.addr == "/serialosc/add" {
+                                info!("🔌 serialosc hotplug: Grid connected!");
+                                info!("   Message args: {:?}", msg.args);
+                                info!("   Source port: {}", source_port);
+                                should_rediscover = true;
+                            } else if msg.addr == "/serialosc/remove" {
+                                info!("🔌 serialosc hotplug: Grid disconnected!");
+                                info!("   Message args: {:?}", msg.args);
+                                info!("   Source port: {}", source_port);
+                                should_rediscover = true;
                             } else {
-                                // Check if this is a serialosc hotplug notification
-                                debug!("Received OSC message: addr={}, source_port={}", msg.addr, source_port);
-                                if msg.addr == "/serialosc/add" {
-                                    info!("🔌 serialosc hotplug: Grid connected!");
-                                    info!("   Message args: {:?}", msg.args);
-                                    should_rediscover = true;
-                                } else if msg.addr == "/serialosc/remove" {
-                                    info!("🔌 serialosc hotplug: Grid disconnected!");
-                                    info!("   Message args: {:?}", msg.args);
-                                    should_rediscover = true;
+                                // Parse grid key events - match by source port to specific device
+                                let matching_device = self.devices.values().find(|device| device.port == source_port);
+                                
+                                if let Some(device) = matching_device {
+                                    let key_addr = format!("{}/grid/key", device.prefix);
+                                    if msg.addr == key_addr && msg.args.len() >= 3 {
+                                        if let (Some(OscType::Int(x)), Some(OscType::Int(y)), Some(OscType::Int(state))) =
+                                            (msg.args.get(0), msg.args.get(1), msg.args.get(2)) {
+                                            // Always apply inverse 180-degree transformation for GRID_TWO button events
+                                            let (logical_x, logical_y) = if self.is_grid_two(&device.id).unwrap_or(false) {
+                                                (15 - (*x as usize), 7 - (*y as usize))
+                                            } else {
+                                                (*x as usize, *y as usize)
+                                            };
+                                        
+                                            events.push(GridButtonEvent {
+                                                grid_id: device.id.clone(),
+                                                x: logical_x,
+                                                y: logical_y,
+                                                pressed: *state != 0,
+                                            });
+                                            debug!("Grid {} button event: hardware ({}, {}) -> logical ({}, {}) = {} (from port {})",
+                                                   device.id, x, y, logical_x, logical_y, *state != 0, source_port);
+                                        }
+                                    }
                                 } else {
                                     debug!("Received OSC message from unknown port: {} - addr: {}", source_port, msg.addr);
                                 }
@@ -809,7 +810,7 @@ impl GridManager {
         if should_rediscover && allow_hotplug {
             let previous_count = self.devices.len();
             info!("🔍 Hotplug detected - triggering automatic grid rediscovery...");
-            info!("   Sequencer is stopped - hotplug enabled");
+            info!("   MIDI clock is stopped - hotplug enabled");
             info!("   Previous grid count: {}", previous_count);
             info!("   Currently connected devices: {:?}", self.devices.keys().collect::<Vec<_>>());
             
@@ -835,8 +836,8 @@ impl GridManager {
                 }
             }
         } else if should_rediscover && !allow_hotplug {
-            info!("🔌 Hotplug detected but sequencer is running - rediscovery disabled");
-            info!("   Stop sequencer to enable grid hotplug detection");
+            info!("🔌 Hotplug detected but MIDI clock is running - rediscovery disabled");
+            info!("   Stop MIDI clock to enable grid hotplug detection");
         }
 
         Ok(events)
