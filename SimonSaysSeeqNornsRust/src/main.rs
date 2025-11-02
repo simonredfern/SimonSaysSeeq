@@ -350,7 +350,9 @@ impl SimonSaysSeeq {
 
             // Poll grid for button events
             let _poll_start = Instant::now();
-                match self.grid.read_button_events() {
+            // Only allow hotplug detection when sequencer is NOT running
+            let allow_hotplug = !self.sequencer.is_running();
+                match self.grid.read_button_events(allow_hotplug) {
                     Ok(grid_events) => {
                         // Process events from both grids - each should only report its own presses
                         let connected_grids = self.grid.get_connected_grids();

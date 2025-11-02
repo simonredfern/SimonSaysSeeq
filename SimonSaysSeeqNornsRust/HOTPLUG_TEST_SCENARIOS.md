@@ -11,14 +11,20 @@ This document describes test scenarios for verifying that grid hotplug detection
 **Initial State:**
 - No grids connected
 - Sequencer running in headless mode
+- **Sequencer must be STOPPED** for hotplug to work
 
 **Action:**
-1. Plug in first grid (GRID_ONE)
+1. Stop the sequencer (if running)
+2. Plug in first grid (GRID_ONE)
 
 **Expected Behavior:**
 - Within 1-2 seconds: "🔌 serialosc hotplug: Grid connected!"
 - "🔍 Hotplug detected - triggering automatic grid rediscovery..."
+- "   Sequencer is stopped - hotplug enabled"
 - "   Previous grid count: 0"
+- "discover_devices: Starting grid device discovery via serialosc..."
+- "discover_devices: Found serialosc device: [device_id] (type: ...) on port ..."
+- "connect_to_device: Connecting to NEW grid device: [device_id]"
 - "   New grid count: 1"
 - "🔄 Grid count changed: 0 → 1"
 - "✨ Grid [device_id] connected and flashed"
@@ -40,22 +46,35 @@ This document describes test scenarios for verifying that grid hotplug detection
 **Initial State:**
 - 1 grid connected (e.g., GRID_ONE)
 - Sequencer running with partial grid control
+- **Sequencer must be STOPPED** for hotplug to work
 
 **Action:**
-1. Plug in second grid (GRID_TWO)
+1. Stop the sequencer (if running)
+2. Plug in second grid (GRID_TWO)
 
 **Expected Behavior:**
 - Within 1-2 seconds: "🔌 serialosc hotplug: Grid connected!"
 - "🔍 Hotplug detected - triggering automatic grid rediscovery..."
+- "   Sequencer is stopped - hotplug enabled"
 - "   Previous grid count: 1"
-- Device already connected gets skipped: "Device [existing_id] already connected, skipping reconnection"
-- "   New grid count: 2"
-- "🔄 Grid count changed: 1 → 2"
+- "   Currently connected devices: [existing_id]"
+- "discover_devices: Starting grid device discovery via serialosc..."
+- "discover_devices: Found serialosc device: [existing_id] ..." (first grid found)
+- "discover_devices: Found serialosc device: [new_device_id] ..." (second grid found)
+- "discover_devices: Discovery complete. Found 2 device(s)"
+- "discover_devices: Attempting to connect to device: [existing_id]"
+- "connect_to_device: Device [existing_id] already connected, skipping reconnection"
+- "discover_devices: Attempting to connect to device: [new_device_id]"
+- "connect_to_device: Connecting to NEW grid device: [new_device_id]"
 - "✨ Grid [new_device_id] connected and flashed"
+- "✅ Successfully connected to 2 grids"
+- "   New grid count: 2"
+- "   Now connected devices: [existing_id, new_device_id]"
+- "🔄 Grid count changed: 1 → 2"
 - "💾 Saved grid configuration to ~/.config/simonsaysseeq/grid_config.json"
 - "💾 Grid configuration saved: 2 grids now connected"
-- "✅ Successfully connected to 2 grids"
 - Second grid flashes 2 times quickly
+- First grid does NOT flash (not reconnected)
 - Both grids now fully functional
 
 **What to Verify:**
@@ -76,14 +95,20 @@ This document describes test scenarios for verifying that grid hotplug detection
 **Initial State:**
 - 2 grids connected
 - Full grid control active
+- **Sequencer must be STOPPED** for hotplug to work
 
 **Action:**
-1. Unplug GRID_TWO
+1. Stop the sequencer (if running)
+2. Unplug GRID_TWO
 
 **Expected Behavior:**
 - Within 1-2 seconds: "🔌 serialosc hotplug: Grid disconnected!"
 - "🔍 Hotplug detected - triggering automatic grid rediscovery..."
+- "   Sequencer is stopped - hotplug enabled"
 - "   Previous grid count: 2"
+- "discover_devices: Starting grid device discovery via serialosc..."
+- "discover_devices: Found serialosc device: [remaining_id]" (only one grid found now)
+- "discover_devices: Discovery complete. Found 1 device(s)"
 - "   New grid count: 1"
 - "🔄 Grid count changed: 2 → 1"
 - "Connected to 1 grid(s) - recommended: 2"
@@ -104,11 +129,13 @@ This document describes test scenarios for verifying that grid hotplug detection
 **Initial State:**
 - 2 grids connected
 - Full grid control active
+- **Sequencer must be STOPPED** for hotplug to work
 
 **Action:**
-1. Unplug GRID_TWO
-2. Wait 2-3 seconds
-3. Plug GRID_TWO back in
+1. Stop the sequencer (if running)
+2. Unplug GRID_TWO
+3. Wait 2-3 seconds
+4. Plug GRID_TWO back in
 
 **Expected Behavior:**
 
@@ -119,13 +146,18 @@ This document describes test scenarios for verifying that grid hotplug detection
 **After replug:**
 - "🔌 serialosc hotplug: Grid connected!"
 - "🔍 Hotplug detected - triggering automatic grid rediscovery..."
+- "   Sequencer is stopped - hotplug enabled"
 - "   Previous grid count: 1"
-- First grid skipped (already connected)
+- "discover_devices: Starting grid device discovery via serialosc..."
+- Both grids found in discovery
+- "connect_to_device: Device [existing_id] already connected, skipping reconnection"
+- "connect_to_device: Connecting to NEW grid device: [device_id]"
+- "✨ Grid [device_id] connected and flashed"
 - "   New grid count: 2"
 - "🔄 Grid count changed: 1 → 2"
-- "✨ Grid [device_id] connected and flashed"
 - "💾 Grid configuration saved: 2 grids now connected"
-- Replugd grid flashes 2 times
+- Replugged grid flashes 2 times
+- First grid does NOT flash
 - Both grids fully functional
 
 **What to Verify:**
@@ -142,9 +174,11 @@ This document describes test scenarios for verifying that grid hotplug detection
 **Initial State:**
 - No grids connected
 - Sequencer running in headless mode
+- **Sequencer must be STOPPED** for hotplug to work
 
 **Action:**
-1. Plug in both grids at approximately the same time (within 1 second)
+1. Stop the sequencer (if running)
+2. Plug in both grids at approximately the same time (within 1 second)
 
 **Expected Behavior:**
 - Two hotplug events received (may be rapid)
@@ -207,37 +241,83 @@ This document describes test scenarios for verifying that grid hotplug detection
    - Should see: "📡 Registered for serialosc hotplug notifications"
    - If missing: "Failed to register for serialosc hotplug notifications"
 
-3. **Check if notifications are received:**
+3. **Verify sequencer is stopped:**
+   - Hotplug ONLY works when sequencer is stopped
+   - If running, you'll see: "🔌 Hotplug detected but sequencer is running - rediscovery disabled"
+
+4. **Check if notifications are received:**
    - Enable debug logging
    - Look for: "🔌 serialosc hotplug: Grid connected/disconnected!"
 
-4. **Manual fallback:**
-   - Send MIDI stop to manually trigger rediscovery
+5. **Check discovery process:**
+   - Look for: "discover_devices: Starting grid device discovery via serialosc..."
+   - Look for: "discover_devices: Found serialosc device: [id]"
+   - Look for: "connect_to_device: Connecting to NEW grid device: [id]"
+
+6. **Manual fallback:**
+   - Send MIDI stop to manually trigger rediscovery (works even when running)
 
 ### Common Issues:
 
+- **Grid doesn't get detected when plugged in:**
+  - **Most likely cause:** Sequencer is running
+  - Check logs for: "🔌 Hotplug detected but sequencer is running - rediscovery disabled"
+  - Solution: Stop sequencer, then plug in grid
+  
+- **Second grid not detected when sequencer is stopped:**
+  - Check logs for: "discover_devices: Found serialosc device: [id]" (should see 2 devices)
+  - Check logs for: "connect_to_device: Device [id] already connected, skipping reconnection"
+  - Check logs for: "connect_to_device: Connecting to NEW grid device: [new_id]"
+  
 - **Grid flashes twice every time button pressed:** Check if hotplug is triggering too often
-- **Second grid not detected:** Check logs for "Device [id] already connected, skipping reconnection"
-- **Grid count doesn't change:** Check if `discover_devices()` is being called
+  
+- **Grid count doesn't change after hotplug:**
+  - Check if `discover_devices()` is being called
+  - Check if discovery finds the devices: "discover_devices: Discovery complete. Found X device(s)"
+  
 - **Config not saved:** Check for "Failed to save grid config after hotplug" warnings
 
 ---
 
-## Expected Log Output for 1→2 Transition
+## Expected Log Output for 1→2 Transition (Sequencer Stopped)
 
 ```
-[Previous state: 1 grid connected]
+[Previous state: 1 grid connected, sequencer STOPPED]
 INFO  🔌 serialosc hotplug: Grid connected!
+INFO     Message args: ["m1000456", "monome 128", 16909]
 INFO  🔍 Hotplug detected - triggering automatic grid rediscovery...
+INFO     Sequencer is stopped - hotplug enabled
 INFO     Previous grid count: 1
-DEBUG Device m1000123 already connected, skipping reconnection
+INFO     Currently connected devices: ["m1000123"]
+INFO  discover_devices: Starting grid device discovery via serialosc...
+INFO  discover_devices: Sent /serialosc/list request to port 12002
+INFO  discover_devices: Found serialosc device: m1000123 (type: monome 128) on port 16908
+INFO  discover_devices: Found serialosc device: m1000456 (type: monome 128) on port 16909
+INFO  discover_devices: Discovery complete. Found 2 device(s)
+INFO  discover_devices: Attempting to connect to device: m1000123 (type: monome 128, port: 16908)
+INFO  connect_to_device: Device m1000123 already connected, skipping reconnection
+INFO  discover_devices: Attempting to connect to device: m1000456 (type: monome 128, port: 16909)
+INFO  connect_to_device: Connecting to NEW grid device: m1000456 (type: monome 128)
 INFO  ✨ Grid m1000456 connected and flashed
 INFO  ✅ Successfully connected to 2 grids
 INFO     New grid count: 2
+INFO     Now connected devices: ["m1000123", "m1000456"]
 INFO  🔄 Grid count changed: 1 → 2
 INFO  💾 Saved grid configuration to /home/we/.config/simonsaysseeq/grid_config.json
 INFO  💾 Grid configuration saved: 2 grids now connected
-[LED flash happens on grid m1000456]
+[LED flash happens on grid m1000456 ONLY]
+```
+
+## Expected Log Output When Sequencer is Running
+
+```
+[Sequencer is RUNNING, grid plugged in]
+INFO  🔌 serialosc hotplug: Grid connected!
+INFO     Message args: ["m1000456", "monome 128", 16909]
+INFO  🔌 Hotplug detected but sequencer is running - rediscovery disabled
+INFO     Stop sequencer to enable grid hotplug detection
+[No rediscovery happens, no LED flash]
+[User must stop sequencer or send MIDI stop to trigger detection]
 ```
 
 ---
@@ -277,10 +357,12 @@ INFO  💾 Grid configuration saved: 2 grids now connected
 ## Success Criteria
 
 All scenarios should pass with:
-- ✅ Automatic detection (no manual trigger needed)
+- ✅ Automatic detection when sequencer stopped (no manual trigger needed)
+- ✅ Hotplug disabled when sequencer running (prevents performance disruption)
 - ✅ Correct grid count after each action
-- ✅ Visual confirmation (LED flash)
+- ✅ Visual confirmation (LED flash on new grids only)
 - ✅ Full functionality after connection
 - ✅ No crashes or errors
 - ✅ Configuration saved when reaching 2 grids
-- ✅ Existing grids not reconnected unnecessarily
+- ✅ Existing grids not reconnected unnecessarily (no double flash)
+- ✅ Detailed debug logging shows discovery process

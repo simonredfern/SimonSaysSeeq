@@ -226,7 +226,7 @@ impl GridManager {
     /// Discover grid devices through serialosc
     #[cfg(feature = "rosc")]
     fn discover_devices(&mut self) -> Result<()> {
-        // info!("discover_devices says: Discovering grid devices via serialosc...");
+        info!("discover_devices: Starting grid device discovery via serialosc...");
 
         // Send discovery request to serialosc server
         let list_msg = OscMessage {
@@ -243,7 +243,7 @@ impl GridManager {
         self.socket.send_to(&msg_buf, "127.0.0.1:12002")
             .map_err(|e| anyhow!("Failed to send discovery request to serialosc: {}", e))?;
 
-        // info!("discover_devices says: Sent device discovery request to serialosc");
+        info!("discover_devices: Sent /serialosc/list request to port 12002");
 
         // Wait for device responses
         let discovery_timeout = Duration::from_secs(3);
@@ -256,10 +256,11 @@ impl GridManager {
                 Ok((size, _addr)) => {
                     if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                         if let OscPacket::Message(msg) = packet {
+                            debug!("discover_devices: Received OSC message: addr={}", msg.addr);
                             if msg.addr == "/serialosc/device" && msg.args.len() >= 3 {
                                 if let (Some(OscType::String(id)), Some(OscType::String(device_type)), Some(OscType::Int(port))) =
                                     (msg.args.get(0), msg.args.get(1), msg.args.get(2)) {
-                                    // info!("discover_devices says: Found serialosc device: {} (type: {}) on port {}", id, device_type, port);
+                                    info!("discover_devices: Found serialosc device: {} (type: {}) on port {}", id, device_type, port);
                                     discovered_devices.push((id.clone(), device_type.clone(), *port as u16));
                                 }
                             }
@@ -276,6 +277,8 @@ impl GridManager {
             }
         }
 
+        info!("discover_devices: Discovery complete. Found {} device(s)", discovered_devices.len());
+        
         if discovered_devices.is_empty() {
             warn!("No serialosc devices found - running without grids");
             warn!("Button presses and LED updates will be ignored");
@@ -294,8 +297,9 @@ impl GridManager {
 
         // Connect to each discovered device
         for (device_id, device_type, device_port) in discovered_devices {
+            info!("discover_devices: Attempting to connect to device: {} (type: {}, port: {})", device_id, device_type, device_port);
             if let Err(e) = self.connect_to_device(&device_id, &device_type, device_port) {
-                // warn!("discover_devices says: Failed to connect to device {}: {}", device_id, e);
+                warn!("discover_devices: Failed to connect to device {}: {}", device_id, e);
             }
         }
 
@@ -328,11 +332,11 @@ impl GridManager {
     fn connect_to_device(&mut self, device_id: &str, device_type: &str, device_port: u16) -> Result<()> {
         // Skip if device is already connected
         if self.devices.contains_key(device_id) {
-            debug!("Device {} already connected, skipping reconnection", device_id);
+            info!("connect_to_device: Device {} already connected, skipping reconnection", device_id);
             return Ok(());
         }
 
-        // info!("connect_to_device says: Connecting to grid device: {} ({})", device_id, device_type);
+        info!("connect_to_device: Connecting to NEW grid device: {} (type: {})", device_id, device_type);
 
         let device_addr = format!("127.0.0.1:{}", device_port);
 
@@ -721,7 +725,10 @@ impl GridManager {
     }
 
     /// Read button events from grids
-    pub fn read_button_events(&mut self) -> Result<Vec<GridButtonEvent>> {
+    /// 
+    /// # Parameters
+    /// * `allow_hotplug` - If true, hotplug detection is enabled. Set to false when sequencer is running.
+    pub fn read_button_events(&mut self, allow_hotplug: bool) -> Result<Vec<GridButtonEvent>> {
         #[cfg(not(feature = "rosc"))]
         {
             return Ok(Vec::new());
@@ -769,14 +776,17 @@ impl GridManager {
                                 }
                             } else {
                                 // Check if this is a serialosc hotplug notification
+                                debug!("Received OSC message: addr={}, source_port={}", msg.addr, source_port);
                                 if msg.addr == "/serialosc/add" {
                                     info!("🔌 serialosc hotplug: Grid connected!");
+                                    info!("   Message args: {:?}", msg.args);
                                     should_rediscover = true;
                                 } else if msg.addr == "/serialosc/remove" {
                                     info!("🔌 serialosc hotplug: Grid disconnected!");
+                                    info!("   Message args: {:?}", msg.args);
                                     should_rediscover = true;
                                 } else {
-                                    debug!("Received OSC message from unknown port: {}", source_port);
+                                    debug!("Received OSC message from unknown port: {} - addr: {}", source_port, msg.addr);
                                 }
                             }
                         }
@@ -795,17 +805,20 @@ impl GridManager {
         // Add any queued virtual events
         events.append(&mut self.virtual_events);
 
-        // If we detected a hotplug event, trigger rediscovery
-        if should_rediscover {
+        // If we detected a hotplug event, trigger rediscovery (only if allowed)
+        if should_rediscover && allow_hotplug {
             let previous_count = self.devices.len();
             info!("🔍 Hotplug detected - triggering automatic grid rediscovery...");
+            info!("   Sequencer is stopped - hotplug enabled");
             info!("   Previous grid count: {}", previous_count);
+            info!("   Currently connected devices: {:?}", self.devices.keys().collect::<Vec<_>>());
             
             if let Err(e) = self.discover_devices() {
                 warn!("Failed to rediscover grids after hotplug: {}", e);
             } else {
                 let current_count = self.devices.len();
                 info!("   New grid count: {}", current_count);
+                info!("   Now connected devices: {:?}", self.devices.keys().collect::<Vec<_>>());
                 
                 // Log the transition
                 if current_count != previous_count {
@@ -821,6 +834,9 @@ impl GridManager {
                     }
                 }
             }
+        } else if should_rediscover && !allow_hotplug {
+            info!("🔌 Hotplug detected but sequencer is running - rediscovery disabled");
+            info!("   Stop sequencer to enable grid hotplug detection");
         }
 
         Ok(events)
