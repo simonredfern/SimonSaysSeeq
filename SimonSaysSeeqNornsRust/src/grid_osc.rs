@@ -4,11 +4,14 @@
 //! replacing the problematic raw serial communication approach.
 
 use anyhow::{Result, anyhow};
-use log::{info, debug, warn, error};
+use log::{info, debug, warn};
 use crate::formal_state_logger::log_led_change;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::thread;
+use std::fs;
+use std::path::PathBuf;
+use serde::{Serialize, Deserialize};
 
 #[cfg(feature = "rosc")]
 use std::net::UdpSocket;
@@ -38,6 +41,13 @@ struct GridDevice {
     is_varibright: bool,
 }
 
+/// Persistent configuration for grid IDs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct GridConfig {
+    grid_one_id: String,
+    grid_two_id: String,
+}
+
 /// OSC-based Grid Manager
 pub struct GridManager {
     #[cfg(feature = "rosc")]
@@ -47,6 +57,11 @@ pub struct GridManager {
     #[cfg(feature = "rosc")]
     local_port: u16,
     virtual_events: Vec<GridButtonEvent>,
+    /// Last known grid IDs when 2 grids were connected
+    last_known_grid_ids: Option<(String, String)>,
+    config_path: PathBuf,
+    /// Last time we checked for grid changes
+    last_rediscovery: Instant,
 }
 
 impl GridManager {
@@ -63,31 +78,116 @@ impl GridManager {
 
             // info!("new says: Created OSC socket on port {}", local_port);
 
+            // Set up config path
+            let config_path = Self::get_config_path();
+
+            // Load last known grid configuration
+            let last_known_grid_ids = Self::load_grid_config(&config_path);
+
             let mut manager = Self {
                 socket,
                 devices: HashMap::new(),
                 assumed_led_states: HashMap::new(),
                 local_port,
                 virtual_events: Vec::new(),
+                last_known_grid_ids,
+                config_path,
+                last_rediscovery: Instant::now(),
             };
 
             // Discover devices via serialosc
             manager.discover_devices()?;
+
+            // If we now have 2 grids, save the configuration
+            if manager.devices.len() == 2 {
+                manager.save_grid_config()?;
+            } else if manager.devices.len() == 0 {
+                warn!("⚠️  No grids detected at startup");
+                if let Some((grid_one, grid_two)) = &manager.last_known_grid_ids {
+                    warn!("   Will use last known configuration: GRID_ONE={}, GRID_TWO={}", grid_one, grid_two);
+                } else {
+                    warn!("   No previous configuration found - grid operations will be limited");
+                }
+            } else if manager.devices.len() == 1 {
+                warn!("⚠️  Only 1 grid detected at startup (expected 2)");
+                let connected_id = manager.devices.keys().next().unwrap().clone();
+                warn!("   Connected: {}", connected_id);
+                if let Some((grid_one, grid_two)) = &manager.last_known_grid_ids {
+                    warn!("   Will use last known configuration: GRID_ONE={}, GRID_TWO={}", grid_one, grid_two);
+                    if connected_id == *grid_one {
+                        warn!("   Missing: GRID_TWO ({})", grid_two);
+                    } else if connected_id == *grid_two {
+                        warn!("   Missing: GRID_ONE ({})", grid_one);
+                    } else {
+                        warn!("   Connected grid doesn't match last known configuration");
+                    }
+                } else {
+                    warn!("   No previous configuration found - grid operations will be limited");
+                }
+            }
 
             Ok(manager)
         }
 
         #[cfg(not(feature = "rosc"))]
         {
-            // error!("HARD REQUIREMENT: SimonSaysSeeq requires exactly TWO REAL grids (GRID_ONE and GRID_TWO)");
-            // error!("OSC grid support is DISABLED (rosc feature not enabled)");
-            // error!("Mock grids are NOT ALLOWED in this application");
-            // error!("Please rebuild with --features desktop or --features rosc to enable real grid support");
+            let config_path = Self::get_config_path();
+            let last_known_grid_ids = Self::load_grid_config(&config_path);
+            
             Ok(Self {
                 devices: HashMap::new(),
                 assumed_led_states: HashMap::new(),
                 virtual_events: Vec::new(),
+                last_known_grid_ids,
+                config_path,
+                last_rediscovery: Instant::now(),
             })
+        }
+    }
+
+    /// Get the path to the grid configuration file
+    fn get_config_path() -> PathBuf {
+        // Try to use XDG config directory, fall back to current directory
+        if let Ok(home) = std::env::var("HOME") {
+            let mut path = PathBuf::from(home);
+            path.push(".config");
+            path.push("simonsaysseeq");
+            if fs::create_dir_all(&path).is_ok() {
+                path.push("grid_config.json");
+                return path;
+            }
+        }
+        PathBuf::from("grid_config.json")
+    }
+
+    /// Load grid configuration from file
+    fn load_grid_config(path: &PathBuf) -> Option<(String, String)> {
+        if let Ok(contents) = fs::read_to_string(path) {
+            if let Ok(config) = serde_json::from_str::<GridConfig>(&contents) {
+                info!("📋 Loaded last known grid configuration from {}", path.display());
+                return Some((config.grid_one_id, config.grid_two_id));
+            }
+        }
+        None
+    }
+
+    /// Save current grid configuration to file
+    fn save_grid_config(&mut self) -> Result<()> {
+        if self.devices.len() == 2 {
+            let (grid_one, grid_two) = self.get_grid_ids_ordered()?;
+            let config = GridConfig {
+                grid_one_id: grid_one.clone(),
+                grid_two_id: grid_two.clone(),
+            };
+            let json = serde_json::to_string_pretty(&config)?;
+            fs::write(&self.config_path, json)?;
+            info!("💾 Saved grid configuration to {}", self.config_path.display());
+            
+            // Update in-memory cache
+            self.last_known_grid_ids = Some((grid_one, grid_two));
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 
@@ -151,14 +251,13 @@ impl GridManager {
         }
 
         if discovered_devices.len() == 1 {
-            error!("Found 1 grid, but either 0 or 2 grids are required");
-            error!("Please connect a second grid or disconnect the first one");
-            return Err(anyhow!("Invalid configuration: Found 1 grid, but either 0 or 2 grids are required"));
+            warn!("Found 1 grid, but 2 grids are recommended for full operation");
+            warn!("Will continue with partial functionality");
         }
 
-        if discovered_devices.len() != 2 {
-            error!("Found {} grids, but either 0 or 2 grids are required", discovered_devices.len());
-            return Err(anyhow!("Invalid configuration: Found {} grids, but either 0 or 2 grids are required", discovered_devices.len()));
+        if discovered_devices.len() > 2 {
+            warn!("Found {} grids, but only 2 are supported", discovered_devices.len());
+            warn!("Will use the first 2 grids discovered");
         }
 
         // Connect to each discovered device
@@ -174,9 +273,8 @@ impl GridManager {
         } else if self.devices.len() == 2 {
             info!("✅ Successfully connected to 2 grids");
         } else {
-            // Should not happen due to checks above, but handle gracefully
-            error!("Unexpected number of grids connected: {}", self.devices.len());
-            return Err(anyhow!("Invalid configuration: {} grids connected", self.devices.len()));
+            // Handle 1 or 3+ grids gracefully
+            warn!("Connected to {} grid(s) - recommended: 2", self.devices.len());
         }
         
         // Assign grid roles (GRID_ONE and GRID_TWO) based on device IDs - only if we have 2 grids
@@ -866,21 +964,33 @@ impl GridManager {
     /// Get the ID of GRID_ONE (first grid in sorted order)
     pub fn get_grid_one_id(&self) -> Result<String> {
         let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
-        if grid_ids.len() != 2 {
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
+        if grid_ids.len() == 2 {
+            grid_ids.sort();
+            return Ok(grid_ids[0].clone());
         }
-        grid_ids.sort();
-        Ok(grid_ids[0].clone())
+        
+        // Fall back to last known configuration
+        if let Some((grid_one, _)) = &self.last_known_grid_ids {
+            return Ok(grid_one.clone());
+        }
+        
+        Err(anyhow!("No grids connected and no previous configuration available"))
     }
 
     /// Get the ID of GRID_TWO (second grid in sorted order)
     pub fn get_grid_two_id(&self) -> Result<String> {
         let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
-        if grid_ids.len() != 2 {
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
+        if grid_ids.len() == 2 {
+            grid_ids.sort();
+            return Ok(grid_ids[1].clone());
         }
-        grid_ids.sort();
-        Ok(grid_ids[1].clone())
+        
+        // Fall back to last known configuration
+        if let Some((_, grid_two)) = &self.last_known_grid_ids {
+            return Ok(grid_two.clone());
+        }
+        
+        Err(anyhow!("No grids connected and no previous configuration available"))
     }
 
     /// Check if given grid_id is GRID_TWO
@@ -896,32 +1006,72 @@ impl GridManager {
     /// Get both grid IDs in consistent order (GRID_ONE, GRID_TWO)
     pub fn get_grid_ids_ordered(&self) -> Result<(String, String)> {
         let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
-        if grid_ids.len() != 2 {
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", grid_ids.len()));
+        if grid_ids.len() == 2 {
+            grid_ids.sort();
+            let result = (grid_ids[0].clone(), grid_ids[1].clone());
+            return Ok(result);
         }
-        grid_ids.sort();
-        Ok((grid_ids[0].clone(), grid_ids[1].clone()))
+        
+        // Fall back to last known configuration
+        if let Some((grid_one, grid_two)) = &self.last_known_grid_ids {
+            return Ok((grid_one.clone(), grid_two.clone()));
+        }
+        
+        Err(anyhow!("No grids connected and no previous configuration available"))
     }
 
-    /// Verify that exactly 2 real grids are connected
+    /// Verify that exactly 2 real grids are connected (soft check with warnings)
     pub fn verify_two_grids_requirement(&self) -> Result<()> {
         if self.devices.len() != 2 {
-            return Err(anyhow!("HARD REQUIREMENT VIOLATION: Expected exactly 2 grids, found {}", self.devices.len()));
+            warn!("⚠️  Grid count: {} (expected 2)", self.devices.len());
+            if self.last_known_grid_ids.is_some() {
+                warn!("   Using last known configuration");
+            } else {
+                warn!("   No previous configuration available");
+            }
         }
 
         // Check that no mock grids are present
         for (grid_id, _) in &self.devices {
             if grid_id.contains("mock") {
-                return Err(anyhow!("HARD REQUIREMENT VIOLATION: Mock grid '{}' detected. Only real grids are allowed.", grid_id));
+                warn!("⚠️  Mock grid '{}' detected. Real grids preferred.", grid_id);
             }
         }
 
         Ok(())
     }
 
-    /// Refresh/update a grid display
+    /// Refresh/update a grid display (no grid rediscovery - that's done on MIDI stop)
     pub fn refresh(&mut self) -> Result<()> {
         // For OSC, we don't need explicit refresh - commands are sent immediately
+        // Grid rediscovery is handled separately via rediscover_grids()
+        Ok(())
+    }
+
+    /// Rediscover grids - checks for newly connected or disconnected grids
+    /// Should be called explicitly, e.g., on MIDI stop
+    pub fn rediscover_grids(&mut self) -> Result<()> {
+        #[cfg(feature = "rosc")]
+        {
+            debug!("🔍 Checking for grid changes (triggered by MIDI stop)...");
+            let previous_count = self.devices.len();
+            
+            // Rediscover devices to detect newly connected grids
+            self.discover_devices()?;
+            
+            let current_count = self.devices.len();
+            
+            // If we now have 2 grids and didn't before, save the configuration
+            if current_count == 2 && previous_count != 2 {
+                self.save_grid_config()?;
+                info!("🔄 Grid configuration updated: 2 grids now connected");
+            } else if current_count != previous_count {
+                info!("🔄 Grid count changed: {} -> {}", previous_count, current_count);
+            }
+            
+            self.last_rediscovery = Instant::now();
+        }
+        
         Ok(())
     }
 

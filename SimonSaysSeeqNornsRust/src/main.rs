@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use log::{info, warn, debug, error, trace};
-use anyhow::anyhow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::thread;
@@ -180,19 +179,51 @@ impl SimonSaysSeeq {
         // Verify and display grid assignment
         let connected_grids = self.grid.get_connected_grids();
 
-        if connected_grids.len() == 0 {
-            warn!("🎛️  GRID ASSIGNMENT: No grids connected");
-            warn!("⚠️  Running without hardware - button presses and LEDs will be ignored");
-        } else if connected_grids.len() == 2 {
-            let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
-            info!("🎛️  GRID ASSIGNMENT:");
-            info!("   GRID_ONE: {}", grid_one);
-            info!("   GRID_TWO: {}", grid_two);
-            info!("✅ Two real grids ready for operation");
-        } else {
-            // Should never happen due to GridManager checks, but handle it
-            error!("Invalid grid configuration: {} grids connected", connected_grids.len());
-            return Err(anyhow!("Either 0 or 2 grids are required, found {}", connected_grids.len()));
+        match connected_grids.len() {
+            0 => {
+                warn!("🎛️  GRID ASSIGNMENT: No grids connected");
+                if let Ok((grid_one, grid_two)) = self.grid.get_grid_ids_ordered() {
+                    warn!("   Using last known configuration:");
+                    warn!("   GRID_ONE: {} (not connected)", grid_one);
+                    warn!("   GRID_TWO: {} (not connected)", grid_two);
+                } else {
+                    warn!("   No previous configuration available");
+                }
+                warn!("⚠️  Running without hardware - button presses and LEDs will be ignored");
+            }
+            1 => {
+                warn!("🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)");
+                let connected_id = connected_grids[0].clone();
+                warn!("   Connected: {}", connected_id);
+                if let Ok((grid_one, grid_two)) = self.grid.get_grid_ids_ordered() {
+                    warn!("   Using last known configuration:");
+                    if connected_id == grid_one {
+                        warn!("   GRID_ONE: {} ✓", grid_one);
+                        warn!("   GRID_TWO: {} (not connected)", grid_two);
+                    } else if connected_id == grid_two {
+                        warn!("   GRID_ONE: {} (not connected)", grid_one);
+                        warn!("   GRID_TWO: {} ✓", grid_two);
+                    } else {
+                        warn!("   GRID_ONE: {} (expected, not connected)", grid_one);
+                        warn!("   GRID_TWO: {} (expected, not connected)", grid_two);
+                        warn!("   Connected grid doesn't match last known configuration");
+                    }
+                } else {
+                    warn!("   No previous configuration available");
+                }
+                warn!("⚠️  Partial operation - some button presses and LEDs may not work");
+            }
+            2 => {
+                let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;
+                info!("🎛️  GRID ASSIGNMENT:");
+                info!("   GRID_ONE: {}", grid_one);
+                info!("   GRID_TWO: {}", grid_two);
+                info!("✅ Two real grids ready for operation");
+            }
+            _ => {
+                warn!("🎛️  GRID ASSIGNMENT: {} grids connected (expected 2)", connected_grids.len());
+                warn!("⚠️  Unexpected grid configuration - operation may be limited");
+            }
         }
 
         // Initialize Crow USB serial communication
@@ -1813,6 +1844,11 @@ impl SimonSaysSeeq {
                 if let Some(ref mut co2_manager) = self.co2 {
                     co2_manager.reset_counters();
                     debug!("🔄 CO2 counters reset on MIDI stop");
+                }
+
+                // Rediscover grids on MIDI stop (good time to check for reconnections)
+                if let Err(e) = self.grid.rediscover_grids() {
+                    warn!("Failed to rediscover grids on MIDI stop: {}", e);
                 }
 
                 // TEMPORARILY DISABLED FOR DEBUGGING LED DROPPING ISSUE
