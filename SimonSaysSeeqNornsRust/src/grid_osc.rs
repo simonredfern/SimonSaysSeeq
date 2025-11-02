@@ -104,6 +104,9 @@ impl GridManager {
                 warn!("Grid hotplug detection will be disabled - use MIDI stop to rediscover grids");
             } else {
                 info!("📡 Registered for serialosc hotplug notifications");
+                info!("   Our app listens on port: {}", manager.local_port);
+                info!("   serialosc server on port: 12002");
+                info!("   Hotplug messages will come FROM serialosc (port 12002) TO our port ({})", manager.local_port);
             }
 
             // Discover devices via serialosc
@@ -322,10 +325,23 @@ impl GridManager {
             let mut grid_ids: Vec<String> = self.devices.keys().cloned().collect();
             grid_ids.sort(); // Sort to ensure consistent assignment
 
-            // info!("GRID ASSIGNMENT:");
-            // info!("  GRID_ONE: {} ({})", grid_ids[0], self.devices[&grid_ids[0]].device_type);
-            // info!("  GRID_TWO: {} ({})", grid_ids[1], self.devices[&grid_ids[1]].device_type);
-            // info!("SUCCESS: Two real grids connected and assigned as required!");
+            info!("📡 PORT SUMMARY: 2 grids connected");
+            for grid_id in &grid_ids {
+                if let Some(device) = self.devices.get(grid_id) {
+                    info!("   Grid {} on port {} - type: {}", grid_id, device.port, device.device_type);
+                }
+            }
+            info!("   Our app listens on port: {}", self.local_port);
+            info!("   serialosc server on port: 12002");
+            info!("   Hotplug notifications should come from port 12002");
+        } else if self.devices.len() == 1 {
+            info!("📡 PORT SUMMARY: 1 grid connected");
+            for (grid_id, device) in &self.devices {
+                info!("   Grid {} on port {} - type: {}", grid_id, device.port, device.device_type);
+            }
+            info!("   Our app listens on port: {}", self.local_port);
+            info!("   serialosc server on port: 12002");
+            info!("   Waiting for second grid... (hotplug should detect it)");
         }
         
         Ok(())
@@ -441,6 +457,11 @@ impl GridManager {
 
         // Insert device first, before trying to access it
         self.devices.insert(device_id.to_string(), grid_device);
+        
+        info!("📡 Grid port assignment: {} on port {} (our app listens on port {})", 
+              device_id, device_port, self.local_port);
+        info!("   Device type: {}, Size: {}x{}, Varibright: {}", 
+              device_type, cols, rows, is_varibright);
 
         // Initialize LED state tracking
         for x in 0..cols {
@@ -762,21 +783,34 @@ impl GridManager {
                     if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                         if let OscPacket::Message(msg) = packet {
                             let source_port = addr.port();
+                            let source_addr = addr.ip();
                             
                             // DEBUG: Log ALL received OSC messages to diagnose hotplug issues
-                            debug!("📨 Received OSC: addr='{}' from port {} (local={})", msg.addr, source_port, self.local_port);
+                            debug!("📨 Received OSC: addr='{}' from {}:{} (our local port: {})", 
+                                   msg.addr, source_addr, source_port, self.local_port);
+                            
+                            // Check if this is from serialosc server (port 12002)
+                            if source_port == 12002 {
+                                info!("📡 Message from serialosc server (port 12002): {}", msg.addr);
+                            }
                             
                             // Check for hotplug messages FIRST, regardless of source port
                             // This ensures we don't miss hotplug notifications
                             if msg.addr == "/serialosc/add" {
                                 info!("🔌 serialosc hotplug: Grid connected!");
                                 info!("   Message args: {:?}", msg.args);
-                                info!("   Source port: {}", source_port);
+                                info!("   Source: {}:{} (serialosc should be 127.0.0.1:12002)", source_addr, source_port);
+                                if source_port != 12002 {
+                                    warn!("   ⚠️  Unexpected source port! Expected 12002 (serialosc), got {}", source_port);
+                                }
                                 should_rediscover = true;
                             } else if msg.addr == "/serialosc/remove" {
                                 info!("🔌 serialosc hotplug: Grid disconnected!");
                                 info!("   Message args: {:?}", msg.args);
-                                info!("   Source port: {}", source_port);
+                                info!("   Source: {}:{} (serialosc should be 127.0.0.1:12002)", source_addr, source_port);
+                                if source_port != 12002 {
+                                    warn!("   ⚠️  Unexpected source port! Expected 12002 (serialosc), got {}", source_port);
+                                }
                                 should_rediscover = true;
                             } else {
                                 // Parse grid key events - match by source port to specific device
