@@ -766,9 +766,11 @@ impl GridManager {
 
         // Periodically re-register for hotplug notifications (every 10 seconds)
         // This ensures we don't miss notifications if serialosc loses our registration
+        // Only do this when MIDI clock is stopped (allow_hotplug=true)
         let now = Instant::now();
-        if now.duration_since(self.last_registration) >= Duration::from_secs(10) {
+        if allow_hotplug && now.duration_since(self.last_registration) >= Duration::from_secs(10) {
             info!("🔄 Re-registering for serialosc hotplug notifications (periodic maintenance)");
+            info!("   (MIDI clock is stopped - maintenance enabled)");
             if let Err(e) = self.register_for_hotplug_notifications() {
                 warn!("Failed to re-register for hotplug notifications: {}", e);
             }
@@ -892,11 +894,13 @@ impl GridManager {
             info!("   Stop MIDI clock to enable grid hotplug detection");
         }
 
-        // Periodic polling fallback: if we don't have 2 grids and hotplug is allowed,
+        // Periodic polling fallback: if we don't have 2 grids and hotplug is allowed (MIDI clock stopped),
         // periodically rediscover to catch grids that serialosc notifications missed
+        // This only runs when MIDI clock is stopped to avoid disrupting performance
         if allow_hotplug && self.devices.len() < 2 && now.duration_since(self.last_rediscovery) >= Duration::from_secs(5) {
             let previous_count = self.devices.len();
             info!("🔄 Periodic polling: checking for new grids (current: {}, target: 2)", previous_count);
+            info!("   (MIDI clock is stopped - polling enabled)");
             info!("   (Fallback for unreliable serialosc hotplug notifications)");
             
             if let Err(e) = self.discover_devices() {
