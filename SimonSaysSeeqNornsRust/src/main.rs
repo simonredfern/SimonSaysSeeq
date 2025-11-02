@@ -191,7 +191,7 @@ impl SimonSaysSeeq {
                 }
                 warn!("📝 Sequencer WILL run and generate MIDI output normally");
                 warn!("🎛️  Grid control disabled - no button input or LED feedback");
-                warn!("🔌 Plug in grids and send MIDI STOP to enable grid control");
+                warn!("🔌 Plug in grids - they will be detected automatically");
             }
             1 => {
                 warn!("🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)");
@@ -215,7 +215,7 @@ impl SimonSaysSeeq {
                 }
                 warn!("📝 Sequencer WILL run and generate MIDI output normally");
                 warn!("⚠️  Partial grid control - only connected grid will respond");
-                warn!("🔌 Plug in second grid and send MIDI STOP to detect it");
+                warn!("🔌 Plug in second grid - it will be detected automatically");
             }
             2 => {
                 let (grid_one, grid_two) = self.grid.get_grid_ids_ordered()?;

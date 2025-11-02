@@ -95,6 +95,14 @@ impl GridManager {
                 last_rediscovery: Instant::now(),
             };
 
+            // Register for serialosc hotplug notifications
+            if let Err(e) = manager.register_for_hotplug_notifications() {
+                warn!("Failed to register for serialosc hotplug notifications: {}", e);
+                warn!("Grid hotplug detection will be disabled - use MIDI stop to rediscover grids");
+            } else {
+                info!("📡 Registered for serialosc hotplug notifications");
+            }
+
             // Discover devices via serialosc
             manager.discover_devices()?;
 
@@ -110,7 +118,7 @@ impl GridManager {
                 }
                 warn!("   📝 Sequencer will run normally and generate MIDI output");
                 warn!("   🎛️  Grid control and LED feedback disabled");
-                warn!("   🔌 Plug in grids and send MIDI STOP to enable grid control");
+                warn!("   🔌 Plug in grids - they will be detected automatically");
             } else if manager.devices.len() == 1 {
                 warn!("⚠️  Only 1 grid detected at startup (expected 2)");
                 let connected_id = manager.devices.keys().next().unwrap().clone();
@@ -128,7 +136,7 @@ impl GridManager {
                     warn!("   No previous configuration found");
                 }
                 warn!("   📝 Sequencer will run with partial grid control");
-                warn!("   🔌 Plug in second grid and send MIDI STOP to detect it");
+                warn!("   🔌 Plug in second grid - it will be detected automatically");
             }
 
             Ok(manager)
@@ -174,6 +182,25 @@ impl GridManager {
             }
         }
         None
+    }
+
+    /// Register for serialosc hotplug notifications
+    #[cfg(feature = "rosc")]
+    fn register_for_hotplug_notifications(&self) -> Result<()> {
+        let notify_msg = OscMessage {
+            addr: "/serialosc/notify".to_string(),
+            args: vec![
+                OscType::String("127.0.0.1".to_string()),
+                OscType::Int(self.local_port as i32),
+            ],
+        };
+
+        let packet = OscPacket::Message(notify_msg);
+        let msg_buf = rosc::encoder::encode(&packet)?;
+
+        self.socket.send_to(&msg_buf, "127.0.0.1:12002")?;
+        debug!("Sent hotplug notification registration to serialosc on port {}", self.local_port);
+        Ok(())
     }
 
     /// Save current grid configuration to file
@@ -697,6 +724,7 @@ impl GridManager {
         #[cfg(feature = "rosc")]
         {
         let mut events = Vec::new();
+        let mut should_rediscover = false;
 
         // Check for incoming OSC messages from grids (non-blocking)
         loop {
@@ -734,7 +762,16 @@ impl GridManager {
                                     }
                                 }
                             } else {
-                                debug!("Received OSC message from unknown port: {}", source_port);
+                                // Check if this is a serialosc hotplug notification
+                                if msg.addr == "/serialosc/add" {
+                                    info!("🔌 serialosc hotplug: Grid connected!");
+                                    should_rediscover = true;
+                                } else if msg.addr == "/serialosc/remove" {
+                                    info!("🔌 serialosc hotplug: Grid disconnected!");
+                                    should_rediscover = true;
+                                } else {
+                                    debug!("Received OSC message from unknown port: {}", source_port);
+                                }
                             }
                         }
                     }
@@ -751,6 +788,14 @@ impl GridManager {
 
         // Add any queued virtual events
         events.append(&mut self.virtual_events);
+
+        // If we detected a hotplug event, trigger rediscovery
+        if should_rediscover {
+            info!("🔍 Hotplug detected - triggering automatic grid rediscovery...");
+            if let Err(e) = self.discover_devices() {
+                warn!("Failed to rediscover grids after hotplug: {}", e);
+            }
+        }
 
         Ok(events)
         }

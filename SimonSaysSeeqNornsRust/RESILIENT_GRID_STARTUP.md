@@ -4,7 +4,7 @@
 
 SimonSaysSeeq now supports resilient startup when grids are not fully connected. The sequencer will start even if 0 or 1 grids are detected, using the last known configuration from when 2 grids were present.
 
-**Grid Rediscovery Trigger**: Grid rediscovery is triggered **only on MIDI stop events**. This ensures minimal performance impact during playback while providing a natural opportunity to detect newly connected grids when the sequencer stops. **Grids do NOT automatically connect when plugged in during operation** - you must send MIDI stop to trigger detection.
+**Grid Rediscovery**: Grid rediscovery happens **automatically via USB hotplug detection**. When you plug in a grid, serialosc sends a notification and the sequencer immediately detects it. Additionally, you can manually trigger rediscovery by sending **MIDI stop**.
 
 **Visual Feedback**: When a grid is detected (at startup or during rediscovery), it **flashes 2 times quickly** (150ms timing) to provide immediate visual confirmation of successful connection.
 
@@ -76,18 +76,25 @@ All grid ID methods now fall back to last known configuration:
 
 ### 5. Dynamic Grid Rediscovery
 
+#### Automatic Hotplug Detection
+- **serialosc hotplug notifications**: GridManager registers with serialosc to receive device add/remove events
+- When a grid is plugged in: serialosc sends `/serialosc/add` → automatic rediscovery triggered
+- When a grid is unplugged: serialosc sends `/serialosc/remove` → automatic rediscovery triggered
+- Happens in `read_button_events()` loop (called frequently)
+- **Zero user action required** - grids just work when plugged in
+
 #### `refresh()`
 - Returns immediately (no-op for OSC)
-- Does NOT perform grid rediscovery (see `rediscover_grids()` below)
+- Does NOT perform grid rediscovery
 - Called frequently by the main loop without performance impact
 
 #### `rediscover_grids()`
 - Performs actual grid rediscovery
-- **Triggered only on MIDI stop events**
+- **Triggered by**: USB hotplug events OR MIDI stop
 - Detects newly connected grids
 - Auto-saves configuration when 2 grids become available
 - Logs grid count changes
-- Natural pause point that won't disrupt playback
+- Can be manually triggered via MIDI stop as fallback
 
 ### 6. Visual Feedback on Grid Connection
 
@@ -121,15 +128,22 @@ All scenarios include **LED flash feedback** when grids are detected.
    Will use last known configuration: GRID_ONE=..., GRID_TWO=...
    📝 Sequencer will run normally and generate MIDI output
    🎛️  Grid control and LED feedback disabled
-   🔌 Plug in grids and send MIDI STOP to enable grid control
+   🔌 Plug in grids - they will be detected automatically
 🎛️  GRID ASSIGNMENT: No grids connected
    Using last known configuration:
    GRID_ONE: ... (not connected)
    GRID_TWO: ... (not connected)
 📝 Sequencer WILL run and generate MIDI output normally
 🎛️  Grid control disabled - no button input or LED feedback
-🔌 Plug in grids and send MIDI STOP to enable grid control
+🔌 Plug in grids - they will be detected automatically
 ```
+</parameter>
+
+**Important**: When you plug in a grid:
+- ✅ **Automatically detected** within seconds via serialosc hotplug
+- ✅ Grid flashes 2 times to confirm connection
+- ✅ Immediately starts working (buttons and LEDs)
+- ✅ No MIDI stop required
 No LED flashes (no grids to flash).
 
 **Important**: The sequencer continues to run normally:
@@ -148,7 +162,7 @@ No LED flashes (no grids to flash).
    Will use last known configuration: GRID_ONE=..., GRID_TWO=...
    Missing: GRID_TWO (...)
    📝 Sequencer will run with partial grid control
-   🔌 Plug in second grid and send MIDI STOP to detect it
+   🔌 Plug in second grid - it will be detected automatically
 🎛️  GRID ASSIGNMENT: Only 1 grid connected (expected 2)
    Connected: ...
    Using last known configuration:
@@ -156,15 +170,15 @@ No LED flashes (no grids to flash).
    GRID_TWO: ... (not connected)
 📝 Sequencer WILL run and generate MIDI output normally
 ⚠️  Partial grid control - only connected grid will respond
-🔌 Plug in second grid and send MIDI STOP to detect it
+🔌 Plug in second grid - it will be detected automatically
 ```
 The connected grid will flash 2 times quickly.
 
-**Important**: To detect the second grid after plugging it in:
+**Important**: When you plug in the second grid:
 1. Plug in the missing grid
-2. Send MIDI stop (stop MIDI clock)
-3. Grid will be detected and flash
-4. Resume MIDI clock
+2. **Automatic detection** happens within seconds
+3. Grid flashes 2 times to confirm
+4. Grid immediately starts working - no further action needed
 
 ### 2 Grids Connected (Normal)
 ```
@@ -182,11 +196,13 @@ Both grids will flash 2 times quickly in sequence.
 ## Benefits
 
 1. **Loose Connection Tolerance**: Sequencer starts even with loose connections at startup
-2. **Hot Reconnection**: Use MIDI stop to detect newly connected grids without restarting
-3. **Consistent Grid Assignment**: Last known configuration ensures consistent GRID_ONE/GRID_TWO assignment
-4. **Clear User Feedback**: Detailed warnings show exactly which grids are missing
-5. **Visual Confirmation**: Grids flash when detected, providing immediate feedback
-6. **No Crashes**: LED operations gracefully handle missing grids without panicking
+2. **Automatic Hotplug Detection**: Grids are detected instantly when plugged in - no manual trigger needed
+3. **Hot Reconnection**: Plug and play - grids work immediately without restarting
+4. **Consistent Grid Assignment**: Last known configuration ensures consistent GRID_ONE/GRID_TWO assignment
+5. **Clear User Feedback**: Detailed warnings show exactly which grids are missing
+6. **Visual Confirmation**: Grids flash when detected, providing immediate feedback
+7. **No Crashes**: LED operations gracefully handle missing grids without panicking
+8. **Manual Fallback**: Can manually trigger detection via MIDI stop if needed
 
 ## Limitations
 
@@ -194,27 +210,26 @@ Both grids will flash 2 times quickly in sequence.
 - LED updates to disconnected grids are silently ignored
 - If no grids have ever been connected, configuration will be unavailable
 - Grid flashing during connection takes ~600ms (2 flashes × 150ms on + 150ms off)
-- **Grids are NOT detected automatically when plugged in** - requires MIDI stop trigger
+- Hotplug detection requires serialosc daemon to be running (standard on Norns)
 
 ## Performance Considerations
 
-- `refresh()` is called very frequently (multiple times per second after LED updates)
-- Grid rediscovery is **only triggered on MIDI stop** to avoid:
-  - Excessive OSC communication overhead
-  - Potential disruption to ongoing grid operations
-  - Performance degradation during playback
-- MIDI stop is a natural pause point where rediscovery won't interrupt sequencing
-- **No automatic polling** - grids plugged in during operation won't be detected until MIDI stop
-- Users must actively trigger rediscovery by sending MIDI stop
+- `refresh()` is called very frequently (multiple times per second after LED updates) - no impact
+- Grid rediscovery is **event-driven via serialosc notifications**:
+  - No polling overhead
+  - Instant detection when grids are plugged in
+  - Minimal OSC communication (only when devices change)
+- `read_button_events()` checks for hotplug messages in the same loop as button events
+- **Automatic detection** happens naturally without disrupting sequencing
+- MIDI stop can still be used as manual fallback trigger
 
 ## Future Enhancements
 
 Potential improvements:
-- Additional rediscovery triggers (e.g., on transport button press)
-- User notification when grids reconnect during operation
-- Manual grid refresh command via button combination
+- Visual notification on screen when grids reconnect during operation
+- Manual grid refresh command via button combination (as alternative to MIDI stop)
 - Configuration UI for manual grid assignment
-- Background thread for periodic checking (optional)
+- Grid connection history/logging
 
 ## Testing
 
@@ -223,13 +238,13 @@ To test resilient startup:
 1. **With 2 grids**: Normal operation, configuration saved, both grids flash on startup
 2. **Disconnect 1 grid and restart**: Should use last config, show warnings, connected grid flashes
 3. **Disconnect both grids and restart**: Should use last config, show warnings, no flashes
-4. **Reconnect grids while running**: 
+4. **Hot reconnect while running**: 
    - Plug in the grid(s)
-   - **Send MIDI stop** to trigger rediscovery
-   - Grid rediscovery happens when MIDI clock stops
+   - **Automatic detection** happens within 1-2 seconds
    - **Watch for the LED flash** - this confirms the grid was detected
-   - Restart MIDI clock to resume operation
-   - **Note**: Grids will NOT be detected until you send MIDI stop
+   - Grid immediately starts working - buttons and LEDs active
+   - No interruption to sequencing or MIDI output
+   - **Fallback**: If detection doesn't happen, send MIDI stop to trigger manually
 
 ## Technical Notes
 
@@ -238,5 +253,6 @@ To test resilient startup:
 - File writes are atomic (temporary file + rename pattern via `fs::write`)
 - Grid ID ordering is alphabetical for consistency
 - No virtual/mock grids are created - only real hardware or degraded operation
-- Grid detection is explicit, not automatic - provides predictable behavior
-- MIDI stop as trigger ensures detection happens at a safe point in the workflow
+- Uses serialosc `/serialosc/notify` protocol for hotplug notifications
+- Hotplug messages (`/serialosc/add` and `/serialosc/remove`) processed in button event loop
+- MIDI stop available as manual fallback if hotplug detection fails
