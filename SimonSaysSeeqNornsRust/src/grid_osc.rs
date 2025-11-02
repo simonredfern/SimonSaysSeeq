@@ -62,6 +62,8 @@ pub struct GridManager {
     config_path: PathBuf,
     /// Last time we checked for grid changes
     last_rediscovery: Instant,
+    /// Last time we registered for hotplug notifications
+    last_registration: Instant,
 }
 
 impl GridManager {
@@ -93,6 +95,7 @@ impl GridManager {
                 last_known_grid_ids,
                 config_path,
                 last_rediscovery: Instant::now(),
+                last_registration: Instant::now(),
             };
 
             // Register for serialosc hotplug notifications
@@ -154,6 +157,7 @@ impl GridManager {
                 last_known_grid_ids,
                 config_path,
                 last_rediscovery: Instant::now(),
+                last_registration: Instant::now(),
             })
         }
     }
@@ -739,6 +743,17 @@ impl GridManager {
         let mut events = Vec::new();
         let mut should_rediscover = false;
 
+        // Periodically re-register for hotplug notifications (every 10 seconds)
+        // This ensures we don't miss notifications if serialosc loses our registration
+        let now = Instant::now();
+        if now.duration_since(self.last_registration) >= Duration::from_secs(10) {
+            info!("🔄 Re-registering for serialosc hotplug notifications (periodic maintenance)");
+            if let Err(e) = self.register_for_hotplug_notifications() {
+                warn!("Failed to re-register for hotplug notifications: {}", e);
+            }
+            self.last_registration = now;
+        }
+
         // Check for incoming OSC messages from grids (non-blocking)
         loop {
             let mut buf = [0u8; rosc::decoder::MTU];
@@ -747,6 +762,9 @@ impl GridManager {
                     if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                         if let OscPacket::Message(msg) = packet {
                             let source_port = addr.port();
+                            
+                            // DEBUG: Log ALL received OSC messages to diagnose hotplug issues
+                            debug!("📨 Received OSC: addr='{}' from port {} (local={})", msg.addr, source_port, self.local_port);
                             
                             // Check for hotplug messages FIRST, regardless of source port
                             // This ensures we don't miss hotplug notifications
@@ -838,6 +856,36 @@ impl GridManager {
         } else if should_rediscover && !allow_hotplug {
             info!("🔌 Hotplug detected but MIDI clock is running - rediscovery disabled");
             info!("   Stop MIDI clock to enable grid hotplug detection");
+        }
+
+        // Periodic polling fallback: if we don't have 2 grids and hotplug is allowed,
+        // periodically rediscover to catch grids that serialosc notifications missed
+        if allow_hotplug && self.devices.len() < 2 && now.duration_since(self.last_rediscovery) >= Duration::from_secs(5) {
+            let previous_count = self.devices.len();
+            info!("🔄 Periodic polling: checking for new grids (current: {}, target: 2)", previous_count);
+            info!("   (Fallback for unreliable serialosc hotplug notifications)");
+            
+            if let Err(e) = self.discover_devices() {
+                warn!("Failed to rediscover grids during periodic polling: {}", e);
+            } else {
+                let current_count = self.devices.len();
+                if current_count != previous_count {
+                    info!("🔄 Periodic polling found grid count change: {} → {}", previous_count, current_count);
+                    
+                    // Save config if we now have 2 grids
+                    if current_count == 2 {
+                        if let Err(e) = self.save_grid_config() {
+                            warn!("Failed to save grid config after periodic polling: {}", e);
+                        } else {
+                            info!("💾 Grid configuration saved: 2 grids now connected");
+                        }
+                    }
+                } else {
+                    debug!("   No new grids found in periodic poll");
+                }
+            }
+            
+            self.last_rediscovery = now;
         }
 
         Ok(events)
