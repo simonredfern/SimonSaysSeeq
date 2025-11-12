@@ -539,32 +539,9 @@ impl SimonSaysSeeq {
         match event {
             SequencerEvent::Step { step } => {
                 // Step event - display updates handled
-
-                // CO2 data will be handled in handle_co2_cv_per_step function
-
-                // Process step for all active rows
-                for row in 0..=6 { // Rows 0-6 are sequence rows
-                    if let Some(note_events) = self.sequencer.get_step_events(row, 0, step) {
-                        for note_event in note_events {
-                            #[cfg(feature = "midi")]
-                            {
-                                if note_event.note_on {
-                                    self.midi.sequencer_a_note_on(note_event.note, note_event.velocity, note_event.channel)?;
-                                } else {
-                                    self.midi.sequencer_a_note_off(note_event.note, note_event.channel)?;
-                                }
-                            }
-                            #[cfg(not(feature = "midi"))]
-                            {
-                                if note_event.note_on {
-                                    // info!("🎹 MIDI Note ON: {} vel:{} ch:{}", note_event.note, note_event.velocity, note_event.channel);
-                                } else {
-                                    // info!("🎹 MIDI Note OFF: {} ch:{}", note_event.note, note_event.channel);
-                                }
-                            }
-                        }
-                    }
-                }
+                // MIDI generation is handled in process_step() with correct per-row counters
+                // Removed duplicate MIDI generation that was causing phantom pattern bug
+                // (was reading grid with master step counter instead of per-row current_row_step)
 
                 // Handle CO2-influenced CV output for special rows
                 // Send CV output using CO2 data - one record per step
