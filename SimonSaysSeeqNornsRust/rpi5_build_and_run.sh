@@ -643,7 +643,7 @@ install_service() {
 
     # Concert mode: if SSSEQ_INSTALL_CONCERT_MODE=1 is set in the environment,
     # bake --concert into the generated wrapper so boot-time autostart runs
-    # in concert mode (log filter pinned to ERROR, RUST_LOG ignored).
+    # in concert mode (log filter pinned to WARN, RUST_LOG ignored).
     # The companion script rpi5_build_and_run_concert.sh sets this env var.
     local extra_binary_args=""
     if [ "${SSSEQ_INSTALL_CONCERT_MODE:-}" = "1" ]; then

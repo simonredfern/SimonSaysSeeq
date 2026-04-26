@@ -2078,10 +2078,11 @@ fn main() -> Result<()> {
     // unnecessary overhead at a concert).
     let enable_formal_logger = args.iter().any(|arg| arg == "--do-formal-state-logger");
 
-    // Concert mode forces the log filter to ERROR regardless of RUST_LOG,
-    // so warnings firing in tight loops (e.g. a `crow-serial worker write
-    // failed` line every few ms if Crow disconnects) can never flood
-    // stderr/journald and back-pressure the audio path.
+    // Concert mode pins the log filter to WARN regardless of RUST_LOG, so a
+    // misconfigured launcher can't accidentally turn on info-level per-step /
+    // per-button logging during a show. WARN keeps useful diagnostic signal
+    // (e.g. failed MIDI sends, queue overruns) while filtering out the noisy
+    // info-level chatter on the audio path.
     let concert_mode = args.iter().any(|arg| arg == "--concert");
 
     // Handle help flag
@@ -2100,7 +2101,7 @@ fn main() -> Result<()> {
         println!("    --test-mode          Enable test mode (auto-load test_pattern_1.json, disable auto-save)");
         println!("    --do-formal-state-logger");
         println!("                         Enable formal state logger (writes JSON events to formal_state.log)");
-        println!("    --concert            Concert mode: force log filter to ERROR (overrides RUST_LOG)");
+        println!("    --concert            Concert mode: pin log filter to WARN (overrides RUST_LOG)");
 
 
         return Ok(());
@@ -2120,15 +2121,16 @@ fn main() -> Result<()> {
     // Override with RUST_LOG=info (or finer-grained, e.g.
     // RUST_LOG=simon_says_seeq=debug) when debugging.
     //
-    // `--concert` forces the level to ERROR and ignores RUST_LOG entirely,
-    // so a misconfigured launcher can't accidentally turn logging back on
-    // during a show.
+    // `--concert` pins the level to WARN and ignores RUST_LOG entirely,
+    // so a misconfigured launcher can't accidentally turn on info-level
+    // logging during a show. WARN preserves useful diagnostic signal
+    // (failed MIDI sends, queue overruns) while filtering the per-step /
+    // per-button info chatter that runs on the audio path.
     if concert_mode {
-        // eprintln (not info!) so it actually appears even though the level
-        // we're about to set would otherwise filter it out.
-        eprintln!("CONCERT MODE: log filter forced to ERROR (RUST_LOG ignored)");
+        // eprintln (not info!) so the banner shows up regardless of filter.
+        eprintln!("CONCERT MODE: log filter pinned to WARN (RUST_LOG ignored)");
         env_logger::Builder::new()
-            .filter_level(log::LevelFilter::Error)
+            .filter_level(log::LevelFilter::Warn)
             .init();
     } else {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();

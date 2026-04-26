@@ -3,9 +3,11 @@
 # SimonSaysSeeq concert wrapper.
 #
 # Thin wrapper around rpi5_build_and_run.sh that runs the sequencer with the
-# binary's --concert flag, which forces the log filter to ERROR (RUST_LOG
-# ignored) so warnings firing in tight loops can never flood stderr/journald
-# and back-pressure the audio path.
+# binary's --concert flag, which pins the log filter to WARN (RUST_LOG
+# ignored) so a misconfigured launcher can't accidentally turn on info-level
+# per-step / per-button logging during a show. WARN keeps useful diagnostic
+# signal (failed MIDI sends, queue overruns) while filtering the noisy info
+# chatter that runs on the audio path.
 #
 # Behaviour vs. the base script:
 #   - Same build, same dependencies, same binary — there is no separate
