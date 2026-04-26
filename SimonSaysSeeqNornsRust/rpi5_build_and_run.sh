@@ -694,7 +694,7 @@ Group=audio
 WorkingDirectory=$(pwd)
 ExecStartPre=/bin/sleep 10
 ExecStart=/usr/local/bin/simonsaysseeq_wrapper.sh
-Environment=RUST_LOG=error
+Environment=RUST_LOG=warn
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u)
 Restart=on-failure
 RestartSec=5
@@ -735,7 +735,7 @@ run_application() {
     fi
 
     # Set environment variables
-    export RUST_LOG="${RUST_LOG:-info}"
+    export RUST_LOG="${RUST_LOG:-warn}"
     export RUST_BACKTRACE=1
 
     log_run "Environment: RUST_LOG=$RUST_LOG"
@@ -841,7 +841,7 @@ NOTES:
 ENVIRONMENT VARIABLES:
     BUILD_TYPE          Build type: release or debug (default: release)
     RPI_FEATURES        Cargo features to enable (default: hardware,midi,desktop)
-    RUST_LOG           Log level: error,warn,info,debug,trace (default: info)
+    RUST_LOG           Log level: error,warn,info,debug,trace (default: warn)
 
 The script automatically detects Raspberry Pi 5 and optimizes compilation for ARM64.
 EOF

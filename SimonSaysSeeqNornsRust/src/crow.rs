@@ -57,7 +57,7 @@ impl Crow {
     pub fn initialize(&mut self) -> Result<()> {
         #[cfg(feature = "hardware")]
         {
-            for attempt in 1..=4 {
+            for attempt in 1..=3 {
                 if attempt > 1 {
                     thread::sleep(Duration::from_secs(attempt as u64));
                 }

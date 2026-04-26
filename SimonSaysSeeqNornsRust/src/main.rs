@@ -2078,6 +2078,12 @@ fn main() -> Result<()> {
     // unnecessary overhead at a concert).
     let enable_formal_logger = args.iter().any(|arg| arg == "--do-formal-state-logger");
 
+    // Concert mode forces the log filter to ERROR regardless of RUST_LOG,
+    // so warnings firing in tight loops (e.g. a `crow-serial worker write
+    // failed` line every few ms if Crow disconnects) can never flood
+    // stderr/journald and back-pressure the audio path.
+    let concert_mode = args.iter().any(|arg| arg == "--concert");
+
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
         let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
@@ -2094,6 +2100,7 @@ fn main() -> Result<()> {
         println!("    --test-mode          Enable test mode (auto-load test_pattern_1.json, disable auto-save)");
         println!("    --do-formal-state-logger");
         println!("                         Enable formal state logger (writes JSON events to formal_state.log)");
+        println!("    --concert            Concert mode: force log filter to ERROR (overrides RUST_LOG)");
 
 
         return Ok(());
@@ -2108,8 +2115,24 @@ fn main() -> Result<()> {
 
 
 
-    // Initialize logging
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    // Initialize logging. Default level is "warn" so per-step / per-button
+    // info logs don't fire on the audio path during a live performance.
+    // Override with RUST_LOG=info (or finer-grained, e.g.
+    // RUST_LOG=simon_says_seeq=debug) when debugging.
+    //
+    // `--concert` forces the level to ERROR and ignores RUST_LOG entirely,
+    // so a misconfigured launcher can't accidentally turn logging back on
+    // during a show.
+    if concert_mode {
+        // eprintln (not info!) so it actually appears even though the level
+        // we're about to set would otherwise filter it out.
+        eprintln!("CONCERT MODE: log filter forced to ERROR (RUST_LOG ignored)");
+        env_logger::Builder::new()
+            .filter_level(log::LevelFilter::Error)
+            .init();
+    } else {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    }
 
     // Also log version info to ai_startup.log file
     if let Ok(mut ai_log) = std::fs::OpenOptions::new()
