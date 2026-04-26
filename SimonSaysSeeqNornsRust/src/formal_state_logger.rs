@@ -9,33 +9,97 @@
 //!
 //! The logs are written to formal_state.log in a structured format that can be
 //! analyzed for debugging sequencer issues and building automated tests.
+//!
+//! Architecture: events from the audio/main thread are sent over an unbounded
+//! crossbeam channel to a dedicated `formal-log-writer` thread, which owns the
+//! file and does the JSON serialization plus disk writes. The audio path's
+//! per-event cost is just one `Sender::send` — no Mutex on the file, no
+//! serde, no syscall — so the logger can stay enabled in real-time contexts
+//! without risk of stalling sequencer timing.
+//!
+//! The logger is opt-in: `init_formal_logger` must be called explicitly
+//! (the binary gates this behind the `--do-formal-state-logger` CLI flag).
+//! Until init runs, every `log_event` call is a single Mutex lock + None check.
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use crossbeam_channel::{unbounded, Sender};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::sync::Mutex;
+use std::thread::{self, JoinHandle};
 
-/// Global formal state logger instance
-static FORMAL_LOGGER: Mutex<Option<FormalStateLogger>> = Mutex::new(None);
+/// Handle to the running logger: a Sender for fanning events into the writer
+/// thread, plus the JoinHandle so we can drain on shutdown.
+struct FormalLoggerHandle {
+    sender: Sender<FormalStateEvent>,
+    worker: Option<JoinHandle<()>>,
+}
 
-/// Initialize the formal state logger
+/// Global formal state logger handle. None until `init_formal_logger` runs.
+static FORMAL_LOGGER: Mutex<Option<FormalLoggerHandle>> = Mutex::new(None);
+
+/// Initialize the formal state logger. Spawns the writer thread that owns
+/// the log file. Subsequent `log_event` calls fan into that thread via an
+/// unbounded channel — they do not touch the file from the caller's thread.
 pub fn init_formal_logger() -> Result<()> {
-    let logger = FormalStateLogger::new()?;
-    let mut global_logger = FORMAL_LOGGER.lock().unwrap();
-    *global_logger = Some(logger);
+    let mut writer = FormalStateLogger::new()?;
+
+    let (tx, rx) = unbounded::<FormalStateEvent>();
+    let worker = thread::Builder::new()
+        .name("formal-log-writer".into())
+        .spawn(move || {
+            while let Ok(event) = rx.recv() {
+                if let Err(e) = writer.log_event(&event) {
+                    eprintln!("Failed to log formal state event: {}", e);
+                }
+            }
+        })?;
+
+    let mut global = FORMAL_LOGGER.lock().unwrap();
+    *global = Some(FormalLoggerHandle {
+        sender: tx,
+        worker: Some(worker),
+    });
     Ok(())
 }
 
-/// Log a formal state event
-pub fn log_event(event: FormalStateEvent) {
-    if let Ok(mut logger_guard) = FORMAL_LOGGER.lock() {
-        if let Some(logger) = logger_guard.as_mut() {
-            if let Err(e) = logger.log_event(event) {
-                eprintln!("Failed to log formal state event: {}", e);
-            }
+/// Drain queued events to disk and stop the writer thread. Safe to call
+/// multiple times; subsequent calls are no-ops. Idempotent on shutdown.
+pub fn shutdown_formal_logger() {
+    let handle = {
+        let mut global = FORMAL_LOGGER.lock().unwrap();
+        global.take()
+    };
+    if let Some(mut h) = handle {
+        // Drop sender so the worker's `recv()` returns Disconnected once
+        // the queue is drained, then wait for the worker to finish writing.
+        drop(h.sender);
+        if let Some(worker) = h.worker.take() {
+            let _ = worker.join();
         }
+    }
+}
+
+/// Send a formal state event to the writer thread. Returns immediately;
+/// serialization and the disk write happen on the writer thread. If the
+/// logger is not initialized, this is a no-op.
+pub fn log_event(event: FormalStateEvent) {
+    // Clone the Sender out under the lock, then release the lock before
+    // calling `.send()` so concurrent log_event calls don't serialize
+    // through the global Mutex.
+    let sender_opt = {
+        let guard = match FORMAL_LOGGER.lock() {
+            Ok(g) => g,
+            Err(_) => return,
+        };
+        guard.as_ref().map(|h| h.sender.clone())
+    };
+    if let Some(sender) = sender_opt {
+        // Unbounded channel: send only fails if the receiver is gone, which
+        // can only happen after `shutdown_formal_logger` — drop in that case.
+        let _ = sender.send(event);
     }
 }
 
@@ -190,9 +254,9 @@ impl FormalStateLogger {
         Ok(())
     }
     
-    /// Log a formal state event
-    pub fn log_event(&mut self, event: FormalStateEvent) -> Result<()> {
-        let json_line = serde_json::to_string(&event)?;
+    /// Log a formal state event. Called from the writer thread only.
+    pub fn log_event(&mut self, event: &FormalStateEvent) -> Result<()> {
+        let json_line = serde_json::to_string(event)?;
         writeln!(self.file, "{}", json_line)?;
         self.file.flush()?;
         Ok(())

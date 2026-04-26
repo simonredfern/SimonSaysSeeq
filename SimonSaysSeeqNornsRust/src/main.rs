@@ -2072,6 +2072,12 @@ fn main() -> Result<()> {
     // Check for test mode flag
     let test_mode = args.iter().any(|arg| arg == "--test-mode");
 
+    // Check for formal state logger flag (off by default for live performance:
+    // when on, every step/button/LED/MIDI event is queued onto a writer thread
+    // and serialized to formal_state.log — useful for offline analysis but
+    // unnecessary overhead at a concert).
+    let enable_formal_logger = args.iter().any(|arg| arg == "--do-formal-state-logger");
+
     // Handle help flag
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
         let git_hash = option_env!("GIT_HASH").unwrap_or("unknown");
@@ -2086,6 +2092,8 @@ fn main() -> Result<()> {
         println!("    --no-hardware        Disable hardware features");
         println!("    --no-midi            Disable MIDI features");
         println!("    --test-mode          Enable test mode (auto-load test_pattern_1.json, disable auto-save)");
+        println!("    --do-formal-state-logger");
+        println!("                         Enable formal state logger (writes JSON events to formal_state.log)");
 
 
         return Ok(());
@@ -2119,12 +2127,19 @@ fn main() -> Result<()> {
         writeln!(ai_log, "Features: MIDI={}, Hardware={}", cfg!(feature = "midi"), cfg!(feature = "hardware")).ok();
     }
 
-    // Initialize formal state logger
+    // Initialize formal state logger (opt-in via --do-formal-state-logger).
+    // When disabled, every log_event call is just a Mutex lock + None check;
+    // when enabled, events are queued onto a dedicated writer thread so the
+    // audio path doesn't pay serde or disk-write cost.
     use simon_says_seeq_rust::formal_state_logger;
-    if let Err(e) = formal_state_logger::init_formal_logger() {
-        warn!("Failed to initialize formal state logger: {}", e);
+    if enable_formal_logger {
+        if let Err(e) = formal_state_logger::init_formal_logger() {
+            warn!("Failed to initialize formal state logger: {}", e);
+        } else {
+            info!("📝 Formal state logger initialized");
+        }
     } else {
-        info!("📝 Formal state logger initialized");
+        info!("📝 Formal state logger disabled (pass --do-formal-state-logger to enable)");
     }
 
     // Log startup banner with version and timestamp
@@ -2146,7 +2161,14 @@ fn main() -> Result<()> {
 
     // Single-grid mode removed - application now requires exactly 2 grids
 
-    app.run()?;
+    let run_result = app.run();
 
+    // Drain any events still queued in the formal state logger before exit.
+    // No-op if the logger was never initialized. (On Ctrl+C the explicit
+    // process::exit(0) skips this path, so the kernel flushes whatever the
+    // writer thread already managed to write.)
+    formal_state_logger::shutdown_formal_logger();
+
+    run_result?;
     Ok(())
 }
