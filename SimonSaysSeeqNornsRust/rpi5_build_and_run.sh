@@ -641,6 +641,16 @@ install_service() {
         binary_path="$(pwd)/target/debug/simon_says_seeq"
     fi
 
+    # Concert mode: if SSSEQ_INSTALL_CONCERT_MODE=1 is set in the environment,
+    # bake --concert into the generated wrapper so boot-time autostart runs
+    # in concert mode (log filter pinned to ERROR, RUST_LOG ignored).
+    # The companion script rpi5_build_and_run_concert.sh sets this env var.
+    local extra_binary_args=""
+    if [ "${SSSEQ_INSTALL_CONCERT_MODE:-}" = "1" ]; then
+        extra_binary_args="--concert"
+        log_info "Concert mode requested for installed service: --concert will be baked into wrapper"
+    fi
+
     # Create Crow CV boot fix wrapper script
     log_info "Creating Crow CV boot fix wrapper..."
     cat > /tmp/simonsaysseeq_wrapper.sh << WRAPPER
@@ -651,6 +661,7 @@ install_service() {
 set -e
 
 BINARY_PATH="$binary_path"
+EXTRA_BINARY_ARGS="$extra_binary_args"
 LOG_FILE="/tmp/simonsaysseeq_crow_boot_fix.log"
 
 log_msg() {
@@ -659,10 +670,11 @@ log_msg() {
 
 log_msg "=== Crow CV Boot Fix Started ==="
 log_msg "Binary path: \$BINARY_PATH"
+log_msg "Extra binary args: \$EXTRA_BINARY_ARGS"
 
 # Step 1: Start the service briefly to initialize hardware
 log_msg "Step 1: Starting service for initial hardware setup..."
-"\$BINARY_PATH" &
+"\$BINARY_PATH" \$EXTRA_BINARY_ARGS &
 SERVICE_PID=\$!
 sleep 3
 
@@ -674,7 +686,7 @@ sleep 2
 
 # Step 3: Start the service for real (Crow CV should now work)
 log_msg "Step 3: Final start - Crow CV should now work..."
-exec "\$BINARY_PATH"
+exec "\$BINARY_PATH" \$EXTRA_BINARY_ARGS
 WRAPPER
 
     chmod +x /tmp/simonsaysseeq_wrapper.sh
