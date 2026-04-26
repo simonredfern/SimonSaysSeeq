@@ -92,56 +92,25 @@ impl Crow {
             }
         }
 
-        // Try to find Crow by USB vendor/product ID
-        match self.find_crow_device() {
-            Ok(Some(crow_path)) => {
-                match serialport::new(&crow_path, 115_200)
-                    .timeout(Duration::from_millis(1000))
-                    .open()
-                {
-                    Ok(port) => {
-                        self.enable_with_port(port);
-                        return Ok(());
-                    }
-                    Err(_e) => {
-                        // warn!("Failed to open identified Crow device {}: {}", crow_path, _e);
-                    }
-                }
-            }
-            Ok(None) => {
-                // debug!("No Crow device found by USB ID, trying fallback paths");
-            }
-            Err(_e) => {
-                // warn!("Error searching for Crow device: {}", _e);
-            }
-        }
+        // Identify Crow strictly by its USB vendor/product ID (0483:5740).
+        // We deliberately do NOT fall back to "open whatever ttyACM*/ttyUSB*
+        // happens to be available" — on a Pi with monome grids (or any other
+        // USB-CDC peripheral) that fallback would grab the wrong port,
+        // happily report success, then spam `Crow serial write failed`
+        // warnings at every CO2 CV tick (especially after a hot-unplug
+        // invalidates the fd).
+        let crow_path = match self.find_crow_device()? {
+            Some(p) => p,
+            None => return Err(anyhow!("No Crow device found by USB ID (0483:5740)")),
+        };
 
-        // Fallback: Try common paths (but skip monome grids)
-        let possible_paths = [
-            "/dev/ttyACM0",
-            "/dev/ttyACM1",
-            "/dev/ttyACM2",
-            "/dev/ttyACM3",
-            "/dev/ttyUSB0",
-            "/dev/ttyUSB1",
-        ];
+        let port = serialport::new(&crow_path, 115_200)
+            .timeout(Duration::from_millis(1000))
+            .open()
+            .map_err(|e| anyhow!("Failed to open identified Crow device {}: {}", crow_path, e))?;
 
-        for path in &possible_paths {
-            if self.is_monome_grid(path) {
-                debug!("Skipping {} - identified as monome grid", path);
-                continue;
-            }
-
-            if let Ok(port) = serialport::new(*path, 115_200)
-                .timeout(Duration::from_millis(1000))
-                .open()
-            {
-                self.enable_with_port(port);
-                return Ok(());
-            }
-        }
-
-        Err(anyhow!("No suitable Crow device found"))
+        self.enable_with_port(port);
+        Ok(())
     }
 
     /// Take ownership of an opened port, spawn the writer thread, and queue
@@ -166,13 +135,45 @@ impl Crow {
         let worker = thread::Builder::new()
             .name("crow-serial".into())
             .spawn(move || {
+                // Rate-limit serial-I/O failure warnings. Without throttling,
+                // a real disconnect mid-show would emit one warning per tick
+                // (~48/s at 120 BPM × 24 PPQ) and flood journald. We log
+                // first failures immediately so the operator sees them, then
+                // suppress and summarise inside a 1 s window.
+                let warn_throttle = Duration::from_secs(1);
+                let mut last_warn: Option<std::time::Instant> = None;
+                let mut suppressed_since_warn: u32 = 0;
+
                 while let Ok(cmd) = rx.recv() {
-                    if let Err(e) = port.write_all(cmd.as_bytes()) {
-                        warn!("Crow serial write failed: {}", e);
-                        continue;
-                    }
-                    if let Err(e) = port.flush() {
-                        warn!("Crow serial flush failed: {}", e);
+                    let result = port
+                        .write_all(cmd.as_bytes())
+                        .and_then(|_| port.flush());
+                    match result {
+                        Ok(_) => {
+                            // Reset counter so the next failure logs immediately.
+                            suppressed_since_warn = 0;
+                        }
+                        Err(e) => {
+                            let now = std::time::Instant::now();
+                            let should_log = match last_warn {
+                                None => true,
+                                Some(t) => now.duration_since(t) >= warn_throttle,
+                            };
+                            if should_log {
+                                if suppressed_since_warn > 0 {
+                                    warn!(
+                                        "Crow serial I/O failed: {} ({} more suppressed in the last second)",
+                                        e, suppressed_since_warn
+                                    );
+                                } else {
+                                    warn!("Crow serial I/O failed: {}", e);
+                                }
+                                last_warn = Some(now);
+                                suppressed_since_warn = 0;
+                            } else {
+                                suppressed_since_warn += 1;
+                            }
+                        }
                     }
                 }
                 debug!("crow-serial worker exiting (channel disconnected)");
@@ -275,21 +276,6 @@ impl Crow {
         Ok(None)
     }
 
-    /// Check if a device is a monome grid
-    #[cfg(feature = "hardware")]
-    fn is_monome_grid(&self, device_path: &str) -> bool {
-        match Command::new("udevadm")
-            .args(&["info", "--query=all", &format!("--name={}", device_path)])
-            .output()
-        {
-            Ok(output) => {
-                let udev_str = String::from_utf8_lossy(&output.stdout);
-                // Check for monome vendor ID (cafe)
-                udev_str.contains("ID_VENDOR_ID=cafe")
-            }
-            Err(_) => false,
-        }
-    }
 }
 
 impl Drop for Crow {
