@@ -173,6 +173,14 @@ impl SimonSaysSeeq {
         })
     }
 
+    /// Apply runtime safety levers for live performance. Currently this just
+    /// inhibits grid rediscovery (whose ~3 s + 1 s/device blocking call would
+    /// silence the sequencer if a grid is unplugged or the MIDI clock briefly
+    /// stops). Future concert-mode tightening can hook in here.
+    pub fn apply_concert_mode(&mut self) {
+        self.grid.set_disable_rediscovery(true);
+    }
+
     pub fn run(&mut self) -> Result<()> {
         // info!("run says: Starting SimonSaysSeeq Rust application");
 
@@ -2185,6 +2193,10 @@ fn main() -> Result<()> {
     let mut app = SimonSaysSeeq::new_with_test_mode(test_mode)?;
 
     // Single-grid mode removed - application now requires exactly 2 grids
+
+    if concert_mode {
+        app.apply_concert_mode();
+    }
 
     let run_result = app.run();
 

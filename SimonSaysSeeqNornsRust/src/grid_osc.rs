@@ -64,6 +64,11 @@ pub struct GridManager {
     last_rediscovery: Instant,
     /// Last time we registered for hotplug notifications
     last_registration: Instant,
+    /// When true, all paths into `discover_devices()` after the initial
+    /// startup discovery are inhibited. Set by the binary's --concert flag
+    /// because `discover_devices` blocks the main thread for ~3 s plus 1 s
+    /// per device, which would silence the sequencer mid-show.
+    disable_rediscovery: bool,
 }
 
 impl GridManager {
@@ -96,6 +101,7 @@ impl GridManager {
                 config_path,
                 last_rediscovery: Instant::now(),
                 last_registration: Instant::now(),
+                disable_rediscovery: false,
             };
 
             // Register for serialosc hotplug notifications
@@ -161,7 +167,21 @@ impl GridManager {
                 config_path,
                 last_rediscovery: Instant::now(),
                 last_registration: Instant::now(),
+                disable_rediscovery: false,
             })
+        }
+    }
+
+    /// Inhibit all post-startup grid rediscovery. Once set, the three paths
+    /// that would call `discover_devices()` from the main thread (hotplug
+    /// callback, periodic polling, and the explicit `rediscover_grids`
+    /// triggered on MIDI stop) become no-ops. The initial startup discovery
+    /// in `new()` is unaffected. Intended for `--concert` mode, where the
+    /// ~3 s + 1 s/device blocking discovery would silence MIDI output.
+    pub fn set_disable_rediscovery(&mut self, disable: bool) {
+        self.disable_rediscovery = disable;
+        if disable {
+            info!("Grid rediscovery disabled (concert mode): unplugged grids will not be re-detected during this run");
         }
     }
 
@@ -860,8 +880,10 @@ impl GridManager {
         // Add any queued virtual events
         events.append(&mut self.virtual_events);
 
-        // If we detected a hotplug event, trigger rediscovery (only if allowed)
-        if should_rediscover && allow_hotplug {
+        // If we detected a hotplug event, trigger rediscovery (only if allowed).
+        // Concert mode also fully inhibits this (`disable_rediscovery`) because
+        // the discovery roundtrip is a 3 s+ blocking call on the main thread.
+        if should_rediscover && allow_hotplug && !self.disable_rediscovery {
             let previous_count = self.devices.len();
             info!("🔍 Hotplug detected - triggering automatic grid rediscovery...");
             info!("   MIDI clock is stopped - hotplug enabled");
@@ -895,9 +917,10 @@ impl GridManager {
         }
 
         // Periodic polling fallback: if we don't have 2 grids and hotplug is allowed (MIDI clock stopped),
-        // periodically rediscover to catch grids that serialosc notifications missed
-        // This only runs when MIDI clock is stopped to avoid disrupting performance
-        if allow_hotplug && self.devices.len() < 2 && now.duration_since(self.last_rediscovery) >= Duration::from_secs(5) {
+        // periodically rediscover to catch grids that serialosc notifications missed.
+        // This only runs when MIDI clock is stopped to avoid disrupting performance,
+        // and is fully inhibited in concert mode (rediscovery is a 3 s+ blocking call).
+        if allow_hotplug && !self.disable_rediscovery && self.devices.len() < 2 && now.duration_since(self.last_rediscovery) >= Duration::from_secs(5) {
             let previous_count = self.devices.len();
             info!("🔄 Periodic polling: checking for new grids (current: {}, target: 2)", previous_count);
             info!("   (MIDI clock is stopped - polling enabled)");
@@ -1241,11 +1264,15 @@ impl GridManager {
     /// Rediscover grids - checks for newly connected or disconnected grids
     /// Should be called explicitly, e.g., on MIDI stop
     pub fn rediscover_grids(&mut self) -> Result<()> {
+        if self.disable_rediscovery {
+            debug!("rediscover_grids: skipped (rediscovery disabled by concert mode)");
+            return Ok(());
+        }
         #[cfg(feature = "rosc")]
         {
             debug!("🔍 Checking for grid changes (triggered by MIDI stop)...");
             let previous_count = self.devices.len();
-            
+
             // Rediscover devices to detect newly connected grids
             self.discover_devices()?;
             
