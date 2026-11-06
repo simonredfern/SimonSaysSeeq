@@ -54,7 +54,7 @@ journalctl --list-boots                     # is the journal kept across reboots
 sudo journalctl -u simonsaysseeq-rpi -b | grep -E "MIDI PORT ASSIGNMENTS|PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT|Clock scan completed|Started|panicked|Error"
 ```
 
-Things to check in that boot: whether the process stays up (one "Started" line, or one per wrapper restart), which port was chosen for clock and gates, and whether "MIDI Clock detected" appears at all. With the fix (section 8), the grid status light separates the cases: blinking means no clock is arriving on any port, steady dim with a frozen playhead means the clock is bound and the problem is further along, and a dark or unchanging light means the process or its main loop has stopped.
+Things to check in that boot: whether the process stays up (one "Started" line, or one per wrapper restart), which port was chosen for clock and gates, and whether "MIDI Clock detected" appears at all. With the fix (section 8), the grid clock light separates the cases: flashing on the beat with a frozen playhead means clock is arriving and the problem is further along; dark means no clock is arriving on any port, or the process or its main loop has stopped (the journal tells these apart).
 
 ## 4. Two identical USB MIDI interfaces
 
@@ -124,7 +124,7 @@ How it works now:
 - On the next main-loop pass, the gates output opens on the device with the same port name (exact name first, so two identical interfaces are told apart). The keyboard port is the other hardware input, preferring "USB MIDI Interface". Clock and notes from all other ports are ignored. A port with no matching output is rejected for the session (step 3).
 - After 5 seconds without clock: all notes off, the output closes, the clock source goes to none (so `ExternalClockTimeout` now fires), and it listens on all inputs again. A clock that is stopped for more than 5 seconds between songs is therefore released and rebound on its next message (step 4).
 - The saved-device shortcut is gone from `MidiManager`: nothing is read from or written to `last_detected_device` (step 5). The config field is still there, and so are the one-off scanner `src/midi_scanner/` and `midi_clock_detector`, which uses it. They can go in a cleanup.
-- Grid two, row 7, column 0 shows the clock status: blinking while waiting, steady dim once bound (step 6). It is one of the two re-detect buttons. The light is checked twice a second and an LED message is only sent when it changes, plus a re-send every 5 seconds.
+- Grid two, row 7, column 0 shows the clock (step 6): it flashes on each beat while MIDI clock is arriving and is off when none has arrived for 250 ms. Changed on 6 November 2026 from the first version (blink while waiting, steady once bound), which read the wrong way round. It is one of the two re-detect buttons. The light is checked on every main-loop pass and an LED message is only sent when it changes, plus a re-send every 5 seconds.
 - Binding changes are logged at warn level, so they appear in the journal and with `--concert`: "MIDI: clock bound to …", "MIDI: clock on … lost (no clock for 5 s); listening on all inputs", "MIDI: listening for clock on N input(s): …" (step 7).
 - Columns 0 and 1 on grid two (held together) now just release the current binding. They no longer block: the next port to send clock is bound straight away.
 

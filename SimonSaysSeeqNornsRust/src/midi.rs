@@ -937,6 +937,25 @@ impl MidiManager {
 
     
     /// Check if external clock is running
+    /// For the clock light: None if no MIDI clock tick arrived in the last 250 ms, otherwise
+    /// Some(true) during the first sixteenth (6 of 24 ticks) of each beat and Some(false) for the rest.
+    /// Beats count from the last MIDI Start, which resets the tick count.
+    pub fn clock_beat_light(&self) -> Option<bool> {
+        // Lock the shared clock state written by the MIDI input thread
+        let clock = self.clock_state.lock().unwrap();
+        // `?` on an Option returns None from this function if there has been no tick at all
+        let last_tick = clock.last_clock_time?;
+        // A clock at 30 BPM still ticks every 83 ms, so 250 ms of silence means it has stopped
+        if last_tick.elapsed() > Duration::from_millis(250) {
+            // Not receiving clock: light off
+            return None;
+        }
+        // The first tick after Start makes clock_ticks 1, so subtract 1 to count from 0
+        let tick_in_beat = clock.clock_ticks.wrapping_sub(1) % 24;
+        // On for ticks 0-5 of the beat (a sixteenth note), off for ticks 6-23
+        Some(tick_in_beat < 6)
+    }
+
     pub fn is_external_clock_running(&self) -> bool {
         let clock = self.clock_state.lock().unwrap();
         matches!(clock.source, ClockSource::MidiExternal) && clock.running

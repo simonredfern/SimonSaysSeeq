@@ -605,6 +605,86 @@ impl GridManager {
         }
     }
 
+    /// Set 8 LEDs in a row with one OSC message (`/grid/led/level/row`), instead of 8 `set_led`
+    /// calls. `x_start` must be 0 or 8 (serialosc works in 8-wide blocks); `levels[i]` is the
+    /// brightness at logical column `x_start + i`. Grid two's 180-degree rotation is applied here.
+    pub fn set_led_row8(&mut self, grid_id: &str, x_start: usize, y: usize, levels: &[u8; 8], caller: &str) -> Result<()> {
+        // Only whole 8-wide blocks of a 16-wide grid are allowed
+        if x_start != 0 && x_start != 8 {
+            // `anyhow!` builds an error value; `return Err(..)` hands it to the caller
+            return Err(anyhow!("set_led_row8: x_start must be 0 or 8, got {}", x_start));
+        }
+        // Rows beyond 7 don't exist on a 16x8 grid; ignore them like set_led does
+        if y > 7 {
+            // Nothing to do
+            return Ok(());
+        }
+        // `?` returns early if the grid-two check itself fails
+        let rotated = self.is_grid_two(grid_id)?;
+
+        // Without rosc (simulation build) there is no OSC: fall back to single LEDs
+        #[cfg(not(feature = "rosc"))]
+        {
+            // `iter().enumerate()` gives (index, &level) pairs
+            for (i, &level) in levels.iter().enumerate() {
+                // One LED at a time; set_led handles rotation and state
+                self.set_led(grid_id, x_start + i, y, level, caller)?;
+            }
+            // Done
+            return Ok(());
+        }
+
+        // The real path, compiled when the rosc feature is on
+        #[cfg(feature = "rosc")]
+        {
+            // `.get()` returns None if the grid isn't connected
+            let (port, prefix, is_varibright, cols) = match self.devices.get(grid_id) {
+                // Copy the fields so we can mutate self below without borrowing `device`
+                Some(d) => (d.port, d.prefix.clone(), d.is_varibright, d.cols),
+                // Grid not connected: silently ignore, like set_led
+                None => return Ok(()),
+            };
+            // Monochrome grids don't take level/row: use single LEDs (set_led makes them on/off)
+            if !is_varibright || cols != 16 {
+                // One LED at a time
+                for (i, &level) in levels.iter().enumerate() {
+                    // set_led handles rotation, clamping and state
+                    self.set_led(grid_id, x_start + i, y, level, caller)?;
+                }
+                // Done
+                return Ok(());
+            }
+
+            // Remember each LED's brightness (by logical coordinates) and log it, as set_led does
+            for (i, &level) in levels.iter().enumerate() {
+                // Grids accept 0-15
+                let level = level.min(15);
+                // `to_string()` makes an owned String for the HashMap key
+                self.assumed_led_states.insert((grid_id.to_string(), x_start + i, y), level);
+                // No-op unless --do-formal-state-logger is on
+                log_led_change(grid_id, x_start + i, y, level, caller);
+            }
+
+            // Rotated grid: logical x becomes 15 - x and y becomes 7 - y, so the block moves to the other half...
+            let (x_offset, row) = if rotated { (8 - x_start, 7 - y) } else { (x_start, y) };
+            // ...and its 8 levels come out in reverse order
+            let ordered: Vec<u8> = if rotated { levels.iter().rev().copied().collect() } else { levels.to_vec() };
+
+            // OSC arguments: x offset, row, then the 8 levels
+            let mut args = vec![OscType::Int(x_offset as i32), OscType::Int(row as i32)];
+            // `extend` appends every item from the iterator
+            args.extend(ordered.iter().map(|&level| OscType::Int(level.min(15) as i32)));
+            // Build the message; `format!` joins the grid's prefix and the command
+            let osc_msg = OscMessage { addr: format!("{}/grid/led/level/row", prefix), args };
+            // Encode to bytes
+            let msg_buf = rosc::encoder::encode(&OscPacket::Message(osc_msg))?;
+            // Send to the grid's serialosc port on this machine
+            self.socket.send_to(&msg_buf, format!("127.0.0.1:{}", port))?;
+            // Success
+            Ok(())
+        }
+    }
+
     /// Get current LED state
     pub fn get_led(&self, grid_id: &str, x: usize, y: usize) -> u8 {
         self.assumed_led_states.get(&(grid_id.to_string(), x, y)).copied().unwrap_or(0)

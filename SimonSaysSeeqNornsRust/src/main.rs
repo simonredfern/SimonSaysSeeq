@@ -30,6 +30,8 @@ const LED_DIM_PLUS: u8 = 8; // Empty step, playhead present (enhanced visibility
 const LED_BRIGHT: u8 = 10;  // Pattern exists, no playhead (pattern only)
 const LED_MAX: u8 = 14;     // Pattern exists, playhead present (pattern + position)
 const LED_TURBO: u8 = 15;     // Maximum brightness (ARM buttons, flashing, etc.)
+// MIDI clock light (grid two, row 7, column 0) on the beat: kept low so it doesn't dazzle
+const LED_CLOCK_BEAT: u8 = 3;
 
 /// External MIDI clock tick counter for step synchronization
 static EXTERNAL_CLOCK_TICK_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -122,12 +124,13 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
+    // While grid one row 7 column 8 or 9 is held: Some(false) = show only straight rows, Some(true) = only triplet rows
+    rate_highlight: Option<bool>,
     // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
     grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
     clock_status_led: Option<u8>,
     clock_status_last_update: Instant,
-    clock_status_checks: u32,
     // Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
     test_mode: bool,
 }
@@ -178,9 +181,10 @@ impl SimonSaysSeeq {
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
             grid_two_crow_search_held: [false; 3],
+            // No rate highlight until column 8 or 9 is held
+            rate_highlight: None,
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
-            clock_status_checks: 0,
             test_mode,
         })
     }
@@ -785,20 +789,12 @@ impl SimonSaysSeeq {
                             self.sequencer.set_row_triplet(seq_y, false);
                             // Set the last step; `?` passes any error up to the caller
                             self.set_row_last_step(seq_x, seq_y, allow_master_resync, "SetMaxStepForRow")?;
-                            // Only compiled when the "hardware" feature is on, like the rest of the LED code
-                            #[cfg(feature = "hardware")]
-                            // Redraw the rate lights, since setting the last step redrew this row
-                            self.show_row_rate_lights()?;
                         },
                         ArmAction::SetMaxStepTriplet => {
                             // Column 9 means triplet; the change waits for the next 12-clock boundary
                             self.sequencer.set_row_triplet(seq_y, true);
                             // Set the last step; a triplet row is never resynced to the master step
                             self.set_row_last_step(seq_x, seq_y, false, "SetMaxStepTriplet")?;
-                            // Only compiled when the "hardware" feature is on, like the rest of the LED code
-                            #[cfg(feature = "hardware")]
-                            // Redraw the rate lights, since setting the last step redrew this row
-                            self.show_row_rate_lights()?;
                         },
                         ArmAction::PresetGrid => {
                             // Apply preset pattern to this row
@@ -1072,13 +1068,10 @@ impl SimonSaysSeeq {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     self.grid.refresh()?;
                                 }
-                                // The rate lights borrowed each row's first light; redraw the rows
+                                // Column 8 or 9 released: back to normal brightness on every row
                                 if matches!(arm_action, ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet) {
-                                    // Rows 0 to 6 are the sequence rows
-                                    for row in 0..7 {
-                                        // Put back the pattern and playhead lights for this row
-                                        self.refresh_all_row_leds(row)?;
-                                    }
+                                    // None = no rows highlighted; this also redraws the rows
+                                    self.set_rate_highlight(None)?;
                                 }
                             }
                         }
@@ -1103,18 +1096,30 @@ impl SimonSaysSeeq {
             ArmAction::Undo => {
                 // Undo last action
                 match self.sequencer.undo() {
-                    Ok(description) => info!("ARM UNDO: Successfully undid: {}", description),
+                    // Undo worked: log it and redraw every row at once
+                    Ok(description) => {
+                        // Log at info (hidden in concert mode)
+                        info!("ARM UNDO: Successfully undid: {}", description);
+                        // Redraw now instead of waiting for the playhead to pass each step
+                        self.refresh_sequence_rows()?;
+                    }
+                    // Nothing to undo: log and leave the grids as they are
                     Err(e) => warn!("ARM UNDO: Cannot undo: {}", e),
                 }
-                // Grid updates will be handled naturally by sequencer scroll - no manual refresh needed
             }
             ArmAction::Redo => {
                 // Redo last undone action
                 match self.sequencer.redo() {
-                    Ok(description) => info!("ARM REDO: Successfully redid: {}", description),
+                    // Redo worked: log it and redraw every row at once
+                    Ok(description) => {
+                        // Log at info (hidden in concert mode)
+                        info!("ARM REDO: Successfully redid: {}", description);
+                        // Redraw now instead of waiting for the playhead to pass each step
+                        self.refresh_sequence_rows()?;
+                    }
+                    // Nothing to redo: log and leave the grids as they are
                     Err(e) => warn!("ARM REDO: Cannot redo: {}", e),
                 }
-                // Grid updates will be handled naturally by sequencer scroll - no manual refresh needed
             }
             ArmAction::EuclidianEvents => {
                 // Euclidean Events ARM button activated - waiting for sequence row press
@@ -1136,15 +1141,15 @@ impl SimonSaysSeeq {
                 info!("ARM RATCHET: ARM button activated - not yet implemented");
             }
             ArmAction::SetMaxStepForRow => {
-                // Set Max Step ARM button activated - waiting for sequence row press; show each row's rate
-                self.show_row_rate_lights()?;
+                // Set Max Step ARM button activated - waiting for sequence row press; show only the straight rows
+                self.set_rate_highlight(Some(false))?;
                 // info!("ARM SET_MAX_STEP: ARM button activated - press sequence row at column N to set max_step to N (0-indexed)");
                 // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
             ArmAction::SetMaxStepTriplet => {
-                // Waiting for a sequence row press; meanwhile show each row's rate
-                self.show_row_rate_lights()?;
+                // Waiting for a sequence row press; meanwhile show only the triplet rows
+                self.set_rate_highlight(Some(true))?;
             }
             ArmAction::PresetGrid => {
                 // Preset Grid ARM button activated - waiting for sequence row press
@@ -1215,6 +1220,11 @@ impl SimonSaysSeeq {
     /// This is much more efficient than refreshing the entire grid every step (32x7=224 LEDs)
     /// vs selective update (2 LEDs per active row = ~14 LEDs per step)
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
+        // While column 8 or 9 is held, rows with the other rate stay dark: don't draw their playhead
+        if self.row_hidden(row) {
+            // Nothing to draw
+            return Ok(());
+        }
 
 
         let connected_grids = self.grid.get_connected_grids();
@@ -1645,68 +1655,95 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// While grid one row 7 column 8 or 9 is held: the first light of each sequence row on grid
-    /// one shows its rate, full brightness = triplet, dim = straight.
-    #[cfg(feature = "hardware")]
-    fn show_row_rate_lights(&mut self) -> Result<()> {
-        // Ask the grid manager which grids are connected
-        let connected_grids = self.grid.get_connected_grids();
-        // Destructure the pair; `_` ignores grid two
-        let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
-        // Only draw if grid one is present
-        if let Some(grid_one_id) = grid_one {
-            // `0..7` is rows 0 to 6 (the end is excluded)
-            for row in 0..7 {
-                // Full brightness for triplet rows, dim for straight rows
-                let brightness = if self.sequencer.is_row_triplet(row) { LED_TURBO } else { LED_DIM };
-                // Column 0 of grid one is each row's first light
-                self.grid.set_led(&grid_one_id, 0, row, brightness, "row_rate_light")?;
-            }
-            // Send the LED changes to the grid
-            self.grid.refresh()?;
+    /// True if a row's lights should be dark right now: while column 8 (straight) or 9 (triplet)
+    /// is held, only rows with that rate are shown and the others go dark.
+    fn row_hidden(&self, row: usize) -> bool {
+        // `match` on the Option: Some(want_triplet) while a button is held, None otherwise
+        match self.rate_highlight {
+            // A button is held and this row has the other rate: hide it
+            Some(want_triplet) => self.sequencer.is_row_triplet(row) != want_triplet,
+            // No button held: every row is shown
+            None => false,
+        }
+    }
+
+    /// Start or stop showing only one rate's rows, and redraw the sequence rows to match.
+    fn set_rate_highlight(&mut self, highlight: Option<bool>) -> Result<()> {
+        // Remember which rows to show (read by row_hidden)
+        self.rate_highlight = highlight;
+        // Redraw the rows, hiding or showing them
+        self.refresh_sequence_rows()
+    }
+
+    /// Redraw all seven sequence rows (pattern and playhead) on both grids.
+    fn refresh_sequence_rows(&mut self) -> Result<()> {
+        // Rows 0 to 6 are the sequence rows (`0..7` excludes 7)
+        for row in 0..7 {
+            // Redraw one whole row; `?` stops and returns the error if a grid write fails
+            self.refresh_all_row_leds(row)?;
         }
         // Success
         Ok(())
     }
 
+    /// Redraw one sequence row (pattern and playhead) on both grids, 8 lights per OSC message:
+    /// 4 messages for the 32 steps instead of 32 single-LED messages.
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
-
-
+        // Ask the grid manager which grids are connected
         let connected_grids = self.grid.get_connected_grids();
-
-        if connected_grids.len() >= 2 {
-            // 32-step mode: Update both grids
-            let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-            let grid_one_id = grid_one.as_ref().unwrap();
-            let grid_two_id = grid_two.as_ref().unwrap();
-
-            info!("ARM DEBUG: refresh_all_row_leds() called for row {} on both grids", row);
-
-            if let Some(seq_a_row_state) = self.sequencer.get_row_states(row) {
-                info!("ARM DEBUG: Got row state for row {}: current_step={}", row, seq_a_row_state.current_row_step);
-
-                for seq_x in 0..=31 {
-                    let pattern_value = self.sequencer.get_grid_value(seq_x, row);
-                    let is_current_step = seq_x == seq_a_row_state.current_row_step;
-
-                    let brightness = match (pattern_value > 0, is_current_step) {
-                        (false, false) => LED_OFF,
-                        (false, true) => LED_DIM,
-                        (true, false) => LED_BRIGHT,
-                        (true, true) => LED_MAX,
-                    };
-
-                    if seq_x <= 15 {
-                        self.grid.set_led(grid_one_id, seq_x, row, brightness, "refresh_row_grid1")?;
-                    } else if seq_x <= 31 {
-                        let grid_x = seq_x - 16;
-                        self.grid.set_led(grid_two_id, grid_x, row, brightness, "refresh_row_grid2")?;
-                    }
-                }
-                self.grid.refresh()?;
-                info!("ARM DEBUG: refresh_all_row_leds() completed successfully for row {}", row);
-            }
+        // The 32-step layout needs both grids
+        if connected_grids.len() < 2 {
+            // Nothing to draw on
+            return Ok(());
         }
+        // Grid one shows steps 0-15, grid two steps 16-31
+        let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+        // `let (Some(a), Some(b)) = .. else` needs both to be Some, otherwise returns
+        let (Some(grid_one_id), Some(grid_two_id)) = (grid_one, grid_two) else {
+            // A grid id is missing: nothing to draw
+            return Ok(());
+        };
+        // Copy of the row's settings; None for a row number that isn't a sequence row
+        let Some(seq_a_row_state) = self.sequencer.get_row_states(row) else {
+            // Not a sequence row
+            return Ok(());
+        };
+        // While column 8 or 9 is held, a row with the other rate is drawn all dark
+        let hidden = self.row_hidden(row);
+
+        // One brightness per step; `[LED_OFF; 32]` is an array of 32 zeros
+        let mut levels = [LED_OFF; 32];
+        // `iter_mut().enumerate()` gives each step's index and a mutable reference to its slot
+        for (seq_x, level) in levels.iter_mut().enumerate() {
+            // Is there a beat programmed at this step?
+            let has_beat = self.sequencer.get_grid_value(seq_x, row) > 0;
+            // Is the playhead on this step?
+            let is_current_step = seq_x == seq_a_row_state.current_row_step;
+            // `*level = ..` writes through the reference into the array
+            *level = match (hidden, has_beat, is_current_step) {
+                // Hidden row: everything off
+                (true, _, _) => LED_OFF,
+                // Empty step, no playhead
+                (false, false, false) => LED_OFF,
+                // Empty step with the playhead
+                (false, false, true) => LED_DIM,
+                // Beat, no playhead
+                (false, true, false) => LED_BRIGHT,
+                // Beat with the playhead
+                (false, true, true) => LED_MAX,
+            };
+        }
+
+        // The 32 steps as four blocks of 8: (grid, x offset on that grid, first step)
+        let blocks = [(&grid_one_id, 0, 0), (&grid_one_id, 8, 8), (&grid_two_id, 0, 16), (&grid_two_id, 8, 24)];
+        // Send each block as one message
+        for (grid_id, x_start, first_step) in blocks {
+            // `try_into()` turns the 8-element slice into a fixed [u8; 8]; it can't fail for 8 items
+            let block: [u8; 8] = levels[first_step..first_step + 8].try_into().unwrap();
+            // One OSC message for 8 lights
+            self.grid.set_led_row8(grid_id, x_start, row, &block, "refresh_row")?;
+        }
+        // Success
         Ok(())
     }
 
@@ -2076,43 +2113,47 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// MIDI clock status light on GRID_TWO row 7 column 0 (the first of the two re-detect buttons):
-    /// blinks while waiting for a MIDI clock, steady dim once a clock port is bound. Checked twice a
-    /// second; an LED message is sent only when the brightness changes (plus a re-send of the steady
-    /// state every few seconds in case a grid was reconnected).
+    /// MIDI clock light on GRID_TWO row 7 column 0 (the first of the two re-detect buttons):
+    /// flashes on each beat while MIDI clock is coming in, off when no clock is arriving.
+    /// Checked on every main-loop pass; an LED message is sent only when the brightness changes,
+    /// plus a re-send every 5 seconds in case a grid was reconnected.
     #[cfg(all(feature = "midi", feature = "hardware"))]
     fn update_clock_status_led(&mut self) {
-        if self.clock_status_last_update.elapsed() < Duration::from_millis(500) {
-            return;
-        }
-        self.clock_status_last_update = Instant::now();
+        // While button 0 is held, its own press light wins
         if self.grid_two_button_0_pressed {
-            return; // the button's own press light wins while it is held
+            // Leave the LED alone
+            return;
         }
 
-        self.clock_status_checks = self.clock_status_checks.wrapping_add(1);
-        let brightness = if self.midi.is_clock_bound() {
-            LED_DIM
-        } else if self.clock_status_checks % 2 == 0 {
-            LED_BRIGHT
-        } else {
-            LED_OFF
-        };
-        let resend = self.clock_status_checks % 10 == 0; // every ~5 s, for a reconnected grid
+        // Bright on the beat while clock is arriving; off between beats and when there is no clock
+        let brightness = if self.midi.clock_beat_light() == Some(true) { LED_CLOCK_BEAT } else { LED_OFF };
+        // True when 5 seconds have passed since the last LED message
+        let resend = self.clock_status_last_update.elapsed() >= Duration::from_secs(5);
+        // Nothing changed and no re-send due: don't flood the grid with identical messages
         if self.clock_status_led == Some(brightness) && !resend {
+            // Done for this pass
             return;
         }
 
+        // Ask which grids are connected
         let connected_grids = self.grid.get_connected_grids();
+        // We only need grid two; `_` ignores grid one
         let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+        // `let ... else` binds grid_two_id if it is Some, otherwise runs the else block
         let Some(grid_two_id) = grid_two else {
+            // No grid two: forget what was drawn so it is redrawn when the grid comes back
             self.clock_status_led = None;
+            // Nothing to draw on
             return;
         };
+        // Set the LED and push it to the grid; `&&` only refreshes if set_led worked
         if self.grid.set_led(&grid_two_id, 0, 7, brightness, "midi_clock_status").is_ok()
             && self.grid.refresh().is_ok()
         {
+            // Remember what is on the grid now
             self.clock_status_led = Some(brightness);
+            // Restart the 5-second re-send timer
+            self.clock_status_last_update = Instant::now();
         }
     }
 

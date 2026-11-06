@@ -57,11 +57,12 @@ The controls used during a performance, existing and new. All other buttons keep
 |---|---|---|---|
 | Undo | grid one, row 7, column 0 | as now | exists |
 | Redo | grid one, row 7, column 1 | as now | exists |
-| Last step, straight | grid one, row 7, column 8 (hold) + step | sets that row's last step and makes the row straight; while held, each row's first light shows bright for triplet, dim for straight | in working tree |
-| Last step, triplet | grid one, row 7, column 9 (hold) + step | sets that row's last step and makes the row triplet; no toggle, so pressing again keeps it triplet; latched and saved, not undoable (like last step); same rate lights as column 8 | in working tree |
+| Last step, straight | grid one, row 7, column 8 (hold) + step | sets that row's last step and makes the row straight; while held, only the straight rows are shown; triplet rows go dark | in working tree |
+| Last step, triplet | grid one, row 7, column 9 (hold) + step | sets that row's last step and makes the row triplet; no toggle, so pressing again keeps it triplet; latched and saved, not undoable (like last step); while held, only the triplet rows are shown; straight rows go dark | in working tree |
 | Hold for triplets | grid two, row 7, column 2 | every row plays triplets while held; not saved, not undoable | new |
 | Back to straight | grid two, row 7, double-tap column 2 | every row back to straight | new |
-| MIDI clock status light | grid two, row 7, column 0 | blinks while waiting for a MIDI clock, steady dim once bound; display only | in working tree |
+| MIDI clock light | grid two, row 7, column 0 | flashes on each beat (first sixteenth, brightness 3) while MIDI clock is coming in; off when no clock has arrived for 250 ms; display only | in working tree |
+| Undo / redo redraw | grid one, row 7, columns 0 / 1 | all seven rows are redrawn straight after a successful undo or redo, instead of as the playhead passes; rows are sent 8 lights per OSC message (`/grid/led/level/row`), 28 messages instead of 224 | in working tree |
 | MIDI clock re-detect | grid two, row 7, columns 0 and 1 held together | releases the clock binding; the next port to send clock is bound | exists, non-blocking in working tree |
 | Crow search | grid two, row 7, columns 4, 5 and 6 held together | one quick search for Crow (no retries, does not stop the sequencer); the three lights go full brightness if found, dark if not | in working tree |
 
