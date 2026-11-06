@@ -76,6 +76,22 @@ impl Crow {
         }
     }
 
+    /// One quick search, for the grid button combination: no retries, no sleeps.
+    /// Returns true if Crow is (now) connected. Takes a few milliseconds.
+    pub fn search_once(&mut self) -> bool {
+        if self.enabled {
+            return true;
+        }
+        #[cfg(feature = "hardware")]
+        {
+            return self.try_initialize_once().is_ok();
+        }
+        #[cfg(not(feature = "hardware"))]
+        {
+            return false;
+        }
+    }
+
     /// Single initialization attempt
     #[cfg(feature = "hardware")]
     fn try_initialize_once(&mut self) -> Result<()> {
@@ -267,8 +283,7 @@ impl Crow {
 
             let udev_str = String::from_utf8_lossy(&udev_output.stdout);
 
-            // Look for STMicroelectronics Virtual COM Port (0483:5740)
-            if udev_str.contains("ID_VENDOR_ID=0483") && udev_str.contains("ID_MODEL_ID=5740") {
+            if is_crow_udev_info(&udev_str) {
                 return Ok(Some(device.to_string()));
             }
         }
@@ -276,6 +291,19 @@ impl Crow {
         Ok(None)
     }
 
+}
+
+/// True if `udevadm info --query=all` output describes a Crow. The USB ID alone (0483:5740,
+/// STMicroelectronics Virtual COM Port) is not enough: older monome grids report the same ID,
+/// and opening one of those as Crow sends Lua text to the grid's serial port. Crow names itself
+/// "crow" in its USB product string (ID_MODEL).
+fn is_crow_udev_info(udev_str: &str) -> bool {
+    let usb_id_matches = udev_str.contains("ID_VENDOR_ID=0483") && udev_str.contains("ID_MODEL_ID=5740");
+    let named_crow = udev_str
+        .lines()
+        .filter_map(|line| line.split_once("ID_MODEL="))
+        .any(|(_, model)| model.to_ascii_lowercase().contains("crow"));
+    usb_id_matches && named_crow
 }
 
 impl Drop for Crow {
@@ -291,5 +319,29 @@ impl Drop for Crow {
         }
         // Default field drop order is fine: dropping `sender` makes the
         // worker's `recv` return Disconnected, ending the worker loop.
+    }
+}
+
+#[cfg(test)]
+mod crow_detection_tests {
+    use super::is_crow_udev_info;
+
+    #[test]
+    fn grid_with_crow_usb_id_is_not_crow() {
+        // Real udev output from the Pi's grid m2949672 (trimmed)
+        let grid = "E: ID_VENDOR=monome\nE: ID_VENDOR_ID=0483\nE: ID_MODEL=grid\nE: ID_MODEL_ID=5740\nE: ID_SERIAL_SHORT=m2949672\n";
+        assert!(!is_crow_udev_info(grid));
+    }
+
+    #[test]
+    fn crow_is_crow() {
+        let crow = "E: ID_VENDOR=monome___whimsical_raps\nE: ID_VENDOR_ID=0483\nE: ID_MODEL=crow__telephone_line\nE: ID_MODEL_ID=5740\n";
+        assert!(is_crow_udev_info(crow));
+    }
+
+    #[test]
+    fn other_device_named_crow_with_wrong_id_is_not_crow() {
+        let other = "E: ID_VENDOR_ID=1234\nE: ID_MODEL=crow\nE: ID_MODEL_ID=5678\n";
+        assert!(!is_crow_udev_info(other));
     }
 }

@@ -651,8 +651,11 @@ install_service() {
         log_info "Concert mode requested for installed service: --concert will be baked into wrapper"
     fi
 
-    # Create Crow CV boot fix wrapper script
-    log_info "Creating Crow CV boot fix wrapper..."
+    # Service wrapper. By default it starts the binary once. The old Crow CV boot fix
+    # (start, kill after 3 s, start again) is only generated with SSSEQ_CROW_BOOT_FIX=1:
+    # without Crow it costs 5 s at boot and briefly runs two instances on the same MIDI ports.
+    if [ "${SSSEQ_CROW_BOOT_FIX:-}" = "1" ]; then
+    log_info "Creating Crow CV boot fix wrapper (SSSEQ_CROW_BOOT_FIX=1)..."
     cat > /tmp/simonsaysseeq_wrapper.sh << WRAPPER
 #!/bin/bash
 # SimonSaysSeeq Crow CV Boot Fix Wrapper
@@ -688,6 +691,15 @@ sleep 2
 log_msg "Step 3: Final start - Crow CV should now work..."
 exec "\$BINARY_PATH" \$EXTRA_BINARY_ARGS
 WRAPPER
+    else
+    log_info "Creating single-start service wrapper..."
+    cat > /tmp/simonsaysseeq_wrapper.sh << WRAPPER
+#!/bin/bash
+# SimonSaysSeeq service wrapper: starts the binary once.
+# Reinstall with SSSEQ_CROW_BOOT_FIX=1 for the old Crow CV start-stop-start sequence.
+exec "$binary_path" $extra_binary_args
+WRAPPER
+    fi
 
     chmod +x /tmp/simonsaysseeq_wrapper.sh
     sudo mv /tmp/simonsaysseeq_wrapper.sh /usr/local/bin/simonsaysseeq_wrapper.sh
@@ -695,7 +707,7 @@ WRAPPER
     # Create systemd service
     sudo tee /etc/systemd/system/simonsaysseeq-rpi.service > /dev/null << EOF
 [Unit]
-Description=SimonSaysSeeq Sequencer for Raspberry Pi (with Crow CV fix)
+Description=SimonSaysSeeq Sequencer for Raspberry Pi
 After=multi-user.target udev.target serialosc.service systemd-udev-settle.service
 Wants=serialosc.service systemd-udev-settle.service
 
@@ -854,6 +866,7 @@ ENVIRONMENT VARIABLES:
     BUILD_TYPE          Build type: release or debug (default: release)
     RPI_FEATURES        Cargo features to enable (default: hardware,midi,desktop)
     RUST_LOG           Log level: error,warn,info,debug,trace (default: warn)
+    SSSEQ_CROW_BOOT_FIX Set to 1 when installing the service to get the old Crow start-stop-start wrapper
 
 The script automatically detects Raspberry Pi 5 and optimizes compilation for ARM64.
 EOF

@@ -489,7 +489,7 @@ mod tests {
             is_scanning: false,
         };
 
-        assert!(summary.has_reliable_sources());
-        assert!(summary.is_locked());
+        assert!(!summary.reliable_sources.is_empty());
+        assert_eq!(summary.selected_source.as_deref(), Some("USB MIDI"));
     }
 }

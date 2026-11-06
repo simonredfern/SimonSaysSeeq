@@ -22,6 +22,24 @@ pub struct Config {
     pub display: DisplayConfig,
     /// CO2 data configuration
     pub co2: crate::co2::Co2Config,
+    /// Crow configuration (section may be absent in older config files)
+    #[serde(default)]
+    pub crow: CrowConfig,
+}
+
+/// Crow-related configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrowConfig {
+    /// Search for Crow at startup (about 5 s with retries when none is connected).
+    /// When false, Crow is only searched for when grid two row 7 columns 4, 5 and 6 are held together.
+    #[serde(default)]
+    pub search_at_startup: bool,
+}
+
+impl Default for CrowConfig {
+    fn default() -> Self {
+        Self { search_at_startup: false }
+    }
 }
 
 /// MIDI-related configuration
@@ -119,6 +137,7 @@ impl Default for Config {
             hardware: HardwareConfig::default(),
             display: DisplayConfig::default(),
             co2: crate::co2::Co2Config::default(),
+            crow: CrowConfig::default(),
         }
     }
 }
@@ -374,6 +393,7 @@ impl Config {
                 window_size: 100,
                 voltage_scale: 1.0,
             },
+            crow: CrowConfig::default(),
         }
     }
 }

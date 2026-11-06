@@ -43,7 +43,8 @@ enum ArmAction {
     EuclidianLength,   // Column 5
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
-    SetMaxStepForRow,  // Column 8
+    SetMaxStepForRow,  // Column 8: set last step and make the row straight
+    SetMaxStepTriplet, // Column 9: set last step and make the row triplet
     PresetGrid,        // Column 10
 
 }
@@ -59,6 +60,7 @@ impl ArmAction {
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetMaxStepForRow),
+            9 => Some(ArmAction::SetMaxStepTriplet),
             10 => Some(ArmAction::PresetGrid),
 
             _ => None,
@@ -75,6 +77,7 @@ impl ArmAction {
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
             ArmAction::SetMaxStepForRow => 8,
+            ArmAction::SetMaxStepTriplet => 9,
             ArmAction::PresetGrid => 10,
 
         }
@@ -119,6 +122,8 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
+    // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
+    grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
     clock_status_led: Option<u8>,
     clock_status_last_update: Instant,
@@ -172,6 +177,7 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
+            grid_two_crow_search_held: [false; 3],
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
             clock_status_checks: 0,
@@ -244,8 +250,11 @@ impl SimonSaysSeeq {
             }
         }
 
-        // Initialize Crow USB serial communication
-        if let Err(e) = self.crow.initialize() {
+        // Initialize Crow USB serial communication. Off by default: with no Crow connected the
+        // retries cost about 5 s of startup. Grid two row 7 columns 4+5+6 search for it at any time.
+        if !self.config.crow.search_at_startup {
+            info!("Crow: not searched for at startup (hold grid two row 7 columns 4, 5 and 6 to search)");
+        } else if let Err(e) = self.crow.initialize() {
             // warn!("Failed to initialize Crow: {}. CV output will be disabled.", e);
         } else if self.crow.is_enabled() {
             // info!("🎛️  Crow USB serial initialized and ready");
@@ -770,38 +779,26 @@ impl SimonSaysSeeq {
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::SetMaxStepForRow => {
-                            let max_step = seq_x; // Use column directly as max_step (0-indexed)
-                            let max_step = max_step.clamp(0, 31); // Ensure valid range 0-31
-
-                            // info!("ARM SET_MAX_STEP: Setting row {} max_step to {}", seq_y, max_step);
-
-                            // Set the max_step for this specific row
-                            if let Some(mut seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
-                                let old_max_step = seq_a_row_state.max_step;
-                                seq_a_row_state.max_step = max_step;
-
-                                // If current step is beyond new max_step, reset to beginning of the row's own cycle
-                                if seq_a_row_state.current_row_step > max_step {
-                                    // Reset to beginning of the row's own cycle
-                                    seq_a_row_state.current_row_step = seq_a_row_state.first_step;
-                                    // info!("ARM SET_MAX_STEP: Row {} step position reset to {} (was beyond new max_step {})",
-                                    //       seq_y, seq_a_row_state.current_row_step, max_step);
-                                } else if max_step == 31 {
-                                    // If max_step is 31 (full 32 steps), sync this row with global master step counter
-                                    let master_step = self.sequencer.get_current_position();
-                                    seq_a_row_state.current_row_step = master_step;
-                                    // info!("ARM SET_MAX_STEP: Row {} synced with global master step counter (current_step={})", seq_y, seq_a_row_state.current_row_step);
-                                }
-
-                                self.sequencer.set_row_states(seq_y, seq_a_row_state);
-
-                                // Log ARM action execution to formal state logger
-                                log_arm_action_executed("SetMaxStepForRow", seq_y, seq_x,
-                                    &format!("Changed row {} max_step from {} to {}", seq_y, old_max_step, max_step));
-
-                                // info!("ARM SET_MAX_STEP: Successfully set row {} max_step to {}", seq_y, max_step);
-                                self.refresh_all_row_leds(seq_y)?;
-                            }
+                            // Resync to the master step only if the row is straight already (not triplet or heading there)
+                            let allow_master_resync = !self.sequencer.is_row_triplet(seq_y);
+                            // Column 8 means straight; a change from triplet waits for the next 12-clock boundary
+                            self.sequencer.set_row_triplet(seq_y, false);
+                            // Set the last step; `?` passes any error up to the caller
+                            self.set_row_last_step(seq_x, seq_y, allow_master_resync, "SetMaxStepForRow")?;
+                            // Only compiled when the "hardware" feature is on, like the rest of the LED code
+                            #[cfg(feature = "hardware")]
+                            // Redraw the rate lights, since setting the last step redrew this row
+                            self.show_row_rate_lights()?;
+                        },
+                        ArmAction::SetMaxStepTriplet => {
+                            // Column 9 means triplet; the change waits for the next 12-clock boundary
+                            self.sequencer.set_row_triplet(seq_y, true);
+                            // Set the last step; a triplet row is never resynced to the master step
+                            self.set_row_last_step(seq_x, seq_y, false, "SetMaxStepTriplet")?;
+                            // Only compiled when the "hardware" feature is on, like the rest of the LED code
+                            #[cfg(feature = "hardware")]
+                            // Redraw the rate lights, since setting the last step redrew this row
+                            self.show_row_rate_lights()?;
                         },
                         ArmAction::PresetGrid => {
                             // Apply preset pattern to this row
@@ -876,6 +873,33 @@ impl SimonSaysSeeq {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "midi_detection_button_release")?;
                                     self.grid.refresh()?;
                                 }
+                            }
+                            return Ok(());
+                        }
+
+                        // GRID_TWO Crow search (columns 4, 5, 6) - require all three held
+                        else if (4..=6).contains(&x) {
+                            self.grid_two_crow_search_held[x - 4] = pressed;
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.set_led(grid_id, x, seq_y, if pressed { LED_DIM } else { LED_OFF }, "crow_search_button")?;
+                            }
+                            if pressed && self.grid_two_crow_search_held.iter().all(|&held| held) {
+                                let found = self.crow.search_once();
+                                if found {
+                                    warn!("Crow: found and connected");
+                                } else {
+                                    warn!("Crow: not found");
+                                }
+                                // Feedback while the buttons are still held: full brightness = found, dark = not found
+                                #[cfg(feature = "hardware")]
+                                for column in 4..=6 {
+                                    self.grid.set_led(grid_id, column, seq_y, if found { LED_MAX } else { LED_OFF }, "crow_search_result")?;
+                                }
+                            }
+                            #[cfg(feature = "hardware")]
+                            {
+                                self.grid.refresh()?;
                             }
                             return Ok(());
                         }
@@ -1048,6 +1072,14 @@ impl SimonSaysSeeq {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     self.grid.refresh()?;
                                 }
+                                // The rate lights borrowed each row's first light; redraw the rows
+                                if matches!(arm_action, ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet) {
+                                    // Rows 0 to 6 are the sequence rows
+                                    for row in 0..7 {
+                                        // Put back the pattern and playhead lights for this row
+                                        self.refresh_all_row_leds(row)?;
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -1104,10 +1136,15 @@ impl SimonSaysSeeq {
                 info!("ARM RATCHET: ARM button activated - not yet implemented");
             }
             ArmAction::SetMaxStepForRow => {
-                // Set Max Step ARM button activated - waiting for sequence row press
+                // Set Max Step ARM button activated - waiting for sequence row press; show each row's rate
+                self.show_row_rate_lights()?;
                 // info!("ARM SET_MAX_STEP: ARM button activated - press sequence row at column N to set max_step to N (0-indexed)");
                 // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
+            }
+            ArmAction::SetMaxStepTriplet => {
+                // Waiting for a sequence row press; meanwhile show each row's rate
+                self.show_row_rate_lights()?;
             }
             ArmAction::PresetGrid => {
                 // Preset Grid ARM button activated - waiting for sequence row press
@@ -1571,6 +1608,67 @@ impl SimonSaysSeeq {
 
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
+    /// Set a row's last step (max_step) to `seq_x`, as grid one row 7 column 8 does. If the
+    /// current step is beyond it, the row restarts from its first step; otherwise, setting the
+    /// full length (31) resyncs the row to the master step when `allow_master_resync`.
+    fn set_row_last_step(&mut self, seq_x: usize, seq_y: usize, allow_master_resync: bool, action_name: &str) -> Result<()> {
+        // Keep the value in the valid step range 0-31
+        let max_step = seq_x.clamp(0, 31);
+        // get_row_states returns a copy (Option); `if let Some(..)` runs only when the row exists
+        if let Some(mut seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+            // Remember the old value for the log
+            let old_max_step = seq_a_row_state.max_step;
+            // Set the new last step on our copy
+            seq_a_row_state.max_step = max_step;
+
+            // If the playhead is now past the end, restart from the row's first step
+            if seq_a_row_state.current_row_step > max_step {
+                // Reset to beginning of the row's own cycle
+                seq_a_row_state.current_row_step = seq_a_row_state.first_step;
+            // Full 32 steps: line the row up with the master step again (straight rows only)
+            } else if max_step == 31 && allow_master_resync {
+                // Copy the master step position into the row
+                seq_a_row_state.current_row_step = self.sequencer.get_current_position();
+            }
+
+            // Write the changed copy back into the sequencer
+            self.sequencer.set_row_states(seq_y, seq_a_row_state);
+
+            // Record the change in the formal state log; `&format!(..)` builds a String and lends it
+            log_arm_action_executed(action_name, seq_y, seq_x,
+                &format!("Changed row {} max_step from {} to {}", seq_y, old_max_step, max_step));
+
+            // Redraw the whole row on the grids
+            self.refresh_all_row_leds(seq_y)?;
+        }
+        // Success
+        Ok(())
+    }
+
+    /// While grid one row 7 column 8 or 9 is held: the first light of each sequence row on grid
+    /// one shows its rate, full brightness = triplet, dim = straight.
+    #[cfg(feature = "hardware")]
+    fn show_row_rate_lights(&mut self) -> Result<()> {
+        // Ask the grid manager which grids are connected
+        let connected_grids = self.grid.get_connected_grids();
+        // Destructure the pair; `_` ignores grid two
+        let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+        // Only draw if grid one is present
+        if let Some(grid_one_id) = grid_one {
+            // `0..7` is rows 0 to 6 (the end is excluded)
+            for row in 0..7 {
+                // Full brightness for triplet rows, dim for straight rows
+                let brightness = if self.sequencer.is_row_triplet(row) { LED_TURBO } else { LED_DIM };
+                // Column 0 of grid one is each row's first light
+                self.grid.set_led(&grid_one_id, 0, row, brightness, "row_rate_light")?;
+            }
+            // Send the LED changes to the grid
+            self.grid.refresh()?;
+        }
+        // Success
+        Ok(())
+    }
+
     fn refresh_all_row_leds(&mut self, row: usize) -> Result<()> {
 
 
@@ -1872,12 +1970,11 @@ impl SimonSaysSeeq {
                         warn!("Failed to process pending note-offs: {}", e);
                     }
                     
-                    // Check if we should advance step BEFORE incrementing, so step 0 happens at tick 0
-                    if tick_count % 6 == 0 { // Every 6th MIDI clock = 1 step (16th note: 24÷4 = 6)
-                        // Advance sequencer step based on external clock
-                        if let Err(e) = self.sequencer.external_advance_step(seq_tx, tick_count as u64) {
-                            warn!("External clock step advancement failed: {}", e);
-                        }
+                    // Play and advance rows on every tick: straight rows every 6th clock, triplet rows
+                    // every 4th, master step every 6th. Runs BEFORE incrementing, so step 0 is at tick 0.
+                    if let Err(e) = self.sequencer.external_clock_tick(seq_tx, tick_count as u64) {
+                        // Log the error and carry on; one bad tick shouldn't stop the sequencer
+                        warn!("External clock step advancement failed: {}", e);
                     }
 
 
