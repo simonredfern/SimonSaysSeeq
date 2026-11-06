@@ -72,6 +72,31 @@ fn default_clocks_per_step() -> u8 {
     STRAIGHT_CLOCKS_PER_STEP
 }
 
+/// How many passes of its row a temporary step lasts (grid one, row 7, column 2 + step)
+pub const TEMPORARY_STEP_PASSES: u8 = 2;
+
+/// A temporary change to one step, layered over the pattern; never saved, not part of undo.
+/// Each time the row's playhead passes the step, `passes_left` goes down by one; at 0 it is removed.
+// `Copy` lets the value be duplicated like a number; `PartialEq` allows `==`
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemporaryStep {
+    /// An extra step on an empty position: plays for `passes_left` more passes
+    Added { passes_left: u8 },
+    /// A lit step silenced for `passes_left` more passes
+    Muted { passes_left: u8 },
+}
+
+impl TemporaryStep {
+    /// Passes left, whichever kind it is
+    pub fn passes_left(&self) -> u8 {
+        // `match` with `|` binds `passes_left` from either variant
+        match self {
+            // `*` copies the u8 out of the reference
+            TemporaryStep::Added { passes_left } | TemporaryStep::Muted { passes_left } => *passes_left,
+        }
+    }
+}
+
 /// MIDI event for hardware output
 #[derive(Debug, Clone)]
 pub struct MidiEvent {
@@ -250,6 +275,9 @@ pub struct SequencerState {
     pub max_step: usize,
     /// Flag to indicate tick counter should be reset on next clock loop iteration
     pub reset_tick_counter: bool,
+    /// Temporary steps by (step, row); `serde(skip)` keeps them out of saved pattern files
+    #[serde(skip)]
+    pub temporary_steps: HashMap<(usize, usize), TemporaryStep>,
 }
 
 impl Default for SequencerState {
@@ -310,6 +338,8 @@ impl Default for SequencerState {
             max_lane: MAX_LANE,
             max_step: MAX_STEP,
             reset_tick_counter: false,
+            // No temporary steps at startup
+            temporary_steps: HashMap::new(),
             global_reset_step_counter: 0,
             reset_1_active: false,
             reset_16_active: false,
@@ -410,6 +440,8 @@ impl Sequencer {
         if !state.is_running {
             state.is_running = true;
             state.reset_tick_counter = true;
+            // A fresh start has no temporary steps
+            state.temporary_steps.clear();
 
 
             // Reset to beginning
@@ -435,6 +467,8 @@ impl Sequencer {
         let mut state = self.state.lock().unwrap();
         if state.is_running {
             state.is_running = false;
+            // Stopping clears all temporary steps
+            state.temporary_steps.clear();
             // Reset to beginning
             state.sequencer_a_current_master_step = 0;
             for seq_a_row_state in &mut state.sequencer_a_row_states {
@@ -485,6 +519,8 @@ impl Sequencer {
             ));
             let mut state = self.state.lock().unwrap();
             state.sequencer_a_grid[x][y] = value;
+            // A normal edit of this step replaces any temporary change on it
+            state.temporary_steps.remove(&(x, y));
         }
     }
 
@@ -684,6 +720,28 @@ impl Sequencer {
             }
         }
 
+        // Temporary steps the playhead just passed count down one pass (sequence rows 0-6 only)
+        for row_idx in 0..state.sequencer_a_row_states.len().min(7) {
+            // Skip rows that didn't play on this tick
+            if !rows_due.get(row_idx).copied().unwrap_or(false) {
+                continue;
+            }
+            // The step this row just played
+            let step = state.sequencer_a_row_states[row_idx].current_row_step;
+            // `get_mut` gives a mutable reference into the map if there is a temporary step here
+            if let Some(temporary) = state.temporary_steps.get_mut(&(step, row_idx)) {
+                // One pass fewer; `saturating_sub` stops at 0 instead of wrapping around
+                *temporary = match *temporary {
+                    // Rebuild the same kind with one pass fewer
+                    TemporaryStep::Added { passes_left } => TemporaryStep::Added { passes_left: passes_left.saturating_sub(1) },
+                    // Same for a muted step
+                    TemporaryStep::Muted { passes_left } => TemporaryStep::Muted { passes_left: passes_left.saturating_sub(1) },
+                };
+            }
+        }
+        // Drop the ones that have no passes left; `retain` keeps entries for which the closure is true
+        state.temporary_steps.retain(|_, temporary| temporary.passes_left() > 0);
+
         // Advance the due row step counters
         for (row_idx, seq_a_row_state) in state.sequencer_a_row_states.iter_mut().enumerate() {
             if !rows_due.get(row_idx).copied().unwrap_or(false) {
@@ -697,6 +755,15 @@ impl Sequencer {
                 seq_a_row_state.current_row_step = seq_a_row_state.first_step;
             }
         }
+
+        // Temporary steps outside their row's loop (e.g. beyond a shortened last step) would never
+        // be passed, so remove them; copy each row's (first, last) step out first to satisfy the borrow checker
+        let windows: Vec<(usize, usize)> = state.sequencer_a_row_states.iter().map(|r| (r.first_step, r.max_step)).collect();
+        // Keep a temporary step only if its row exists and the step is inside that row's loop
+        state.temporary_steps.retain(|&(step, row), _| {
+            // `matches!` with a guard: Some((first, last)) and the step between them
+            matches!(windows.get(row), Some(&(first, last)) if step >= first && step <= last)
+        });
 
         if master_due {
             // Log step advancement to formal state logger: (row_index, new_step_position) per row
@@ -747,7 +814,15 @@ impl Sequencer {
                 }
 
                 // Get grid value for this row at current step
-                let grid_value = state.sequencer_a_grid[row_step][row_idx];
+                // The pattern's value, unless a temporary step adds or mutes it
+                let grid_value = match state.temporary_steps.get(&(row_step, row_idx)) {
+                    // Temporary extra step: play it
+                    Some(TemporaryStep::Added { .. }) => 1,
+                    // Temporarily muted: stay silent
+                    Some(TemporaryStep::Muted { .. }) => 0,
+                    // No temporary change: the pattern decides
+                    None => state.sequencer_a_grid[row_step][row_idx],
+                };
 
                 // DEBUG: Log grid reads for Row 3
                 if row_idx == 3 {
@@ -1716,6 +1791,48 @@ impl Sequencer {
         };
     }
 
+    /// Grid one row 7 column 2 + step: add a temporary step on an empty position, temporarily
+    /// mute a lit one, or remove the temporary change if the step already has one. Returns the
+    /// step's temporary state afterwards (None if it was removed or the position is invalid).
+    pub fn toggle_temporary_step(&self, step: usize, row: usize) -> Option<TemporaryStep> {
+        // Only sequence rows 0-6 and steps 0-31
+        if row > 6 || step > 31 {
+            // Nothing to do
+            return None;
+        }
+        // Lock the shared state for the rest of this function
+        let mut state = self.state.lock().unwrap();
+        // Already temporary: `remove` returns Some(old value) if there was one
+        if state.temporary_steps.remove(&(step, row)).is_some() {
+            // Removed: the step is back to the pattern
+            return None;
+        }
+        // A lit step gets muted, an empty one gets added
+        let temporary = if state.sequencer_a_grid[step][row] > 0 {
+            // Silence it for a while
+            TemporaryStep::Muted { passes_left: TEMPORARY_STEP_PASSES }
+        } else {
+            // Play it for a while
+            TemporaryStep::Added { passes_left: TEMPORARY_STEP_PASSES }
+        };
+        // Store it under its (step, row) key
+        state.temporary_steps.insert((step, row), temporary);
+        // Tell the caller what was set
+        Some(temporary)
+    }
+
+    /// The temporary change on a step, if any (for drawing the grid)
+    pub fn temporary_step(&self, step: usize, row: usize) -> Option<TemporaryStep> {
+        // Lock, look up, and `copied()` turns Option<&T> into Option<T>
+        self.state.lock().unwrap().temporary_steps.get(&(step, row)).copied()
+    }
+
+    /// Every temporary step as ((step, row), state), for redrawing and blinking them on the grid
+    pub fn temporary_steps_list(&self) -> Vec<((usize, usize), TemporaryStep)> {
+        // Lock, then copy each (key, value) pair out of the map into a Vec
+        self.state.lock().unwrap().temporary_steps.iter().map(|(&position, &temporary)| (position, temporary)).collect()
+    }
+
     /// A sequence row's rate in clocks per step, or the rate it is heading for
     pub fn row_clocks_per_step(&self, row: usize) -> u8 {
         // Lock the shared state just long enough to read it
@@ -2355,6 +2472,112 @@ mod timing_tests {
         sequencer.set_row_rate(4, 5);
         // The row stays straight
         assert_eq!(sequencer.row_clocks_per_step(4), STRAIGHT_CLOCKS_PER_STEP);
+    }
+
+    /// Ticks at which `note` was switched on
+    fn note_on_ticks(trace: &[String], note: u8) -> Vec<u64> {
+        // The text each matching line ends with
+        let suffix = format!(" on {}", note);
+        // Keep matching lines and parse the tick from "t<tick> ..."
+        trace.iter()
+            .filter(|line| line.ends_with(&suffix))
+            .map(|line| line[1..line.find(' ').unwrap()].parse().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn a_temporary_step_plays_for_two_passes_then_disappears() {
+        // Row 4 has 4 steps (max_step 3); in the test pattern only its step 2 is on
+        let mut sequencer = test_sequencer();
+        // Before the first tick, add a temporary step on row 4's empty step 1
+        let trace = run_main_loop(&mut sequencer, 6 * 20, |seq, tick| {
+            // Only once, before tick 0
+            if tick == 0 {
+                // Empty step, so it becomes an added temporary step
+                assert_eq!(seq.toggle_temporary_step(1, 4), Some(TemporaryStep::Added { passes_left: TEMPORARY_STEP_PASSES }));
+            }
+        });
+        // Row 4 reaches step 1 at ticks 6, 30, 54, ...; step 2 (the real beat) at 12, 36, 60, 84, 108
+        assert_eq!(note_on_ticks(&trace, 64), vec![6, 12, 30, 36, 60, 84, 108]);
+        // Gone afterwards
+        assert_eq!(sequencer.temporary_step(1, 4), None);
+    }
+
+    #[test]
+    fn a_temporarily_muted_step_is_silent_for_two_passes_then_plays_again() {
+        // Row 4's step 2 is on in the test pattern; it plays at ticks 12, 36, 60, 84, 108
+        let mut sequencer = test_sequencer();
+        // Mute it before the first tick
+        let trace = run_main_loop(&mut sequencer, 6 * 20, |seq, tick| {
+            // Only once, before tick 0
+            if tick == 0 {
+                // A lit step, so it becomes a muted temporary step
+                assert_eq!(seq.toggle_temporary_step(2, 4), Some(TemporaryStep::Muted { passes_left: TEMPORARY_STEP_PASSES }));
+            }
+        });
+        // Silent at 12 and 36, back from 60
+        assert_eq!(note_on_ticks(&trace, 64), vec![60, 84, 108]);
+        // The pattern itself was never changed
+        assert_eq!(sequencer.get_grid_value(2, 4), 1);
+    }
+
+    #[test]
+    fn toggling_a_temporary_step_again_removes_it_and_stop_clears_them_all() {
+        // In-memory sequencer
+        let sequencer = test_sequencer();
+        // Add one temporary step
+        sequencer.toggle_temporary_step(1, 4);
+        // Toggling the same step again removes it
+        assert_eq!(sequencer.toggle_temporary_step(1, 4), None);
+        // Nothing left there
+        assert_eq!(sequencer.temporary_step(1, 4), None);
+        // Start, add two, then stop
+        sequencer.start();
+        // Two temporary steps on different rows
+        sequencer.toggle_temporary_step(1, 4);
+        sequencer.toggle_temporary_step(5, 0);
+        // Stop clears every temporary step
+        sequencer.stop();
+        // Both gone
+        assert_eq!(sequencer.temporary_step(1, 4), None);
+        assert_eq!(sequencer.temporary_step(5, 0), None);
+    }
+
+    #[test]
+    fn temporary_steps_are_not_saved_or_undone_and_normal_edits_replace_them() {
+        // In-memory sequencer
+        let sequencer = test_sequencer();
+        // A temporary step on row 4, step 1
+        sequencer.toggle_temporary_step(1, 4);
+        // Serialize the whole state as a pattern file would
+        let json = serde_json::to_value(&*sequencer.state.lock().unwrap()).unwrap();
+        // The temporary steps are not in it
+        assert!(json.get("temporary_steps").is_none());
+        // An unrelated edit, then undo: the temporary step survives
+        sequencer.set_grid_value(7, 2, 1);
+        sequencer.undo().unwrap();
+        // Still there
+        assert!(sequencer.temporary_step(1, 4).is_some());
+        // A normal edit of the same step replaces the temporary change
+        sequencer.set_grid_value(1, 4, 1);
+        // Gone
+        assert_eq!(sequencer.temporary_step(1, 4), None);
+    }
+
+    #[test]
+    fn temporary_steps_beyond_the_rows_last_step_are_dropped() {
+        // Row 4 has 4 steps (0-3); step 10 is outside its loop and would never be passed
+        let mut sequencer = test_sequencer();
+        // Add it before tick 0
+        run_main_loop(&mut sequencer, 6, |seq, tick| {
+            // Only once
+            if tick == 0 {
+                // Outside the loop
+                seq.toggle_temporary_step(10, 4);
+            }
+        });
+        // Removed after the first step advance
+        assert_eq!(sequencer.temporary_step(10, 4), None);
     }
 
     #[test]

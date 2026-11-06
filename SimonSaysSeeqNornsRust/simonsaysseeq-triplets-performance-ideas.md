@@ -59,6 +59,7 @@ The controls used during a performance, existing and new. All other buttons keep
 |---|---|---|---|
 | Undo | grid one, row 7, column 0 | as now | exists |
 | Redo | grid one, row 7, column 1 | as now | exists |
+| Temporary step | grid one, row 7, column 2 (hold) + step | an empty step plays for the next 2 passes of its row, a lit step is muted for 2 passes, then the pattern is back as it was; press the step again (still holding) to cancel; not saved, not undoable, cleared on stop; temporary steps show at brightness 6 then 3 as a countdown, muted ones blink | in working tree |
 | Last step, straight | grid one, row 7, column 8 (hold) + step | sets that row's last step and makes the row straight; while held, straight rows look normal and all others are dimmed (same picture at about a quarter brightness) | in working tree |
 | Last step, 16th triplets | grid one, row 7, column 9 (hold) + step | sets that row's last step and makes the row 16th triplets (4 clocks per step); no toggle, so pressing again keeps it triplet; latched and saved, not undoable (like last step); while held, rows at this rate look normal and all others are dimmed | in working tree |
 | Last step, 8th-note triplets | grid one, row 7, column 10 (hold) + step | sets the last step and makes the row 8th-note triplets (8 clocks per step, 0.75 times straight); same dimming | in working tree |

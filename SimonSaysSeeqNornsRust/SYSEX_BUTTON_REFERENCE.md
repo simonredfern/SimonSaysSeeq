@@ -33,6 +33,7 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 |--------|--------|----------|-------------|
 | 0 | Undo | `ARM_UNDO` | Undo last action |
 | 1 | Redo | `ARM_REDO` | Redo last undone action |
+| 2 | Temporary step | | Hold + press a step: an empty step plays for the next 2 passes of its row, a lit step is muted for 2 passes; press again to cancel. Not saved, not undoable, cleared on stop |
 | 4 | Euclidean Events | `ARM_EUCLIDEAN_EVENTS` | Set number of events in euclidean pattern |
 | 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |

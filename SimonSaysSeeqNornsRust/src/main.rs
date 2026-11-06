@@ -41,6 +41,7 @@ static EXTERNAL_CLOCK_TICK_COUNTER: AtomicU32 = AtomicU32::new(0);
 enum ArmAction {
     Undo,              // Column 0
     Redo,              // Column 1
+    TemporaryStep,     // Column 2: hold + step = temporary step (plays, or is muted, for 2 passes of its row)
     EuclidianEvents,   // Column 4
     EuclidianLength,   // Column 5
     EuclidianRotation, // Column 6
@@ -59,6 +60,7 @@ impl ArmAction {
         match column {
             0 => Some(ArmAction::Undo),
             1 => Some(ArmAction::Redo),
+            2 => Some(ArmAction::TemporaryStep),
             4 => Some(ArmAction::EuclidianEvents),
             5 => Some(ArmAction::EuclidianLength),
             6 => Some(ArmAction::EuclidianRotation),
@@ -78,6 +80,7 @@ impl ArmAction {
         match self {
             ArmAction::Undo => 0,
             ArmAction::Redo => 1,
+            ArmAction::TemporaryStep => 2,
             ArmAction::EuclidianEvents => 4,
             ArmAction::EuclidianLength => 5,
             ArmAction::EuclidianRotation => 6,
@@ -116,6 +119,8 @@ use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 // Row rates in MIDI clocks per step, used by the last-step buttons
 use sequencer::{STRAIGHT_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP, DOTTED_CLOCKS_PER_STEP};
+// Temporary steps (grid one row 7 column 2)
+use sequencer::TemporaryStep;
 #[cfg(feature = "midi")]
 use midi::MidiManager;
 use simon_says_seeq_rust::grid_osc::GridManager;
@@ -153,6 +158,12 @@ pub struct SimonSaysSeeq {
     // While a last-step button (grid one row 7, columns 8-11) is held: Some(its rate in clocks per step);
     // rows with that rate look normal, the others are dimmed. None when no such button is held.
     rate_highlight: Option<u8>,
+    // Temporarily muted steps blink: true = currently in the visible half of the blink
+    temporary_blink_on: bool,
+    // When the blink last changed
+    temporary_blink_last: Instant,
+    // Positions drawn as temporary last time, so lights are restored when one expires or is cleared
+    temporary_drawn: Vec<(usize, usize)>,
     // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
     grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
@@ -210,6 +221,12 @@ impl SimonSaysSeeq {
             grid_two_crow_search_held: [false; 3],
             // No rate highlight until a last-step button (columns 8-11) is held
             rate_highlight: None,
+            // Blink starts in the visible half
+            temporary_blink_on: true,
+            // Blink timer starts now
+            temporary_blink_last: Instant::now(),
+            // Nothing drawn as temporary yet
+            temporary_drawn: Vec::new(),
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
             test_mode,
@@ -469,6 +486,9 @@ impl SimonSaysSeeq {
 
                 #[cfg(feature = "hardware")]
                 self.update_clock_status_led();
+                // Blink temporarily muted steps and restore lights of expired ones
+                #[cfg(feature = "hardware")]
+                self.update_temporary_steps();
 
 
             }
@@ -808,6 +828,14 @@ impl SimonSaysSeeq {
 
                             // info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
+                        },
+                        ArmAction::TemporaryStep => {
+                            // Add, mute or remove a temporary step at this position
+                            let temporary = self.sequencer.toggle_temporary_step(seq_x, seq_y);
+                            // `{:?}` prints the Option for the log (None = removed)
+                            info!("ARM TEMPORARY_STEP: step {} row {} -> {:?}", seq_x, seq_y, temporary);
+                            // Redraw just this light
+                            self.update_single_button_led(seq_x, seq_y)?;
                         },
                         // Any of the four last-step buttons (columns 8-11); `|` matches any of them
                         ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet
@@ -1149,6 +1177,9 @@ impl SimonSaysSeeq {
                     Err(e) => warn!("ARM REDO: Cannot redo: {}", e),
                 }
             }
+            ArmAction::TemporaryStep => {
+                // Nothing on press: the button is a modifier, the step press does the work
+            }
             ArmAction::EuclidianEvents => {
                 // Euclidean Events ARM button activated - waiting for sequence row press
                 // info!("ARM EUCLIDIAN_EVENTS: ARM button activated - press sequence row at column N for N+1 events (max 32)");
@@ -1249,8 +1280,6 @@ impl SimonSaysSeeq {
     /// This is much more efficient than refreshing the entire grid every step (32x7=224 LEDs)
     /// vs selective update (2 LEDs per active row = ~14 LEDs per step)
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
-        // While a last-step button (columns 8-11) is held, rows with another rate are drawn dimmed
-        let dimmed = self.row_dimmed(row);
 
 
         let connected_grids = self.grid.get_connected_grids();
@@ -1284,9 +1313,9 @@ impl SimonSaysSeeq {
                 //
                 // Without this check, ALL old positions would go dark, hiding the pattern data.
                 // Users need to see both: WHERE beats are programmed (dim LEDs) AND where the playhead is (bright LED)
-                let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
+                // (step_brightness looks up the pattern value, temporary steps and dimming itself)
                 // The step the playhead left: beat or empty, no playhead
-                let old_brightness = Self::step_level(dimmed, old_pattern_value > 0, false);
+                let old_brightness = self.step_brightness(old_step, row, false);
 
                 // DUAL-GRID COORDINATE MAPPING:
                 // Steps 0-15  → GRID_ONE (coordinates 0-15)
@@ -1324,9 +1353,9 @@ impl SimonSaysSeeq {
                 // This dual-brightness system lets users instantly distinguish:
                 //   - Steps WITH beats that are playing (brightness 14)
                 //   - Steps WITHOUT beats where playhead is just passing through (brightness 6)
-                let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
+                // (step_brightness looks up the pattern value, temporary steps and dimming itself)
                 // The step the playhead arrived at: beat or empty, with the playhead
-                let new_brightness = Self::step_level(dimmed, new_pattern_value > 0, true);
+                let new_brightness = self.step_brightness(new_step, row, true);
 
                 // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
@@ -1481,15 +1510,10 @@ impl SimonSaysSeeq {
             let grid_two_id = grid_two.as_ref().unwrap();
 
             if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
-                let pattern_value = self.sequencer.get_grid_value(seq_x, seq_y);
                 let is_current_step = seq_x == seq_a_row_state.current_row_step;
 
-                let brightness = match (pattern_value > 0, is_current_step) {
-                    (false, false) => LED_OFF,     // No pattern, not current position
-                    (false, true) => LED_DIM,      // No pattern, but current position
-                    (true, false) => LED_BRIGHT,     // Has pattern, not current position
-                    (true, true) => LED_MAX,      // Has pattern AND current position
-                };
+                // Same rules as the row redraw: pattern, playhead, temporary steps, dimmed rows
+                let brightness = self.step_brightness(seq_x, seq_y, is_current_step);
 
                 // info!("GRID DEBUG: Setting single LED seq_x={}, seq_y={}, brightness={}, pattern_value={}, is_current={}",
                 //       seq_x, seq_y, brightness, pattern_value, is_current_step);
@@ -1717,6 +1741,67 @@ impl SimonSaysSeeq {
         }
     }
 
+    /// Brightness of the light for `step` on `row`, taking temporary steps and dimmed rows into
+    /// account. Used everywhere a step light is drawn, so all drawing agrees.
+    fn step_brightness(&self, step: usize, row: usize, is_current_step: bool) -> u8 {
+        // Dimmed while a last-step button with another rate is held
+        let dimmed = self.row_dimmed(row);
+        // Temporary steps fade: 6 with two passes left, 3 with one (a normal beat is 10)
+        let fading = |passes_left: u8| if passes_left >= 2 { LED_DIM } else { 3 };
+        // `match` on the temporary state of this step (None = just the pattern)
+        match self.sequencer.temporary_step(step, row) {
+            // No temporary change: the normal rules
+            None => Self::step_level(dimmed, self.sequencer.get_grid_value(step, row) > 0, is_current_step),
+            // An added step being played: as bright as a playing beat (dimmed rows: 4)
+            Some(TemporaryStep::Added { .. }) if is_current_step => if dimmed { 4 } else { LED_MAX },
+            // An added step waiting: its fading countdown (dimmed rows: 1)
+            Some(TemporaryStep::Added { passes_left }) => if dimmed { 1 } else { fading(passes_left) },
+            // A muted step under the playhead: like an empty step with the playhead
+            Some(TemporaryStep::Muted { .. }) if is_current_step => if dimmed { 1 } else { LED_DIM },
+            // A muted step in the dark half of its blink
+            Some(TemporaryStep::Muted { .. }) if !self.temporary_blink_on => LED_OFF,
+            // A muted step in the visible half: same fading countdown (dimmed rows: 1)
+            Some(TemporaryStep::Muted { passes_left }) => if dimmed { 1 } else { fading(passes_left) },
+        }
+    }
+
+    /// Called from the main loop: every 300 ms, flip the blink of temporarily muted steps and
+    /// redraw them, and restore the normal look of steps that stopped being temporary (expired,
+    /// removed, or cleared by a stop) since the last check.
+    #[cfg(feature = "hardware")]
+    fn update_temporary_steps(&mut self) {
+        // Only every 300 ms
+        if self.temporary_blink_last.elapsed() < Duration::from_millis(300) {
+            // Not yet
+            return;
+        }
+        // Restart the timer
+        self.temporary_blink_last = Instant::now();
+        // Flip the blink phase; `!` is boolean not
+        self.temporary_blink_on = !self.temporary_blink_on;
+        // All temporary steps right now
+        let current = self.sequencer.temporary_steps_list();
+        // Just their positions
+        let positions: Vec<(usize, usize)> = current.iter().map(|&(position, _)| position).collect();
+        // `std::mem::take` moves the old list out and leaves an empty Vec in its place
+        let previous = std::mem::take(&mut self.temporary_drawn);
+        // Lights that were temporary last time but aren't now: draw them normally again
+        for (step, row) in previous.into_iter().filter(|position| !positions.contains(position)) {
+            // Errors are ignored here; the next playhead pass redraws anyway
+            let _ = self.update_single_button_led(step, row);
+        }
+        // Muted steps: redraw for the new blink phase
+        for &((step, row), temporary) in &current {
+            // Only muted ones blink
+            if matches!(temporary, TemporaryStep::Muted { .. }) {
+                // Redraw this one light
+                let _ = self.update_single_button_led(step, row);
+            }
+        }
+        // Remember what is drawn as temporary now
+        self.temporary_drawn = positions;
+    }
+
     /// Start or stop dimming the other rate's rows, and redraw the sequence rows to match.
     fn set_rate_highlight(&mut self, highlight: Option<u8>) -> Result<()> {
         // Remember which rows to dim (read by row_dimmed)
@@ -1758,19 +1843,15 @@ impl SimonSaysSeeq {
             // Not a sequence row
             return Ok(());
         };
-        // While a last-step button (columns 8-11) is held, a row with another rate is drawn dimmed
-        let dimmed = self.row_dimmed(row);
 
         // One brightness per step; `[LED_OFF; 32]` is an array of 32 zeros
         let mut levels = [LED_OFF; 32];
         // `iter_mut().enumerate()` gives each step's index and a mutable reference to its slot
         for (seq_x, level) in levels.iter_mut().enumerate() {
-            // Is there a beat programmed at this step?
-            let has_beat = self.sequencer.get_grid_value(seq_x, row) > 0;
             // Is the playhead on this step?
             let is_current_step = seq_x == seq_a_row_state.current_row_step;
             // `*level = ..` writes through the reference into the array; `Self::` calls an associated fn
-            *level = Self::step_level(dimmed, has_beat, is_current_step);
+            *level = self.step_brightness(seq_x, row, is_current_step);
         }
 
         // The 32 steps as four blocks of 8: (grid, x offset on that grid, first step)
