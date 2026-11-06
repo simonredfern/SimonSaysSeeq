@@ -45,6 +45,8 @@ A whole row advances every 4 clocks instead of 6. The grid display is unchanged;
 - Tests in `src/sequencer.rs` (`timing_tests`): an independent model of today's straight timing, checked against both the old and the new tick path over 1,200 clocks, plus triplet cases (4-clock rows, the 12-clock boundary, keeping the step, no double notes, 3 against 2, old pattern files, undo). The old sequencer tests now use an in-memory sequencer, because `Sequencer::new()` read and `stop()` wrote `current_pattern.json`.
 - Built and running on the Pi; not yet tested by ear. Backups of the previous binary and `current_pattern.json` are in `~/simonsaysseeq-backup-20261106/` (`*.before-triplets`).
 
+**More rates (6 November 2026).** Rows can also play 8th-note triplets (8 clocks per step) and dotted 16ths (9 clocks per step), set with columns 10 and 11. A rate change now waits for the least common multiple of the old and new rates: 12 clocks for straight and 16th triplets, 24 for 8th-note triplets, 18 for dotted 16ths, 36 for dotted and 16th triplets. Coming back to straight from any rate resyncs the row as above. Unknown values in a pattern file play straight. Tests: `eighth_triplet_and_dotted_rows_play_at_their_rates...`, `switching_to_eighth_triplets_and_dotted_waits_for_the_line_up...`, `rate_change_boundaries_are_where_the_rates_line_up`, `unsupported_rates_are_ignored`.
+
 **Risk.** This rewrites the code where rows advance, which is also where the phantom-pattern bug lives. The test scripts assume "step × 6" timing (`TIMING_RULES_CHEATSHEET.md`), so add triplet test cases first.
 
 **Dropped:** NONO Major Tom-style triplet slots between steps. They would need a hidden second layer, which breaks the at-a-glance principle.
@@ -57,8 +59,11 @@ The controls used during a performance, existing and new. All other buttons keep
 |---|---|---|---|
 | Undo | grid one, row 7, column 0 | as now | exists |
 | Redo | grid one, row 7, column 1 | as now | exists |
-| Last step, straight | grid one, row 7, column 8 (hold) + step | sets that row's last step and makes the row straight; while held, only the straight rows are shown; triplet rows go dark | in working tree |
-| Last step, triplet | grid one, row 7, column 9 (hold) + step | sets that row's last step and makes the row triplet; no toggle, so pressing again keeps it triplet; latched and saved, not undoable (like last step); while held, only the triplet rows are shown; straight rows go dark | in working tree |
+| Last step, straight | grid one, row 7, column 8 (hold) + step | sets that row's last step and makes the row straight; while held, straight rows look normal and all others are dimmed (same picture at about a quarter brightness) | in working tree |
+| Last step, 16th triplets | grid one, row 7, column 9 (hold) + step | sets that row's last step and makes the row 16th triplets (4 clocks per step); no toggle, so pressing again keeps it triplet; latched and saved, not undoable (like last step); while held, rows at this rate look normal and all others are dimmed | in working tree |
+| Last step, 8th-note triplets | grid one, row 7, column 10 (hold) + step | sets the last step and makes the row 8th-note triplets (8 clocks per step, 0.75 times straight); same dimming | in working tree |
+| Last step, dotted 16ths | grid one, row 7, column 11 (hold) + step | sets the last step and makes the row dotted 16ths (9 clocks per step, two-thirds of straight); same dimming | in working tree |
+| Preset pattern | grid one, row 7, column 12 (hold) + step | as before; moved from column 10 | in working tree |
 | Hold for triplets | grid two, row 7, column 2 | every row plays triplets while held; not saved, not undoable | new |
 | Back to straight | grid two, row 7, double-tap column 2 | every row back to straight | new |
 | MIDI clock light | grid two, row 7, column 0 | flashes on each beat (first sixteenth, brightness 3) while MIDI clock is coming in; off when no clock has arrived for 250 ms; display only | in working tree |

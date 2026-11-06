@@ -46,8 +46,10 @@ enum ArmAction {
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
     SetMaxStepForRow,  // Column 8: set last step and make the row straight
-    SetMaxStepTriplet, // Column 9: set last step and make the row triplet
-    PresetGrid,        // Column 10
+    SetMaxStepTriplet, // Column 9: set last step and make the row 16th triplets
+    SetMaxStepEighthTriplet, // Column 10: set last step and make the row 8th-note triplets
+    SetMaxStepDotted,  // Column 11: set last step and make the row dotted 16ths
+    PresetGrid,        // Column 12 (was 10 before the extra rate buttons)
 
 }
 
@@ -63,7 +65,9 @@ impl ArmAction {
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetMaxStepForRow),
             9 => Some(ArmAction::SetMaxStepTriplet),
-            10 => Some(ArmAction::PresetGrid),
+            10 => Some(ArmAction::SetMaxStepEighthTriplet),
+            11 => Some(ArmAction::SetMaxStepDotted),
+            12 => Some(ArmAction::PresetGrid),
 
             _ => None,
         }
@@ -80,8 +84,28 @@ impl ArmAction {
             ArmAction::Ratchet => 7,
             ArmAction::SetMaxStepForRow => 8,
             ArmAction::SetMaxStepTriplet => 9,
-            ArmAction::PresetGrid => 10,
+            ArmAction::SetMaxStepEighthTriplet => 10,
+            ArmAction::SetMaxStepDotted => 11,
+            ArmAction::PresetGrid => 12,
 
+        }
+    }
+
+    /// For the last-step buttons (columns 8-11): the rate they give the row, in MIDI clocks per
+    /// step. None for every other action.
+    fn rate(&self) -> Option<u8> {
+        // `match` on self; each arm returns a value
+        match self {
+            // Column 8: straight 16ths
+            ArmAction::SetMaxStepForRow => Some(STRAIGHT_CLOCKS_PER_STEP),
+            // Column 9: 16th triplets
+            ArmAction::SetMaxStepTriplet => Some(TRIPLET_CLOCKS_PER_STEP),
+            // Column 10: 8th-note triplets
+            ArmAction::SetMaxStepEighthTriplet => Some(EIGHTH_TRIPLET_CLOCKS_PER_STEP),
+            // Column 11: dotted 16ths
+            ArmAction::SetMaxStepDotted => Some(DOTTED_CLOCKS_PER_STEP),
+            // Everything else has no rate
+            _ => None,
         }
     }
 }
@@ -90,6 +114,8 @@ use crossbeam_channel::Receiver;
 
 use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
+// Row rates in MIDI clocks per step, used by the last-step buttons
+use sequencer::{STRAIGHT_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP, DOTTED_CLOCKS_PER_STEP};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
 use simon_says_seeq_rust::grid_osc::GridManager;
@@ -124,8 +150,9 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
-    // While grid one row 7 column 8 or 9 is held: Some(false) = show only straight rows, Some(true) = only triplet rows
-    rate_highlight: Option<bool>,
+    // While a last-step button (grid one row 7, columns 8-11) is held: Some(its rate in clocks per step);
+    // rows with that rate look normal, the others are dimmed. None when no such button is held.
+    rate_highlight: Option<u8>,
     // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
     grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
@@ -181,7 +208,7 @@ impl SimonSaysSeeq {
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
             grid_two_crow_search_held: [false; 3],
-            // No rate highlight until column 8 or 9 is held
+            // No rate highlight until a last-step button (columns 8-11) is held
             rate_highlight: None,
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
@@ -782,19 +809,20 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
-                        ArmAction::SetMaxStepForRow => {
-                            // Resync to the master step only if the row is straight already (not triplet or heading there)
-                            let allow_master_resync = !self.sequencer.is_row_triplet(seq_y);
-                            // Column 8 means straight; a change from triplet waits for the next 12-clock boundary
-                            self.sequencer.set_row_triplet(seq_y, false);
+                        // Any of the four last-step buttons (columns 8-11); `|` matches any of them
+                        ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet
+                        | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepDotted => {
+                            // The rate this button gives the row; these four always have one
+                            let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
+                            // Resync to the master step only for a straight row that is already straight
+                            let allow_master_resync = clocks == STRAIGHT_CLOCKS_PER_STEP
+                                && self.sequencer.row_clocks_per_step(seq_y) == STRAIGHT_CLOCKS_PER_STEP;
+                            // Set the rate; the change waits until the old and new rates line up
+                            self.sequencer.set_row_rate(seq_y, clocks);
+                            // `{:?}` formats the action's name (from #[derive(Debug)]) for the log
+                            let action_name = format!("{:?}", arm_action);
                             // Set the last step; `?` passes any error up to the caller
-                            self.set_row_last_step(seq_x, seq_y, allow_master_resync, "SetMaxStepForRow")?;
-                        },
-                        ArmAction::SetMaxStepTriplet => {
-                            // Column 9 means triplet; the change waits for the next 12-clock boundary
-                            self.sequencer.set_row_triplet(seq_y, true);
-                            // Set the last step; a triplet row is never resynced to the master step
-                            self.set_row_last_step(seq_x, seq_y, false, "SetMaxStepTriplet")?;
+                            self.set_row_last_step(seq_x, seq_y, allow_master_resync, &action_name)?;
                         },
                         ArmAction::PresetGrid => {
                             // Apply preset pattern to this row
@@ -1068,8 +1096,8 @@ impl SimonSaysSeeq {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     self.grid.refresh()?;
                                 }
-                                // Column 8 or 9 released: back to normal brightness on every row
-                                if matches!(arm_action, ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet) {
+                                // A last-step button (columns 8-11) released: back to normal brightness on every row
+                                if arm_action.rate().is_some() {
                                     // None = no rows highlighted; this also redraws the rows
                                     self.set_rate_highlight(None)?;
                                 }
@@ -1141,15 +1169,16 @@ impl SimonSaysSeeq {
                 info!("ARM RATCHET: ARM button activated - not yet implemented");
             }
             ArmAction::SetMaxStepForRow => {
-                // Set Max Step ARM button activated - waiting for sequence row press; show only the straight rows
-                self.set_rate_highlight(Some(false))?;
+                // Set Max Step ARM button activated - waiting for sequence row press; dim rows that aren't straight
+                self.set_rate_highlight(Some(STRAIGHT_CLOCKS_PER_STEP))?;
                 // info!("ARM SET_MAX_STEP: ARM button activated - press sequence row at column N to set max_step to N (0-indexed)");
                 // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
-            ArmAction::SetMaxStepTriplet => {
-                // Waiting for a sequence row press; meanwhile show only the triplet rows
-                self.set_rate_highlight(Some(true))?;
+            // The other three rate buttons (columns 9-11)
+            ArmAction::SetMaxStepTriplet | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepDotted => {
+                // Waiting for a sequence row press; meanwhile dim the rows with a different rate
+                self.set_rate_highlight(action.rate())?;
             }
             ArmAction::PresetGrid => {
                 // Preset Grid ARM button activated - waiting for sequence row press
@@ -1220,11 +1249,8 @@ impl SimonSaysSeeq {
     /// This is much more efficient than refreshing the entire grid every step (32x7=224 LEDs)
     /// vs selective update (2 LEDs per active row = ~14 LEDs per step)
     fn handle_grid_update(&mut self, row: usize, old_step: usize, new_step: usize) -> Result<()> {
-        // While column 8 or 9 is held, rows with the other rate stay dark: don't draw their playhead
-        if self.row_hidden(row) {
-            // Nothing to draw
-            return Ok(());
-        }
+        // While a last-step button (columns 8-11) is held, rows with another rate are drawn dimmed
+        let dimmed = self.row_dimmed(row);
 
 
         let connected_grids = self.grid.get_connected_grids();
@@ -1259,7 +1285,8 @@ impl SimonSaysSeeq {
                 // Without this check, ALL old positions would go dark, hiding the pattern data.
                 // Users need to see both: WHERE beats are programmed (dim LEDs) AND where the playhead is (bright LED)
                 let old_pattern_value = self.sequencer.get_grid_value(old_step, row);
-                let old_brightness = if old_pattern_value > 0 { LED_BRIGHT } else { LED_OFF };
+                // The step the playhead left: beat or empty, no playhead
+                let old_brightness = Self::step_level(dimmed, old_pattern_value > 0, false);
 
                 // DUAL-GRID COORDINATE MAPPING:
                 // Steps 0-15  → GRID_ONE (coordinates 0-15)
@@ -1298,7 +1325,8 @@ impl SimonSaysSeeq {
                 //   - Steps WITH beats that are playing (brightness 14)
                 //   - Steps WITHOUT beats where playhead is just passing through (brightness 6)
                 let new_pattern_value = self.sequencer.get_grid_value(new_step, row);
-                let new_brightness = if new_pattern_value > 0 { LED_MAX } else { LED_DIM };
+                // The step the playhead arrived at: beat or empty, with the playhead
+                let new_brightness = Self::step_level(dimmed, new_pattern_value > 0, true);
 
                 // Same coordinate mapping logic applies to NEW position
                 if new_step <= 15 {
@@ -1655,23 +1683,45 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// True if a row's lights should be dark right now: while column 8 (straight) or 9 (triplet)
-    /// is held, only rows with that rate are shown and the others go dark.
-    fn row_hidden(&self, row: usize) -> bool {
-        // `match` on the Option: Some(want_triplet) while a button is held, None otherwise
+    /// True if a row should be drawn dimmed right now: while a last-step button (columns 8-11)
+    /// is held, rows with that button's rate look normal and rows with any other rate are dimmed.
+    fn row_dimmed(&self, row: usize) -> bool {
+        // `match` on the Option: Some(clocks) while a button is held, None otherwise
         match self.rate_highlight {
-            // A button is held and this row has the other rate: hide it
-            Some(want_triplet) => self.sequencer.is_row_triplet(row) != want_triplet,
-            // No button held: every row is shown
+            // A button is held and this row has a different rate: dim it
+            Some(clocks) => self.sequencer.row_clocks_per_step(row) != clocks,
+            // No button held: every row is normal
             None => false,
         }
     }
 
-    /// Start or stop showing only one rate's rows, and redraw the sequence rows to match.
-    fn set_rate_highlight(&mut self, highlight: Option<bool>) -> Result<()> {
-        // Remember which rows to show (read by row_hidden)
+    /// Brightness of one step light, used by both the full-row redraw and the playhead updates
+    /// so they always agree. `dimmed` rows keep the same picture at about a quarter brightness.
+    fn step_level(dimmed: bool, has_beat: bool, is_current_step: bool) -> u8 {
+        // A tuple lets `match` look at all three conditions at once
+        match (dimmed, has_beat, is_current_step) {
+            // Empty step without the playhead is always off
+            (_, false, false) => LED_OFF,
+            // Normal row: empty step with the playhead
+            (false, false, true) => LED_DIM,
+            // Normal row: beat without the playhead
+            (false, true, false) => LED_BRIGHT,
+            // Normal row: beat with the playhead
+            (false, true, true) => LED_MAX,
+            // Dimmed row: empty step with the playhead
+            (true, false, true) => 1,
+            // Dimmed row: beat without the playhead
+            (true, true, false) => 2,
+            // Dimmed row: beat with the playhead
+            (true, true, true) => 4,
+        }
+    }
+
+    /// Start or stop dimming the other rate's rows, and redraw the sequence rows to match.
+    fn set_rate_highlight(&mut self, highlight: Option<u8>) -> Result<()> {
+        // Remember which rows to dim (read by row_dimmed)
         self.rate_highlight = highlight;
-        // Redraw the rows, hiding or showing them
+        // Redraw the rows, dimmed or normal
         self.refresh_sequence_rows()
     }
 
@@ -1708,8 +1758,8 @@ impl SimonSaysSeeq {
             // Not a sequence row
             return Ok(());
         };
-        // While column 8 or 9 is held, a row with the other rate is drawn all dark
-        let hidden = self.row_hidden(row);
+        // While a last-step button (columns 8-11) is held, a row with another rate is drawn dimmed
+        let dimmed = self.row_dimmed(row);
 
         // One brightness per step; `[LED_OFF; 32]` is an array of 32 zeros
         let mut levels = [LED_OFF; 32];
@@ -1719,19 +1769,8 @@ impl SimonSaysSeeq {
             let has_beat = self.sequencer.get_grid_value(seq_x, row) > 0;
             // Is the playhead on this step?
             let is_current_step = seq_x == seq_a_row_state.current_row_step;
-            // `*level = ..` writes through the reference into the array
-            *level = match (hidden, has_beat, is_current_step) {
-                // Hidden row: everything off
-                (true, _, _) => LED_OFF,
-                // Empty step, no playhead
-                (false, false, false) => LED_OFF,
-                // Empty step with the playhead
-                (false, false, true) => LED_DIM,
-                // Beat, no playhead
-                (false, true, false) => LED_BRIGHT,
-                // Beat with the playhead
-                (false, true, true) => LED_MAX,
-            };
+            // `*level = ..` writes through the reference into the array; `Self::` calls an associated fn
+            *level = Self::step_level(dimmed, has_beat, is_current_step);
         }
 
         // The 32 steps as four blocks of 8: (grid, x offset on that grid, first step)

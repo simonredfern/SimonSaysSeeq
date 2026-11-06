@@ -37,8 +37,11 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |
 | 7 | Ratchet | `ARM_RATCHET` | Set ratchet count (note repeats) |
-| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed) |
-| 10 | Preset Grid | `ARM_PRESET_GRID` | Apply preset pattern to row |
+| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed) and make the row straight |
+| 9 | Set Max Step, 16th triplets | | Set row max_step and make the row 16th triplets (4 clocks per step) |
+| 10 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step) |
+| 11 | Set Max Step, dotted 16ths | | Set row max_step and make the row dotted 16ths (9 clocks per step) |
+| 12 | Preset Grid | `ARM_PRESET_GRID` | Apply preset pattern to row (was column 10) |
 
 ## Usage in Test Scripts
 
