@@ -17,7 +17,6 @@ use simon_says_seeq_rust::formal_state_logger::{self, log_button_press, log_butt
 mod hardware;
 mod sequencer;
 mod midi;
-mod midi_scanner;
 
 mod screen;
 mod config;
@@ -120,6 +119,10 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
+    // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
+    clock_status_led: Option<u8>,
+    clock_status_last_update: Instant,
+    clock_status_checks: u32,
     // Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
     test_mode: bool,
 }
@@ -169,6 +172,9 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
+            clock_status_led: None,
+            clock_status_last_update: Instant::now(),
+            clock_status_checks: 0,
             test_mode,
         })
     }
@@ -420,6 +426,9 @@ impl SimonSaysSeeq {
                         // error!("Error handling MIDI input event: {}", e);
                     }
                 }
+
+                #[cfg(feature = "hardware")]
+                self.update_clock_status_led();
 
 
             }
@@ -843,14 +852,9 @@ impl SimonSaysSeeq {
                                     info!("handle_grid_press says: Both GRID_TWO buttons 0 and 1 pressed - triggering MIDI detection");
                                     #[cfg(feature = "midi")]
                                     {
-                                        // First clear any saved device, then force detection
-                                        if let Err(e) = self.midi.clear_detected_device() {
-                                            warn!("handle_grid_press says: Failed to clear detected device: {}", e);
-                                        }
-                                        match self.midi.force_redetection() {
-                                            Ok(true) => info!("handle_grid_press says: MIDI clock detection successful (both buttons)"),
-                                            Ok(false) => warn!("handle_grid_press says: MIDI clock detection found no sources (both buttons)"),
-                                            Err(e) => warn!("handle_grid_press says: MIDI clock detection failed: {}", e),
+                                        // Release the current clock port (non-blocking); the next port to send clock is bound
+                                        if let Err(e) = self.midi.force_redetection() {
+                                            warn!("handle_grid_press says: MIDI clock re-detection failed: {}", e);
                                         }
                                     }
                                 }
@@ -863,6 +867,9 @@ impl SimonSaysSeeq {
                                     self.grid_two_button_1_pressed = false;
                                     info!("handle_grid_press says: GRID_TWO button 1 released");
                                 }
+
+                                // The clock status light shares column 0; redraw it after the release
+                                self.clock_status_led = None;
 
                                 #[cfg(feature = "hardware")]
                                 {
@@ -1970,6 +1977,46 @@ impl SimonSaysSeeq {
         }
 
         Ok(())
+    }
+
+    /// MIDI clock status light on GRID_TWO row 7 column 0 (the first of the two re-detect buttons):
+    /// blinks while waiting for a MIDI clock, steady dim once a clock port is bound. Checked twice a
+    /// second; an LED message is sent only when the brightness changes (plus a re-send of the steady
+    /// state every few seconds in case a grid was reconnected).
+    #[cfg(all(feature = "midi", feature = "hardware"))]
+    fn update_clock_status_led(&mut self) {
+        if self.clock_status_last_update.elapsed() < Duration::from_millis(500) {
+            return;
+        }
+        self.clock_status_last_update = Instant::now();
+        if self.grid_two_button_0_pressed {
+            return; // the button's own press light wins while it is held
+        }
+
+        self.clock_status_checks = self.clock_status_checks.wrapping_add(1);
+        let brightness = if self.midi.is_clock_bound() {
+            LED_DIM
+        } else if self.clock_status_checks % 2 == 0 {
+            LED_BRIGHT
+        } else {
+            LED_OFF
+        };
+        let resend = self.clock_status_checks % 10 == 0; // every ~5 s, for a reconnected grid
+        if self.clock_status_led == Some(brightness) && !resend {
+            return;
+        }
+
+        let connected_grids = self.grid.get_connected_grids();
+        let (_, grid_two) = self.get_sorted_grid_ids(&connected_grids);
+        let Some(grid_two_id) = grid_two else {
+            self.clock_status_led = None;
+            return;
+        };
+        if self.grid.set_led(&grid_two_id, 0, 7, brightness, "midi_clock_status").is_ok()
+            && self.grid.refresh().is_ok()
+        {
+            self.clock_status_led = Some(brightness);
+        }
     }
 
     /// Update beat LEDs on GRID_TWO to flash with external MIDI clock beats

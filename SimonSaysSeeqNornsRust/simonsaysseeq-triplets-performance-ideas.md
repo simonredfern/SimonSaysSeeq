@@ -1,0 +1,82 @@
+# SimonSaysSeeq: triplets and a concert control layout
+
+Notes from 5 November 2026, written against commit `dbc258f` ("concert mode") of `simonredfern/simonsaysseeq`, folder `SimonSaysSeeqNornsRust`. Nothing here is implemented yet.
+
+## 1. Design principles
+
+- **See everything at a glance.** The 32 steps across the two grids show exactly what will play. Nothing new may hide events on a second page or layer.
+- **Performance, not editing.** In practice patterns rarely change live. Dynamics come from the modular (mutes, filters, voltage-controlled amplifiers on the hi-hats). The sequencer controls actually used are **last step per row** (for phasing), **undo** and **redo**.
+- **Triplets are a phasing tool.** A row switched to triplet timing runs 1.5 times faster over the same visible steps. It's the same kind of control as last step: a different rate instead of a different length.
+
+## 2. Timing basis
+
+- External MIDI clock runs at 24 pulses per quarter note.
+- A straight sixteenth step is 6 clocks. Steps advance at `tick_count % 6 == 0` in `src/main.rs` (around line 1869).
+- A sixteenth triplet is 4 clocks.
+- **3 triplet steps = 2 straight steps = 12 clocks.** Straight and triplet rows line up again every 12 clocks, so every position falls on a whole clock and nothing drifts.
+- `ticks_per_step = 12` in the code is stale and not the real timing. See `TODO_remove_ticks_per_step.md`.
+
+```
+clock:     0  1  2  3  4  5  6  7  8  9  10 11
+straight:  X                 X
+triplet:   X           X           X
+```
+
+## 3. Implementation: triplet rows
+
+A whole row advances every 4 clocks instead of 6. The grid display is unchanged; only that row's playhead moves faster.
+
+- Add `clocks_per_step: u8` (6 or 4) to `SequencerARowStates`, with `#[serde(default)]` returning 6 so old pattern files still load.
+- In `advance_step()` (`src/sequencer.rs`), stop advancing every row together. Each row advances when `tick_count % clocks_per_step == 0`. The master step stays on 6.
+- Make sure a triplet row's note-off lands within its 4 clocks.
+- Update the playhead lights per row, not all rows at once. This is the largest change.
+- **Switch only on the 12-clock boundary.** Any change between straight and triplet waits for the next 12-clock boundary, so rows stay locked and nothing flams.
+- On switching, the row **keeps its step index**, so the pattern carries on from where it was.
+- It works with last step: for example, a 6-step triplet row against a 4-step straight row gives an even 3-against-2 cycle.
+
+**Risk.** This rewrites the code where rows advance, which is also where the phantom-pattern bug lives. The test scripts assume "step × 6" timing (`TIMING_RULES_CHEATSHEET.md`), so add triplet test cases first.
+
+**Dropped:** NONO Major Tom-style triplet slots between steps. They would need a hidden second layer, which breaks the at-a-glance principle.
+
+## 4. Concert control layout
+
+When the binary runs with `--concert`, only these controls respond. Every other control-row button does nothing, so a stray press mid-set can't change the pattern.
+
+| Control | Button | Behaviour | Status |
+|---|---|---|---|
+| Undo | grid one, row 7, column 0 | as now | exists |
+| Redo | grid one, row 7, column 1 | as now | exists |
+| Last step | grid one, row 7, column 8 (hold) + step | as now | exists |
+| Triplet toggle | grid one, row 7, column 9 (hold) + step in a row | flips that row between straight and triplet; latched, saved, undoable; while column 9 is held, each row's first light shows bright for triplet, dim for straight | new |
+| Hold for triplets | grid two, row 7, column 2 | every row plays triplets while held; not saved, not undoable | new |
+| Back to straight | grid two, row 7, double-tap column 2 | every row back to straight | new |
+| MIDI clock status light | grid two, row 7, column 0 | blinks while waiting for a MIDI clock, steady dim once bound; display only | in working tree |
+| MIDI clock re-detect | grid two, row 7, columns 0 and 1 held together | releases the clock binding; the next port to send clock is bound | exists, non-blocking in working tree |
+
+Optional hands-free control: sustain pedal (controller 64) on the MIDI keyboard port acts as "hold for triplets". Low effort, because MIDI input already arrives there.
+
+Implementation notes:
+- `apply_concert_mode()` in `src/main.rs` already exists and currently only turns off grid rediscovery. Add a flag there that makes the control-row handler ignore everything not in the table.
+- The re-detect combination stays active in concert mode. It is the on-stage recovery if the clock interface is replugged, and the check in `simonsaysseeq-midi-clock-startup-fix.md` section 3 relies on it. With the MIDI fix it no longer blocks the main loop.
+- Outside concert mode, every button behaves as it does now.
+
+## 5. Remove the Crow startup fix
+
+Crow is no longer in the case, but startup still pays for it:
+
+- **Service wrapper** (`/usr/local/bin/simonsaysseeq_wrapper.sh`, generated by `install_service` in `rpi5_build_and_run.sh`): starts the binary, kills it after 3 seconds, waits 2 seconds, then starts it again. Without Crow this is pointless. The first instance can also still hold the MIDI ports while the second starts. Before the MIDI fix, a stale saved device name could make the binary exit at startup (`simonsaysseeq-midi-clock-startup-fix.md` section 2), and the restart sequence makes that harder to spot in the journal.
+- **`Crow::initialize()`** (`src/crow.rs`) tries 3 times, sleeping 2 and 3 seconds between attempts, so about 5 seconds of startup is spent looking for a device that isn't there.
+
+Changes:
+- Add a config setting such as `[crow] enabled = false`. When false, skip `crow.initialize()` entirely.
+- When generating the wrapper, add an option to skip the start-kill-start sequence and just `exec` the binary once. Make that the default while Crow isn't used.
+- Keep the 10-second `ExecStartPre` delay. In concert mode, grids are only discovered once at startup, so serialosc and USB need to be ready by then.
+
+## 6. Order of work
+
+1. **Fix gates not being output when the clock starts after the sequencer.** Ports are chosen once at startup and nothing revisits the choice (the unused `retry_detection()` in `src/midi.rs`). Without a clock at boot, the output is either not opened or opened on a stale saved device, and a renamed saved device makes the binary exit. See `simonsaysseeq-midi-clock-startup-fix.md`. Fixed in the working tree, not yet tested on the Pi. Booting with the clock already running did not work around it on the original code, so there may be a second cause (see that note, sections 1 and 3).
+2. Remove the Crow startup fix (section 5).
+3. Add triplet test cases.
+4. Triplet rows (section 3), with the triplet toggle.
+5. Concert control layout, with hold for triplets and back to straight (section 4).
+6. Sustain pedal, if the button feels awkward live.

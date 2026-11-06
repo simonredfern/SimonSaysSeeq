@@ -3,9 +3,9 @@
 //! Provides MIDI output capabilities with note tracking and device management.
 
 use anyhow::{Result, anyhow};
-use log::{info, debug, warn, error, trace};
+use log::{info, debug, warn, trace};
 #[cfg(feature = "midi")]
-use midir::{MidiInput, MidiOutput, MidiInputConnection, MidiOutputConnection, MidiInputPort, MidiOutputPort};
+use midir::{MidiInput, MidiOutput, MidiInputConnection, MidiOutputConnection, MidiOutputPort};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -135,17 +135,81 @@ impl Default for ClockState {
     }
 }
 
+/// How long the bound clock port may stay silent before we release it and listen on all inputs again.
+/// Matches the existing 5 second "clock stopped" timeout.
+#[cfg(feature = "midi")]
+const CLOCK_LOSS_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// How often the input port list is refreshed while waiting for a clock (picks up hot-plugged
+/// interfaces and an ALSA sequencer that wasn't ready at boot). Nothing is scanned once bound.
+#[cfg(feature = "midi")]
+const LISTEN_RESCAN_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Which input port plays which role. Written by the listener callbacks (the first port to send
+/// clock claims the clock role) and by the main loop (binding, release). Port names are the full
+/// ALSA names including client:port numbers, which are unambiguous within one session.
+#[derive(Debug, Default)]
+struct PortRoles {
+    /// Port carrying the MIDI clock: clock in, and gates out on the same device
+    clock: Option<String>,
+    /// The other interface: keyboard notes and CCs in
+    keyboard: Option<String>,
+    /// Ports that sent clock but have no matching output port (e.g. a software clock generator's
+    /// own source port). Never claimed again this session.
+    rejected: Vec<String>,
+}
+
+/// What a listener does with a message from its port
+#[derive(Debug, PartialEq)]
+enum PortRole {
+    Clock,
+    Keyboard,
+    Ignore,
+}
+
+impl PortRoles {
+    /// Decide what to do with a message (status byte `status`) arriving on `port`. While no clock
+    /// is bound, the first port to send clock (F8 tick, FA start, FB continue) claims the clock role.
+    fn route(&mut self, port: &str, status: u8) -> PortRole {
+        match self.clock.as_deref() {
+            Some(clock) if clock == port => PortRole::Clock,
+            None if matches!(status, 0xF8 | 0xFA | 0xFB) && !self.rejected.iter().any(|r| r == port) => {
+                self.clock = Some(port.to_string());
+                PortRole::Clock
+            }
+            _ if self.keyboard.as_deref() == Some(port) => PortRole::Keyboard,
+            _ => PortRole::Ignore,
+        }
+    }
+}
+
 /// MIDI manager handles all MIDI I/O operations
+///
+/// Port selection: listen on every input until one sends clock, then bind clock in and gates out
+/// to that device and use the other interface as the keyboard port. If the clock goes silent for
+/// CLOCK_LOSS_TIMEOUT, release and listen on everything again. Nothing is decided once at startup
+/// and nothing is saved across boots.
 pub struct MidiManager {
     #[cfg(feature = "midi")]
     sequencer_a_output_connection: Option<MidiOutputConnection>,
+    /// One input connection per port, keyed by full port name. Callbacks run on midir's threads.
     #[cfg(feature = "midi")]
-    input_connection: Option<MidiInputConnection<()>>,
+    listeners: HashMap<String, MidiInputConnection<()>>,
     #[cfg(feature = "midi")]
-    keyboard_input_connection: Option<MidiInputConnection<()>>,
+    port_roles: Arc<Mutex<PortRoles>>,
+    /// Port the main loop has finished binding to (output open, keyboard chosen)
+    #[cfg(feature = "midi")]
+    bound_port: Option<String>,
+    #[cfg(feature = "midi")]
+    last_listener_refresh: Option<Instant>,
+    /// Last port-list problem logged, so a missing ALSA sequencer is logged once, not every second
+    #[cfg(feature = "midi")]
+    last_listener_error: Option<String>,
+    /// Optional config.midi.device: only ports whose name contains this are considered
+    #[cfg(feature = "midi")]
+    device_filter: String,
     active_notes: Arc<Mutex<HashMap<(u8, u8), ActiveNote>>>, // (note, channel) -> ActiveNote
     last_note_sent: Arc<Mutex<Option<String>>>,
-    device_name: String,
     port_a_midi_clock_in_and_gates_out: String,
     port_b_midi_keyboard_in_and_out: String,
     /// MIDI input event channel
@@ -155,103 +219,69 @@ pub struct MidiManager {
     clock_state: Arc<Mutex<ClockState>>,
     /// Previous clock source to detect transitions
     previous_clock_source: Arc<Mutex<ClockSource>>,
-    /// Auto-detect MIDI clock sources
-    auto_detect_clock: bool,
-    /// Last successful auto-detection time
-    last_detection_time: Arc<Mutex<Option<Instant>>>,
-    /// Auto-detection retry interval (seconds)
-    detection_retry_interval: u64,
-    /// Configuration reference for saving detected devices
-    config: Arc<Mutex<MidiConfig>>,
 }
 
 impl MidiManager {
-    /// Create a new MIDI manager
+    /// Create a new MIDI manager. Never fails because of MIDI: with no ports (or no ALSA sequencer
+    /// yet) it starts with nothing bound and keeps listening from the main loop.
     pub fn new(config: &MidiConfig) -> Result<Self> {
         let (input_sender, input_receiver) = unbounded();
-        
+
+        #[cfg_attr(not(feature = "midi"), allow(unused_mut))]
         let mut manager = Self {
             #[cfg(feature = "midi")]
             sequencer_a_output_connection: None,
             #[cfg(feature = "midi")]
-            input_connection: None,
+            listeners: HashMap::new(),
             #[cfg(feature = "midi")]
-            keyboard_input_connection: None,
+            port_roles: Arc::new(Mutex::new(PortRoles::default())),
+            #[cfg(feature = "midi")]
+            bound_port: None,
+            #[cfg(feature = "midi")]
+            last_listener_refresh: None,
+            #[cfg(feature = "midi")]
+            last_listener_error: None,
+            #[cfg(feature = "midi")]
+            device_filter: config.device.trim().to_string(),
             active_notes: Arc::new(Mutex::new(HashMap::new())),
             last_note_sent: Arc::new(Mutex::new(None)),
-            device_name: config.device.clone(),
-            port_a_midi_clock_in_and_gates_out: config.device.clone(), // Use same device for clock by default
-            port_b_midi_keyboard_in_and_out: config.device.clone(), // Use same device for keyboard by default
+            port_a_midi_clock_in_and_gates_out: String::new(),
+            port_b_midi_keyboard_in_and_out: String::new(),
             input_sender: Some(input_sender),
             input_receiver: Some(input_receiver),
             clock_state: Arc::new(Mutex::new(ClockState::default())),
             previous_clock_source: Arc::new(Mutex::new(ClockSource::None)),
-            auto_detect_clock: config.auto_detect_clock,
-            last_detection_time: Arc::new(Mutex::new(None)),
-            detection_retry_interval: config.detection_retry_interval,
-            config: Arc::new(Mutex::new(config.clone())),
         };
-        
+
         #[cfg(feature = "midi")]
         {
-            info!("MIDI Manager initialized - auto_detect_clock: {}, device: '{}'", manager.auto_detect_clock, manager.device_name);
-            let sequencer_a_port = if manager.auto_detect_clock {
-                info!("Starting MIDI auto-detection flow...");
-                manager.auto_detect_and_connect()?;
-                manager.initialize_output()?
+            if manager.device_filter.is_empty() {
+                info!("MIDI Manager initialized - listening on all inputs for a MIDI clock");
             } else {
-                info!("Using manual MIDI configuration (auto-detect disabled)...");
-                let port = manager.initialize_output()?;
-                manager.initialize_input()?;
-                manager.initialize_keyboard_input()?;
-                port
-            };
-            info!("MIDI Manager connected: PORT_A={}", sequencer_a_port);
-            
-            // Always print final port assignments regardless of initialization mode
-            info!("════════════════════════════════════════════════════════");
-            info!("FINAL MIDI PORT ASSIGNMENTS:");
-            info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {}", manager.port_a_midi_clock_in_and_gates_out);
-            info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {}", manager.port_b_midi_keyboard_in_and_out);
-            info!("════════════════════════════════════════════════════════");
+                info!("MIDI Manager initialized - listening for a MIDI clock on inputs matching '{}'", manager.device_filter);
+            }
+            manager.refresh_listeners();
         }
         #[cfg(not(feature = "midi"))]
-        info!("new says: MIDI simulation mode - no actual MIDI I/O");
-        
+        {
+            let _ = config;
+            info!("new says: MIDI simulation mode - no actual MIDI I/O");
+        }
+
         Ok(manager)
     }
-    
-    /// Initialize dual MIDI output connections for sequencer A and B
+
+    /// Open the gates output on the device with this port name (exact name first, so two identical
+    /// interfaces are told apart by their ALSA numbers).
     #[cfg(feature = "midi")]
-    fn initialize_output(&mut self) -> Result<String> {
-        let midi_out_a = MidiOutput::new("SimonSaysSeeq Sequencer A")?;
-        let out_ports_a = midi_out_a.ports();
-        
-        info!("initialize_output says: Setting up MIDI output connection");
-        info!("PORT_A (Sequencer A): {}", self.port_a_midi_clock_in_and_gates_out);
-        
-        // Initialize Sequencer A output (PORT_A)
-        let sequencer_a_port_name = if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
-            let port_a = self.find_port_by_name(&midi_out_a, &out_ports_a, &self.port_a_midi_clock_in_and_gates_out)?;
-            match midi_out_a.connect(&port_a, "SimonSaysSeeq Sequencer A") {
-                Ok(connection) => {
-                    info!("Sequencer A connected to PORT_A: {}", self.port_a_midi_clock_in_and_gates_out);
-                    self.sequencer_a_output_connection = Some(connection);
-                    self.port_a_midi_clock_in_and_gates_out.clone()
-                }
-                Err(e) => {
-                    error!("Failed to connect Sequencer A to PORT_A {}: {}", self.port_a_midi_clock_in_and_gates_out, e);
-                    return Err(anyhow!("Sequencer A MIDI connection failed: {}", e));
-                }
-            }
-        } else {
-            warn!("PORT_A not configured for Sequencer A");
-            "No PORT_A configured".to_string()
-        };
-        
-        info!("MIDI output connection established: Sequencer A → {}", sequencer_a_port_name);
-        
-        Ok(sequencer_a_port_name)
+    fn open_output(&mut self, port_name: &str) -> Result<()> {
+        let midi_out = MidiOutput::new("SimonSaysSeeq Sequencer A")?;
+        let out_ports = midi_out.ports();
+        let port = self.find_port_by_name(&midi_out, &out_ports, port_name)?;
+        let connection = midi_out.connect(&port, "SimonSaysSeeq Sequencer A")
+            .map_err(|e| anyhow!("Sequencer A MIDI connection to '{}' failed: {}", port_name, e))?;
+        self.sequencer_a_output_connection = Some(connection);
+        Ok(())
     }
     
     /// Check if a MIDI port is a system or virtual port (should be filtered out)
@@ -276,27 +306,12 @@ impl MidiManager {
         false
     }
 
-    /// Extract USB interface name from MIDI port name (e.g., "28:0" from "USB MIDI Interface 28:0")
-    #[cfg(feature = "midi")]
-    fn extract_usb_interface_name(&self, port_name: &str) -> String {
-        // Look for pattern like "USB MIDI Interface 28:0" or "Interface 24:0"
-        if let Some(interface_pos) = port_name.find("Interface ") {
-            let after_interface = &port_name[interface_pos + "Interface ".len()..];
-            // Extract the part that looks like "XX:Y" (digits:digits)
-            for word in after_interface.split_whitespace() {
-                if word.contains(':') && word.chars().all(|c| c.is_ascii_digit() || c == ':') {
-                    return word.to_string();
-                }
-            }
-        }
-        
-        // Fallback: return the full port name if pattern not found
-        port_name.to_string()
-    }
-
-    /// Find a MIDI port by name (case-insensitive substring match)
+    /// Find a MIDI output port by name: exact match first, then case-insensitive substring match
     #[cfg(feature = "midi")]
     fn find_port_by_name(&self, midi_out: &MidiOutput, ports: &[MidiOutputPort], target_name: &str) -> Result<MidiOutputPort> {
+        if let Some(port) = ports.iter().find(|p| midi_out.port_name(p).ok().as_deref() == Some(target_name)) {
+            return Ok(port.clone());
+        }
         let target_lower = target_name.to_lowercase();
         
         for port in ports {
@@ -370,111 +385,214 @@ impl MidiManager {
 
 
     
-    /// Initialize MIDI input connection
+    /// Is this port one of ours (our own output client shows up in the input list)?
     #[cfg(feature = "midi")]
-    fn initialize_input(&mut self) -> Result<()> {
-        let midi_in = MidiInput::new("SimonSaysSeeq Input")?;
-        let in_ports = midi_in.ports();
-        
-        info!("initialize_input says: Available MIDI input ports:");
-        for (i, port) in in_ports.iter().enumerate() {
-            if let Ok(name) = midi_in.port_name(port) {
-                let interface_name = self.extract_usb_interface_name(&name);
-                info!("initialize_input says:   {}: {} → interface: '{}'", i, name, interface_name);
-            }
-        }
-        
-        // Filter out system and virtual ports to get only real hardware devices
-        let hardware_ports: Vec<_> = in_ports.iter().filter(|port| {
-            if let Ok(name) = midi_in.port_name(port) {
-                !self.is_system_or_virtual_port(&name)
-            } else {
-                false
-            }
-        }).collect();
-        
-        // Try to find the configured device, or use the first available hardware device
-        let selected_port = if !self.port_a_midi_clock_in_and_gates_out.is_empty() {
-            // When port_a_midi_clock_in_and_gates_out is set (from clock detection), use it directly
-            self.find_input_port_by_name(&midi_in, &in_ports, &self.port_a_midi_clock_in_and_gates_out)?
-        } else if !hardware_ports.is_empty() {
-            hardware_ports[0].clone()
-        } else {
-            // No hardware ports - try Midi Through as fallback for testing with direct_test
-            info!("initialize_input says: No hardware MIDI input ports found - checking for Midi Through port for testing");
-            match self.find_input_port_by_name(&midi_in, &in_ports, "Midi Through") {
-                Ok(port) => {
-                    info!("initialize_input says: Using Midi Through port for testing/direct_test");
-                    port
-                }
-                Err(_) => {
-                    warn!("initialize_input says: No hardware MIDI input ports or Midi Through available - MIDI input will be disabled");
-                    return Ok(());
-                }
-            }
-        };
-        
-        let port_name = midi_in.port_name(&selected_port)
-            .unwrap_or_else(|_| "Unknown".to_string());
-        
-        // Set up input callback
-        let sender = self.input_sender.as_ref().unwrap().clone();
-        let clock_state = self.clock_state.clone();
-        
-        match midi_in.connect(&selected_port, "SimonSaysSeeq Input", move |timestamp, message, _| {
-            Self::handle_midi_input_message(timestamp, message, &sender, &clock_state);
-        }, ()) {
-            Ok(connection) => {
-                if self.auto_detect_clock && !self.port_a_midi_clock_in_and_gates_out.is_empty() {
-                    info!("PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT: {} (for tempo sync)", port_name);
-                } else {
-                    info!("PORT_B_MIDI_KEYBOARD_IN_AND_OUT: {} (for note input)", port_name);
-                }
-                self.input_connection = Some(connection);
-            }
-            Err(e) => {
-                error!("initialize_input says: Failed to connect to MIDI input port {}: {}", port_name, e);
-                return Err(anyhow!("MIDI input connection failed: {}", e));
-            }
-        }
-        
-        Ok(())
+    fn is_own_port(port_name: &str) -> bool {
+        port_name.contains("SimonSaysSeeq")
     }
 
-    /// Initialize MIDI keyboard input connection (separate from clock input)
+    /// Bring the per-port listeners in line with the current input port list: open a listener on
+    /// each new port, drop listeners on ports that have gone. Cheap, and only called while waiting
+    /// for a clock (and once at startup), never while bound.
     #[cfg(feature = "midi")]
-    fn initialize_keyboard_input(&mut self) -> Result<()> {
-        if self.port_b_midi_keyboard_in_and_out.is_empty() {
-            warn!("initialize_keyboard_input says: No keyboard port configured");
-            return Ok(());
+    fn refresh_listeners(&mut self) {
+        self.last_listener_refresh = Some(Instant::now());
+
+        let names: Vec<String> = match MidiInput::new("SimonSaysSeeq Port List") {
+            Ok(midi_in) => midi_in.ports().iter()
+                .filter_map(|p| midi_in.port_name(p).ok())
+                .collect(),
+            Err(e) => {
+                let msg = format!("MIDI input not available yet ({}), will keep trying", e);
+                if self.last_listener_error.as_deref() != Some(msg.as_str()) {
+                    warn!("refresh_listeners says: {}", msg);
+                    self.last_listener_error = Some(msg);
+                }
+                return;
+            }
+        };
+        self.last_listener_error = None;
+
+        let filter = self.device_filter.to_lowercase();
+        let candidates: Vec<String> = names.into_iter()
+            .filter(|n| !Self::is_own_port(n))
+            .filter(|n| filter.is_empty() || n.to_lowercase().contains(&filter))
+            .collect();
+
+        let before: Vec<String> = self.listeners.keys().cloned().collect();
+        self.listeners.retain(|name, _| candidates.contains(name));
+
+        for name in &candidates {
+            if self.listeners.contains_key(name) {
+                continue;
+            }
+            match self.open_listener(name) {
+                Ok(connection) => {
+                    self.listeners.insert(name.clone(), connection);
+                }
+                Err(e) => debug!("refresh_listeners says: could not listen on '{}': {}", name, e),
+            }
         }
 
-        let midi_in = MidiInput::new("SimonSaysSeeq Keyboard Input")?;
-        let in_ports = midi_in.ports();
-        
-        info!("initialize_keyboard_input says: Setting up keyboard input on: {}", self.port_b_midi_keyboard_in_and_out);
-        
-        let selected_port = self.find_input_port_by_name(&midi_in, &in_ports, &self.port_b_midi_keyboard_in_and_out)?;
-        let port_name = midi_in.port_name(&selected_port)
-            .unwrap_or_else(|_| "Unknown".to_string());
-        
-        // Set up keyboard input callback (only for note/CC messages, not clock)
-        let sender = self.input_sender.as_ref().unwrap().clone();
-        
-        match midi_in.connect(&selected_port, "SimonSaysSeeq Keyboard Input", move |_timestamp, message, _| {
-            Self::handle_keyboard_input_message(message, &sender);
-        }, ()) {
-            Ok(connection) => {
-                info!("initialize_keyboard_input says: Connected to keyboard port: {}", port_name);
-                self.keyboard_input_connection = Some(connection);
-            }
-            Err(e) => {
-                error!("initialize_keyboard_input says: Failed to connect to keyboard port {}: {}", port_name, e);
-                return Err(anyhow!("Keyboard MIDI input connection failed: {}", e));
+        let mut after: Vec<String> = self.listeners.keys().cloned().collect();
+        let mut before_sorted = before;
+        before_sorted.sort();
+        after.sort();
+        if after != before_sorted {
+            if after.is_empty() {
+                warn!("MIDI: no input ports found, waiting for a MIDI interface");
+            } else {
+                warn!("MIDI: listening for clock on {} input(s): {}", after.len(), after.join(", "));
             }
         }
-        
-        Ok(())
+    }
+
+    /// Open one listener. Its callback routes by role: the clock port gets the full handler, the
+    /// keyboard port gets notes/CCs only, and while nothing is bound the first port to send clock
+    /// (F8 tick, FA start, FB continue) claims the clock role. That first message is handled too,
+    /// so no tick is lost while the main loop opens the output.
+    #[cfg(feature = "midi")]
+    fn open_listener(&self, port_name: &str) -> Result<MidiInputConnection<()>> {
+        let midi_in = MidiInput::new("SimonSaysSeeq Input")?;
+        let port = midi_in.ports().into_iter()
+            .find(|p| midi_in.port_name(p).ok().as_deref() == Some(port_name))
+            .ok_or_else(|| anyhow!("port '{}' disappeared", port_name))?;
+
+        let name = port_name.to_string();
+        let sender = self.input_sender.as_ref().unwrap().clone();
+        let clock_state = self.clock_state.clone();
+        let roles = self.port_roles.clone();
+
+        midi_in.connect(&port, "SimonSaysSeeq Input", move |timestamp, message, _| {
+            if message.is_empty() {
+                return;
+            }
+            let role = roles.lock().unwrap().route(&name, message[0]);
+            match role {
+                PortRole::Clock => Self::handle_midi_input_message(timestamp, message, &sender, &clock_state),
+                PortRole::Keyboard => Self::handle_keyboard_input_message(message, &sender),
+                PortRole::Ignore => {}
+            }
+        }, ()).map_err(|e| anyhow!("connect failed: {}", e))
+    }
+
+    /// Main-loop housekeeping for port roles. Non-blocking apart from opening/closing ALSA ports,
+    /// which happens only when the binding changes (or once a second while nothing is bound).
+    #[cfg(feature = "midi")]
+    fn service_ports(&mut self) {
+        let claimed = self.port_roles.lock().unwrap().clock.clone();
+
+        match (&self.bound_port, claimed) {
+            (None, Some(port)) => self.complete_binding(port),
+            (Some(bound), Some(port)) if *bound != port => {
+                // Only possible if a release raced with a new claim; rebind cleanly.
+                self.release_clock("moved to another port");
+                self.complete_binding(port);
+            }
+            (Some(_), Some(_)) => {
+                let silent_too_long = self.clock_state.lock().unwrap().last_external_activity
+                    .map_or(true, |t| t.elapsed() > CLOCK_LOSS_TIMEOUT);
+                if silent_too_long {
+                    self.release_clock("lost (no clock for 5 s)");
+                }
+            }
+            (Some(_), None) => self.release_clock("released"),
+            (None, None) => {}
+        }
+
+        if self.bound_port.is_none()
+            && self.last_listener_refresh.map_or(true, |t| t.elapsed() >= LISTEN_RESCAN_INTERVAL)
+        {
+            self.refresh_listeners();
+        }
+    }
+
+    /// A listener has claimed the clock role for `port`: open the gates output on the same device
+    /// and choose the keyboard port.
+    #[cfg(feature = "midi")]
+    fn complete_binding(&mut self, port: String) {
+        if let Err(e) = self.open_output(&port) {
+            warn!("MIDI: '{}' sends clock but has no usable output ({}); ignoring it as a clock source", port, e);
+            {
+                let mut roles = self.port_roles.lock().unwrap();
+                roles.rejected.push(port.clone());
+                if roles.clock.as_deref() == Some(port.as_str()) {
+                    roles.clock = None;
+                }
+            }
+            *self.clock_state.lock().unwrap() = ClockState::default();
+            return;
+        }
+
+        let keyboard = self.choose_keyboard_port(&port);
+        self.port_roles.lock().unwrap().keyboard = keyboard.clone();
+        self.bound_port = Some(port.clone());
+        self.port_a_midi_clock_in_and_gates_out = port.clone();
+        self.port_b_midi_keyboard_in_and_out = keyboard.clone().unwrap_or_default();
+
+        warn!("MIDI: clock bound to '{}' (clock in and gates out); keyboard in: {}",
+              port, keyboard.as_deref().unwrap_or("none"));
+    }
+
+    /// Stop using the current clock port: silence any held gates, close the output, and go back
+    /// to listening on all inputs.
+    #[cfg(feature = "midi")]
+    fn release_clock(&mut self, reason: &str) {
+        let _ = self.all_notes_off();
+        self.sequencer_a_output_connection = None;
+        {
+            let mut roles = self.port_roles.lock().unwrap();
+            roles.clock = None;
+            roles.keyboard = None;
+        }
+        {
+            // Source None makes check_clock_source_transition emit ExternalClockTimeout
+            let mut clock = self.clock_state.lock().unwrap();
+            clock.source = ClockSource::None;
+            clock.running = false;
+            clock.clock_ticks = 0;
+            clock.last_external_activity = None;
+        }
+        let was = self.bound_port.take().unwrap_or_default();
+        self.port_a_midi_clock_in_and_gates_out.clear();
+        self.port_b_midi_keyboard_in_and_out.clear();
+        self.last_listener_refresh = None; // rescan straight away
+
+        warn!("MIDI: clock on '{}' {}; listening on all inputs", was, reason);
+    }
+
+    /// Pick the keyboard port: another hardware input that isn't the clock port, preferring
+    /// "USB MIDI Interface" devices. With two identical interfaces this is simply the other one.
+    #[cfg(feature = "midi")]
+    fn choose_keyboard_port(&self, clock_port: &str) -> Option<String> {
+        let mut others: Vec<&String> = self.listeners.keys()
+            .filter(|n| n.as_str() != clock_port && !self.is_system_or_virtual_port(n))
+            .collect();
+        others.sort();
+        others.iter()
+            .find(|n| n.contains("USB MIDI Interface"))
+            .or_else(|| others.first())
+            .map(|n| n.to_string())
+    }
+
+    /// True once a clock port is bound and the gates output is open
+    pub fn is_clock_bound(&self) -> bool {
+        #[cfg(feature = "midi")]
+        { self.bound_port.is_some() }
+        #[cfg(not(feature = "midi"))]
+        { false }
+    }
+
+    /// Drop the current clock binding (if any) and listen on all inputs again. Non-blocking: the
+    /// next port to send clock is bound from the main loop.
+    #[cfg(feature = "midi")]
+    pub fn force_redetection(&mut self) -> Result<bool> {
+        if self.bound_port.is_some() {
+            self.release_clock("released by grid re-detect");
+        } else {
+            self.refresh_listeners();
+        }
+        Ok(true)
     }
 
     /// Handle keyboard-only MIDI input messages (notes, CC, but not clock)
@@ -519,22 +637,6 @@ impl MidiManager {
                 // Don't log every ignored message to avoid spam
             }
         }
-    }
-    
-    /// Find a MIDI input port by name (case-insensitive substring match)
-    #[cfg(feature = "midi")]
-    fn find_input_port_by_name(&self, midi_in: &MidiInput, ports: &[MidiInputPort], target_name: &str) -> Result<MidiInputPort> {
-        let target_lower = target_name.to_lowercase();
-        
-        for port in ports {
-            if let Ok(name) = midi_in.port_name(port) {
-                if name.to_lowercase().contains(&target_lower) {
-                    return Ok(port.clone());
-                }
-            }
-        }
-        
-        Err(anyhow!("MIDI input port '{}' not found", target_name))
     }
     
     /// Handle incoming MIDI message
@@ -840,9 +942,13 @@ impl MidiManager {
         matches!(clock.source, ClockSource::MidiExternal) && clock.running
     }
     
-    /// Get MIDI input events (non-blocking)
-    pub fn get_input_events(&self) -> Vec<MidiInputEvent> {
+    /// Get MIDI input events (non-blocking). Also binds/releases the clock port, so that a newly
+    /// bound port's output is open before its first clock tick is handled.
+    pub fn get_input_events(&mut self) -> Vec<MidiInputEvent> {
         let mut events = Vec::new();
+
+        #[cfg(feature = "midi")]
+        self.service_ports();
         
         // Check for external clock timeout (5 seconds without activity)
         self.check_external_clock_timeout();
@@ -1007,314 +1113,6 @@ impl MidiManager {
         }
     }
 
-    /// Auto-detect and connect to the first available MIDI clock source
-    #[cfg(feature = "midi")]
-    fn auto_detect_and_connect(&mut self) -> Result<()> {
-        use crate::midi_scanner::{scan_for_midi_clock};
-        
-        info!("auto_detect_and_connect says: Starting automatic MIDI clock detection...");
-        
-        // First try the last known good device if available
-        let last_detected = self.config.lock().unwrap().last_detected_device.clone();
-        if let Some(ref last_device) = last_detected {
-            info!("auto_detect_and_connect says: Trying last known device: {}", last_device);
-            self.port_a_midi_clock_in_and_gates_out = last_device.clone();
-            match self.initialize_input() {
-                Ok(_) => {
-                    // Test if this device actually provides clock
-                    std::thread::sleep(std::time::Duration::from_millis(500));
-                    let is_external_clock = {
-                        let clock_state = self.clock_state.lock().unwrap();
-                        matches!(clock_state.source, ClockSource::MidiExternal)
-                    };
-                    
-                    if is_external_clock {
-                        info!("auto_detect_and_connect says: Successfully reconnected to last known device");
-                        // Set up keyboard input/output on the OTHER port
-                        self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(last_device)?;
-                        self.initialize_keyboard_input()?;
-                        let sequencer_a_port = self.initialize_output()?;
-                        info!("════════════════════════════════════════════════════════");
-                        info!("MIDI PORT ASSIGNMENTS COMPLETE (RECONNECTED):");
-                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", last_device);
-                        info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
-                        info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
-                        info!("════════════════════════════════════════════════════════");
-                        return Ok(());
-                    } else {
-                        info!("auto_detect_and_connect says: Last known device no longer provides clock, scanning for new sources");
-                    }
-                }
-                Err(e) => {
-                    warn!("auto_detect_and_connect says: Failed to connect to last known device: {}", e);
-                }
-            }
-        }
-        
-        // Fall back to full scanning
-        info!("Starting full MIDI clock scan...");
-        match scan_for_midi_clock() {
-            Ok(summary) => {
-                info!("Clock scan completed - reliable sources: {:?}, selected: {:?}", 
-                     summary.reliable_sources, summary.selected_source);
-                if let Some(selected_source) = summary.selected_source {
-                    info!("auto_detect_and_connect says: Found reliable clock source: {}", selected_source);
-                    self.port_a_midi_clock_in_and_gates_out = selected_source.clone();
-                    // Set keyboard input to OTHER port (not the clock port)
-                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&selected_source)?;
-                    self.initialize_input()?;
-                    self.initialize_keyboard_input()?;
-                    // Re-initialize output for sequencer
-                    let sequencer_a_port = self.initialize_output()?;
-                    self.save_detected_device(&selected_source)?;
-                    info!("════════════════════════════════════════════════════════");
-                    info!("MIDI PORT ASSIGNMENTS COMPLETE (AUTO-DETECTED):");
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", selected_source);
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
-                    info!("════════════════════════════════════════════════════════");
-                } else if !summary.reliable_sources.is_empty() {
-                    // Use the first reliable source if none was auto-selected
-                    let first_source = summary.reliable_sources[0].clone();
-                    info!("auto_detect_and_connect says: Using first reliable source: {}", first_source);
-                    self.port_a_midi_clock_in_and_gates_out = first_source.clone();
-                    // Set keyboard input to OTHER port (not the clock port)
-                    self.port_b_midi_keyboard_in_and_out = self.find_other_usb_midi_device(&first_source)?;
-                    self.initialize_input()?;
-                    self.initialize_keyboard_input()?;
-                    // Re-initialize output for sequencer
-                    let sequencer_a_port = self.initialize_output()?;
-                    self.save_detected_device(&first_source)?;
-                    info!("════════════════════════════════════════════════════════");
-                    info!("MIDI PORT ASSIGNMENTS COMPLETE (FIRST RELIABLE):");
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (sequencer tempo sync)", first_source);
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input)", self.port_b_midi_keyboard_in_and_out);
-                    info!("════════════════════════════════════════════════════════");
-                } else {
-                    warn!("auto_detect_and_connect says: No reliable MIDI clock sources found, falling back to first available port");
-                    self.initialize_input()?;
-                    self.initialize_keyboard_input()?;
-                    let sequencer_a_port = self.initialize_output()?;
-                    info!("════════════════════════════════════════════════════════");
-                    info!("MIDI PORT ASSIGNMENTS COMPLETE (FALLBACK MODE):");
-                    info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
-                    info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - no clock detected)", self.port_b_midi_keyboard_in_and_out);
-                    info!("════════════════════════════════════════════════════════");
-                }
-            }
-            Err(e) => {
-                warn!("auto_detect_and_connect says: Clock detection failed: {}, falling back to normal initialization", e);
-                self.initialize_input()?;
-                self.initialize_keyboard_input()?;
-                let sequencer_a_port = self.initialize_output()?;
-                info!("════════════════════════════════════════════════════════");
-                info!("MIDI PORT ASSIGNMENTS COMPLETE (ERROR FALLBACK):");
-                info!("   PORT_A_MIDI_CLOCK_IN_AND_GATES_OUT:  {} (pattern playback)", sequencer_a_port);
-                info!("   PORT_B_MIDI_KEYBOARD_IN_AND_OUT:     {} (note input - clock detection failed)", self.port_b_midi_keyboard_in_and_out);
-                info!("════════════════════════════════════════════════════════");
-            }
-        }
-        
-        Ok(())
-    }
-
-    /// Find the other USB MIDI device that's not the specified device
-    #[cfg(feature = "midi")]
-    fn find_other_usb_midi_device(&self, exclude_device: &str) -> Result<String> {
-        info!("find_other_usb_midi_device: Looking for other device, excluding: '{}'", exclude_device);
-        let midi_in = MidiInput::new("Device Finder")?;
-        let in_ports = midi_in.ports();
-        
-        // Find all hardware USB MIDI devices
-        let usb_devices: Vec<String> = in_ports.iter()
-            .filter_map(|port| {
-                if let Ok(name) = midi_in.port_name(port) {
-                    if name.contains("USB MIDI Interface") && !self.is_system_or_virtual_port(&name) {
-                        info!("find_other_usb_midi_device: Found USB device: '{}'", name);
-                        Some(name)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        info!("find_other_usb_midi_device: Found {} USB devices total", usb_devices.len());
-
-        // Find a device that's NOT the excluded device
-        for device in &usb_devices {
-            if device != exclude_device {
-                info!("find_other_usb_midi_device: Selected other device: '{}'", device);
-                return Ok(device.clone());
-            }
-        }
-
-        // Fallback: if we can't find another device, use the same device
-        warn!("find_other_usb_midi_device: Could not find other USB MIDI device, using same device for keyboard");
-        Ok(exclude_device.to_string())
-    }
-
-    /// Schedule a re-detection attempt
-    fn schedule_redetection(&self) {
-        *self.last_detection_time.lock().unwrap() = Some(Instant::now());
-    }
-
-    /// Check if we should attempt re-detection
-    pub fn should_retry_detection(&self) -> bool {
-        if !self.auto_detect_clock {
-            return false;
-        }
-
-        let clock = self.clock_state.lock().unwrap();
-        let last_detection = self.last_detection_time.lock().unwrap();
-
-        // Only retry if we have no clock source and enough time has passed
-        if matches!(clock.source, ClockSource::None) {
-            if let Some(last_time) = *last_detection {
-                last_time.elapsed().as_secs() >= self.detection_retry_interval
-            } else {
-                true // Never attempted detection
-            }
-        } else {
-            false // We have external clock, no need to retry
-        }
-    }
-
-    /// Attempt to re-detect MIDI clock sources
-    #[cfg(feature = "midi")]
-    pub fn retry_detection(&mut self) -> Result<bool> {
-        if !self.should_retry_detection() {
-            return Ok(false);
-        }
-
-        info!("retry_detection says: Attempting to re-detect MIDI clock sources...");
-        
-        // Disconnect current input if any
-        #[cfg(feature = "midi")]
-        {
-            self.input_connection = None;
-        }
-
-        // Run detection
-        match self.auto_detect_and_connect() {
-            Ok(_) => {
-                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
-                info!("retry_detection says: Re-detection completed successfully");
-                Ok(true)
-            }
-            Err(e) => {
-                warn!("retry_detection says: Re-detection failed: {}", e);
-                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
-                Ok(false)
-            }
-        }
-    }
-
-    /// Force re-detection even if clock is currently active
-    #[cfg(feature = "midi")]
-    pub fn force_redetection(&mut self) -> Result<bool> {
-        info!("force_redetection says: Forcing MIDI clock re-detection (ignoring current state)");
-        
-        // Disconnect current input
-        #[cfg(feature = "midi")]
-        {
-            self.input_connection = None;
-        }
-
-        // Reset clock state to internal to ensure fresh detection
-        {
-            let mut clock = self.clock_state.lock().unwrap();
-            clock.source = ClockSource::None;
-            clock.running = false;
-            clock.clock_ticks = 0;
-            clock.last_external_activity = None;
-        }
-
-        // Run detection
-        match self.auto_detect_and_connect() {
-            Ok(_) => {
-                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
-                info!("force_redetection says: Forced re-detection completed successfully");
-                Ok(true)
-            }
-            Err(e) => {
-                warn!("force_redetection says: Forced re-detection failed: {}", e);
-                *self.last_detection_time.lock().unwrap() = Some(Instant::now());
-                Ok(false)
-            }
-        }
-    }
-
-    /// Get detection status information
-    pub fn get_detection_status(&self) -> DetectionStatus {
-        let clock = self.clock_state.lock().unwrap();
-        let last_detection = self.last_detection_time.lock().unwrap();
-        let should_retry = self.should_retry_detection();
-
-        DetectionStatus {
-            auto_detect_enabled: self.auto_detect_clock,
-            current_source: clock.source.clone(),
-            last_detection_time: *last_detection,
-            next_retry_in: if should_retry {
-                Some(0)
-            } else if let Some(last_time) = *last_detection {
-                let elapsed = last_time.elapsed().as_secs();
-                if elapsed < self.detection_retry_interval {
-                    Some(self.detection_retry_interval - elapsed)
-                } else {
-                    Some(0)
-                }
-            } else {
-                None
-            },
-            device_name: self.port_a_midi_clock_in_and_gates_out.clone(),
-        }
-    }
-
-    /// Save the detected MIDI device to configuration for future use
-    fn save_detected_device(&self, device_name: &str) -> Result<()> {
-        {
-            let mut config = self.config.lock().unwrap();
-            config.last_detected_device = Some(device_name.to_string());
-        }
-        
-        // Save to file
-        let config_path = crate::config::Config::get_config_path();
-        if let Ok(mut full_config) = crate::config::Config::load_or_default() {
-            full_config.midi.last_detected_device = Some(device_name.to_string());
-            if let Err(e) = full_config.save(&config_path) {
-                warn!("save_detected_device says: Failed to save config: {}", e);
-            } else {
-                info!("save_detected_device says: Saved detected device '{}' to config", device_name);
-            }
-        }
-        
-        Ok(())
-    }
-
-    /// Clear the saved detected device from configuration
-    pub fn clear_detected_device(&self) -> Result<()> {
-        {
-            let mut config = self.config.lock().unwrap();
-            config.last_detected_device = None;
-        }
-        
-        let config_path = crate::config::Config::get_config_path();
-        if let Ok(mut full_config) = crate::config::Config::load_or_default() {
-            full_config.midi.last_detected_device = None;
-            if let Err(e) = full_config.save(&config_path) {
-                warn!("clear_detected_device says: Failed to save config: {}", e);
-            } else {
-                info!("clear_detected_device says: Cleared saved detected device from config");
-            }
-        }
-        
-        Ok(())
-    }
-
     /// Get current clock connection health
     pub fn get_clock_health(&self) -> ClockHealth {
         let clock = self.clock_state.lock().unwrap();
@@ -1337,16 +1135,6 @@ impl MidiManager {
             }
         }
     }
-}
-
-/// Status information for MIDI clock detection
-#[derive(Debug, Clone)]
-pub struct DetectionStatus {
-    pub auto_detect_enabled: bool,
-    pub current_source: ClockSource,
-    pub last_detection_time: Option<Instant>,
-    pub next_retry_in: Option<u64>, // seconds
-    pub device_name: String,
 }
 
 /// Health status of MIDI clock connection
@@ -1449,6 +1237,44 @@ mod tests {
     }
     
     #[test]
+    fn test_port_roles_first_clock_wins() {
+        let mut roles = PortRoles::default();
+        // Notes before any clock are ignored and claim nothing
+        assert_eq!(roles.route("A 20:0", 0x90), PortRole::Ignore);
+        assert_eq!(roles.clock, None);
+        // First clock tick claims the clock role
+        assert_eq!(roles.route("B 24:0", 0xF8), PortRole::Clock);
+        assert_eq!(roles.clock.as_deref(), Some("B 24:0"));
+        // A second clock on another port is ignored
+        assert_eq!(roles.route("A 20:0", 0xF8), PortRole::Ignore);
+        // Everything on the clock port goes to the full handler (sysex, notes)
+        assert_eq!(roles.route("B 24:0", 0xF0), PortRole::Clock);
+        // Keyboard port gets the keyboard handler once chosen
+        roles.keyboard = Some("A 20:0".to_string());
+        assert_eq!(roles.route("A 20:0", 0x90), PortRole::Keyboard);
+    }
+
+    #[test]
+    fn test_port_roles_start_and_continue_claim() {
+        let mut roles = PortRoles::default();
+        assert_eq!(roles.route("B 24:0", 0xFA), PortRole::Clock);
+        let mut roles = PortRoles::default();
+        assert_eq!(roles.route("B 24:0", 0xFB), PortRole::Clock);
+        // Stop does not claim
+        let mut roles = PortRoles::default();
+        assert_eq!(roles.route("B 24:0", 0xFC), PortRole::Ignore);
+    }
+
+    #[test]
+    fn test_port_roles_rejected_port_never_claims() {
+        let mut roles = PortRoles::default();
+        roles.rejected.push("Fake Clock 128:0".to_string());
+        assert_eq!(roles.route("Fake Clock 128:0", 0xF8), PortRole::Ignore);
+        assert_eq!(roles.clock, None);
+        assert_eq!(roles.route("Midi Through 14:0", 0xF8), PortRole::Clock);
+    }
+
+    #[test]
     fn test_clock_source() {
         let config = MidiConfig::default();
         if let Ok(midi) = MidiManager::new(&config) {
@@ -1464,7 +1290,7 @@ mod tests {
     #[test]
     fn test_input_events() {
         let config = MidiConfig::default();
-        if let Ok(midi) = MidiManager::new(&config) {
+        if let Ok(mut midi) = MidiManager::new(&config) {
             // Should start with no events
             let events = midi.get_input_events();
             assert!(events.is_empty());
