@@ -30,6 +30,12 @@ const LED_DIM_PLUS: u8 = 8; // Empty step, playhead present (enhanced visibility
 const LED_BRIGHT: u8 = 10;  // Pattern exists, no playhead (pattern only)
 const LED_MAX: u8 = 14;     // Pattern exists, playhead present (pattern + position)
 const LED_TURBO: u8 = 15;     // Maximum brightness (ARM buttons, flashing, etc.)
+// Ratchet styles 1-3 (grid values 2-4): a little brighter than a normal beat (10), one level apart
+const LED_RATCHET_1: u8 = 12;
+// Ratchet style 2
+const LED_RATCHET_2: u8 = 13;
+// Ratchet style 3
+const LED_RATCHET_3: u8 = 14;
 // MIDI clock light (grid two, row 7, column 0) on the beat: kept low so it doesn't dazzle
 const LED_CLOCK_BEAT: u8 = 3;
 
@@ -42,6 +48,7 @@ enum ArmAction {
     Undo,              // Column 0
     Redo,              // Column 1
     TemporaryStep,     // Column 2: hold + step = temporary step (plays, or is muted, for 2 passes of its row)
+    PresetGrid,        // Column 3 (moved from 12 to make room for the Jump Loop buttons)
     EuclidianEvents,   // Column 4
     EuclidianLength,   // Column 5
     EuclidianRotation, // Column 6
@@ -50,7 +57,10 @@ enum ArmAction {
     SetMaxStepTriplet, // Column 9: set last step and make the row 16th triplets
     SetMaxStepEighthTriplet, // Column 10: set last step and make the row 8th-note triplets
     SetMaxStepDotted,  // Column 11: set last step and make the row dotted 16ths
-    PresetGrid,        // Column 12 (was 10 before the extra rate buttons)
+    JumpLoop1x,        // Column 12: hold + start step + end step = add a Jump Loop segment played once
+    JumpLoop2x,        // Column 13: same, segment played twice
+    JumpLoop3x,        // Column 14: same, segment played three times
+    JumpLoopReset,     // Column 15: hold + any step on a row = clear that row's Jump Loop
 
 }
 
@@ -61,6 +71,7 @@ impl ArmAction {
             0 => Some(ArmAction::Undo),
             1 => Some(ArmAction::Redo),
             2 => Some(ArmAction::TemporaryStep),
+            3 => Some(ArmAction::PresetGrid),
             4 => Some(ArmAction::EuclidianEvents),
             5 => Some(ArmAction::EuclidianLength),
             6 => Some(ArmAction::EuclidianRotation),
@@ -69,7 +80,10 @@ impl ArmAction {
             9 => Some(ArmAction::SetMaxStepTriplet),
             10 => Some(ArmAction::SetMaxStepEighthTriplet),
             11 => Some(ArmAction::SetMaxStepDotted),
-            12 => Some(ArmAction::PresetGrid),
+            12 => Some(ArmAction::JumpLoop1x),
+            13 => Some(ArmAction::JumpLoop2x),
+            14 => Some(ArmAction::JumpLoop3x),
+            15 => Some(ArmAction::JumpLoopReset),
 
             _ => None,
         }
@@ -81,6 +95,7 @@ impl ArmAction {
             ArmAction::Undo => 0,
             ArmAction::Redo => 1,
             ArmAction::TemporaryStep => 2,
+            ArmAction::PresetGrid => 3,
             ArmAction::EuclidianEvents => 4,
             ArmAction::EuclidianLength => 5,
             ArmAction::EuclidianRotation => 6,
@@ -89,9 +104,34 @@ impl ArmAction {
             ArmAction::SetMaxStepTriplet => 9,
             ArmAction::SetMaxStepEighthTriplet => 10,
             ArmAction::SetMaxStepDotted => 11,
-            ArmAction::PresetGrid => 12,
+            ArmAction::JumpLoop1x => 12,
+            ArmAction::JumpLoop2x => 13,
+            ArmAction::JumpLoop3x => 14,
+            ArmAction::JumpLoopReset => 15,
 
         }
+    }
+
+    /// For the Jump Loop buttons 1X/2X/3X (columns 12-14): how many times the segment plays.
+    /// None for every other action, including Reset.
+    fn jump_repeats(&self) -> Option<u8> {
+        // `match` on self; each arm returns a value
+        match self {
+            // Column 12
+            ArmAction::JumpLoop1x => Some(1),
+            // Column 13
+            ArmAction::JumpLoop2x => Some(2),
+            // Column 14
+            ArmAction::JumpLoop3x => Some(3),
+            // Everything else
+            _ => None,
+        }
+    }
+
+    /// True for the four Jump Loop buttons (columns 12-15)
+    fn is_jump_loop(&self) -> bool {
+        // `matches!` is true if self is any of the listed variants
+        matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x | ArmAction::JumpLoopReset)
     }
 
     /// For the last-step buttons (columns 8-11): the rate they give the row, in MIDI clocks per
@@ -164,6 +204,10 @@ pub struct SimonSaysSeeq {
     temporary_blink_last: Instant,
     // Positions drawn as temporary last time, so lights are restored when one expires or is cleared
     temporary_drawn: Vec<(usize, usize)>,
+    // While a Jump Loop button (columns 12-15) is held: steps outside each row's segments are dimmed
+    jump_highlight: bool,
+    // While 1X/2X/3X is held: the start step (step, row) waiting for its end step
+    jump_pending_start: Option<(usize, usize)>,
     // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
     grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
@@ -227,6 +271,10 @@ impl SimonSaysSeeq {
             temporary_blink_last: Instant::now(),
             // Nothing drawn as temporary yet
             temporary_drawn: Vec::new(),
+            // No Jump Loop button held at startup
+            jump_highlight: false,
+            // No segment half-entered
+            jump_pending_start: None,
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
             test_mode,
@@ -829,6 +877,54 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_ROTATION: Successfully generated rotation {} on row {}", rotation, seq_y);
                             self.refresh_all_row_leds(seq_y)?;
                         },
+                        // 1X, 2X or 3X held: first press = segment start, second press on the same row = segment end
+                        ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x => {
+                            // How many times this button's segments play
+                            let repeats = arm_action.jump_repeats().unwrap_or(1);
+                            // `match` on the half-entered segment, if any
+                            match self.jump_pending_start {
+                                // A start on this row is waiting: this press is the end
+                                Some((start, row)) if row == seq_y => {
+                                    // Nothing waiting any more
+                                    self.jump_pending_start = None;
+                                    // Add the segment (start may be after end: it then plays backwards)
+                                    let added = self.sequencer.add_jump_segment(seq_y, start, seq_x, repeats);
+                                    // Log at info (hidden in concert mode)
+                                    info!("ARM JUMP_LOOP: row {} steps {}-{} x{} added={}", seq_y, start + 1, seq_x + 1, repeats, added);
+                                    // Redraw the row: the segment shows, and the start light goes back to normal
+                                    self.refresh_all_row_leds(seq_y)?;
+                                }
+                                // Nothing waiting, or a start on another row: this press is a new start
+                                other => {
+                                    // `if let` on the old value: redraw that row so its start light goes back to normal
+                                    if let Some((_, old_row)) = other {
+                                        // The old start was on another row
+                                        self.refresh_all_row_leds(old_row)?;
+                                    }
+                                    // Remember the start
+                                    self.jump_pending_start = Some((seq_x, seq_y));
+                                    // Show it at full brightness
+                                    self.update_single_button_led(seq_x, seq_y)?;
+                                }
+                            }
+                        },
+                        // Reset held: clear this row's Jump Loop
+                        ArmAction::JumpLoopReset => {
+                            // Back to normal playing (undoable); false if there was nothing to clear
+                            let cleared = self.sequencer.clear_jump_loop(seq_y);
+                            // Log at info (hidden in concert mode)
+                            info!("ARM JUMP_LOOP_RESET: row {} cleared={}", seq_y, cleared);
+                            // Redraw the row without segments
+                            self.refresh_all_row_leds(seq_y)?;
+                        },
+                        ArmAction::Ratchet => {
+                            // Off/normal -> style 1 -> style 2 -> style 3 -> normal (undoable)
+                            let value = self.sequencer.cycle_ratchet(seq_x, seq_y);
+                            // Log at info (hidden in concert mode)
+                            info!("ARM RATCHET: step {} row {} -> grid value {}", seq_x, seq_y, value);
+                            // Redraw just this light at the style's brightness
+                            self.update_single_button_led(seq_x, seq_y)?;
+                        },
                         ArmAction::TemporaryStep => {
                             // Add, mute or remove a temporary step at this position
                             let temporary = self.sequencer.toggle_temporary_step(seq_x, seq_y);
@@ -1125,6 +1221,15 @@ impl SimonSaysSeeq {
                                     self.grid.refresh()?;
                                 }
                                 // A last-step button (columns 8-11) released: back to normal brightness on every row
+                                if arm_action.is_jump_loop() {
+                                    // A start without an end is dropped
+                                    self.jump_pending_start = None;
+                                    // Segment view off
+                                    self.jump_highlight = false;
+                                    // Redraw every row normally
+                                    self.refresh_sequence_rows()?;
+                                }
+                                // A last-step button (columns 8-11) released
                                 if arm_action.rate().is_some() {
                                     // None = no rows highlighted; this also redraws the rows
                                     self.set_rate_highlight(None)?;
@@ -1180,6 +1285,15 @@ impl SimonSaysSeeq {
             ArmAction::TemporaryStep => {
                 // Nothing on press: the button is a modifier, the step press does the work
             }
+            // Any Jump Loop button: show the segments (steps outside them dimmed) while it is held
+            ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x | ArmAction::JumpLoopReset => {
+                // A fresh press starts with no half-entered segment
+                self.jump_pending_start = None;
+                // Turn on the segment view
+                self.jump_highlight = true;
+                // Redraw every row with it
+                self.refresh_sequence_rows()?;
+            }
             ArmAction::EuclidianEvents => {
                 // Euclidean Events ARM button activated - waiting for sequence row press
                 // info!("ARM EUCLIDIAN_EVENTS: ARM button activated - press sequence row at column N for N+1 events (max 32)");
@@ -1196,8 +1310,7 @@ impl SimonSaysSeeq {
                 // info!("ARM EUCLIDIAN_ROTATION: GRID_ONE columns 0-15 = rotation 0-15, GRID_TWO columns 0-15 = rotation 16-31");
             }
             ArmAction::Ratchet => {
-                // Ratchet functionality - placeholder
-                info!("ARM RATCHET: ARM button activated - not yet implemented");
+                // Nothing on press: the button is a modifier, the step press does the work
             }
             ArmAction::SetMaxStepForRow => {
                 // Set Max Step ARM button activated - waiting for sequence row press; dim rows that aren't straight
@@ -1397,7 +1510,9 @@ impl SimonSaysSeeq {
         // Normal mode: Grid will be naturally painted by selective updates during playback
         // No need for full grid refresh - let the sequencer paint the display as it runs
         if connected_grids.len() == 2 {
-            info!("GRID DEBUG: Dual-grid mode active - display will be painted by selective updates");
+            info!("GRID DEBUG: Dual-grid mode active - drawing the pattern now");
+            // Draw every sequence row at once (28 OSC messages), so the pattern shows before the clock runs
+            self.refresh_sequence_rows()?;
         } else if connected_grids.len() == 0 {
             warn!("GRID DEBUG: No grids connected - running in headless mode");
         } else {
@@ -1683,8 +1798,11 @@ impl SimonSaysSeeq {
             // Set the new last step on our copy
             seq_a_row_state.max_step = max_step;
 
+            // A row with a Jump Loop: its segments decide where the playhead goes, so leave it alone
+            if !seq_a_row_state.jump_loop.is_empty() {
+                // Only the stored last step changes (it applies again after Reset)
             // If the playhead is now past the end, restart from the row's first step
-            if seq_a_row_state.current_row_step > max_step {
+            } else if seq_a_row_state.current_row_step > max_step {
                 // Reset to beginning of the row's own cycle
                 seq_a_row_state.current_row_step = seq_a_row_state.first_step;
             // Full 32 steps: line the row up with the master step again (straight rows only)
@@ -1719,41 +1837,56 @@ impl SimonSaysSeeq {
         }
     }
 
-    /// Brightness of one step light, used by both the full-row redraw and the playhead updates
-    /// so they always agree. `dimmed` rows keep the same picture at about a quarter brightness.
-    fn step_level(dimmed: bool, has_beat: bool, is_current_step: bool) -> u8 {
-        // A tuple lets `match` look at all three conditions at once
-        match (dimmed, has_beat, is_current_step) {
+    /// Brightness of one step light from its grid value (0 off, 1 normal, 2-4 ratchet styles 1-3).
+    /// `dimmed` rows keep the same picture at about a quarter brightness.
+    fn step_level(dimmed: bool, value: u8, is_current_step: bool) -> u8 {
+        // A tuple lets `match` look at all three things at once; `_` matches anything
+        match (dimmed, value, is_current_step) {
             // Empty step without the playhead is always off
-            (_, false, false) => LED_OFF,
+            (_, 0, false) => LED_OFF,
             // Normal row: empty step with the playhead
-            (false, false, true) => LED_DIM,
-            // Normal row: beat without the playhead
-            (false, true, false) => LED_BRIGHT,
-            // Normal row: beat with the playhead
-            (false, true, true) => LED_MAX,
+            (false, 0, true) => LED_DIM,
+            // Normal row: any beat with the playhead on it, the brightest light
+            (false, _, true) => LED_TURBO,
+            // Normal row: normal beat
+            (false, 1, false) => LED_BRIGHT,
+            // Normal row: ratchet style 1
+            (false, 2, false) => LED_RATCHET_1,
+            // Normal row: ratchet style 2
+            (false, 3, false) => LED_RATCHET_2,
+            // Normal row: ratchet style 3 (or any higher value)
+            (false, _, false) => LED_RATCHET_3,
             // Dimmed row: empty step with the playhead
-            (true, false, true) => 1,
-            // Dimmed row: beat without the playhead
-            (true, true, false) => 2,
+            (true, 0, true) => 1,
+            // Dimmed row: normal beat
+            (true, 1, false) => 2,
+            // Dimmed row: any ratchet, a touch brighter
+            (true, _, false) => 3,
             // Dimmed row: beat with the playhead
-            (true, true, true) => 4,
+            (true, _, true) => 4,
         }
     }
 
     /// Brightness of the light for `step` on `row`, taking temporary steps and dimmed rows into
     /// account. Used everywhere a step light is drawn, so all drawing agrees.
     fn step_brightness(&self, step: usize, row: usize, is_current_step: bool) -> u8 {
-        // Dimmed while a last-step button with another rate is held
-        let dimmed = self.row_dimmed(row);
+        // A Jump Loop start waiting for its end step: full brightness so you can see it
+        if self.jump_pending_start == Some((step, row)) {
+            // Brightest level
+            return LED_TURBO;
+        }
+        // While a Jump Loop button is held, steps outside a row's segments are dimmed (rows without one stay normal)
+        let outside_jump_loop = self.jump_highlight && self.sequencer.jump_loop_contains(row, step) == Some(false);
+        // Dimmed while a last-step button with another rate is held, or outside the Jump Loop
+        let dimmed = self.row_dimmed(row) || outside_jump_loop;
         // Temporary steps fade: 6 with two passes left, 3 with one (a normal beat is 10)
         let fading = |passes_left: u8| if passes_left >= 2 { LED_DIM } else { 3 };
         // `match` on the temporary state of this step (None = just the pattern)
         match self.sequencer.temporary_step(step, row) {
             // No temporary change: the normal rules
-            None => Self::step_level(dimmed, self.sequencer.get_grid_value(step, row) > 0, is_current_step),
+            None => Self::step_level(dimmed, self.sequencer.get_grid_value(step, row), is_current_step),
             // An added step being played: as bright as a playing beat (dimmed rows: 4)
-            Some(TemporaryStep::Added { .. }) if is_current_step => if dimmed { 4 } else { LED_MAX },
+            Some(TemporaryStep::Added { .. }) if is_current_step => if dimmed { 4 } else { LED_TURBO },
             // An added step waiting: its fading countdown (dimmed rows: 1)
             Some(TemporaryStep::Added { passes_left }) => if dimmed { 1 } else { fading(passes_left) },
             // A muted step under the playhead: like an empty step with the playhead

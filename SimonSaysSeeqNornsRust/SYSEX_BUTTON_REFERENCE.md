@@ -34,15 +34,19 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 0 | Undo | `ARM_UNDO` | Undo last action |
 | 1 | Redo | `ARM_REDO` | Redo last undone action |
 | 2 | Temporary step | | Hold + press a step: an empty step plays for the next 2 passes of its row, a lit step is muted for 2 passes; press again to cancel. Not saved, not undoable, cleared on stop |
+| 3 | Preset Grid | `ARM_PRESET_GRID` | Apply preset pattern to row (was column 10, then 12) |
 | 4 | Euclidean Events | `ARM_EUCLIDEAN_EVENTS` | Set number of events in euclidean pattern |
 | 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |
-| 7 | Ratchet | `ARM_RATCHET` | Set ratchet count (note repeats) |
+| 7 | Ratchet | `ARM_RATCHET` | Hold + press a step: off or normal -> style 1 (2 hits) -> style 2 (3 hits) -> style 3 (4 hits) -> normal step. Saved and undoable |
 | 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed) and make the row straight |
 | 9 | Set Max Step, 16th triplets | | Set row max_step and make the row 16th triplets (4 clocks per step) |
 | 10 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step) |
 | 11 | Set Max Step, dotted 16ths | | Set row max_step and make the row dotted 16ths (9 clocks per step) |
-| 12 | Preset Grid | `ARM_PRESET_GRID` | Apply preset pattern to row (was column 10) |
+| 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards) |
+| 13 | Jump Loop 2X | | Same, segment played twice |
+| 14 | Jump Loop 3X | | Same, segment played three times |
+| 15 | Jump Loop Reset | | Hold + press any step on a row: clear that row's Jump Loop |
 
 ## Usage in Test Scripts
 

@@ -72,6 +72,41 @@ fn default_clocks_per_step() -> u8 {
     STRAIGHT_CLOCKS_PER_STEP
 }
 
+/// Most segments one row's Jump Loop can have
+pub const MAX_JUMP_SEGMENTS: usize = 8;
+
+/// One segment of a Jump Loop: play from `start` to `end` (backwards if end < start), `repeats` times.
+// `Serialize, Deserialize` let it be saved in the pattern file with the row
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct JumpSegment {
+    /// First step played (0-31)
+    pub start: usize,
+    /// Last step played (0-31); before `start` means the segment plays backwards
+    pub end: usize,
+    /// How many times the segment plays before the next one (1-3 from the grid)
+    pub repeats: u8,
+}
+
+impl JumpSegment {
+    /// True if `step` is one of the steps this segment plays
+    pub fn contains(&self, step: usize) -> bool {
+        // `min`/`max` give the lower and upper end whichever way round the segment goes
+        step >= self.start.min(self.end) && step <= self.start.max(self.end)
+    }
+
+    /// The step after `step` within this segment: one forwards, or one backwards for a reversed segment
+    fn next(&self, step: usize) -> usize {
+        // Forwards segment (or a single step)
+        if self.end >= self.start {
+            // One step on
+            step + 1
+        } else {
+            // One step back; `saturating_sub` can't go below 0
+            step.saturating_sub(1)
+        }
+    }
+}
+
 /// How many passes of its row a temporary step lasts (grid one, row 7, column 2 + step)
 pub const TEMPORARY_STEP_PASSES: u8 = 2;
 
@@ -117,6 +152,30 @@ pub struct PendingNoteOff {
     pub target_tick: u64,
 }
 
+/// An extra hit of a ratcheted step, scheduled for a later tick within the step
+#[derive(Debug, Clone)]
+pub struct PendingRatchetHit {
+    /// MIDI note (the row's gate note)
+    pub note: u8,
+    /// MIDI channel
+    pub channel: u8,
+    /// The step it belongs to (for the MIDI event)
+    pub step: usize,
+    /// Clock tick at which to play it
+    pub target_tick: u64,
+}
+
+/// Grid values: 0 = off, 1 = normal step, 2-4 = ratchet styles 1-3 (2, 3 or 4 hits in the step)
+pub const RATCHET_STYLE_1: u8 = 2;
+// Ratchet style 3, the highest grid value
+pub const RATCHET_STYLE_3: u8 = 4;
+
+/// Hits a step plays for its grid value: 1 for a normal step, 2-4 for ratchet styles 1-3
+fn hits_for_grid_value(value: u8) -> u64 {
+    // `clamp` keeps it between 1 and 4 whatever is in the pattern file
+    value.clamp(1, RATCHET_STYLE_3) as u64
+}
+
 /// Events that the sequencer can send to the main application
 #[derive(Debug, Clone)]
 pub enum SequencerEvent {
@@ -159,9 +218,66 @@ pub struct SequencerARowStates {
     /// Rate change waiting until the old and new rates line up. Not saved.
     #[serde(skip)]
     pub pending_clocks_per_step: Option<u8>,
+    /// Jump Loop segments, played in order and repeated; empty = normal sequential playing.
+    /// Saved with the pattern; `serde(default)` lets older pattern files load with none.
+    #[serde(default)]
+    pub jump_loop: Vec<JumpSegment>,
+    /// Which segment of the Jump Loop is playing. Not saved.
+    #[serde(skip)]
+    pub jump_segment: usize,
+    /// How many times the current segment has finished so far. Not saved.
+    #[serde(skip)]
+    pub jump_repeat: u8,
+    /// Set when a Jump Loop is cleared: on its next step the row lines up with where it would be
+    /// had it played normally all along. Not saved.
+    #[serde(skip)]
+    pub resync_pending: bool,
 }
 
 impl SequencerARowStates {
+    /// Work out the next step of a row that has a Jump Loop (call only when `jump_loop` is not
+    /// empty), updating which segment and repeat it is on.
+    fn next_jump_step(&mut self) -> usize {
+        // Number of segments
+        let count = self.jump_loop.len();
+        // After an undo the list may be shorter: start again from the first segment
+        if self.jump_segment >= count {
+            // First segment
+            self.jump_segment = 0;
+            // No repeats done
+            self.jump_repeat = 0;
+        }
+        // The segment playing now (`Copy`, so this is a copy, not a borrow)
+        let segment = self.jump_loop[self.jump_segment];
+        // The step that just played
+        let current = self.current_row_step;
+        // Not inside the segment (the loop was just made, or changed): jump to its start
+        if !segment.contains(current) {
+            // Count repeats from here
+            self.jump_repeat = 0;
+            // Go to the segment's first step
+            return segment.start;
+        }
+        // Inside the segment and not at its end: carry on through it
+        if current != segment.end {
+            // Next step, forwards or backwards
+            return segment.next(current);
+        }
+        // At the segment's end: one more repeat done
+        self.jump_repeat += 1;
+        // More repeats to go: back to the segment's start
+        if self.jump_repeat < segment.repeats {
+            // Same segment again
+            return segment.start;
+        }
+        // All repeats done: on to the next segment (back to the first after the last)
+        self.jump_repeat = 0;
+        // `%` wraps the index around
+        self.jump_segment = (self.jump_segment + 1) % count;
+        // Start of the next segment
+        self.jump_loop[self.jump_segment].start
+    }
+
     /// The rate the row plays at, or will once a waiting change takes effect
     pub fn target_clocks_per_step(&self) -> u8 {
         // `unwrap_or` takes the pending rate if there is one (Some), else the current rate
@@ -202,6 +318,14 @@ impl Default for SequencerARowStates {
             ratchet_count: 1,
             clocks_per_step: STRAIGHT_CLOCKS_PER_STEP,
             pending_clocks_per_step: None,
+            // No Jump Loop: normal sequential playing
+            jump_loop: Vec::new(),
+            // Start at the first segment
+            jump_segment: 0,
+            // No repeats finished yet
+            jump_repeat: 0,
+            // Nothing to line up
+            resync_pending: false,
         }
     }
 }
@@ -366,6 +490,8 @@ pub struct Sequencer {
     test_mode: bool,
     /// Pending note-off events scheduled by tick
     pending_note_offs: Arc<Mutex<Vec<PendingNoteOff>>>,
+    /// Extra hits of ratcheted steps, waiting for their tick
+    pending_ratchet_hits: Arc<Mutex<Vec<PendingRatchetHit>>>,
 }
 
 impl Sequencer {
@@ -386,6 +512,8 @@ impl Sequencer {
             current_pattern: 0,
             test_mode: true,
             pending_note_offs: Arc::new(Mutex::new(Vec::new())),
+            // No ratchet hits waiting
+            pending_ratchet_hits: Arc::new(Mutex::new(Vec::new())),
         };
         sequencer.push_undo_snapshot("Initial state".to_string());
         sequencer
@@ -402,6 +530,8 @@ impl Sequencer {
             current_pattern: 0,
             test_mode,
             pending_note_offs: Arc::new(Mutex::new(Vec::new())),
+            // No ratchet hits waiting
+            pending_ratchet_hits: Arc::new(Mutex::new(Vec::new())),
         };
 
         // In test mode, load test_pattern_1.json
@@ -442,6 +572,11 @@ impl Sequencer {
             state.reset_tick_counter = true;
             // A fresh start has no temporary steps
             state.temporary_steps.clear();
+            // Nor ratchet hits left over from before (the tick counter restarts at 0)
+            if let Ok(mut pending) = self.pending_ratchet_hits.lock() {
+                // Drop them all
+                pending.clear();
+            }
 
 
             // Reset to beginning
@@ -469,6 +604,11 @@ impl Sequencer {
             state.is_running = false;
             // Stopping clears all temporary steps
             state.temporary_steps.clear();
+            // And any ratchet hits still waiting
+            if let Ok(mut pending) = self.pending_ratchet_hits.lock() {
+                // Drop them all
+                pending.clear();
+            }
             // Reset to beginning
             state.sequencer_a_current_master_step = 0;
             for seq_a_row_state in &mut state.sequencer_a_row_states {
@@ -748,6 +888,28 @@ impl Sequencer {
                 continue;
             }
             seq_a_row_state.previous_row_step = seq_a_row_state.current_row_step;
+            // A sequence row with a Jump Loop follows its segments instead of stepping through 0-31
+            if row_idx <= 6 && !seq_a_row_state.jump_loop.is_empty() {
+                // Next step from the segments (also moves to the next segment/repeat)
+                seq_a_row_state.current_row_step = seq_a_row_state.next_jump_step();
+                // Done with this row
+                continue;
+            }
+            // Jump Loop just cleared: line up with where the row would be had it played normally
+            if seq_a_row_state.resync_pending {
+                // Only once
+                seq_a_row_state.resync_pending = false;
+                // This row's clocks per step (6 straight, 4, 8 or 9)
+                let clocks = supported_rate(seq_a_row_state.clocks_per_step) as u64;
+                // Steps in the row's loop; `saturating_sub` avoids underflow
+                let row_length = seq_a_row_state.max_step.saturating_sub(seq_a_row_state.first_step) + 1;
+                // The row plays its n-th step at tick n * clocks; the next one is number current_tick / clocks + 1
+                let next_step_number = (current_tick / clocks) as usize + 1;
+                // Where a normally playing row would be on that step
+                seq_a_row_state.current_row_step = seq_a_row_state.first_step + next_step_number % row_length;
+                // Done with this row
+                continue;
+            }
             seq_a_row_state.current_row_step += 1;
             // Wrap step counter if it exceeds the max_step
             // max_step is the maximum valid step index (e.g., 31 for 32 steps)
@@ -759,8 +921,15 @@ impl Sequencer {
         // Temporary steps outside their row's loop (e.g. beyond a shortened last step) would never
         // be passed, so remove them; copy each row's (first, last) step out first to satisfy the borrow checker
         let windows: Vec<(usize, usize)> = state.sequencer_a_row_states.iter().map(|r| (r.first_step, r.max_step)).collect();
-        // Keep a temporary step only if its row exists and the step is inside that row's loop
+        // Each row's Jump Loop segments too (a Jump Loop can play steps beyond the last step)
+        let jump_loops: Vec<Vec<JumpSegment>> = state.sequencer_a_row_states.iter().map(|r| r.jump_loop.clone()).collect();
+        // Keep a temporary step only if the row can still reach it
         state.temporary_steps.retain(|&(step, row), _| {
+            // With a Jump Loop: reachable if any segment contains it (`map_or` gives false for a missing row)
+            if jump_loops.get(row).map_or(false, |segments| !segments.is_empty()) {
+                // `iter().any` is true if at least one segment contains the step
+                return jump_loops[row].iter().any(|segment| segment.contains(step));
+            }
             // `matches!` with a guard: Some((first, last)) and the step between them
             matches!(windows.get(row), Some(&(first, last)) if step >= first && step <= last)
         });
@@ -860,6 +1029,28 @@ impl Sequencer {
                         };
                         if let Ok(mut pending) = self.pending_note_offs.lock() {
                             pending.push(note_off);
+                        }
+
+                        // Ratchet (grid value 2-4): 2, 3 or 4 hits spread over the step's clocks
+                        let hits = hits_for_grid_value(grid_value);
+                        // This row's clocks per step (6 straight, 4, 8 or 9)
+                        let clocks = supported_rate(seq_a_row_state.clocks_per_step) as u64;
+                        // Hit 0 was just played; schedule hits 1.. at evenly spread ticks (rounded down)
+                        for hit in 1..hits {
+                            // e.g. 3 hits in 6 clocks: ticks 2 and 4 after the step starts
+                            let offset = hit * clocks / hits;
+                            // Each hit is its own one-tick gate
+                            let ratchet_hit = PendingRatchetHit {
+                                note: seq_a_row_state.midi_note,
+                                channel: seq_a_row_state.midi_channel,
+                                step: row_step,
+                                target_tick: current_tick + offset,
+                            };
+                            // `if let Ok(..)` skips quietly if the lock is poisoned
+                            if let Ok(mut pending) = self.pending_ratchet_hits.lock() {
+                                // Queue it
+                                pending.push(ratchet_hit);
+                            }
                         }
                     }
                 }
@@ -995,6 +1186,10 @@ impl Sequencer {
         let current_rates: Vec<(u8, Option<u8>)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.clocks_per_step, rs.pending_clocks_per_step))
             .collect();
+        // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
+        let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending))
+            .collect();
         drop(current_state);
 
         redo_stack.push_back(current_snapshot);
@@ -1014,6 +1209,15 @@ impl Sequencer {
                 if let Some(&(clocks, pending)) = current_rates.get(i) {
                     seq_a_row_state.clocks_per_step = clocks;
                     seq_a_row_state.pending_clocks_per_step = pending;
+                }
+                // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
+                if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
+                    // Segment being played
+                    seq_a_row_state.jump_segment = segment;
+                    // Repeats done
+                    seq_a_row_state.jump_repeat = repeat;
+                    // Waiting line-up after a clear
+                    seq_a_row_state.resync_pending = resync;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -1059,6 +1263,10 @@ impl Sequencer {
         let current_rates: Vec<(u8, Option<u8>)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.clocks_per_step, rs.pending_clocks_per_step))
             .collect();
+        // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
+        let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending))
+            .collect();
         drop(current_state);
 
         undo_stack.push_back(current_snapshot);
@@ -1078,6 +1286,15 @@ impl Sequencer {
                 if let Some(&(clocks, pending)) = current_rates.get(i) {
                     seq_a_row_state.clocks_per_step = clocks;
                     seq_a_row_state.pending_clocks_per_step = pending;
+                }
+                // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
+                if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
+                    // Segment being played
+                    seq_a_row_state.jump_segment = segment;
+                    // Repeats done
+                    seq_a_row_state.jump_repeat = repeat;
+                    // Waiting line-up after a clear
+                    seq_a_row_state.resync_pending = resync;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -1374,7 +1591,74 @@ impl Sequencer {
 
     /// Process pending note-offs on every tick (public interface)
     pub fn process_pending_note_offs_on_tick(&self, sender: &Sender<SequencerEvent>, current_tick: u64) -> Result<()> {
-        self.process_pending_note_offs(current_tick, sender)
+        // Gates that end on this tick go off first...
+        self.process_pending_note_offs(current_tick, sender)?;
+        // ...then ratchet hits due on this tick play (so a hit right after a gate retriggers it)
+        self.process_pending_ratchet_hits(current_tick, sender)
+    }
+
+    /// Play the ratchet hits due on this tick, each as a one-tick gate
+    fn process_pending_ratchet_hits(&self, current_tick: u64, sender: &Sender<SequencerEvent>) -> Result<()> {
+        // Take the due hits out of the queue; `unwrap` panics only if another thread panicked holding the lock
+        let due: Vec<PendingRatchetHit> = {
+            // Lock the queue for this block only
+            let mut pending = self.pending_ratchet_hits.lock().unwrap();
+            // `partition` splits into (due, later) by the closure
+            let (due, later): (Vec<_>, Vec<_>) = pending.drain(..).partition(|hit| hit.target_tick <= current_tick);
+            // Put the later ones back
+            *pending = later;
+            // The block's value: the due hits
+            due
+        };
+        // Play each due hit
+        for hit in due {
+            // Note on, like a normal step
+            let midi_event = MidiEvent {
+                note: hit.note,
+                velocity: 100,
+                channel: hit.channel,
+                note_on: true,
+                step: hit.step,
+                sequencer_source: 'A',
+            };
+            // `try_send` doesn't block; log if the channel is full
+            if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                // Shouldn't happen: the channel is drained every main-loop pass
+                warn!("Failed to send ratchet note ON event: {}", e);
+            }
+            // Its note off on the next tick
+            if let Ok(mut pending) = self.pending_note_offs.lock() {
+                // One-tick gate, as for normal steps
+                pending.push(PendingNoteOff { note: hit.note, channel: hit.channel, row: 0, target_tick: current_tick + 1 });
+            }
+        }
+        // Success
+        Ok(())
+    }
+
+    /// Grid one row 7 column 7 (Ratchet) + step: off or normal -> style 1 -> style 2 -> style 3
+    /// -> normal. Undoable and saved (it is the step's grid value). Returns the new value.
+    pub fn cycle_ratchet(&self, step: usize, row: usize) -> u8 {
+        // Only sequence rows 0-6 and steps 0-31
+        if row > 6 || step > 31 {
+            // Nothing changed
+            return 0;
+        }
+        // The step's value now
+        let current = self.get_grid_value(step, row);
+        // Off (0) or normal (1) -> style 1; styles 1-2 -> next style; style 3 -> normal again
+        let next = match current {
+            // Off or normal: first ratchet style
+            0 | 1 => RATCHET_STYLE_1,
+            // Style 3 (or anything higher): ratchet removed, the step stays on
+            v if v >= RATCHET_STYLE_3 => 1,
+            // Style 1 or 2: one more hit
+            v => v + 1,
+        };
+        // set_grid_value saves an undo snapshot first
+        self.set_grid_value(step, row, next);
+        // Tell the caller the new value
+        next
     }
 
     /// Process clock division resets on every tick
@@ -1724,7 +2008,8 @@ impl Sequencer {
                 // `%` is remainder: apply only on a tick where the old and new rates line up
                 if current_tick % rate_change_boundary(old_clocks, new_clocks) == 0 {
                     // Coming back to straight from any other rate: the row drifted against the straight rows
-                    if new_clocks == STRAIGHT_CLOCKS_PER_STEP && old_clocks != STRAIGHT_CLOCKS_PER_STEP {
+                    // (Not for a row with a Jump Loop: its segments decide where it is)
+                    if new_clocks == STRAIGHT_CLOCKS_PER_STEP && old_clocks != STRAIGHT_CLOCKS_PER_STEP && row.jump_loop.is_empty() {
                         // Number of steps in the row's loop; `saturating_sub` stops at 0 instead of underflowing
                         let row_length = row.max_step.saturating_sub(row.first_step) + 1;
                         // Straight steps since the clock started (one every 6 clocks)
@@ -1825,6 +2110,76 @@ impl Sequencer {
     pub fn temporary_step(&self, step: usize, row: usize) -> Option<TemporaryStep> {
         // Lock, look up, and `copied()` turns Option<&T> into Option<T>
         self.state.lock().unwrap().temporary_steps.get(&(step, row)).copied()
+    }
+
+    /// Grid one row 7 column 12/13/14 (1X/2X/3X) + two steps: add a segment to a row's Jump Loop.
+    /// Undoable and saved. Returns false (and changes nothing) for a bad row/step or a full list.
+    pub fn add_jump_segment(&self, row: usize, start: usize, end: usize, repeats: u8) -> bool {
+        // Only sequence rows 0-6, steps 0-31 and 1+ repeats
+        if row > 6 || start > 31 || end > 31 || repeats == 0 {
+            // Nothing added
+            return false;
+        }
+        // A short block so the lock is released before push_undo_snapshot locks again
+        {
+            // Lock to check the list size
+            let state = self.state.lock().unwrap();
+            // Full: refuse
+            if state.sequencer_a_row_states[row].jump_loop.len() >= MAX_JUMP_SEGMENTS {
+                // Nothing added
+                return false;
+            }
+        }
+        // Save the current state so undo can take this back
+        self.push_undo_snapshot(format!("Jump loop R{}: add steps {}-{} x{}", row, start + 1, end + 1, repeats));
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Append the segment; it plays after the ones already there
+        state.sequencer_a_row_states[row].jump_loop.push(JumpSegment { start, end, repeats });
+        // Added
+        true
+    }
+
+    /// Grid one row 7 column 15 (Reset) + any step: clear a row's Jump Loop, back to normal
+    /// playing, lined up with where the row would be had it played normally. Undoable.
+    /// Returns false if the row had no Jump Loop.
+    pub fn clear_jump_loop(&self, row: usize) -> bool {
+        // Only sequence rows, and only if there is something to clear
+        if row > 6 || self.state.lock().unwrap().sequencer_a_row_states[row].jump_loop.is_empty() {
+            // Nothing to do
+            return false;
+        }
+        // Save the current state so undo can bring the Jump Loop back
+        self.push_undo_snapshot(format!("Jump loop R{}: reset", row));
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Borrow the row mutably
+        let row_state = &mut state.sequencer_a_row_states[row];
+        // No segments: normal playing
+        row_state.jump_loop.clear();
+        // Back to the first segment for next time
+        row_state.jump_segment = 0;
+        // No repeats done
+        row_state.jump_repeat = 0;
+        // Line up on the next step (see advance_rows)
+        row_state.resync_pending = true;
+        // Cleared
+        true
+    }
+
+    /// For drawing: None if the row has no Jump Loop, otherwise whether `step` is in one of its segments
+    pub fn jump_loop_contains(&self, row: usize, step: usize) -> Option<bool> {
+        // Lock just long enough to read
+        let state = self.state.lock().unwrap();
+        // `?` returns None for a bad row index
+        let row_state = state.sequencer_a_row_states.get(row)?;
+        // No Jump Loop on this row
+        if row_state.jump_loop.is_empty() {
+            // Nothing to report
+            return None;
+        }
+        // True if any segment plays this step
+        Some(row_state.jump_loop.iter().any(|segment| segment.contains(step)))
     }
 
     /// Every temporary step as ((step, row), state), for redrawing and blinking them on the grid
@@ -2578,6 +2933,229 @@ mod timing_tests {
         });
         // Removed after the first step advance
         assert_eq!(sequencer.temporary_step(10, 4), None);
+    }
+
+    /// Steps row `row` played, in order (from its playhead updates)
+    fn played_steps(trace: &[String], row: usize) -> Vec<usize> {
+        // Keep just the step from each (tick, step) pair
+        row_step_ticks(trace, row).into_iter().map(|(_, step)| step).collect()
+    }
+
+    #[test]
+    fn a_jump_loop_plays_its_segments_with_repeats_and_then_starts_again() {
+        // In-memory sequencer; row 0 has all 32 steps
+        let mut sequencer = test_sequencer();
+        // Segment A: steps 4-7 once; segment B: steps 12-13 three times
+        assert!(sequencer.add_jump_segment(0, 4, 7, 1));
+        assert!(sequencer.add_jump_segment(0, 12, 13, 3));
+        // 16 straight steps
+        let trace = run_main_loop(&mut sequencer, 6 * 16, |_, _| {});
+        // Step 0 plays first (the playhead was there), then A, B B B, A, B...
+        assert_eq!(played_steps(&trace, 0), vec![0, 4, 5, 6, 7, 12, 13, 12, 13, 12, 13, 4, 5, 6, 7, 12]);
+    }
+
+    #[test]
+    fn a_segment_entered_end_first_plays_backwards() {
+        // In-memory sequencer
+        let mut sequencer = test_sequencer();
+        // Steps 7 down to 4, twice; then step 10 once
+        assert!(sequencer.add_jump_segment(0, 7, 4, 2));
+        assert!(sequencer.add_jump_segment(0, 10, 10, 1));
+        // 12 straight steps
+        let trace = run_main_loop(&mut sequencer, 6 * 12, |_, _| {});
+        // 0 first, then 7 6 5 4 twice, then 10, then back to 7
+        assert_eq!(played_steps(&trace, 0), vec![0, 7, 6, 5, 4, 7, 6, 5, 4, 10, 7, 6]);
+    }
+
+    #[test]
+    fn jump_loop_notes_follow_the_pattern_at_the_played_steps() {
+        // Row 0's pattern is on at steps 0, 3, 6, 9, 12 ... (step % 3 == 0)
+        let mut sequencer = test_sequencer();
+        // Loop steps 5-6 forever (repeats don't matter with one segment)
+        assert!(sequencer.add_jump_segment(0, 5, 6, 1));
+        // 7 straight steps: plays 0, 5, 6, 5, 6, 5, 6
+        let trace = run_main_loop(&mut sequencer, 6 * 7, |_, _| {});
+        // Notes only on steps 0 and 6, i.e. at ticks 0, 12, 24, 36
+        assert_eq!(note_on_ticks(&trace, 60), vec![0, 12, 24, 36]);
+    }
+
+    #[test]
+    fn reset_goes_back_to_normal_playing_in_line_with_the_other_rows() {
+        // In-memory sequencer
+        let mut sequencer = test_sequencer();
+        // A Jump Loop on row 0 from the start
+        assert!(sequencer.add_jump_segment(0, 4, 7, 2));
+        // Reset it at tick 61 (between steps)
+        let trace = run_main_loop(&mut sequencer, 6 * 30, |seq, tick| {
+            // Only once
+            if tick == 61 {
+                // Back to normal
+                assert!(seq.clear_jump_loop(0));
+            }
+        });
+        // From tick 72 on, row 0 plays exactly what a row that never had a Jump Loop plays
+        let expected = straight_model(6 * 30);
+        // Step events from tick 72
+        let after = |trace: &[String]| -> Vec<(u64, usize)> {
+            row_step_ticks(trace, 0).into_iter().filter(|&(t, _)| t >= 72).collect()
+        };
+        // Same ticks, same steps
+        assert_eq!(after(&trace), after(&expected));
+        // A second reset has nothing to clear
+        assert!(!sequencer.clear_jump_loop(0));
+    }
+
+    #[test]
+    fn jump_loops_are_saved_undoable_and_limited_to_eight_segments() {
+        // In-memory sequencer
+        let sequencer = test_sequencer();
+        // One segment on row 2
+        assert!(sequencer.add_jump_segment(2, 0, 3, 2));
+        // It is part of the saved row settings
+        let json = serde_json::to_value(&sequencer.get_row_states(2).unwrap()).unwrap();
+        // `json["jump_loop"]` indexes into the JSON object
+        assert_eq!(json["jump_loop"][0]["repeats"], 2);
+        // Undo takes it back
+        sequencer.undo().unwrap();
+        // No Jump Loop any more
+        assert_eq!(sequencer.jump_loop_contains(2, 1), None);
+        // Redo brings it back
+        sequencer.redo().unwrap();
+        // Step 1 is in the segment again
+        assert_eq!(sequencer.jump_loop_contains(2, 1), Some(true));
+        // Fill up to 8 segments
+        for _ in 0..7 {
+            // Each one is accepted
+            assert!(sequencer.add_jump_segment(2, 4, 5, 1));
+        }
+        // The 9th is refused
+        assert!(!sequencer.add_jump_segment(2, 4, 5, 1));
+        // Older pattern files have no jump_loop field: they load with none
+        let mut json = serde_json::to_value(&SequencerARowStates::default()).unwrap();
+        // Remove the field as an old file would lack it
+        json.as_object_mut().unwrap().remove("jump_loop");
+        // Loads fine
+        let loaded: SequencerARowStates = serde_json::from_value(json).unwrap();
+        // With an empty Jump Loop
+        assert!(loaded.jump_loop.is_empty());
+    }
+
+    #[test]
+    fn a_temporary_step_inside_a_jump_segment_beyond_the_last_step_is_kept() {
+        // Row 4 has 4 steps (0-3); its Jump Loop plays steps 10-12
+        let mut sequencer = test_sequencer();
+        // Segment beyond the row's last step
+        assert!(sequencer.add_jump_segment(4, 10, 12, 1));
+        // Temporary step on 12, which is empty in the test pattern ((12 + 4) % 3 is not 0)
+        let trace = run_main_loop(&mut sequencer, 6 * 6, |seq, tick| {
+            // Before the first tick
+            if tick == 0 {
+                // Empty step inside the segment
+                assert_eq!(seq.toggle_temporary_step(12, 4), Some(TemporaryStep::Added { passes_left: TEMPORARY_STEP_PASSES }));
+            }
+        });
+        // Row 4 plays 0, 10, 11, 12, 10, 11: step 12 is reached at tick 18 and the temporary step plays
+        assert!(note_on_ticks(&trace, 64).contains(&18));
+    }
+
+    /// Ticks at which `note` was switched off
+    fn note_off_ticks(trace: &[String], note: u8) -> Vec<u64> {
+        // The text each matching line ends with
+        let suffix = format!(" off {}", note);
+        // Keep matching lines and parse the tick from "t<tick> ..."
+        trace.iter()
+            .filter(|line| line.ends_with(&suffix))
+            .map(|line| line[1..line.find(' ').unwrap()].parse().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn the_ratchet_button_cycles_style_1_2_3_then_back_to_a_normal_step() {
+        // In-memory sequencer; row 1's step 1 is empty in the test pattern ((1 + 1) % 3 != 0)
+        let sequencer = test_sequencer();
+        // Empty -> style 1 (grid value 2)
+        assert_eq!(sequencer.cycle_ratchet(1, 1), 2);
+        // -> style 2 (3)
+        assert_eq!(sequencer.cycle_ratchet(1, 1), 3);
+        // -> style 3 (4)
+        assert_eq!(sequencer.cycle_ratchet(1, 1), 4);
+        // -> ratchet removed, a normal step (1)
+        assert_eq!(sequencer.cycle_ratchet(1, 1), 1);
+        // -> style 1 again
+        assert_eq!(sequencer.cycle_ratchet(1, 1), 2);
+        // Undo goes back one press
+        sequencer.undo().unwrap();
+        // Back to the normal step
+        assert_eq!(sequencer.get_grid_value(1, 1), 1);
+    }
+
+    #[test]
+    fn ratchet_styles_play_2_3_or_4_one_tick_hits_spread_over_the_step() {
+        // Row 0 is straight (6 clocks per step); its step 0 is on in the test pattern
+        for (value, expected_on) in [(2u8, vec![0u64, 3]), (3, vec![0, 2, 4]), (4, vec![0, 1, 3, 4])] {
+            // Fresh sequencer for each style
+            let mut sequencer = test_sequencer();
+            // Make step 0 of row 0 this ratchet style; nothing else on the row
+            {
+                // Lock in a block so it is released before the run
+                let mut state = sequencer.state.lock().unwrap();
+                // Clear row 0
+                for step in 0..32 {
+                    // Off
+                    state.sequencer_a_grid[step][0] = 0;
+                }
+                // The ratcheted step
+                state.sequencer_a_grid[0][0] = value;
+            }
+            // One straight step
+            let trace = run_main_loop(&mut sequencer, 6, |_, _| {});
+            // Hits where expected
+            assert_eq!(note_on_ticks(&trace, 60), expected_on, "value {}", value);
+            // Each hit ends one tick later
+            let expected_off: Vec<u64> = expected_on.iter().map(|t| t + 1).collect();
+            // Offs where expected
+            assert_eq!(note_off_ticks(&trace, 60), expected_off, "value {}", value);
+        }
+    }
+
+    #[test]
+    fn ratchets_follow_the_rows_rate() {
+        // Row 0 at 16th triplets (4 clocks per step), ratchet style 1 (2 hits) on step 0 only
+        let mut sequencer = test_sequencer();
+        // Set up the row
+        {
+            // Lock in a block so it is released before the run
+            let mut state = sequencer.state.lock().unwrap();
+            // Clear row 0
+            for step in 0..32 {
+                // Off
+                state.sequencer_a_grid[step][0] = 0;
+            }
+            // Style 1
+            state.sequencer_a_grid[0][0] = RATCHET_STYLE_1;
+            // Triplet rate
+            state.sequencer_a_row_states[0].clocks_per_step = TRIPLET_CLOCKS_PER_STEP;
+        }
+        // One triplet step
+        let trace = run_main_loop(&mut sequencer, 4, |_, _| {});
+        // 2 hits in 4 clocks: ticks 0 and 2
+        assert_eq!(note_on_ticks(&trace, 60), vec![0, 2]);
+    }
+
+    #[test]
+    fn stopping_drops_waiting_ratchet_hits() {
+        // Ratchet style 3 on row 0 step 0
+        let mut sequencer = test_sequencer();
+        // Set the step
+        sequencer.state.lock().unwrap().sequencer_a_grid[0][0] = RATCHET_STYLE_3;
+        // Running, so stop() does its work
+        sequencer.start();
+        // Play tick 0 only: hits 1-3 are now waiting
+        run_main_loop(&mut sequencer, 1, |_, _| {});
+        // Stop
+        sequencer.stop();
+        // Nothing waiting any more
+        assert!(sequencer.pending_ratchet_hits.lock().unwrap().is_empty());
     }
 
     #[test]
