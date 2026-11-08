@@ -68,6 +68,7 @@ The controls used during a performance, existing and new. All other buttons keep
 | Preset pattern | grid one, row 7, column 3 (hold) + step | as before; moved from column 10 | in working tree |
 | Jump Loop 1X / 2X / 3X | grid one, row 7, columns 12 / 13 / 14 (hold) + start step + end step on one row | adds a segment to the row's Jump Loop, played 1, 2 or 3 times; segments play in the order entered, then repeat; end before start plays backwards; up to 8 segments; saved and undoable; while held, steps outside each row's segments are dimmed and a waiting start step is full brightness | in working tree |
 | Jump Loop Reset | grid one, row 7, column 15 (hold) + any step on a row | clears the row's Jump Loop; the row plays normally again, in line with where it would be had it never had one; undoable | in working tree |
+| Button press counts | (all control-row buttons, both grids) | every press is counted; on each clock stop (each jam) one line is added to `control_button_counts.jsonl` (next to `current_pattern.json`) with the date and that jam's presses, then counting starts again from zero | in working tree |
 | Hold for triplets | grid two, row 7, column 2 | every row plays triplets while held; not saved, not undoable | new |
 | Back to straight | grid two, row 7, double-tap column 2 | every row back to straight | new |
 | MIDI clock light | grid two, row 7, column 0 | flashes on each beat (first sixteenth, brightness 3) while MIDI clock is coming in; off when no clock has arrived for 250 ms; display only | in working tree |

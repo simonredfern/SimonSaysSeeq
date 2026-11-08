@@ -8,7 +8,7 @@ use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -492,6 +492,8 @@ pub struct Sequencer {
     pending_note_offs: Arc<Mutex<Vec<PendingNoteOff>>>,
     /// Extra hits of ratcheted steps, waiting for their tick
     pending_ratchet_hits: Arc<Mutex<Vec<PendingRatchetHit>>>,
+    /// How many times the pattern has been saved this run; the main loop watches it to save the button counts too
+    pattern_saves: Arc<AtomicU64>,
 }
 
 impl Sequencer {
@@ -514,6 +516,8 @@ impl Sequencer {
             pending_note_offs: Arc::new(Mutex::new(Vec::new())),
             // No ratchet hits waiting
             pending_ratchet_hits: Arc::new(Mutex::new(Vec::new())),
+            // No saves yet
+            pattern_saves: Arc::new(AtomicU64::new(0)),
         };
         sequencer.push_undo_snapshot("Initial state".to_string());
         sequencer
@@ -532,6 +536,8 @@ impl Sequencer {
             pending_note_offs: Arc::new(Mutex::new(Vec::new())),
             // No ratchet hits waiting
             pending_ratchet_hits: Arc::new(Mutex::new(Vec::new())),
+            // No saves yet
+            pattern_saves: Arc::new(AtomicU64::new(0)),
         };
 
         // In test mode, load test_pattern_1.json
@@ -1376,6 +1382,8 @@ impl Sequencer {
         std::fs::write(&pattern_file, json_content)?;
 
         info!("Current pattern saved to: {:?}", pattern_file);
+        // One more save; `fetch_add` adds atomically (safe from any thread)
+        self.pattern_saves.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
 
@@ -1634,6 +1642,12 @@ impl Sequencer {
         }
         // Success
         Ok(())
+    }
+
+    /// How many times the pattern has been saved this run (goes up by one per save)
+    pub fn pattern_save_count(&self) -> u64 {
+        // Read the counter atomically
+        self.pattern_saves.load(Ordering::SeqCst)
     }
 
     /// Grid one row 7 column 7 (Ratchet) + step: off or normal -> style 1 -> style 2 -> style 3

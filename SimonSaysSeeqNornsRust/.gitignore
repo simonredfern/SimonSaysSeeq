@@ -48,3 +48,6 @@ debug_output/
 
 # CO2 data files - exclude logs but include CSV files
 co2_data/*.log
+
+# Control button press counts, one line per jam (local usage data)
+control_button_counts.jsonl

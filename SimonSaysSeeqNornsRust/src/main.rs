@@ -22,6 +22,8 @@ mod screen;
 mod config;
 mod co2;
 mod version;
+// Control button press counts per jam (control_button_counts.jsonl)
+mod button_stats;
 
 // LED brightness constants
 const LED_OFF: u8 = 0;      // Empty step, no playhead (LED off)
@@ -110,6 +112,48 @@ impl ArmAction {
             ArmAction::JumpLoopReset => 15,
 
         }
+    }
+
+    /// Name of the button for the counts file, e.g. "grid one col 08: last step, straight".
+    /// The column is zero-padded so the file lists buttons in column order.
+    fn stats_name(&self) -> String {
+        // A plain-words label per action
+        let label = match self {
+            // Column 0
+            ArmAction::Undo => "undo",
+            // Column 1
+            ArmAction::Redo => "redo",
+            // Column 2
+            ArmAction::TemporaryStep => "temporary step",
+            // Column 3
+            ArmAction::PresetGrid => "preset pattern",
+            // Column 4
+            ArmAction::EuclidianEvents => "Euclidean events",
+            // Column 5
+            ArmAction::EuclidianLength => "Euclidean length",
+            // Column 6
+            ArmAction::EuclidianRotation => "Euclidean rotation",
+            // Column 7
+            ArmAction::Ratchet => "ratchet",
+            // Column 8
+            ArmAction::SetMaxStepForRow => "last step, straight",
+            // Column 9
+            ArmAction::SetMaxStepTriplet => "last step, 16th triplets",
+            // Column 10
+            ArmAction::SetMaxStepEighthTriplet => "last step, 8th-note triplets",
+            // Column 11
+            ArmAction::SetMaxStepDotted => "last step, dotted 16ths",
+            // Column 12
+            ArmAction::JumpLoop1x => "Jump Loop 1X",
+            // Column 13
+            ArmAction::JumpLoop2x => "Jump Loop 2X",
+            // Column 14
+            ArmAction::JumpLoop3x => "Jump Loop 3X",
+            // Column 15
+            ArmAction::JumpLoopReset => "Jump Loop reset",
+        };
+        // `{:02}` pads the column number to two digits
+        format!("grid one col {:02}: {}", self.to_column(), label)
     }
 
     /// For the Jump Loop buttons 1X/2X/3X (columns 12-14): how many times the segment plays.
@@ -204,6 +248,10 @@ pub struct SimonSaysSeeq {
     temporary_blink_last: Instant,
     // Positions drawn as temporary last time, so lights are restored when one expires or is cleared
     temporary_drawn: Vec<(usize, usize)>,
+    // Control button presses in the current jam; one line per jam goes to control_button_counts.jsonl
+    button_stats: button_stats::ButtonStats,
+    // The pattern save count when the button counts were last written
+    button_stats_saved_at: u64,
     // While a Jump Loop button (columns 12-15) is held: steps outside each row's segments are dimmed
     jump_highlight: bool,
     // While 1X/2X/3X is held: the start step (step, row) waiting for its end step
@@ -271,6 +319,10 @@ impl SimonSaysSeeq {
             temporary_blink_last: Instant::now(),
             // Nothing drawn as temporary yet
             temporary_drawn: Vec::new(),
+            // No presses yet in the first jam
+            button_stats: button_stats::ButtonStats::default(),
+            // Nothing written yet this run
+            button_stats_saved_at: 0,
             // No Jump Loop button held at startup
             jump_highlight: false,
             // No segment half-entered
@@ -537,6 +589,8 @@ impl SimonSaysSeeq {
                 // Blink temporarily muted steps and restore lights of expired ones
                 #[cfg(feature = "hardware")]
                 self.update_temporary_steps();
+                // The pattern was saved since we last looked: save the button counts too
+                self.save_button_stats_if_pattern_saved();
 
 
             }
@@ -748,7 +802,21 @@ impl SimonSaysSeeq {
         if y == 7 {
             info!("ARM BUTTON CHECK: y=7 detected, grid_id={}, x={}, pressed={}", grid_id, x, pressed);
             let connected_grids = self.grid.get_connected_grids();
-            let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+            let (grid_one, grid_two_for_stats) = self.get_sorted_grid_ids(&connected_grids);
+            // Count control button presses on the real grids (not SysEx test scripts, which use "grid_one"/"grid_two")
+            if pressed {
+                // `as_deref()` turns Option<String> into Option<&str> for comparing
+                if grid_one.as_deref() == Some(grid_id) {
+                    // Grid one: named after its action, or "unused" for a column without one
+                    let name = ArmAction::from_column(x).map(|action| action.stats_name())
+                        .unwrap_or_else(|| format!("grid one col {:02}: unused", x));
+                    // One more press
+                    self.button_stats.record_press(&name);
+                } else if grid_two_for_stats.as_deref() == Some(grid_id) {
+                    // Grid two: named by column
+                    self.button_stats.record_press(&button_stats::grid_two_button_name(x));
+                }
+            }
             // Accept virtual grid IDs from SysEx button commands (when no physical grids connected)
             // or match against actual physical grid device IDs
             let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
@@ -1941,6 +2009,25 @@ impl SimonSaysSeeq {
         self.rate_highlight = highlight;
         // Redraw the rows, dimmed or normal
         self.refresh_sequence_rows()
+    }
+
+    /// Add a line for the jam to control_button_counts.jsonl whenever the pattern has been saved
+    /// since the last check (the pattern is saved when the clock stops, from any of the places that stop it).
+    fn save_button_stats_if_pattern_saved(&mut self) {
+        // The sequencer's save counter
+        let saves = self.sequencer.pattern_save_count();
+        // No new save since last time: nothing to do
+        if saves == self.button_stats_saved_at {
+            // Done
+            return;
+        }
+        // Remember this save so we add one line per pattern save
+        self.button_stats_saved_at = saves;
+        // Add the line and start counting the next jam; `if let Err(e)` runs only on failure
+        if let Err(e) = self.button_stats.append_jam(&button_stats::ButtonStats::default_path()) {
+            // Log at warn so it shows in the journal
+            warn!("Button counts: could not add the jam's line: {}", e);
+        }
     }
 
     /// Redraw all seven sequence rows (pattern and playhead) on both grids.
