@@ -78,6 +78,8 @@ pub fn grid_two_button_name(column: usize) -> String {
         0 => "MIDI re-detect (with 1) / clock light",
         // Second half of the re-detect pair
         1 => "MIDI re-detect (with 0)",
+        // Jump Loop sync setting
+        2 => "Jump Loop sync (off / 64 / 128)",
         // The three Crow search buttons
         4 | 5 | 6 => "Crow search (4+5+6)",
         // Crow output mutes 1-4

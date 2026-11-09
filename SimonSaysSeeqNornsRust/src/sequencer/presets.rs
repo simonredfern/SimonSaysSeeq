@@ -7,6 +7,9 @@
 //! from there. Most presets on grid two (steps 16-31) are two-bar patterns with a variation
 //! or fill in the second bar.
 //!
+//! A row playing 8th-note triplets (grid one row 7 column 9) gets presets from a separate
+//! triplet bank instead: 12 steps, one bar of 8th-note triplets.
+//!
 //! Patterns are written as text: `x` = step on, `.` = step off. A 16-character pattern is one
 //! bar of 16ths and is played twice to fill the 32 steps; a 32-character pattern is two bars.
 //! Bar positions: `1 e & a 2 e & a 3 e & a 4 e & a`, so beats are at characters 0, 4, 8 and 12.
@@ -407,6 +410,408 @@ const SYNTH: [&str; 31] = [
     "xxxx.xxxxxx.xxxx",
 ];
 
+/// Kick drum (row 0), triplet: four on the floor on the triplet grid first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const KICK_TRIPLET: [&str; 31] = [
+    // 1: four on the floor
+    "x..x..x..x..",
+    // 2: plus the last triplet of the bar
+    "x..x..x..x.x",
+    // 3: plus a push into beat 4
+    "x..x..x.xx..",
+    // 4: plus a push into beat 3
+    "x..x.xx..x..",
+    // 5: shuffle pickups into beats 2 and 4
+    "x.xx..x.xx..",
+    // 6: doubled beat 4
+    "x..x..x..xx.",
+    // 7: beats 1 and 3 with shuffled answers
+    "x..x.x..x.x.",
+    // 8: half time
+    "x.....x.....",
+    // 9: doubled beat 3
+    "x..x..xx.x..",
+    // 10: doubled beats 2 and 4
+    "x..xx.x..xx.",
+    // 11: full shuffle
+    "x.xx.xx.xx.x",
+    // 12: every second triplet (six across the bar)
+    "x.x.x.x.x.x.",
+    // 13: every fourth triplet (three across the bar)
+    "x...x...x...",
+    // 14: doubled downbeats
+    "xx.x..xx.x..",
+    // 15: roll into beat 2
+    "xxxx..x..x..",
+    // 16: roll at the end of the bar
+    "x..x..x.xxxx",
+    // 17: shuffle with a last triplet
+    "x.xx..x.xx.x",
+    // 18: doubled beat 2, roll at the end
+    "x..xx.x..xxx",
+    // 19: beat and middle triplet
+    "xx.xx.xx.xx.",
+    // 20: lopsided
+    "x.x..x.x..x.",
+    // 21: triple hits on beats 2 and 4
+    "x..xxx..xxx.",
+    // 22: triple hits on beats 1 and 2
+    "xxx..xxx..x.",
+    // 23: shuffle, displaced
+    "x.xx.xx.x.xx",
+    // 24: dense syncopation
+    "xx.xx.x.xxx.",
+    // 25: dense groups of three
+    "x.xxx.xxx.xx",
+    // 26: three of every four triplets
+    "xxx.xxx.xxx.",
+    // 27: off-triplets only
+    ".xx.xx.xx.xx",
+    // 28: nearly all triplets
+    "xxxx.xxx.xxx",
+    // 29: dense with two gaps
+    "xx.xxxxx.xxx",
+    // 30: four on the floor into a roll
+    "x..x..xxxxxx",
+    // 31: every triplet
+    "xxxxxxxxxxxx",
+];
+
+/// Open hi-hat (row 1), triplet: the last triplet of each beat (shuffle offbeat) first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const OPEN_HAT_TRIPLET: [&str; 31] = [
+    // 1: shuffle offbeat
+    "..x..x..x..x",
+    // 2: middle triplet of each beat
+    ".x..x..x..x.",
+    // 3: shuffle offbeat, busier end
+    "..x..x..x.xx",
+    // 4: both off-triplets on beats 1 and 3
+    ".xx..x.xx..x",
+    // 5: both off-triplets
+    ".xx.xx.xx.xx",
+    // 6: shuffle with a push
+    "..x..x.xx..x",
+    // 7: sparse
+    "..x...x..x..",
+    // 8: every second triplet, off the beat
+    ".x.x.x.x.x.x",
+    // 9: pushed pairs
+    "..xx.x..xx.x",
+    // 10: beat and shuffle
+    "x.x..x.xx..x",
+    // 11: shuffle with doubles
+    "..x.xx..x.xx",
+    // 12: middle triplets with doubles
+    ".x..xx.x..xx",
+    // 13: triple bursts
+    "..xxx...xxx.",
+    // 14: beats with answers
+    "x..x.xx..x.x",
+    // 15: busy off-beat
+    ".xxx.x.xxx.x",
+    // 16: shuffle into a roll
+    "..x..x..xxxx",
+    // 17: syncopated
+    ".x.xx.x.xx.x",
+    // 18: full shuffle
+    "x.xx.xx.xx.x",
+    // 19: dense off-grid
+    ".xx.x.xx.x.x",
+    // 20: pushes
+    "..x.xxx..x.x",
+    // 21: lopsided
+    "x.x.xx.x.xx.",
+    // 22: three of every four, late
+    ".xxx.xxx.xxx",
+    // 23: beat and middle, busier end
+    "xx.xx.xx.xxx",
+    // 24: dense
+    "x.xxx.xx.xxx",
+    // 25: very dense
+    ".xxxx.xx.xxx",
+    // 26: bursts
+    "..xxxxx..xxx",
+    // 27: dense with gaps
+    "xx.xxx.xxx.x",
+    // 28: nearly all, off the beat
+    ".xxxxx.xxxxx",
+    // 29: nearly all
+    "x.xxxxx.xxxx",
+    // 30: shuffle into a long roll
+    "..x..xxxxxxx",
+    // 31: every triplet
+    "xxxxxxxxxxxx",
+];
+
+/// Closed hi-hat (row 2), triplet: the shuffle (beat plus last triplet) first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const CLOSED_HAT_TRIPLET: [&str; 31] = [
+    // 1: shuffle
+    "x.xx.xx.xx.x",
+    // 2: every triplet
+    "xxxxxxxxxxxx",
+    // 3: on the beat
+    "x..x..x..x..",
+    // 4: off-triplets
+    ".xx.xx.xx.xx",
+    // 5: beat and middle triplet
+    "xx.xx.xx.xx.",
+    // 6: shuffle with a gap
+    "x.xx.x..xx.x",
+    // 7: last triplets only
+    "..x..x..x..x",
+    // 8: every second triplet
+    "x.x.x.x.x.x.",
+    // 9: every second triplet, off the beat
+    ".x.x.x.x.x.x",
+    // 10: busy pairs
+    "xxx.x.xxx.x.",
+    // 11: dense shuffle
+    "x.xxxx.xxxx.",
+    // 12: doubled beats 2 and 4
+    "x..xx.x..xx.",
+    // 13: syncopated
+    "xx.x.xxx.x.x",
+    // 14: lopsided
+    "x.x.xxx.x.xx",
+    // 15: busy, off the beat
+    ".xxxx.xxxx.x",
+    // 16: shuffle into a roll
+    "x.xx.xx.xxxx",
+    // 17: all, then thinning
+    "xxxxxx.x.x.x",
+    // 18: every fourth triplet
+    "x...x...x...",
+    // 19: pairs, off the beat
+    ".xx..xx..xx.",
+    // 20: pairs on the beat
+    "xx..xx..xx..",
+    // 21: dense groups
+    "x.xxx.xxx.xx",
+    // 22: three of every four
+    "xxx.xxx.xxx.",
+    // 23: three of every four, late
+    ".xxx.xxx.xxx",
+    // 24: very dense
+    "x.xxxx.xxxxx",
+    // 25: dense with two gaps
+    "xx.xxxxx.xxx",
+    // 26: dense, uneven gaps
+    "xxxx.xxxxx.x",
+    // 27: two gaps
+    "xxxxx.xxxxx.",
+    // 28: all but the downbeat
+    ".xxxxxxxxxxx",
+    // 29: all but one
+    "xx.xxxxxxxxx",
+    // 30: every second, then a roll
+    "x.x.x.xxxxxx",
+    // 31: all but one, late gap
+    "xxxxx.xxxxxx",
+];
+
+/// Clap (row 3), triplet: beats 2 and 4 first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const CLAP_TRIPLET: [&str; 31] = [
+    // 1: beats 2 and 4
+    "...x.....x..",
+    // 2: plus the last triplet
+    "...x.....x.x",
+    // 3: plus a push into beat 4
+    "...x....xx..",
+    // 4: shuffle answer after beat 2
+    "...x.x...x..",
+    // 5: beats 2, 3 and 4
+    "...x..x..x..",
+    // 6: pushes into beats 2 and 4
+    "..xx....xx..",
+    // 7: shuffle answers
+    "...x.x...x.x",
+    // 8: doubled claps
+    "...xx....xx.",
+    // 9: ghost before beat 2
+    ".x.x.....x..",
+    // 10: ghost after beat 3
+    "...x...x.x..",
+    // 11: shuffle offbeat
+    "..x..x..x..x",
+    // 12: middle triplets
+    ".x..x..x..x.",
+    // 13: doubled beat 3
+    "...x..xx.x..",
+    // 14: every beat
+    "x..x..x..x..",
+    // 15: busy answers
+    "...x.xx..x.x",
+    // 16: roll at the end
+    "...x.....xxx",
+    // 17: rolls into beat 2 and at the end
+    ".xxx.....xxx",
+    // 18: every second triplet
+    "x.x.x.x.x.x.",
+    // 19: busy
+    "...x.xxx.x.x",
+    // 20: pairs, off the beat
+    "..xx..xx..xx",
+    // 21: every second triplet, off the beat
+    ".x.x.x.x.x.x",
+    // 22: bursts on beats 2 and 4
+    "...xxx...xxx",
+    // 23: full shuffle
+    "x.xx.xx.xx.x",
+    // 24: off-triplets
+    ".xx.xx.xx.xx",
+    // 25: building
+    "...x.xxxxx.x",
+    // 26: beat and middle
+    "xx.xx.xx.xx.",
+    // 27: three of every four, late
+    ".xxx.xxx.xxx",
+    // 28: dense groups
+    "x.xxx.xxx.xx",
+    // 29: roll from beat 2
+    "...xxxxxxxxx",
+    // 30: dense with two gaps
+    "xx.xxxxx.xxx",
+    // 31: every triplet
+    "xxxxxxxxxxxx",
+];
+
+/// Accent (row 4), triplet: beats 1 and 3 first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const ACCENT_TRIPLET: [&str; 31] = [
+    // 1: beats 1 and 3
+    "x.....x.....",
+    // 2: once per bar
+    "x...........",
+    // 3: every beat
+    "x..x..x..x..",
+    // 4: shuffle offbeat
+    "..x..x..x..x",
+    // 5: beats 1 and 3 plus the last triplet
+    "x.....x....x",
+    // 6: every beat plus the last triplet
+    "x..x..x..x.x",
+    // 7: three across the bar
+    "x...x...x...",
+    // 8: six across the bar
+    "x.x.x.x.x.x.",
+    // 9: middle triplets
+    ".x..x..x..x.",
+    // 10: beats with shuffled answers
+    "x..x.x..x.x.",
+    // 11: full shuffle
+    "x.xx.xx.xx.x",
+    // 12: doubled beats 1 and 3
+    "xx....xx....",
+    // 13: sparse, off the beat
+    "..x.....x...",
+    // 14: doubled beats 2 and 4
+    "x..xx.x..xx.",
+    // 15: off-triplets
+    ".xx.xx.xx.xx",
+    // 16: beats 1 and 3, roll at the end
+    "x.....x..xxx",
+    // 17: lopsided
+    "x.x..x.x..x.",
+    // 18: six across the bar, off the beat
+    ".x.x.x.x.x.x",
+    // 19: syncopated
+    "xx.x..xx.x..",
+    // 20: triple bursts
+    "x..xxx..xxx.",
+    // 21: triple hits on beats 1 and 3
+    "xxx...xxx...",
+    // 22: dense groups
+    "x.xxx.xxx.xx",
+    // 23: beat and middle
+    "xx.xx.xx.xx.",
+    // 24: three of every four, late
+    ".xxx.xxx.xxx",
+    // 25: three of every four
+    "xxx.xxx.xxx.",
+    // 26: very dense
+    "x.xxxxx.xxxx",
+    // 27: dense, uneven gaps
+    "xxxx.xxxxx.x",
+    // 28: nearly all, off the beat
+    ".xxxxx.xxxxx",
+    // 29: beat 1, then a roll
+    "x.....xxxxxx",
+    // 30: two gaps
+    "xxxxx.xxxxx.",
+    // 31: every triplet
+    "xxxxxxxxxxxx",
+];
+
+/// Synth lines (rows 5 and 6), triplet: shuffle offbeat bass first. 12 steps = one bar of 8th-note triplets
+/// (`x..` = on the beat, `.x.` = middle triplet, `..x` = last triplet of the beat).
+const SYNTH_TRIPLET: [&str; 31] = [
+    // 1: shuffle offbeat bass
+    "..x..x..x..x",
+    // 2: rolling triplet bass
+    ".xx.xx.xx.xx",
+    // 3: shuffle
+    "x.xx.xx.xx.x",
+    // 4: triplet arp
+    "xxxxxxxxxxxx",
+    // 5: on the beat
+    "x..x..x..x..",
+    // 6: six across the bar
+    "x.x.x.x.x.x.",
+    // 7: middle triplets
+    ".x..x..x..x.",
+    // 8: three across the bar
+    "x...x...x...",
+    // 9: beats with shuffled answers
+    "x..x.x..x.x.",
+    // 10: six across the bar, off the beat
+    ".x.x.x.x.x.x",
+    // 11: lopsided
+    "x.x..x.x..x.",
+    // 12: syncopated
+    "xx.x..xx.x..",
+    // 13: pushed pairs
+    "..xx.x..xx.x",
+    // 14: doubled beats 2 and 4
+    "x..xx.x..xx.",
+    // 15: busy off-beat
+    ".xxx.x.xxx.x",
+    // 16: offbeat bass into a run
+    "..x..x..xxxx",
+    // 17: rolling, thinning
+    ".xx.xx.xx.x.",
+    // 18: triple bursts
+    "x..xxx..xxx.",
+    // 19: triple hits on beats 1 and 3
+    "xxx...xxx...",
+    // 20: pairs on the beat
+    "xx..xx..xx..",
+    // 21: dense groups
+    "x.xxx.xxx.xx",
+    // 22: beat and middle
+    "xx.xx.xx.xx.",
+    // 23: three of every four, late
+    ".xxx.xxx.xxx",
+    // 24: dense shuffle
+    "x.xxxx.xxxx.",
+    // 25: three of every four
+    "xxx.xxx.xxx.",
+    // 26: dense with gaps
+    "xx.xxx.xxx.x",
+    // 27: nearly all, off the beat
+    ".xxxxx.xxxxx",
+    // 28: dense, uneven gaps
+    "xxxx.xxxxx.x",
+    // 29: six across, then a run
+    "x.x.x.xxxxxx",
+    // 30: two gaps
+    "xxxxx.xxxxx.",
+    // 31: all but the last
+    "xxxxxxxxxxx.",
+];
+
 /// The preset bank for a sequence row (rows 5 and 6 share the synth bank)
 fn bank(row: usize) -> &'static [&'static str; 31] {
     // `match` on the row number; `&` returns a reference to the constant array
@@ -424,6 +829,40 @@ fn bank(row: usize) -> &'static [&'static str; 31] {
         // Synth lines (and anything else)
         _ => &SYNTH,
     }
+}
+
+/// The triplet preset bank for a sequence row, used when the row plays 8th-note triplets
+fn triplet_bank(row: usize) -> &'static [&'static str; 31] {
+    // `match` on the row number; `&` returns a reference to the constant array
+    match row {
+        // Kick drum
+        0 => &KICK_TRIPLET,
+        // Open hi-hat
+        1 => &OPEN_HAT_TRIPLET,
+        // Closed hi-hat
+        2 => &CLOSED_HAT_TRIPLET,
+        // Clap
+        3 => &CLAP_TRIPLET,
+        // Accent
+        4 => &ACCENT_TRIPLET,
+        // Synth lines (and anything else)
+        _ => &SYNTH_TRIPLET,
+    }
+}
+
+/// Steps in a triplet preset: one bar of 8th-note triplets
+pub const TRIPLET_PRESET_STEPS: usize = 12;
+
+/// The 12 grid values (0 off, 1 on) for triplet preset `column` on `row`, for a row playing
+/// 8th-note triplets. Column 0 clears.
+pub fn row_triplet_preset(row: usize, column: usize) -> Vec<u8> {
+    // Column 0, or anything past the last preset: all steps off
+    if column == 0 || column > 31 {
+        // 12 zeros
+        return vec![0; TRIPLET_PRESET_STEPS];
+    }
+    // Banks are numbered from column 1
+    triplet_bank(row)[column - 1].bytes().map(|c| if c == b'x' { 1 } else { 0 }).collect()
 }
 
 /// The 32 grid values (0 off, 1 on) for preset `column` on `row`. Column 0 clears the row.
@@ -467,6 +906,37 @@ mod tests {
                 assert!(seen.insert(row_preset(row, column)), "{} preset {} repeats an earlier one", name, column);
             }
         }
+    }
+
+    #[test]
+    fn every_triplet_bank_is_well_formed_with_no_repeats_and_gets_denser() {
+        // Each bank, by name for the error message
+        for (name, row) in [("kick", 0), ("open hat", 1), ("closed hat", 2), ("clap", 3), ("accent", 4), ("synth", 5)] {
+            // No two presets in a bank are the same
+            let mut seen = std::collections::HashSet::new();
+            // Column numbers 1-31
+            for column in 1..=31 {
+                // The preset's 12 values
+                let preset = row_triplet_preset(row, column);
+                // One bar of 8th-note triplets
+                assert_eq!(preset.len(), TRIPLET_PRESET_STEPS, "{} triplet preset {}", name, column);
+                // Not empty
+                assert!(preset.contains(&1), "{} triplet preset {} is empty", name, column);
+                // `insert` returns false if it was already there
+                assert!(seen.insert(preset), "{} triplet preset {} repeats an earlier one", name, column);
+            }
+            // Steps on, averaged over a range of columns
+            let density = |columns: std::ops::RangeInclusive<usize>| -> f32 {
+                // Number of presets in the range
+                let count = columns.clone().count() as f32;
+                // Total steps on, divided by the count
+                columns.map(|c| row_triplet_preset(row, c).iter().filter(|&&v| v == 1).count() as f32).sum::<f32>() / count
+            };
+            // The last eight are denser on average than the first eight
+            assert!(density(24..=31) > density(1..=8), "{} triplet bank doesn't get denser", name);
+        }
+        // Column 0 clears
+        assert_eq!(row_triplet_preset(0, 0), vec![0; TRIPLET_PRESET_STEPS]);
     }
 
     #[test]

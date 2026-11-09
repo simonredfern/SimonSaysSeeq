@@ -239,6 +239,10 @@ pub struct SequencerARowStates {
     /// had it played normally all along. Not saved.
     #[serde(skip)]
     pub resync_pending: bool,
+    /// Triplet beats: bit b set = beat b (steps 4b to 4b+3) plays as an 8th-note triplet on a
+    /// straight row. Saved with the pattern; older pattern files load with none.
+    #[serde(default)]
+    pub triplet_beats: u8,
 }
 
 impl SequencerARowStates {
@@ -283,6 +287,35 @@ impl SequencerARowStates {
         self.jump_segment = (self.jump_segment + 1) % count;
         // Start of the next segment
         self.jump_loop[self.jump_segment].start
+    }
+
+    /// True if `step` is in one of this row's triplet beats
+    pub fn in_triplet_beat(&self, step: usize) -> bool {
+        // Beat number 0-7 (step / 4); the `step < 32` check comes first so the shift stays in range
+        step < 32 && (self.triplet_beats >> (step / 4)) & 1 == 1
+    }
+
+    /// When a step's note plays, in clocks after the step starts: Some(0) normally. In a
+    /// triplet beat on a straight row the beat's three notes go on the 8th-note triplet grid
+    /// (0, 8 and 16 clocks into the beat): the 2nd step is delayed 2 clocks, the 3rd 4 clocks,
+    /// and the 4th is silent (None).
+    fn note_delay(&self, step: usize) -> Option<u64> {
+        // Only straight rows have triplet beats (rows at a triplet rate already are triplets)
+        if supported_rate(self.clocks_per_step) != STRAIGHT_CLOCKS_PER_STEP || !self.in_triplet_beat(step) {
+            // Plays on time
+            return Some(0);
+        }
+        // Position within the beat
+        match step % 4 {
+            // On the beat
+            0 => Some(0),
+            // Step at 6 clocks moves to the triplet at 8
+            1 => Some(2),
+            // Step at 12 clocks moves to the triplet at 16
+            2 => Some(4),
+            // The 4th step has no triplet: silent
+            _ => None,
+        }
     }
 
     /// The rate the row plays at, or will once a waiting change takes effect
@@ -333,6 +366,8 @@ impl Default for SequencerARowStates {
             jump_repeat: 0,
             // Nothing to line up
             resync_pending: false,
+            // No triplet beats
+            triplet_beats: 0,
         }
     }
 }
@@ -409,6 +444,10 @@ pub struct SequencerState {
     /// Temporary steps by (step, row); `serde(skip)` keeps them out of saved pattern files
     #[serde(skip)]
     pub temporary_steps: HashMap<(usize, usize), TemporaryStep>,
+    /// Jump Loop sync: every this many straight steps (64 or 128), rows with a Jump Loop restart
+    /// at their first segment. 0 = off. Saved with the pattern.
+    #[serde(default)]
+    pub jump_loop_sync_steps: u16,
 }
 
 impl Default for SequencerState {
@@ -471,6 +510,8 @@ impl Default for SequencerState {
             reset_tick_counter: false,
             // No temporary steps at startup
             temporary_steps: HashMap::new(),
+            // Jump Loop sync off
+            jump_loop_sync_steps: 0,
             global_reset_step_counter: 0,
             reset_1_active: false,
             reset_16_active: false,
@@ -1018,51 +1059,58 @@ impl Sequencer {
                     // debug!("Trigger: row={}, step={}, value={}", row_idx, current_step, grid_value);
 
 
-                    // Send MIDI note ON event for this row
+                    // Send the row's note(s) for this step
                     if let Some(seq_a_row_state) = state.sequencer_a_row_states.get(row_idx) {
-                        let midi_event = MidiEvent {
-                            note: seq_a_row_state.midi_note,
-                            velocity: 100,                // Default velocity
-                            channel: seq_a_row_state.midi_channel,
-                            note_on: true,
-                            step: row_step,
-                            sequencer_source: 'A',
-                        };
-
-                        if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
-                            warn!("Failed to send MIDI note ON event: {}", e);
-                        }
-
-                        // Schedule note OFF for next tick
-                        let note_off = PendingNoteOff {
-                            note: seq_a_row_state.midi_note,
-                            channel: seq_a_row_state.midi_channel,
-                            row: row_idx,
-                            target_tick: current_tick + 1,
-                        };
-                        if let Ok(mut pending) = self.pending_note_offs.lock() {
-                            pending.push(note_off);
-                        }
-
-                        // Ratchet (grid value 2-4): 2, 3 or 4 hits spread over the step's clocks
-                        let hits = hits_for_grid_value(grid_value);
-                        // This row's clocks per step (6 straight, 4, 8 or 9)
-                        let clocks = supported_rate(seq_a_row_state.clocks_per_step) as u64;
-                        // Hit 0 was just played; schedule hits 1.. at evenly spread ticks (rounded down)
-                        for hit in 1..hits {
-                            // e.g. 3 hits in 6 clocks: ticks 2 and 4 after the step starts
-                            let offset = hit * clocks / hits;
-                            // Each hit is its own one-tick gate
-                            let ratchet_hit = PendingRatchetHit {
-                                note: seq_a_row_state.midi_note,
-                                channel: seq_a_row_state.midi_channel,
-                                step: row_step,
-                                target_tick: current_tick + offset,
-                            };
-                            // `if let Ok(..)` skips quietly if the lock is poisoned
-                            if let Ok(mut pending) = self.pending_ratchet_hits.lock() {
-                                // Queue it
-                                pending.push(ratchet_hit);
+                        // None = silent (4th step of a triplet beat); otherwise a delay in clocks
+                        if let Some(delay) = seq_a_row_state.note_delay(row_step) {
+                            // Ratchet (grid value 2-4): 2, 3 or 4 hits; a normal step is 1 hit
+                            let hits = hits_for_grid_value(grid_value);
+                            // This row's clocks per step (6 straight, 4, 8 or 16)
+                            let clocks = supported_rate(seq_a_row_state.clocks_per_step) as u64;
+                            // Each hit: spread evenly over the step (rounded down), after the delay
+                            for hit in 0..hits {
+                                // e.g. 3 hits in 6 clocks: 0, 2 and 4 clocks after the (delayed) start
+                                let offset = delay + hit * clocks / hits;
+                                // A hit due now: send it straight away
+                                if offset == 0 {
+                                    // Note on
+                                    let midi_event = MidiEvent {
+                                        note: seq_a_row_state.midi_note,
+                                        velocity: 100,                // Default velocity
+                                        channel: seq_a_row_state.midi_channel,
+                                        note_on: true,
+                                        step: row_step,
+                                        sequencer_source: 'A',
+                                    };
+                                    // `try_send` doesn't block
+                                    if let Err(e) = sender.try_send(SequencerEvent::MidiEvent(midi_event)) {
+                                        warn!("Failed to send MIDI note ON event: {}", e);
+                                    }
+                                    // Note off on the next tick (a one-tick gate)
+                                    let note_off = PendingNoteOff {
+                                        note: seq_a_row_state.midi_note,
+                                        channel: seq_a_row_state.midi_channel,
+                                        row: row_idx,
+                                        target_tick: current_tick + 1,
+                                    };
+                                    // Queue the off
+                                    if let Ok(mut pending) = self.pending_note_offs.lock() {
+                                        pending.push(note_off);
+                                    }
+                                } else {
+                                    // A later hit (ratchet, or a delayed triplet note): queue it
+                                    let later_hit = PendingRatchetHit {
+                                        note: seq_a_row_state.midi_note,
+                                        channel: seq_a_row_state.midi_channel,
+                                        step: row_step,
+                                        target_tick: current_tick + offset,
+                                    };
+                                    // `if let Ok(..)` skips quietly if the lock is poisoned
+                                    if let Ok(mut pending) = self.pending_ratchet_hits.lock() {
+                                        // Queue it
+                                        pending.push(later_hit);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1517,10 +1565,14 @@ impl Sequencer {
 
         self.push_undo_snapshot(format!("Preset pattern column {} on row {}", column, row));
 
-        // This row's preset for the pressed step (each row has its own bank; step 0 clears)
-        let pattern = presets::row_preset(row, column);
-        let pattern_length = pattern.len();
+        // Lock the state; the row's rate decides which bank the preset comes from
         let mut state = self.state.lock().unwrap();
+        // A row playing (or heading for) 8th-note triplets gets the 12-step triplet presets
+        let triplet = state.sequencer_a_row_states[row].target_clocks_per_step() == EIGHTH_TRIPLET_CLOCKS_PER_STEP;
+        // This row's preset for the pressed step (each row has its own bank; step 0 clears)
+        let pattern = if triplet { presets::row_triplet_preset(row, column) } else { presets::row_preset(row, column) };
+        // 32 steps, or 12 for a triplet preset; the row's last step is set to match below
+        let pattern_length = pattern.len();
 
         // Clear the entire row first
         for col in 0..32 {
@@ -1603,6 +1655,56 @@ impl Sequencer {
         }
         // Success
         Ok(())
+    }
+
+    /// Grid one row 7 column 10 + a step: switch that step's beat (4 steps) between straight and
+    /// 8th-note triplet on this row. Undoable and saved. Returns true if the beat is now triplet.
+    pub fn toggle_triplet_beat(&self, row: usize, step: usize) -> bool {
+        // Only sequence rows 0-6 and steps 0-31
+        if row > 6 || step > 31 {
+            // Nothing changed
+            return false;
+        }
+        // Save the current state so undo can take this back
+        self.push_undo_snapshot(format!("Triplet beat R{}: beat {}", row, step / 4 + 1));
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Borrow the row mutably
+        let row_state = &mut state.sequencer_a_row_states[row];
+        // `^=` flips the beat's bit (XOR)
+        row_state.triplet_beats ^= 1 << (step / 4);
+        // The new setting for this beat
+        row_state.in_triplet_beat(step)
+    }
+
+    /// True if `step` on `row` is in a triplet beat (for drawing the grid)
+    pub fn is_triplet_beat(&self, row: usize, step: usize) -> bool {
+        // Lock, look up the row, and ask it; false for a bad row
+        self.state.lock().unwrap().sequencer_a_row_states.get(row).map_or(false, |r| r.in_triplet_beat(step))
+    }
+
+    /// Grid two row 7 column 2: Jump Loop sync off -> every 64 steps -> every 128 steps -> off.
+    /// Returns the new setting (0 = off).
+    pub fn cycle_jump_loop_sync(&self) -> u16 {
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Next setting in the cycle
+        state.jump_loop_sync_steps = match state.jump_loop_sync_steps {
+            // Off -> 64
+            0 => 64,
+            // 64 -> 128
+            64 => 128,
+            // 128 (or anything else) -> off
+            _ => 0,
+        };
+        // The new setting
+        state.jump_loop_sync_steps
+    }
+
+    /// The Jump Loop sync setting: 0 (off), 64 or 128 straight steps
+    pub fn jump_loop_sync_steps(&self) -> u16 {
+        // Lock just long enough to read
+        self.state.lock().unwrap().jump_loop_sync_steps
     }
 
     /// How many times the pattern has been saved this run (goes up by one per save)
@@ -2008,6 +2110,24 @@ impl Sequencer {
                 if supported_rate(row.clocks_per_step) != STRAIGHT_CLOCKS_PER_STEP && row.jump_loop.is_empty() {
                     // Back to the start of the row's loop
                     row.current_row_step = row.first_step;
+                }
+            }
+        }
+
+        // Jump Loop sync: every 64 or 128 straight steps, rows with a Jump Loop start their loop again
+        let sync_clocks = state.jump_loop_sync_steps as u64 * STRAIGHT_CLOCKS_PER_STEP as u64;
+        // Off when 0; otherwise on every multiple of the sync length (including the clock start)
+        if sync_clocks > 0 && current_tick % sync_clocks == 0 {
+            // The sequence rows 0-6, mutably
+            for row in state.sequencer_a_row_states.iter_mut().take(7) {
+                // `first()` gives the first segment if there is one
+                if let Some(first) = row.jump_loop.first() {
+                    // Play the first segment's first step now
+                    row.current_row_step = first.start;
+                    // From the first segment
+                    row.jump_segment = 0;
+                    // With no repeats done
+                    row.jump_repeat = 0;
                 }
             }
         }
@@ -3223,6 +3343,97 @@ mod timing_tests {
         sequencer.stop();
         // Nothing waiting any more
         assert!(sequencer.pending_ratchet_hits.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn presets_on_an_eighth_note_triplet_row_come_from_the_twelve_step_triplet_bank() {
+        // In-memory sequencer
+        let sequencer = test_sequencer();
+        // A straight row first: the 32-step kick bank, four on the floor
+        sequencer.apply_preset_pattern(0, 1);
+        // Last step is 31 (32 steps)
+        assert_eq!(sequencer.get_row_states(0).unwrap().max_step, 31);
+        // Step 4 is on (beat 2 in 16ths)
+        assert_eq!(sequencer.get_grid_value(4, 0), 1);
+        // Now make row 0 8th-note triplets and apply the same preset column
+        sequencer.set_row_rate(0, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
+        sequencer.apply_preset_pattern(0, 1);
+        // 12 steps: last step 11, one bar of 8th-note triplets
+        assert_eq!(sequencer.get_row_states(0).unwrap().max_step, 11);
+        // Triplet four on the floor: steps 0, 3, 6, 9 on
+        let on: Vec<usize> = (0..32).filter(|&step| sequencer.get_grid_value(step, 0) == 1).collect();
+        // Nothing beyond step 11
+        assert_eq!(on, vec![0, 3, 6, 9]);
+    }
+
+    #[test]
+    fn a_triplet_beat_puts_its_first_three_steps_on_the_triplet_grid_and_silences_the_fourth() {
+        // Row 0, straight; steps 0-7 all on, nothing else
+        let mut sequencer = test_sequencer();
+        // Set up the row
+        {
+            // Lock in a block so it is released before the run
+            let mut state = sequencer.state.lock().unwrap();
+            // Every step of the first two beats on, the rest off
+            for step in 0..32 {
+                // On for steps 0-7
+                state.sequencer_a_grid[step][0] = if step < 8 { 1 } else { 0 };
+            }
+        }
+        // Beat 1 (steps 0-3) becomes a triplet beat
+        assert!(sequencer.toggle_triplet_beat(0, 2));
+        // Two beats
+        let trace = run_main_loop(&mut sequencer, 48, |_, _| {});
+        // Beat 1: triplets at 0, 8, 16 (step 3 silent); beat 2 straight: 24, 30, 36, 42
+        assert_eq!(note_on_ticks(&trace, 60), vec![0, 8, 16, 24, 30, 36, 42]);
+        // Each one-tick gate ends a tick later
+        assert_eq!(note_off_ticks(&trace, 60), vec![1, 9, 17, 25, 31, 37, 43]);
+        // The playhead still moves every 6 clocks
+        let ticks: Vec<u64> = row_step_ticks(&trace, 0).iter().map(|&(t, _)| t).collect();
+        // 0, 6, ..., 42
+        assert_eq!(ticks, (0..8).map(|n| n * 6).collect::<Vec<u64>>());
+        // Pressing a step of the same beat again turns it back to straight
+        assert!(!sequencer.toggle_triplet_beat(0, 1));
+        // Undo brings the triplet beat back
+        sequencer.undo().unwrap();
+        // Beat 1 is a triplet beat again
+        assert!(sequencer.is_triplet_beat(0, 0));
+    }
+
+    #[test]
+    fn triplet_beats_are_ignored_on_rows_at_a_triplet_rate() {
+        // Row 0 at 8th-note triplets with a triplet beat set
+        let sequencer = test_sequencer();
+        // Mark beat 1
+        sequencer.toggle_triplet_beat(0, 0);
+        // Make the row 8th-note triplets
+        sequencer.state.lock().unwrap().sequencer_a_row_states[0].clocks_per_step = EIGHTH_TRIPLET_CLOCKS_PER_STEP;
+        // Every step plays on time (step 3 too)
+        let row = sequencer.get_row_states(0).unwrap();
+        // `map` over the first beat's steps
+        assert_eq!((0..4).map(|s| row.note_delay(s)).collect::<Vec<_>>(), vec![Some(0); 4]);
+    }
+
+    #[test]
+    fn jump_loop_sync_restarts_jump_loop_rows_every_64_or_128_steps() {
+        // Row 0 Jump Loop: steps 4-7 once, 12-13 three times (10 steps per cycle)
+        let mut sequencer = test_sequencer();
+        // Two segments
+        sequencer.add_jump_segment(0, 4, 7, 1);
+        sequencer.add_jump_segment(0, 12, 13, 3);
+        // Sync every 64 steps
+        assert_eq!(sequencer.cycle_jump_loop_sync(), 64);
+        // Just past the first sync point (64 straight steps = 384 clocks)
+        let trace = run_main_loop(&mut sequencer, 64 * 6 + 12, |_, _| {});
+        // The step played at each tick
+        let at = |tick: u64| row_step_ticks(&trace, 0).into_iter().find(|&(t, _)| t == tick).map(|(_, s)| s);
+        // At the sync point the loop starts again at its first segment's first step...
+        assert_eq!(at(384), Some(4));
+        // ...and carries on from there
+        assert_eq!(at(390), Some(5));
+        // The setting cycles 64 -> 128 -> off
+        assert_eq!(sequencer.cycle_jump_loop_sync(), 128);
+        assert_eq!(sequencer.cycle_jump_loop_sync(), 0);
     }
 
     #[test]
