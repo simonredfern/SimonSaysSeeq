@@ -488,7 +488,8 @@ build_project() {
     local start_time=$(date +%s)
 
     # Get git hash for version info
-    local git_hash=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    # Short commit hash, with "-dirty" if the working tree has uncommitted changes
+    local git_hash=$(git describe --always --dirty 2>/dev/null || echo "unknown")
     log_info "Building with git hash: $git_hash"
 
     if [ "$BUILD_TYPE" = "release" ]; then

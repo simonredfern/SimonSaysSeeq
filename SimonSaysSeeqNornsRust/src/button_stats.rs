@@ -2,7 +2,7 @@
 //!
 //! Every press of a control-row button is counted. When the pattern is saved (on each clock
 //! stop, i.e. after each jam) one line is added to `control_button_counts.jsonl` with the date
-//! and that jam's presses, and the counts start again from zero.
+//! and that jam's presses (and the git commit of the running binary), and the counts start again from zero.
 
 // `anyhow::Result` is a Result whose error can be any error type
 use anyhow::Result;
@@ -21,6 +21,8 @@ use std::path::{Path, PathBuf};
 struct JamRow<'a> {
     /// When the jam ended (the clock stopped), UTC
     date: String,
+    /// Git commit the running binary was built from ("-dirty" = with uncommitted changes)
+    commit: &'a str,
     /// Presses by button name, e.g. "grid one col 08: last step, straight"
     presses: &'a BTreeMap<String, u64>,
 }
@@ -49,7 +51,14 @@ impl ButtonStats {
     /// then start counting the next jam from zero
     pub fn append_jam(&mut self, path: &Path) -> Result<()> {
         // The line's content: the date now and this jam's presses
-        let row = JamRow { date: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(), presses: &self.presses };
+        let row = JamRow {
+            // Date and time now
+            date: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+            // `option_env!` reads GIT_HASH at compile time (set by rpi5_build_and_run.sh); None if it wasn't set
+            commit: option_env!("GIT_HASH").unwrap_or("unknown"),
+            // This jam's presses
+            presses: &self.presses,
+        };
         // Open for appending; `create(true)` makes the file the first time
         let mut file = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
         // One JSON object on one line
@@ -121,6 +130,8 @@ mod tests {
         assert!(second["presses"].get("Redo").is_none());
         // Each line has a date
         assert!(first["date"].as_str().unwrap().ends_with("UTC"));
+        // And the commit the binary was built from (a string, "unknown" if GIT_HASH wasn't set)
+        assert!(first["commit"].is_string());
         // Tidy up
         let _ = std::fs::remove_file(&path);
     }

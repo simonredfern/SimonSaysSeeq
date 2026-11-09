@@ -56,9 +56,9 @@ enum ArmAction {
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
     SetMaxStepForRow,  // Column 8: set last step and make the row straight
-    SetMaxStepTriplet, // Column 9: set last step and make the row 16th triplets
-    SetMaxStepEighthTriplet, // Column 10: set last step and make the row 8th-note triplets
-    SetMaxStepDotted,  // Column 11: set last step and make the row dotted 16ths
+    SetMaxStepEighthTriplet, // Column 9: set last step and make the row 8th-note triplets
+    SetMaxStepTriplet, // Column 10: set last step and make the row 16th triplets
+    SetMaxStepQuarterTriplet, // Column 11: set last step and make the row quarter-note triplets
     JumpLoop1x,        // Column 12: hold + start step + end step = add a Jump Loop segment played once
     JumpLoop2x,        // Column 13: same, segment played twice
     JumpLoop3x,        // Column 14: same, segment played three times
@@ -79,9 +79,9 @@ impl ArmAction {
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetMaxStepForRow),
-            9 => Some(ArmAction::SetMaxStepTriplet),
-            10 => Some(ArmAction::SetMaxStepEighthTriplet),
-            11 => Some(ArmAction::SetMaxStepDotted),
+            9 => Some(ArmAction::SetMaxStepEighthTriplet),
+            10 => Some(ArmAction::SetMaxStepTriplet),
+            11 => Some(ArmAction::SetMaxStepQuarterTriplet),
             12 => Some(ArmAction::JumpLoop1x),
             13 => Some(ArmAction::JumpLoop2x),
             14 => Some(ArmAction::JumpLoop3x),
@@ -103,9 +103,9 @@ impl ArmAction {
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
             ArmAction::SetMaxStepForRow => 8,
-            ArmAction::SetMaxStepTriplet => 9,
-            ArmAction::SetMaxStepEighthTriplet => 10,
-            ArmAction::SetMaxStepDotted => 11,
+            ArmAction::SetMaxStepEighthTriplet => 9,
+            ArmAction::SetMaxStepTriplet => 10,
+            ArmAction::SetMaxStepQuarterTriplet => 11,
             ArmAction::JumpLoop1x => 12,
             ArmAction::JumpLoop2x => 13,
             ArmAction::JumpLoop3x => 14,
@@ -138,11 +138,11 @@ impl ArmAction {
             // Column 8
             ArmAction::SetMaxStepForRow => "last step, straight",
             // Column 9
-            ArmAction::SetMaxStepTriplet => "last step, 16th triplets",
-            // Column 10
             ArmAction::SetMaxStepEighthTriplet => "last step, 8th-note triplets",
+            // Column 10
+            ArmAction::SetMaxStepTriplet => "last step, 16th triplets",
             // Column 11
-            ArmAction::SetMaxStepDotted => "last step, dotted 16ths",
+            ArmAction::SetMaxStepQuarterTriplet => "last step, quarter-note triplets",
             // Column 12
             ArmAction::JumpLoop1x => "Jump Loop 1X",
             // Column 13
@@ -185,12 +185,12 @@ impl ArmAction {
         match self {
             // Column 8: straight 16ths
             ArmAction::SetMaxStepForRow => Some(STRAIGHT_CLOCKS_PER_STEP),
-            // Column 9: 16th triplets
-            ArmAction::SetMaxStepTriplet => Some(TRIPLET_CLOCKS_PER_STEP),
-            // Column 10: 8th-note triplets
+            // Column 9: 8th-note triplets
             ArmAction::SetMaxStepEighthTriplet => Some(EIGHTH_TRIPLET_CLOCKS_PER_STEP),
-            // Column 11: dotted 16ths
-            ArmAction::SetMaxStepDotted => Some(DOTTED_CLOCKS_PER_STEP),
+            // Column 10: 16th triplets
+            ArmAction::SetMaxStepTriplet => Some(TRIPLET_CLOCKS_PER_STEP),
+            // Column 11: quarter-note triplets
+            ArmAction::SetMaxStepQuarterTriplet => Some(QUARTER_TRIPLET_CLOCKS_PER_STEP),
             // Everything else has no rate
             _ => None,
         }
@@ -202,7 +202,7 @@ use crossbeam_channel::Receiver;
 use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 // Row rates in MIDI clocks per step, used by the last-step buttons
-use sequencer::{STRAIGHT_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP, DOTTED_CLOCKS_PER_STEP};
+use sequencer::{STRAIGHT_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP, QUARTER_TRIPLET_CLOCKS_PER_STEP};
 // Temporary steps (grid one row 7 column 2)
 use sequencer::TemporaryStep;
 #[cfg(feature = "midi")]
@@ -1003,9 +1003,15 @@ impl SimonSaysSeeq {
                         },
                         // Any of the four last-step buttons (columns 8-11); `|` matches any of them
                         ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepTriplet
-                        | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepDotted => {
+                        | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepQuarterTriplet => {
                             // The rate this button gives the row; these four always have one
                             let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
+                            // Column 8 (straight) also clears the row's Jump Loop (undoable); the row then
+                            // lines up with where it would be had it played normally all along
+                            if clocks == STRAIGHT_CLOCKS_PER_STEP && self.sequencer.clear_jump_loop(seq_y) {
+                                // Log at info (hidden in concert mode)
+                                info!("ARM SET_MAX_STEP: row {} Jump Loop cleared", seq_y);
+                            }
                             // Resync to the master step only for a straight row that is already straight
                             let allow_master_resync = clocks == STRAIGHT_CLOCKS_PER_STEP
                                 && self.sequencer.row_clocks_per_step(seq_y) == STRAIGHT_CLOCKS_PER_STEP;
@@ -1388,7 +1394,7 @@ impl SimonSaysSeeq {
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
             // The other three rate buttons (columns 9-11)
-            ArmAction::SetMaxStepTriplet | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepDotted => {
+            ArmAction::SetMaxStepTriplet | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepQuarterTriplet => {
                 // Waiting for a sequence row press; meanwhile dim the rows with a different rate
                 self.set_rate_highlight(action.rate())?;
             }

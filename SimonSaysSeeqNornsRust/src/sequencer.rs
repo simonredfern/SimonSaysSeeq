@@ -13,6 +13,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use crate::formal_state_logger::{log_system_init, log_sequencer_state_change, log_step_advancement};
+// Row-specific preset banks (src/sequencer/presets.rs)
+mod presets;
 
 /// MIDI gate base note - matches Lua version
 /// This works well with Flame MGTV factory default settings.
@@ -29,28 +31,33 @@ const RESET_CHANNEL: u8 = 1;      // MIDI channel for reset outputs
 const RESET_VELOCITY: u8 = 100;   // Velocity for reset note-ons
 
 /// Row timing, in MIDI clocks (24 per quarter note). Each row plays a step every N clocks:
-/// 6 = straight 16ths, 4 = 16th triplets, 8 = 8th-note triplets, 9 = dotted 16ths.
-/// A rate change waits until the old and new rates line up (their least common multiple:
-/// 12 clocks for 6/4, 24 for 6/8, 18 for 6/9), so the row never skips or doubles a step.
+/// 6 = straight 16ths, 4 = 16th triplets, 8 = 8th-note triplets, 16 = quarter-note triplets.
+/// All of them divide a bar (96 clocks). A rate change waits until the old and new rates line
+/// up (their least common multiple: 12 clocks for 6/4, 24 for 6/8, 48 for 6/16), so the row
+/// never skips or doubles a step.
 pub const STRAIGHT_CLOCKS_PER_STEP: u8 = 6;
 // Sixteenth triplets: three steps in the time of two straight steps
 pub const TRIPLET_CLOCKS_PER_STEP: u8 = 4;
 // Eighth-note triplets: three steps per beat (four straight steps)
 pub const EIGHTH_TRIPLET_CLOCKS_PER_STEP: u8 = 8;
-// Dotted sixteenths: two steps in the time of three straight steps
-pub const DOTTED_CLOCKS_PER_STEP: u8 = 9;
+// Quarter-note triplets: three steps in the time of two beats (six per bar)
+pub const QUARTER_TRIPLET_CLOCKS_PER_STEP: u8 = 16;
 
 /// The rates a row can have; anything else (e.g. a bad pattern file) plays straight.
 pub fn supported_rate(clocks: u8) -> u8 {
     // `matches!` is true if the value fits one of the listed patterns
-    if matches!(clocks, STRAIGHT_CLOCKS_PER_STEP | TRIPLET_CLOCKS_PER_STEP | EIGHTH_TRIPLET_CLOCKS_PER_STEP | DOTTED_CLOCKS_PER_STEP) {
+    if matches!(clocks, STRAIGHT_CLOCKS_PER_STEP | TRIPLET_CLOCKS_PER_STEP | EIGHTH_TRIPLET_CLOCKS_PER_STEP | QUARTER_TRIPLET_CLOCKS_PER_STEP) {
         // A known rate: keep it
         clocks
     } else {
-        // Unknown: fall back to straight
+        // Unknown (including 9, the dotted 16ths of an earlier version): fall back to straight
         STRAIGHT_CLOCKS_PER_STEP
     }
 }
+
+/// One bar of 4/4 in MIDI clocks (4 beats x 24), counted from MIDI Start. Rows at a rate other
+/// than straight restart at their first step on every bar line, so they stay tied to the bar.
+pub const BAR_CLOCKS: u64 = 96;
 
 /// Clocks until two rates line up again: their least common multiple (e.g. 6 and 4 -> 12).
 fn rate_change_boundary(a: u8, b: u8) -> u64 {
@@ -1501,53 +1508,6 @@ impl Sequencer {
 
     /// Preset Rhythm Patterns
 
-    /// Get preset rhythm pattern by column (0-31)
-    pub fn get_preset_pattern(column: usize) -> Vec<u8> {
-        match column {
-            // Column 0: Clear row
-            0 => vec![0; 32], // Clear row (32 steps of silence)
-            // Basic Drum Patterns (1-3)
-            1 => vec![0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1], // Techno closed hi-hat with variation (32 steps)
-            2 => vec![0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0], // Techno open hi-hat with accents (32 steps)
-            3 => vec![0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0], // Techno clap/snare with ghost notes (32 steps)
-
-            // African Rhythms (4-15)
-            4 => vec![1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0], // Kagan with variation (32 steps)
-            5 => vec![1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1], // Soukous (32 steps)
-            6 => vec![1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,0], // Bembe extended (32 steps)
-            7 => vec![1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,0,0,1,0,0,0], // Djembe pattern (32 steps)
-            8 => vec![1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,0], // West African polyrhythm extended (32 steps)
-            9 => vec![1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0], // Makossa (32 steps)
-            10 => vec![1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,1], // Highlife extended (32 steps)
-            11 => vec![1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,0,0,1,0,1,0,1,1,0,0,1,0,0,1], // Afrobeat (32 steps)
-            12 => vec![1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0,1,0,1,1,0,0,1,0], // Ashiko extended (32 steps)
-            13 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Kpanlogo extended (32 steps)
-            14 => vec![1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,1,0,0], // Agbadza extended (32 steps)
-            15 => vec![1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0], // Gahu (32 steps)
-
-            // Salsa Rhythms (16-23)
-            16 => vec![1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], // Son Clave 3-2 (32 steps)
-            17 => vec![0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1], // Son Clave 2-3 extended (32 steps)
-            18 => vec![1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], // Rumba Clave 3-2 extended (32 steps)
-            19 => vec![0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0], // Rumba Clave 2-3 (32 steps)
-            20 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Tumbao (32 steps)
-            21 => vec![1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0], // Cascara extended (32 steps)
-            22 => vec![0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,0,1,0,1], // Mambo bell (32 steps)
-            23 => vec![1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1], // Cha-cha-cha extended (32 steps)
-
-            // Jazz Rhythms (24-31)
-            24 => vec![1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], // Jazz ride (32 steps)
-            25 => vec![1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], // Swing shuffle (32 steps)
-            26 => vec![0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], // Jazz snare (32 steps)
-            27 => vec![1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0], // Brushes pattern (24 steps)
-            28 => vec![1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1], // Latin jazz (32 steps)
-            29 => vec![1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1,0,0,0], // Bossa nova (32 steps)
-            30 => vec![1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,1,1,0,1,0,1], // Samba (32 steps)
-            31 => vec![1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1], // Jazz waltz (32 steps)
-
-            _ => vec![1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], // Default to 4-on-floor (32 steps)
-        }
-    }
 
     /// Apply preset pattern to a row
     pub fn apply_preset_pattern(&self, row: usize, column: usize) {
@@ -1557,7 +1517,8 @@ impl Sequencer {
 
         self.push_undo_snapshot(format!("Preset pattern column {} on row {}", column, row));
 
-        let pattern = Self::get_preset_pattern(column);
+        // This row's preset for the pressed step (each row has its own bank; step 0 clears)
+        let pattern = presets::row_preset(row, column);
         let pattern_length = pattern.len();
         let mut state = self.state.lock().unwrap();
 
@@ -2039,6 +2000,18 @@ impl Sequencer {
             }
         }
 
+        // On a bar line, rows at a non-straight rate start again from their first step (bar lock)
+        if current_tick % BAR_CLOCKS == 0 {
+            // `iter_mut().take(7)`: the sequence rows 0-6 only, mutably
+            for row in state.sequencer_a_row_states.iter_mut().take(7) {
+                // Straight rows run on as before; Jump Loop rows follow their segments
+                if supported_rate(row.clocks_per_step) != STRAIGHT_CLOCKS_PER_STEP && row.jump_loop.is_empty() {
+                    // Back to the start of the row's loop
+                    row.current_row_step = row.first_step;
+                }
+            }
+        }
+
         // The master step (Step event, CO2, resets) always moves every 6 clocks; `as u64` converts the u8
         let master_due = current_tick % STRAIGHT_CLOCKS_PER_STEP as u64 == 0;
         // Build one true/false per row: does this row play on this tick?
@@ -2051,8 +2024,9 @@ impl Sequencer {
                 let clocks = if row_idx > 6 { STRAIGHT_CLOCKS_PER_STEP } else { row.clocks_per_step };
                 // An unknown rate is treated as straight, in case a pattern file has a bad value
                 let clocks = supported_rate(clocks);
-                // The row is due when the tick is a multiple of its clocks per step
-                current_tick % clocks as u64 == 0
+                // Due when the clocks since the last bar line are a multiple of its clocks per step
+                // (the same as `current_tick % clocks`, since every rate divides 96)
+                (current_tick % BAR_CLOCKS) % clocks as u64 == 0
             })
             // `collect()` gathers the bools into the Vec<bool> declared above
             .collect();
@@ -2066,8 +2040,8 @@ impl Sequencer {
         self.advance_rows(&mut state, sender, current_tick, &rows_due, master_due)
     }
 
-    /// Set a sequence row's rate (6 straight, 4 16th triplets, 8 8th-note triplets, 9 dotted
-    /// 16ths). The change waits until the old and new rates line up; going to a non-straight rate
+    /// Set a sequence row's rate (6 straight, 4 16th triplets, 8 8th-note triplets, 16
+    /// quarter-note triplets). The change waits until the old and new rates line up; going to a non-straight rate
     /// keeps the row's step, coming back to straight puts it where a straight row would be.
     /// Asking for the rate a row already has (or is already heading for) changes nothing.
     pub fn set_row_rate(&self, row: usize, clocks_per_step: u8) {
@@ -2551,33 +2525,67 @@ mod timing_tests {
         out
     }
 
-    /// Model with a fixed clocks-per-step for each row (6 straight, 4 triplet)
+    /// Model with a fixed clocks-per-step for each row (6 straight, 4, 8 or 9). Straight rows run
+    /// on continuously; other rates are timed from each bar line and restart at step 0 there.
     fn rate_model(ticks: u64, clocks: [u64; 7]) -> Vec<String> {
+        // Same pattern as test_sequencer
         let grid = |step: usize, row: usize| (step + row) % 3 == 0;
+        // The expected trace
         let mut out = Vec::new();
+        // Notes switched on in the previous tick (switched off in this one)
         let mut fired_last_tick: Vec<u8> = Vec::new();
+        // Every tick
         for tick in 0..ticks {
+            // Last tick's gates end now
             for note in fired_last_tick.drain(..) {
+                // One off per gate
                 out.push(format!("t{} off {}", tick, note));
             }
+            // Rows in order, as the sequencer processes them
             for row in 0..7 {
-                if tick % clocks[row] != 0 {
-                    continue;
-                }
-                let n = (tick / clocks[row]) as usize;
+                // Steps in this row's loop
                 let len = TEST_MAX_STEPS[row] + 1;
-                let pos = n % len;
-                let prev = if n == 0 { 31 } else { (n - 1) % len };
-                if grid(pos, row) {
-                    out.push(format!("t{} on {}", tick, 60 + row));
-                    fired_last_tick.push(60 + row as u8);
+                // (position, previous position) if the row plays on this tick
+                let played = if clocks[row] == 6 {
+                    // Straight: every 6 clocks since clock start
+                    if tick % 6 != 0 { None } else {
+                        // Step number since start
+                        let n = (tick / 6) as usize;
+                        // Position, and the one before (31 before the first step, the default)
+                        Some((n % len, if n == 0 { 31 } else { (n - 1) % len }))
+                    }
+                } else {
+                    // Clocks since the last bar line
+                    let in_bar = tick % 96;
+                    // Other rates: every `clocks` clocks from the bar line
+                    if in_bar % clocks[row] != 0 { None } else {
+                        // Step number within the bar
+                        let k = (in_bar / clocks[row]) as usize;
+                        // Previous: the last step of the previous bar, or 31 at the very start
+                        let prev = if k > 0 { (k - 1) % len } else if tick == 0 { 31 } else { ((95 / clocks[row]) as usize) % len };
+                        // Position restarts at 0 each bar
+                        Some((k % len, prev))
+                    }
+                };
+                // Only rows that played
+                if let Some((pos, prev)) = played {
+                    // A note if the pattern has one there
+                    if grid(pos, row) {
+                        // Note on now, off next tick
+                        out.push(format!("t{} on {}", tick, 60 + row));
+                        fired_last_tick.push(60 + row as u8);
+                    }
+                    // The playhead moved
+                    out.push(format!("t{} grid r{} {}->{}", tick, row, prev, pos));
                 }
-                out.push(format!("t{} grid r{} {}->{}", tick, row, prev, pos));
             }
+            // The master step every 6 clocks
             if tick % 6 == 0 {
+                // Step event
                 out.push(format!("t{} step {}", tick, (tick / 6) % 32));
             }
         }
+        // Done
         out
     }
 
@@ -2763,14 +2771,14 @@ mod timing_tests {
         assert_eq!(rate_change_boundary(STRAIGHT_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP), 12);
         // Straight and 8th-note triplets line up every beat (24 clocks)
         assert_eq!(rate_change_boundary(STRAIGHT_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP), 24);
-        // Straight and dotted 16ths line up every 3 straight steps (18 clocks)
-        assert_eq!(rate_change_boundary(STRAIGHT_CLOCKS_PER_STEP, DOTTED_CLOCKS_PER_STEP), 18);
-        // Dotted 16ths and 16th triplets: 36 clocks
-        assert_eq!(rate_change_boundary(DOTTED_CLOCKS_PER_STEP, TRIPLET_CLOCKS_PER_STEP), 36);
+        // Straight and quarter-note triplets line up every half bar (48 clocks)
+        assert_eq!(rate_change_boundary(STRAIGHT_CLOCKS_PER_STEP, QUARTER_TRIPLET_CLOCKS_PER_STEP), 48);
+        // 8th-note and quarter-note triplets: every quarter-note triplet step (16 clocks)
+        assert_eq!(rate_change_boundary(EIGHTH_TRIPLET_CLOCKS_PER_STEP, QUARTER_TRIPLET_CLOCKS_PER_STEP), 16);
     }
 
     #[test]
-    fn eighth_triplet_and_dotted_rows_play_at_their_rates_and_straight_rows_are_unaffected() {
+    fn eighth_and_quarter_triplet_rows_play_at_their_rates_and_straight_rows_are_unaffected() {
         // In-memory sequencer with the test pattern
         let mut sequencer = test_sequencer();
         // Set the rates directly, as if loaded from a pattern file
@@ -2779,36 +2787,39 @@ mod timing_tests {
             let mut state = sequencer.state.lock().unwrap();
             // Row 2: 8th-note triplets
             state.sequencer_a_row_states[2].clocks_per_step = EIGHTH_TRIPLET_CLOCKS_PER_STEP;
-            // Row 5: dotted 16ths
-            state.sequencer_a_row_states[5].clocks_per_step = DOTTED_CLOCKS_PER_STEP;
+            // Row 5: quarter-note triplets
+            state.sequencer_a_row_states[5].clocks_per_step = QUARTER_TRIPLET_CLOCKS_PER_STEP;
         }
         // 1,200 clocks
         let ticks = 6 * 200;
         // Run the main loop
         let trace = run_main_loop(&mut sequencer, ticks, |_, _| {});
         // Every row matches the model at its own rate; the other rows are exactly straight
-        assert_eq!(trace, rate_model(ticks, [6, 6, 8, 6, 6, 9, 6]));
+        assert_eq!(trace, rate_model(ticks, [6, 6, 8, 6, 6, 16, 6]));
     }
 
     #[test]
-    fn switching_to_eighth_triplets_and_dotted_waits_for_the_line_up_and_back_to_straight_resyncs() {
+    fn switching_to_eighth_and_quarter_triplets_waits_for_the_line_up_and_back_to_straight_resyncs() {
         // In-memory sequencer with the test pattern
         let mut sequencer = test_sequencer();
-        // Row 0: to 8th-note triplets at tick 7 (applies at 24), straight at tick 50 (applies at 72)
-        // Row 1: to dotted 16ths at tick 7 (applies at 18), straight at tick 50 (applies at 54)
+        // Row 0: 8th-note triplets at tick 7 (applies at 24), straight at tick 50 (applies at 72)
+        // Row 1: quarter-note triplets at tick 7 (applies at 48), straight at tick 150 (applies at 192)
         let trace = run_main_loop(&mut sequencer, 6 * 40, |seq, tick| {
             // Requests between line-up points
             if tick == 7 {
                 // 8th-note triplets on row 0
                 seq.set_row_rate(0, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
-                // Dotted 16ths on row 1
-                seq.set_row_rate(1, DOTTED_CLOCKS_PER_STEP);
+                // Quarter-note triplets on row 1
+                seq.set_row_rate(1, QUARTER_TRIPLET_CLOCKS_PER_STEP);
             }
-            // Both back to straight
+            // Row 0 back to straight
             if tick == 50 {
-                // Row 0 straight
+                // Straight
                 seq.set_row_rate(0, STRAIGHT_CLOCKS_PER_STEP);
-                // Row 1 straight
+            }
+            // Row 1 back to straight
+            if tick == 150 {
+                // Straight
                 seq.set_row_rate(1, STRAIGHT_CLOCKS_PER_STEP);
             }
         });
@@ -2816,15 +2827,21 @@ mod timing_tests {
         let row0: Vec<u64> = row_step_ticks(&trace, 0).iter().map(|&(t, _)| t).filter(|&t| t <= 96).collect();
         // Straight until 24, then every 8 until 72, then straight again
         assert_eq!(row0, vec![0, 6, 12, 18, 24, 32, 40, 48, 56, 64, 72, 78, 84, 90, 96]);
-        // Ticks at which row 1 played, up to tick 78
-        let row1: Vec<u64> = row_step_ticks(&trace, 1).iter().map(|&(t, _)| t).filter(|&t| t <= 78).collect();
-        // Straight until 18, then every 9 until 54, then straight again
-        assert_eq!(row1, vec![0, 6, 12, 18, 27, 36, 45, 54, 60, 66, 72, 78]);
+        // Ticks at which row 1 played, up to tick 204
+        let row1: Vec<u64> = row_step_ticks(&trace, 1).iter().map(|&(t, _)| t).filter(|&t| t <= 204).collect();
+        // Straight until 42; quarter-note triplets from 48 (every 16 clocks); straight again from 192
+        let mut expected_row1: Vec<u64> = (0..8).map(|n| n * 6).collect();
+        // 48, 64, ..., 176
+        expected_row1.extend((0..9).map(|n| 48 + n * 16));
+        // 192, 198, 204
+        expected_row1.extend([192, 198, 204]);
+        // Compare
+        assert_eq!(row1, expected_row1);
         // After returning, both rows play exactly what rows that stayed straight would play
         let expected = straight_model(6 * 40);
-        // Row 0 is straight again from 72, row 1 from 54
-        for (row, from) in [(0, 72), (1, 54)] {
-            // Step events from that tick on, skipping the first (its "from" step is wherever the light was)
+        // Row 0 is straight again from 72, row 1 from 192
+        for (row, from) in [(0, 72), (1, 192)] {
+            // Step events from that tick on
             let after = |trace: &[String]| -> Vec<(u64, usize)> {
                 row_step_ticks(trace, row).into_iter().filter(|&(t, _)| t >= from).collect()
             };
@@ -2834,13 +2851,49 @@ mod timing_tests {
     }
 
     #[test]
+    fn non_straight_rows_restart_at_every_bar_line() {
+        // Row 0 (32 steps) at 16th triplets: 24 steps fit a bar, then it starts again
+        let mut sequencer = test_sequencer();
+        // Set the rate directly
+        sequencer.state.lock().unwrap().sequencer_a_row_states[0].clocks_per_step = TRIPLET_CLOCKS_PER_STEP;
+        // Two bars
+        let trace = run_main_loop(&mut sequencer, 2 * BAR_CLOCKS, |_, _| {});
+        // Steps 0-23, then 0-23 again
+        let expected: Vec<usize> = (0..24).chain(0..24).collect();
+        // Compare
+        assert_eq!(played_steps(&trace, 0), expected);
+    }
+
+    #[test]
+    fn a_quarter_note_triplet_row_plays_six_steps_per_bar() {
+        // Row 0 at quarter-note triplets
+        let mut sequencer = test_sequencer();
+        // Set the rate directly
+        sequencer.state.lock().unwrap().sequencer_a_row_states[0].clocks_per_step = QUARTER_TRIPLET_CLOCKS_PER_STEP;
+        // Two bars
+        let trace = run_main_loop(&mut sequencer, 2 * BAR_CLOCKS, |_, _| {});
+        // Ticks: 0, 16, ..., 80 in each bar
+        let ticks: Vec<u64> = row_step_ticks(&trace, 0).iter().map(|&(t, _)| t).collect();
+        // Both bars
+        let expected: Vec<u64> = (0..6).map(|n| n * 16).chain((0..6).map(|n| 96 + n * 16)).collect();
+        // Compare
+        assert_eq!(ticks, expected);
+        // Steps 0-5 in each bar, then the bar lock starts it again
+        assert_eq!(played_steps(&trace, 0), (0..6).chain(0..6).collect::<Vec<usize>>());
+    }
+
+    #[test]
     fn unsupported_rates_are_ignored() {
         // In-memory sequencer
         let sequencer = test_sequencer();
         // 5 clocks per step is not one of the supported rates
         sequencer.set_row_rate(4, 5);
+        // Nor is 9, the dotted 16ths of an earlier version
+        sequencer.set_row_rate(4, 9);
         // The row stays straight
         assert_eq!(sequencer.row_clocks_per_step(4), STRAIGHT_CLOCKS_PER_STEP);
+        // A pattern file saved with 9 plays straight too
+        assert_eq!(supported_rate(9), STRAIGHT_CLOCKS_PER_STEP);
     }
 
     /// Ticks at which `note` was switched on
