@@ -2061,6 +2061,16 @@ impl Sequencer {
         state.reset_tick_counter
     }
 
+    /// True once after each start: the clock tick counter must go back to 0 so that tick 0 is
+    /// where every row is at step 0. Rate changes and bar lines are worked out from the tick
+    /// count, so a counter left over from before a start puts rows out of line with each other.
+    pub fn take_reset_tick_counter(&self) -> bool {
+        // Lock the shared state; the guard unlocks when the function ends
+        let mut state = self.state.lock().unwrap();
+        // `std::mem::take` returns the flag and leaves `false` in its place, so it is true only once
+        std::mem::take(&mut state.reset_tick_counter)
+    }
+
     /// External clock step advancement - locks state and calls advance_step
     pub fn external_advance_step(&mut self, sender: &Sender<SequencerEvent>, current_tick: u64) -> Result<()> {
         let mut state = self.state.lock().unwrap();
@@ -2401,6 +2411,24 @@ mod tests {
             assert!(state.reset_tick_counter);
             assert!(state.is_running);
         }
+    }
+
+    #[test]
+    fn the_tick_counter_reset_is_asked_for_once_after_each_start() {
+        // In-memory sequencer, stopped
+        let sequencer = Sequencer::new_in_memory();
+        // Start (as the grid start button or Norns key does, not only MIDI Start)
+        sequencer.start();
+        // The first tick after the start sees the request
+        assert!(sequencer.take_reset_tick_counter());
+        // Later ticks don't, so the counter runs on
+        assert!(!sequencer.take_reset_tick_counter());
+        // Stop and start again
+        sequencer.stop();
+        // Start again from step 0
+        sequencer.start();
+        // Asked for again
+        assert!(sequencer.take_reset_tick_counter());
     }
 
     #[test]
@@ -2803,6 +2831,50 @@ mod timing_tests {
             };
             assert_eq!(notes(&trace), notes(&expected), "row {} notes", row);
         }
+    }
+
+    #[test]
+    fn back_to_straight_after_a_restart_lines_up_with_the_master_step() {
+        // In-memory sequencer with the test pattern; row 0 has 32 steps like the master step
+        let mut sequencer = test_sequencer();
+        // Channel for the sequencer's events
+        let (tx, rx) = unbounded();
+        // The trace of events
+        let mut out = Vec::new();
+        // The clock counter after a stop and start, counted from 0 as the main loop now does
+        // (it used to carry on from before the stop, e.g. at 1003, which put row 0 eight steps ahead)
+        for tick in 0..(6 * 200) as u64 {
+            // Row 0 to 8th-note triplets
+            if tick == 100 {
+                // Waits for the line-up point
+                sequencer.set_row_rate(0, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
+            }
+            // And back to straight
+            if tick == 500 {
+                // Waits for the line-up point, then puts the row where a straight row would be
+                sequencer.set_row_rate(0, STRAIGHT_CLOCKS_PER_STEP);
+            }
+            // Gate ends due on this tick
+            sequencer.process_pending_note_offs_on_tick(&tx, tick).unwrap();
+            // Play and advance
+            sequencer.external_clock_tick(&tx, tick).unwrap();
+            // Collect what happened
+            drain(&rx, tick, &mut out);
+        }
+        // Each master step after row 0 is straight again, by tick
+        let master: Vec<(u64, usize)> = out.iter()
+            // Master step events only, from well after the change
+            .filter(|line| line.contains(" step "))
+            // "t{tick} step {n}" into (tick, n)
+            .map(|line| (line[1..line.find(' ').unwrap()].parse().unwrap(), line.rsplit(' ').next().unwrap().parse().unwrap()))
+            // After the change back to straight
+            .filter(|&(tick, _)| tick >= 600)
+            // Into a list
+            .collect();
+        // Row 0's steps from the same point
+        let row0: Vec<(u64, usize)> = row_step_ticks(&out, 0).into_iter().filter(|&(tick, _)| tick >= 600).collect();
+        // Row 0 is on the same step as the master step every time
+        assert_eq!(row0, master);
     }
 
     #[test]

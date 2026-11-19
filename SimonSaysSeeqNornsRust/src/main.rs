@@ -2380,10 +2380,13 @@ impl SimonSaysSeeq {
             }
             MidiInputEvent::ClockStart => {
                 info!("handle_midi_input_event says: MIDI Clock Start received - starting sequencer");
+                // MIDI Start means play from the beginning; if already running, stop first so start() rewinds every row
+                if self.sequencer.is_running() {
+                    // Rows back to step 0 (start() alone does nothing while running)
+                    self.sequencer.stop();
+                }
+                // Start from step 0; this also asks for the tick counter to go back to 0 on the next tick
                 self.sequencer.start();
-
-                // Reset external clock tick counter on start
-                EXTERNAL_CLOCK_TICK_COUNTER.store(0, Ordering::SeqCst);
 
                 // Reset CO2 counters on MIDI start
                 if let Some(ref mut co2_manager) = self.co2 {
@@ -2401,9 +2404,6 @@ impl SimonSaysSeeq {
                 info!("STOP TRIGGER: MIDI Clock Stop received from external device - stopping sequencer");
                 info!("handle_midi_input_event says: MIDI Clock Stop received - stopping sequencer");
                 self.sequencer.stop();
-
-                // Reset external clock tick counter on stop
-                EXTERNAL_CLOCK_TICK_COUNTER.store(0, Ordering::SeqCst);
 
                 // Reset CO2 counters on MIDI stop
                 if let Some(ref mut co2_manager) = self.co2 {
@@ -2424,6 +2424,11 @@ impl SimonSaysSeeq {
             MidiInputEvent::ClockTick => {
                 // External clock slave mode: advance sequencer directly on MIDI clock
                 if self.sequencer.is_running() {
+                    // First tick after any start (MIDI Start, grid start button, Norns keys): count from 0 again
+                    if self.sequencer.take_reset_tick_counter() {
+                        // Tick 0 is where every row is at step 0
+                        EXTERNAL_CLOCK_TICK_COUNTER.store(0, Ordering::SeqCst);
+                    }
                     // MIDI clock runs at 24 PPQ, we get 6 ticks per step (every clock, 6 clocks per step)
                     let tick_count = EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst);
                     let tick_in_step = (tick_count % 6) as u32;
