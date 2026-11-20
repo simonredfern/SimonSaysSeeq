@@ -41,8 +41,8 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 7 | Ratchet | `ARM_RATCHET` | Hold + press a step: off or normal -> style 1 (2 hits) -> style 2 (3 hits) -> style 3 (4 hits) -> normal step. Saved and undoable |
 | 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed), make the row straight, and clear its Jump Loop |
 | 9 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step, 12 per bar) |
-| 10 | Triplet beat | | Hold + press a step: that step's beat (4 steps) plays as an 8th-note triplet on a straight row (steps 1-3 on the triplet grid, step 4 silent and dimmed); press again for straight. Saved and undoable |
-| 11 | Set Max Step, quarter-note triplets | | Set row max_step and make the row quarter-note triplets (16 clocks per step, 6 per bar) |
+| 10 | Row reset every 64 | | Hold + press a step: every 64 steps (counted from MIDI Start) the row goes back to that step, even with a Jump Loop; the loop carries on from there. Same button and step again removes it. While held, each row's 64-step reset is the only bright step. Saved and undoable |
+| 11 | Row reset every 128 | | Same, every 128 steps |
 | 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards) |
 | 13 | Jump Loop 2X | | Same, segment played twice |
 | 14 | Jump Loop 3X | | Same, segment played three times |

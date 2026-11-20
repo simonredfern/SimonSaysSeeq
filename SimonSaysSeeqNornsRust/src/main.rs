@@ -57,8 +57,8 @@ enum ArmAction {
     Ratchet,           // Column 7
     SetMaxStepForRow,  // Column 8: set last step and make the row straight
     SetMaxStepEighthTriplet, // Column 9: set last step and make the row 8th-note triplets
-    TripletBeat,       // Column 10: hold + step = that step's beat plays as an 8th-note triplet (press again: straight)
-    SetMaxStepQuarterTriplet, // Column 11: set last step and make the row quarter-note triplets
+    RowReset64,        // Column 10: hold + step = the row goes back to that step every 64 steps (same again: off)
+    RowReset128,       // Column 11: same, every 128 steps
     JumpLoop1x,        // Column 12: hold + start step + end step = add a Jump Loop segment played once
     JumpLoop2x,        // Column 13: same, segment played twice
     JumpLoop3x,        // Column 14: same, segment played three times
@@ -80,8 +80,8 @@ impl ArmAction {
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetMaxStepForRow),
             9 => Some(ArmAction::SetMaxStepEighthTriplet),
-            10 => Some(ArmAction::TripletBeat),
-            11 => Some(ArmAction::SetMaxStepQuarterTriplet),
+            10 => Some(ArmAction::RowReset64),
+            11 => Some(ArmAction::RowReset128),
             12 => Some(ArmAction::JumpLoop1x),
             13 => Some(ArmAction::JumpLoop2x),
             14 => Some(ArmAction::JumpLoop3x),
@@ -104,8 +104,8 @@ impl ArmAction {
             ArmAction::Ratchet => 7,
             ArmAction::SetMaxStepForRow => 8,
             ArmAction::SetMaxStepEighthTriplet => 9,
-            ArmAction::TripletBeat => 10,
-            ArmAction::SetMaxStepQuarterTriplet => 11,
+            ArmAction::RowReset64 => 10,
+            ArmAction::RowReset128 => 11,
             ArmAction::JumpLoop1x => 12,
             ArmAction::JumpLoop2x => 13,
             ArmAction::JumpLoop3x => 14,
@@ -140,9 +140,9 @@ impl ArmAction {
             // Column 9
             ArmAction::SetMaxStepEighthTriplet => "last step, 8th-note triplets",
             // Column 10
-            ArmAction::TripletBeat => "triplet beat",
+            ArmAction::RowReset64 => "row reset every 64",
             // Column 11
-            ArmAction::SetMaxStepQuarterTriplet => "last step, quarter-note triplets",
+            ArmAction::RowReset128 => "row reset every 128",
             // Column 12
             ArmAction::JumpLoop1x => "Jump Loop 1X",
             // Column 13
@@ -154,6 +154,20 @@ impl ArmAction {
         };
         // `{:02}` pads the column number to two digits
         format!("grid one col {:02}: {}", self.to_column(), label)
+    }
+
+    /// For the row reset buttons (columns 10 and 11): how many straight steps between resets.
+    /// None for every other action.
+    fn reset_every_steps(&self) -> Option<u16> {
+        // `match` on self; each arm returns a value
+        match self {
+            // Column 10
+            ArmAction::RowReset64 => Some(64),
+            // Column 11
+            ArmAction::RowReset128 => Some(128),
+            // Everything else
+            _ => None,
+        }
     }
 
     /// For the Jump Loop buttons 1X/2X/3X (columns 12-14): how many times the segment plays.
@@ -178,7 +192,7 @@ impl ArmAction {
         matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x | ArmAction::JumpLoopReset)
     }
 
-    /// For the last-step buttons (columns 8-11): the rate they give the row, in MIDI clocks per
+    /// For the last-step buttons (columns 8 and 9): the rate they give the row, in MIDI clocks per
     /// step. None for every other action.
     fn rate(&self) -> Option<u8> {
         // `match` on self; each arm returns a value
@@ -187,8 +201,6 @@ impl ArmAction {
             ArmAction::SetMaxStepForRow => Some(STRAIGHT_CLOCKS_PER_STEP),
             // Column 9: 8th-note triplets
             ArmAction::SetMaxStepEighthTriplet => Some(EIGHTH_TRIPLET_CLOCKS_PER_STEP),
-            // Column 11: quarter-note triplets
-            ArmAction::SetMaxStepQuarterTriplet => Some(QUARTER_TRIPLET_CLOCKS_PER_STEP),
             // Everything else has no rate
             _ => None,
         }
@@ -200,9 +212,9 @@ use crossbeam_channel::Receiver;
 use hardware::{NornsHardware, HardwareEvent};
 use sequencer::{Sequencer, SequencerEvent};
 // Row rates in MIDI clocks per step, used by the last-step buttons
-use sequencer::{STRAIGHT_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP, QUARTER_TRIPLET_CLOCKS_PER_STEP};
+use sequencer::{STRAIGHT_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP};
 // Temporary steps (grid one row 7 column 2)
-use sequencer::TemporaryStep;
+use sequencer::{TemporaryStep, RowReset};
 #[cfg(feature = "midi")]
 use midi::MidiManager;
 use simon_says_seeq_rust::grid_osc::GridManager;
@@ -237,7 +249,7 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
-    // While a last-step button (grid one row 7, columns 8-11) is held: Some(its rate in clocks per step);
+    // While a last-step button (grid one row 7, columns 8 and 9) is held: Some(its rate in clocks per step);
     // rows with that rate look normal, the others are dimmed. None when no such button is held.
     rate_highlight: Option<u8>,
     // Temporarily muted steps blink: true = currently in the visible half of the blink
@@ -250,10 +262,10 @@ pub struct SimonSaysSeeq {
     button_stats: button_stats::ButtonStats,
     // The pattern save count when the button counts were last written
     button_stats_saved_at: u64,
-    // While grid one row 7 column 10 is held: straight beats are dimmed so triplet beats stand out
-    triplet_beat_highlight: bool,
     // While a Jump Loop button (columns 12-15) is held: steps outside each row's segments are dimmed
     jump_highlight: bool,
+    // While a row reset button (column 10 or 11) is held: Some(64 or 128); only those reset steps stay bright
+    reset_highlight: Option<u16>,
     // While 1X/2X/3X is held: the start step (step, row) waiting for its end step
     jump_pending_start: Option<(usize, usize)>,
     // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
@@ -311,7 +323,7 @@ impl SimonSaysSeeq {
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
             grid_two_crow_search_held: [false; 3],
-            // No rate highlight until a last-step button (columns 8-11) is held
+            // No rate highlight until a last-step button (columns 8 and 9) is held
             rate_highlight: None,
             // Blink starts in the visible half
             temporary_blink_on: true,
@@ -323,10 +335,10 @@ impl SimonSaysSeeq {
             button_stats: button_stats::ButtonStats::default(),
             // Nothing written yet this run
             button_stats_saved_at: 0,
-            // Column 10 not held at startup
-            triplet_beat_highlight: false,
             // No Jump Loop button held at startup
             jump_highlight: false,
+            // No row reset button held at startup
+            reset_highlight: None,
             // No segment half-entered
             jump_pending_start: None,
             clock_status_led: None,
@@ -988,20 +1000,23 @@ impl SimonSaysSeeq {
                             }
                         },
                         // Reset held: clear this row's Jump Loop
+                        // Either row reset button; `|` matches either
+                        ArmAction::RowReset64 | ArmAction::RowReset128 => {
+                            // 64 or 128; these two always have one
+                            let every_steps = arm_action.reset_every_steps().unwrap_or(64);
+                            // Set, move or remove the row's reset (undoable)
+                            let reset = self.sequencer.toggle_row_reset(seq_y, seq_x, every_steps);
+                            // Log at info (hidden in concert mode); `{:?}` prints the Option
+                            info!("ARM ROW_RESET: row {} step {} every {} -> {:?}", seq_y, seq_x, every_steps, reset);
+                            // Redraw the row: the bright reset step moves or goes
+                            self.refresh_all_row_leds(seq_y)?;
+                        },
                         ArmAction::JumpLoopReset => {
                             // Back to normal playing (undoable); false if there was nothing to clear
                             let cleared = self.sequencer.clear_jump_loop(seq_y);
                             // Log at info (hidden in concert mode)
                             info!("ARM JUMP_LOOP_RESET: row {} cleared={}", seq_y, cleared);
                             // Redraw the row without segments
-                            self.refresh_all_row_leds(seq_y)?;
-                        },
-                        ArmAction::TripletBeat => {
-                            // Switch this step's beat (4 steps) between straight and 8th-note triplet (undoable)
-                            let triplet = self.sequencer.toggle_triplet_beat(seq_y, seq_x);
-                            // Log at info (hidden in concert mode)
-                            info!("ARM TRIPLET_BEAT: row {} beat {} -> {}", seq_y, seq_x / 4 + 1, if triplet { "triplet" } else { "straight" });
-                            // Redraw the row: the beat's lights change
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::Ratchet => {
@@ -1020,10 +1035,9 @@ impl SimonSaysSeeq {
                             // Redraw just this light
                             self.update_single_button_led(seq_x, seq_y)?;
                         },
-                        // Any of the four last-step buttons (columns 8-11); `|` matches any of them
-                        ArmAction::SetMaxStepForRow
-                        | ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepQuarterTriplet => {
-                            // The rate this button gives the row; these four always have one
+                        // Either last-step button (columns 8 and 9); `|` matches either of them
+                        ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepEighthTriplet => {
+                            // The rate this button gives the row; both always have one
                             let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
                             // Column 8 (straight) also clears the row's Jump Loop (undoable); the row then
                             // lines up with where it would be had it played normally all along
@@ -1329,14 +1343,6 @@ impl SimonSaysSeeq {
                                     self.grid.set_led(grid_id, x, seq_y, 0, "arm_release")?;
                                     self.grid.refresh()?;
                                 }
-                                // A last-step button (columns 8-11) released: back to normal brightness on every row
-                                // Column 10 released: triplet beat view off
-                                if arm_action == ArmAction::TripletBeat {
-                                    // Back to normal brightness
-                                    self.triplet_beat_highlight = false;
-                                    // Redraw every row
-                                    self.refresh_sequence_rows()?;
-                                }
                                 if arm_action.is_jump_loop() {
                                     // A start without an end is dropped
                                     self.jump_pending_start = None;
@@ -1345,7 +1351,14 @@ impl SimonSaysSeeq {
                                     // Redraw every row normally
                                     self.refresh_sequence_rows()?;
                                 }
-                                // A last-step button (columns 8-11) released
+                                // A row reset button released: back to normal brightness on every row
+                                if arm_action.reset_every_steps().is_some() {
+                                    // Reset view off
+                                    self.reset_highlight = None;
+                                    // Redraw every row normally
+                                    self.refresh_sequence_rows()?;
+                                }
+                                // A last-step button (columns 8 and 9) released: back to normal brightness on every row
                                 if arm_action.rate().is_some() {
                                     // None = no rows highlighted; this also redraws the rows
                                     self.set_rate_highlight(None)?;
@@ -1401,9 +1414,10 @@ impl SimonSaysSeeq {
             ArmAction::TemporaryStep => {
                 // Nothing on press: the button is a modifier, the step press does the work
             }
-            ArmAction::TripletBeat => {
-                // While held, straight beats are dimmed so the triplet beats stand out
-                self.triplet_beat_highlight = true;
+            // Either row reset button: while held, each row's reset of that length is the only bright step
+            ArmAction::RowReset64 | ArmAction::RowReset128 => {
+                // Turn on the reset view for this length
+                self.reset_highlight = action.reset_every_steps();
                 // Redraw every row with it
                 self.refresh_sequence_rows()?;
             }
@@ -1441,8 +1455,8 @@ impl SimonSaysSeeq {
                 // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
-            // The other three rate buttons (columns 9-11)
-            ArmAction::SetMaxStepEighthTriplet | ArmAction::SetMaxStepQuarterTriplet => {
+            // The 8th-note triplet button (column 9)
+            ArmAction::SetMaxStepEighthTriplet => {
                 // Waiting for a sequence row press; meanwhile dim the rows with a different rate
                 self.set_rate_highlight(action.rate())?;
             }
@@ -1950,7 +1964,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// True if a row should be drawn dimmed right now: while a last-step button (columns 8-11)
+    /// True if a row should be drawn dimmed right now: while a last-step button (columns 8 and 9)
     /// is held, rows with that button's rate look normal and rows with any other rate are dimmed.
     fn row_dimmed(&self, row: usize) -> bool {
         // `match` on the Option: Some(clocks) while a button is held, None otherwise
@@ -2003,15 +2017,18 @@ impl SimonSaysSeeq {
         // While a Jump Loop button is held, everything outside a Jump Loop segment is dimmed, including
         // whole rows without one, so only the parts with active Jump Loops stand out
         let outside_jump_loop = self.jump_highlight && self.sequencer.jump_loop_contains(row, step) != Some(true);
-        // In a triplet beat on a straight row (row rate decides; rows at a triplet rate ignore triplet beats)
-        let triplet_beat = self.sequencer.is_triplet_beat(row, step)
-            && self.sequencer.row_clocks_per_step(row) == STRAIGHT_CLOCKS_PER_STEP;
-        // The 4th step of a triplet beat never plays, so it is always shown dimmed
-        let silent_triplet_step = triplet_beat && step % 4 == 3;
-        // While column 10 is held, straight beats are dimmed so the triplet beats stand out
-        let straight_beat_while_held = self.triplet_beat_highlight && !triplet_beat;
+        // While a row reset button is held: the row's reset step of that length at full brightness
+        if let Some(every_steps) = self.reset_highlight {
+            // This step is the row's reset step for the held length
+            if self.sequencer.row_reset(row) == Some(RowReset { every_steps, step }) {
+                // Brightest level
+                return LED_TURBO;
+            }
+        }
+        // ...and everything else dimmed, so only the reset steps stand out
+        let outside_reset = self.reset_highlight.is_some();
         // Dimmed for any of these reasons
-        let dimmed = self.row_dimmed(row) || outside_jump_loop || silent_triplet_step || straight_beat_while_held;
+        let dimmed = self.row_dimmed(row) || outside_jump_loop || outside_reset;
         // Temporary steps fade: 6 with two passes left, 3 with one (a normal beat is 10)
         let fading = |passes_left: u8| if passes_left >= 2 { LED_DIM } else { 3 };
         // `match` on the temporary state of this step (None = just the pattern)
