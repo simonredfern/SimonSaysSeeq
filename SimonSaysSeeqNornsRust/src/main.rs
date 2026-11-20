@@ -924,22 +924,22 @@ impl SimonSaysSeeq {
                             // info!("ARM EUCLIDIAN_LENGTH: Generating rhythm on row {} with length {} (step {})", seq_y, length, seq_x);
 
                             // Get current euclidean parameters to preserve events and rotation
-                            if let Some(mut seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
+                            if let Some(seq_a_row_state) = self.sequencer.get_row_states(seq_y) {
                                 let current_events = seq_a_row_state.euclidean_events;
                                 let current_rotation = seq_a_row_state.euclidean_rotation;
 
-                                // Generate the rhythm first
+                                // Generate the rhythm first (this sets the row's new length)
                                 self.sequencer.generate_euclidean_rhythm(seq_y, current_events, length, current_rotation);
 
-                                // Reset step position if it's beyond the new length
-                                let last_step = length - 1; // Convert to 0-based
-                                if seq_a_row_state.current_row_step > last_step {
-                                    // Reset to beginning of the row's own cycle
-                                    seq_a_row_state.current_row_step = seq_a_row_state.first_step;
-                                    let new_step = seq_a_row_state.current_row_step;
-                                    self.sequencer.set_row_states(seq_y, seq_a_row_state);
-                                    // info!("ARM EUCLIDIAN_LENGTH: Row {} step position reset to {} (was beyond new length {})",
-                                    //       seq_y, new_step, last_step);
+                                // Read the row again: the copy above still has the old length, and writing it back would undo the change
+                                if let Some(mut updated_row_state) = self.sequencer.get_row_states(seq_y) {
+                                    // Reset step position if it's beyond the new length (0-based last step)
+                                    if updated_row_state.current_row_step > length - 1 {
+                                        // Back to the beginning of the row's own cycle
+                                        updated_row_state.current_row_step = updated_row_state.first_step;
+                                        // Write the row back, with the new length kept
+                                        self.sequencer.set_row_states(seq_y, updated_row_state);
+                                    }
                                 }
                             } else {
                                 // Fallback if seq_a_row_state is not available
@@ -1039,9 +1039,12 @@ impl SimonSaysSeeq {
                         ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepEighthTriplet => {
                             // The rate this button gives the row; both always have one
                             let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
-                            // Column 8 (straight) also clears the row's Jump Loop (undoable); the row then
-                            // lines up with where it would be had it played normally all along
-                            if clocks == STRAIGHT_CLOCKS_PER_STEP && self.sequencer.clear_jump_loop(seq_y) {
+                            // One undo step for the whole press: last step, rate and (column 8) the cleared Jump Loop
+                            self.sequencer.save_undo_point(format!("Last step R{}: step {}, {}", seq_y, seq_x + 1,
+                                if clocks == STRAIGHT_CLOCKS_PER_STEP { "straight" } else { "8th-note triplets" }));
+                            // Column 8 (straight) also clears the row's Jump Loop (inside the undo step above); the row
+                            // then lines up with where it would be had it played normally all along
+                            if clocks == STRAIGHT_CLOCKS_PER_STEP && self.sequencer.clear_jump_loop_without_undo_point(seq_y) {
                                 // Log at info (hidden in concert mode)
                                 info!("ARM SET_MAX_STEP: row {} Jump Loop cleared", seq_y);
                             }
@@ -1392,6 +1395,8 @@ impl SimonSaysSeeq {
                         info!("ARM UNDO: Successfully undid: {}", description);
                         // Redraw now instead of waiting for the playhead to pass each step
                         self.refresh_sequence_rows()?;
+                        // The Jump Loop sync setting is undone too, so show it on grid two column 2
+                        self.draw_jump_loop_sync_light()?;
                     }
                     // Nothing to undo: log and leave the grids as they are
                     Err(e) => warn!("ARM UNDO: Cannot undo: {}", e),
@@ -1406,6 +1411,8 @@ impl SimonSaysSeeq {
                         info!("ARM REDO: Successfully redid: {}", description);
                         // Redraw now instead of waiting for the playhead to pass each step
                         self.refresh_sequence_rows()?;
+                        // The Jump Loop sync setting is undone too, so show it on grid two column 2
+                        self.draw_jump_loop_sync_light()?;
                     }
                     // Nothing to redo: log and leave the grids as they are
                     Err(e) => warn!("ARM REDO: Cannot redo: {}", e),

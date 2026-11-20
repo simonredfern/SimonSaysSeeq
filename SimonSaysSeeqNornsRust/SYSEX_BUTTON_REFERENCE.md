@@ -39,8 +39,8 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |
 | 7 | Ratchet | `ARM_RATCHET` | Hold + press a step: off or normal -> style 1 (2 hits) -> style 2 (3 hits) -> style 3 (4 hits) -> normal step. Saved and undoable |
-| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed), make the row straight, and clear its Jump Loop |
-| 9 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step, 12 per bar) |
+| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed), make the row straight, and clear its Jump Loop. Undoable as one step |
+| 9 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step, 12 per bar). Undoable as one step |
 | 10 | Row reset every 64 | | Hold + press a step: every 64 steps (counted from MIDI Start) the row goes back to that step, even with a Jump Loop; the loop carries on from there. Same button and step again removes it. While held, each row's 64-step reset is the only bright step. Saved and undoable |
 | 11 | Row reset every 128 | | Same, every 128 steps |
 | 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards). A row holds up to 5 segments; a 6th drops the oldest, so entering the same segment 5 times replaces the whole loop |
@@ -48,7 +48,7 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 14 | Jump Loop 3X | | Same, segment played three times |
 | 15 | Jump Loop Reset | | Hold + press any step on a row: clear that row's Jump Loop |
 
-Grid two, row 7, column 2: Jump Loop sync. Press to cycle off -> every 64 steps (dim) -> every 128 steps (bright) -> off. At each sync point, rows with a Jump Loop start again at their first segment. Saved with the pattern.
+Grid two, row 7, column 2: Jump Loop sync. Press to cycle off -> every 64 steps (dim) -> every 128 steps (bright) -> off. At each sync point, rows with a Jump Loop start again at their first segment. Saved with the pattern and undoable.
 
 ## Usage in Test Scripts
 

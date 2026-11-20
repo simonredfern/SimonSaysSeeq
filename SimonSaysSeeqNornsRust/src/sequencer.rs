@@ -358,6 +358,8 @@ pub struct StateSnapshot {
     pub grid: Vec<Vec<u8>>,
     pub mozart: Vec<Vec<u8>>,
     pub row_states: Vec<SequencerARowStates>,
+    /// The Jump Loop sync setting (0, 64 or 128), so undo takes back grid two column 2 too
+    pub jump_loop_sync_steps: u16,
     pub timestamp: std::time::SystemTime,
     pub description: String,
 }
@@ -1170,6 +1172,8 @@ impl Sequencer {
             grid: state.sequencer_a_grid.clone(),
             mozart: state.sequencer_a_mozart.clone(),
             row_states: row_states_snapshot,
+            // The sync setting at this point
+            jump_loop_sync_steps: state.jump_loop_sync_steps,
             timestamp: std::time::SystemTime::now(),
             description: description.clone(),
         };
@@ -1210,6 +1214,8 @@ impl Sequencer {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
             row_states: current_row_states,
+            // The sync setting now
+            jump_loop_sync_steps: current_state.jump_loop_sync_steps,
             timestamp: std::time::SystemTime::now(),
             description: "Current state before undo".to_string(),
         };
@@ -1218,9 +1224,9 @@ impl Sequencer {
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.current_row_step, rs.previous_row_step))
             .collect();
-        // Straight/triplet is a performance setting like position: undo and redo leave it alone
-        let current_rates: Vec<(u8, Option<u8>)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.clocks_per_step, rs.pending_clocks_per_step))
+        // The rate each row is playing at now; undo and redo change it over at the next line-up point
+        let current_rates: Vec<u8> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| rs.clocks_per_step)
             .collect();
         // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
         let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
@@ -1242,9 +1248,14 @@ impl Sequencer {
                     seq_a_row_state.current_row_step = current_positions[i].0;
                     seq_a_row_state.previous_row_step = current_positions[i].1;
                 }
-                if let Some(&(clocks, pending)) = current_rates.get(i) {
+                // The rate the restored copy had (or was heading for); a jump straight to it could skip or double a step
+                if let Some(&clocks) = current_rates.get(i) {
+                    // The rate wanted, from the restored copy
+                    let wanted = seq_a_row_state.target_clocks_per_step();
+                    // Keep playing at the current rate for now
                     seq_a_row_state.clocks_per_step = clocks;
-                    seq_a_row_state.pending_clocks_per_step = pending;
+                    // Change over at the next line-up point, as a button press would; nothing to wait for if already there
+                    seq_a_row_state.pending_clocks_per_step = if wanted == supported_rate(clocks) { None } else { Some(wanted) };
                 }
                 // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
                 if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
@@ -1257,6 +1268,8 @@ impl Sequencer {
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
+            // Put back the Jump Loop sync setting
+            state.jump_loop_sync_steps = snapshot.jump_loop_sync_steps;
 
             let description = snapshot.description.clone();
             // info!("Undid: {}", description);
@@ -1287,6 +1300,8 @@ impl Sequencer {
             grid: current_state.sequencer_a_grid.clone(),
             mozart: current_state.sequencer_a_mozart.clone(),
             row_states: current_row_states,
+            // The sync setting now
+            jump_loop_sync_steps: current_state.jump_loop_sync_steps,
             timestamp: std::time::SystemTime::now(),
             description: "State before redo".to_string(),
         };
@@ -1295,9 +1310,9 @@ impl Sequencer {
         let current_positions: Vec<(usize, usize)> = current_state.sequencer_a_row_states.iter()
             .map(|rs| (rs.current_row_step, rs.previous_row_step))
             .collect();
-        // Straight/triplet is a performance setting like position: undo and redo leave it alone
-        let current_rates: Vec<(u8, Option<u8>)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.clocks_per_step, rs.pending_clocks_per_step))
+        // The rate each row is playing at now; undo and redo change it over at the next line-up point
+        let current_rates: Vec<u8> = current_state.sequencer_a_row_states.iter()
+            .map(|rs| rs.clocks_per_step)
             .collect();
         // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
         let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
@@ -1319,9 +1334,14 @@ impl Sequencer {
                     seq_a_row_state.current_row_step = current_positions[i].0;
                     seq_a_row_state.previous_row_step = current_positions[i].1;
                 }
-                if let Some(&(clocks, pending)) = current_rates.get(i) {
+                // The rate the restored copy had (or was heading for); a jump straight to it could skip or double a step
+                if let Some(&clocks) = current_rates.get(i) {
+                    // The rate wanted, from the restored copy
+                    let wanted = seq_a_row_state.target_clocks_per_step();
+                    // Keep playing at the current rate for now
                     seq_a_row_state.clocks_per_step = clocks;
-                    seq_a_row_state.pending_clocks_per_step = pending;
+                    // Change over at the next line-up point, as a button press would; nothing to wait for if already there
+                    seq_a_row_state.pending_clocks_per_step = if wanted == supported_rate(clocks) { None } else { Some(wanted) };
                 }
                 // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
                 if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
@@ -1334,6 +1354,8 @@ impl Sequencer {
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
+            // Put back the Jump Loop sync setting
+            state.jump_loop_sync_steps = snapshot.jump_loop_sync_steps;
 
             let description = snapshot.description.clone();
             // info!("Redid: {}", description);
@@ -1635,6 +1657,8 @@ impl Sequencer {
     /// Grid two row 7 column 2: Jump Loop sync off -> every 64 steps -> every 128 steps -> off.
     /// Returns the new setting (0 = off).
     pub fn cycle_jump_loop_sync(&self) -> u16 {
+        // Save the current state so undo can take this back (before locking: it locks too)
+        self.push_undo_snapshot("Jump loop sync".to_string());
         // Lock for the change
         let mut state = self.state.lock().unwrap();
         // Next setting in the cycle
@@ -2243,8 +2267,20 @@ impl Sequencer {
         }
         // Save the current state so undo can bring the Jump Loop back
         self.push_undo_snapshot(format!("Jump loop R{}: reset", row));
+        // Clear it
+        self.clear_jump_loop_without_undo_point(row)
+    }
+
+    /// Clear a row's Jump Loop as part of a change that has already saved its own undo point
+    /// (the last-step button, column 8). Returns false if the row had no Jump Loop.
+    pub fn clear_jump_loop_without_undo_point(&self, row: usize) -> bool {
         // Lock for the change
         let mut state = self.state.lock().unwrap();
+        // Only sequence rows, and only if there is something to clear
+        if row > 6 || state.sequencer_a_row_states[row].jump_loop.is_empty() {
+            // Nothing to do
+            return false;
+        }
         // Borrow the row mutably
         let row_state = &mut state.sequencer_a_row_states[row];
         // No segments: normal playing
@@ -2257,6 +2293,13 @@ impl Sequencer {
         row_state.resync_pending = true;
         // Cleared
         true
+    }
+
+    /// Save an undo point before a change made outside the sequencer, such as the last-step
+    /// buttons (columns 8 and 9), so one undo takes back the whole press
+    pub fn save_undo_point(&self, description: String) {
+        // The same snapshot every undoable change saves
+        self.push_undo_snapshot(description);
     }
 
     /// Grid one row 7 column 10 (64) or 11 (128) + a step: the row goes back to that step every
@@ -3522,16 +3565,83 @@ mod timing_tests {
     }
 
     #[test]
-    fn undo_and_redo_leave_the_rate_alone() {
-        let sequencer = test_sequencer();
-        sequencer.set_grid_value(5, 2, 1);
-        {
-            let mut state = sequencer.state.lock().unwrap();
-            state.sequencer_a_row_states[2].clocks_per_step = EIGHTH_TRIPLET_CLOCKS_PER_STEP;
-        }
+    fn undo_and_redo_take_back_a_whole_last_step_press_including_the_rate() {
+        // In-memory sequencer
+        let mut sequencer = test_sequencer();
+        // The last-step press on column 9, as main.rs does it: one undo point, then rate and last step
+        let last_step_press = |seq: &Sequencer| {
+            // One undo point for the whole press
+            seq.save_undo_point("Last step R2: step 12, 8th-note triplets".to_string());
+            // 8th-note triplets
+            seq.set_row_rate(2, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
+            // A copy of the row with 12 steps
+            let mut row_state = seq.get_row_states(2).unwrap();
+            // Last step 12 (0-based 11)
+            row_state.max_step = 11;
+            // Write it back
+            seq.set_row_states(2, row_state);
+        };
+        // Press it
+        last_step_press(&sequencer);
+        // Run long enough for the rate change to take effect (24 clocks)
+        run_main_loop(&mut sequencer, 48, |_, _| {});
+        // Triplets, 12 steps
+        assert_eq!((sequencer.row_clocks_per_step(2), sequencer.get_row_states(2).unwrap().max_step), (EIGHTH_TRIPLET_CLOCKS_PER_STEP, 11));
+        // Undo: back to straight (at the next line-up point) and the old length
         sequencer.undo().unwrap();
-        assert!((sequencer.row_clocks_per_step(2) == EIGHTH_TRIPLET_CLOCKS_PER_STEP));
+        // The old length is back straight away
+        assert_eq!(sequencer.get_row_states(2).unwrap().max_step, TEST_MAX_STEPS[2]);
+        // The rate goes back to straight; until the line-up it still plays triplets
+        assert_eq!(sequencer.row_clocks_per_step(2), STRAIGHT_CLOCKS_PER_STEP);
+        // Redo: triplets and 12 steps again
         sequencer.redo().unwrap();
-        assert!((sequencer.row_clocks_per_step(2) == EIGHTH_TRIPLET_CLOCKS_PER_STEP));
+        // Both back
+        assert_eq!((sequencer.row_clocks_per_step(2), sequencer.get_row_states(2).unwrap().max_step), (EIGHTH_TRIPLET_CLOCKS_PER_STEP, 11));
+    }
+
+    #[test]
+    fn undoing_a_later_change_keeps_the_last_step() {
+        // In-memory sequencer
+        let sequencer = test_sequencer();
+        // Turn a step on
+        sequencer.set_grid_value(3, 0, 1);
+        // Set row 0 to 8 steps with the last-step button (its own undo point)
+        sequencer.save_undo_point("Last step R0: step 8, straight".to_string());
+        // A copy of row 0
+        let mut row_state = sequencer.get_row_states(0).unwrap();
+        // 8 steps
+        row_state.max_step = 7;
+        // Write it back
+        sequencer.set_row_states(0, row_state);
+        // Something else on another row
+        sequencer.toggle_row_reset(1, 2, 64);
+        // Undo the row reset: row 0 keeps its 8 steps
+        sequencer.undo().unwrap();
+        // Still 8 steps
+        assert_eq!(sequencer.get_row_states(0).unwrap().max_step, 7);
+        // Undo again: now the last-step press is undone, and the step is still on
+        sequencer.undo().unwrap();
+        // 32 steps again
+        assert_eq!(sequencer.get_row_states(0).unwrap().max_step, 31);
+        // The step press was not undone with it
+        assert_eq!(sequencer.get_grid_value(3, 0), 1);
+    }
+
+    #[test]
+    fn undo_and_redo_take_back_the_jump_loop_sync_setting() {
+        // In-memory sequencer, sync off
+        let sequencer = test_sequencer();
+        // Off -> 64
+        assert_eq!(sequencer.cycle_jump_loop_sync(), 64);
+        // 64 -> 128
+        assert_eq!(sequencer.cycle_jump_loop_sync(), 128);
+        // Undo: back to 64
+        sequencer.undo().unwrap();
+        // 64
+        assert_eq!(sequencer.jump_loop_sync_steps(), 64);
+        // Redo: 128 again
+        sequencer.redo().unwrap();
+        // 128
+        assert_eq!(sequencer.jump_loop_sync_steps(), 128);
     }
 }
