@@ -43,7 +43,7 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 9 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step, 12 per bar) |
 | 10 | Row reset every 64 | | Hold + press a step: every 64 steps (counted from MIDI Start) the row goes back to that step, even with a Jump Loop; the loop carries on from there. Same button and step again removes it. While held, each row's 64-step reset is the only bright step. Saved and undoable |
 | 11 | Row reset every 128 | | Same, every 128 steps |
-| 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards) |
+| 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards). A row holds up to 5 segments; a 6th drops the oldest, so entering the same segment 5 times replaces the whole loop |
 | 13 | Jump Loop 2X | | Same, segment played twice |
 | 14 | Jump Loop 3X | | Same, segment played three times |
 | 15 | Jump Loop Reset | | Hold + press any step on a row: clear that row's Jump Loop |

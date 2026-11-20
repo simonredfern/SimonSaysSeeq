@@ -74,8 +74,9 @@ fn default_clocks_per_step() -> u8 {
     STRAIGHT_CLOCKS_PER_STEP
 }
 
-/// Most segments one row's Jump Loop can have
-pub const MAX_JUMP_SEGMENTS: usize = 8;
+/// Most segments one row's Jump Loop can have; adding one more drops the oldest, so entering
+/// the same segment this many times replaces the whole loop
+pub const MAX_JUMP_SEGMENTS: usize = 5;
 
 /// One segment of a Jump Loop: play from `start` to `end` (backwards if end < start), `repeats` times.
 // `Serialize, Deserialize` let it be saved in the pattern file with the row
@@ -2198,29 +2199,35 @@ impl Sequencer {
     }
 
     /// Grid one row 7 column 12/13/14 (1X/2X/3X) + two steps: add a segment to a row's Jump Loop.
-    /// Undoable and saved. Returns false (and changes nothing) for a bad row/step or a full list.
+    /// Undoable and saved. When the row already has MAX_JUMP_SEGMENTS, the oldest is dropped to
+    /// make room. Returns false (and changes nothing) for a bad row or step.
     pub fn add_jump_segment(&self, row: usize, start: usize, end: usize, repeats: u8) -> bool {
         // Only sequence rows 0-6, steps 0-31 and 1+ repeats
         if row > 6 || start > 31 || end > 31 || repeats == 0 {
             // Nothing added
             return false;
         }
-        // A short block so the lock is released before push_undo_snapshot locks again
-        {
-            // Lock to check the list size
-            let state = self.state.lock().unwrap();
-            // Full: refuse
-            if state.sequencer_a_row_states[row].jump_loop.len() >= MAX_JUMP_SEGMENTS {
-                // Nothing added
-                return false;
-            }
-        }
-        // Save the current state so undo can take this back
+        // Save the current state so undo can take this back (including a dropped oldest segment)
         self.push_undo_snapshot(format!("Jump loop R{}: add steps {}-{} x{}", row, start + 1, end + 1, repeats));
         // Lock for the change
         let mut state = self.state.lock().unwrap();
+        // Borrow the row mutably
+        let row_state = &mut state.sequencer_a_row_states[row];
+        // Full: drop the oldest segment(s) until there is room; `while` also copes with an over-long older pattern file
+        while row_state.jump_loop.len() >= MAX_JUMP_SEGMENTS {
+            // The oldest is the first; `remove(0)` shifts the others down one place
+            row_state.jump_loop.remove(0);
+            // The segment playing moved down one place too
+            if row_state.jump_segment > 0 {
+                // Keep playing the same segment
+                row_state.jump_segment -= 1;
+            } else {
+                // The playing segment was the one dropped: the row moves to the new first segment on its next step
+                row_state.jump_repeat = 0;
+            }
+        }
         // Append the segment; it plays after the ones already there
-        state.sequencer_a_row_states[row].jump_loop.push(JumpSegment { start, end, repeats });
+        row_state.jump_loop.push(JumpSegment { start, end, repeats });
         // Added
         true
     }
@@ -3230,13 +3237,17 @@ mod timing_tests {
         sequencer.redo().unwrap();
         // Step 1 is in the segment again
         assert_eq!(sequencer.jump_loop_contains(2, 1), Some(true));
-        // Fill up to 8 segments
-        for _ in 0..7 {
+        // Fill up to 5 segments
+        for _ in 0..4 {
             // Each one is accepted
             assert!(sequencer.add_jump_segment(2, 4, 5, 1));
         }
-        // The 9th is refused
-        assert!(!sequencer.add_jump_segment(2, 4, 5, 1));
+        // A 6th is accepted too, and the oldest (steps 1-2) is dropped to make room
+        assert!(sequencer.add_jump_segment(2, 4, 5, 1));
+        // Still 5 segments
+        assert_eq!(sequencer.get_row_states(2).unwrap().jump_loop.len(), MAX_JUMP_SEGMENTS);
+        // Step 1 is no longer in any segment
+        assert_eq!(sequencer.jump_loop_contains(2, 1), Some(false));
         // Older pattern files have no jump_loop field: they load with none
         let mut json = serde_json::to_value(&SequencerARowStates::default()).unwrap();
         // Remove the field as an old file would lack it
@@ -3483,6 +3494,31 @@ mod timing_tests {
         assert_eq!(sequencer.toggle_row_reset(7, 0, 64), None);
         // Step 32 does not exist
         assert_eq!(sequencer.toggle_row_reset(0, 32, 64), None);
+    }
+
+    #[test]
+    fn entering_the_same_segment_five_times_replaces_the_whole_jump_loop() {
+        // In-memory sequencer; row 0 has all 32 steps
+        let mut sequencer = test_sequencer();
+        // An old loop of three segments
+        sequencer.add_jump_segment(0, 0, 3, 1);
+        sequencer.add_jump_segment(0, 8, 11, 2);
+        sequencer.add_jump_segment(0, 20, 16, 1);
+        // Play into it for a while (it is somewhere in the old loop now)
+        run_main_loop(&mut sequencer, 6 * 30, |_, _| {});
+        // The new idea, entered five times while playing
+        for _ in 0..MAX_JUMP_SEGMENTS {
+            // Steps 25-28 once
+            sequencer.add_jump_segment(0, 24, 27, 1);
+        }
+        // Only the new segment is left, five times over
+        assert_eq!(sequencer.get_row_states(0).unwrap().jump_loop, vec![JumpSegment { start: 24, end: 27, repeats: 1 }; MAX_JUMP_SEGMENTS]);
+        // Play on: after at most one more step of the old loop the row is in 24-27 and stays there
+        let trace = run_main_loop(&mut sequencer, 6 * 20, |_, _| {});
+        // Steps from the second one on
+        let steps: Vec<usize> = played_steps(&trace, 0).into_iter().skip(1).collect();
+        // Every one of them is in the new segment
+        assert!(steps.iter().all(|step| (24..=27).contains(step)), "{:?}", steps);
     }
 
     #[test]
