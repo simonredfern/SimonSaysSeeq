@@ -36,17 +36,17 @@ F0 7D 53 53 51 02 <row> <col> <press> F7
 | 2 | Temporary step | | Hold + press a step: an empty step plays for the next 2 passes of its row, a lit step is muted for 2 passes; press again to cancel. Not saved, not undoable, cleared on stop |
 | 3 | Preset Grid | `ARM_PRESET_GRID` | Hold + press a step: apply that row's preset (each row has its own bank: kick, open hat, closed hat, clap, accent, synth lines). Step 1 clears the row, step 2 is the standard techno pattern, then denser and more unusual; most presets on grid two are two-bar patterns with a fill. A row at 8th-note triplets gets 12-step triplet presets from a separate bank (last step set to 12) |
 | 4 | Euclidean Events | `ARM_EUCLIDEAN_EVENTS` | Set number of events in euclidean pattern |
-| 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern |
+| 5 | Euclidean Length | `ARM_EUCLIDEAN_LENGTH` | Set length of euclidean pattern. The row then plays from where it would be had it played that length since MIDI Start, so it stays in time |
 | 6 | Euclidean Rotation | `ARM_EUCLIDEAN_ROTATION` | Rotate euclidean pattern |
 | 7 | Ratchet | `ARM_RATCHET` | Hold + press a step: off or normal -> style 1 (2 hits) -> style 2 (3 hits) -> style 3 (4 hits) -> normal step. Saved and undoable |
-| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed), make the row straight, and clear its Jump Loop. Undoable as one step |
-| 9 | Set Max Step, 8th-note triplets | | Set row max_step and make the row 8th-note triplets (8 clocks per step, 12 per bar). Undoable as one step |
-| 10 | Row reset every 64 | | Hold + press a step: every 64 steps (counted from MIDI Start) the row goes back to that step, even with a Jump Loop; the loop carries on from there. Same button and step again removes it. While held, each row's 64-step reset is the only bright step. Saved and undoable |
-| 11 | Row reset every 128 | | Same, every 128 steps |
+| 8 | Set Max Step | `ARM_SET_MAX_STEP` | Set row max_step (0-indexed), make the row straight, and clear its Jump Loop and row reset. The row then plays from where it would be had it played that length since MIDI Start (its own row reset included), so it stays in time. Undoable as one step |
+| 9 | Set Max Step, 8th-note triplets | | Set row max_step, make the row 8th-note triplets (8 clocks per step, 12 per bar), and clear its Jump Loop and row reset (for triplet Jump Loops, set this first, then add the segments). Undoable as one step |
+| 10 | Row reset every 64 | | Hold + press a step: every 64 steps (counted from MIDI Start) the row goes back to that step, even with a Jump Loop; the loop carries on from there. Same button and step again keeps it; undo, a Jump Loop segment on the row, or column 8 or 9 on the row removes it. While held, each row's 64-step reset is the only bright step. The button lights for one beat at each 64-step point while the clock runs. Saved and undoable |
+| 11 | Row reset every 128 | | Same, every 128 steps (the button lights for one beat at each 128-step point) |
 | 12 | Jump Loop 1X | | Hold + press a start step, then an end step, on one row: add a segment played once (end before start plays backwards). A row holds up to 5 segments; a 6th drops the oldest, so entering the same segment 5 times replaces the whole loop |
 | 13 | Jump Loop 2X | | Same, segment played twice |
 | 14 | Jump Loop 3X | | Same, segment played three times |
-| 15 | Jump Loop Reset | | Hold + press any step on a row: clear that row's Jump Loop |
+| 15 | (none) | | Not used. To clear a row's Jump Loop, use column 8 (last step, straight) + a step on that row |
 
 Grid two, row 7, column 2: Jump Loop sync. Press to cycle off -> every 64 steps (dim) -> every 128 steps (bright) -> off. At each sync point, rows with a Jump Loop start again at their first segment. Saved with the pattern and undoable.
 

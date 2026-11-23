@@ -40,6 +40,8 @@ const LED_RATCHET_2: u8 = 13;
 const LED_RATCHET_3: u8 = 14;
 // MIDI clock light (grid two, row 7, column 0) on the beat: kept low so it doesn't dazzle
 const LED_CLOCK_BEAT: u8 = 3;
+// Row reset buttons (grid one, row 7, columns 10 and 11) flash at this brightness on their 64- or 128-step point
+const LED_ROW_RESET_POINT: u8 = LED_BRIGHT;
 
 /// External MIDI clock tick counter for step synchronization
 static EXTERNAL_CLOCK_TICK_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -62,7 +64,7 @@ enum ArmAction {
     JumpLoop1x,        // Column 12: hold + start step + end step = add a Jump Loop segment played once
     JumpLoop2x,        // Column 13: same, segment played twice
     JumpLoop3x,        // Column 14: same, segment played three times
-    JumpLoopReset,     // Column 15: hold + any step on a row = clear that row's Jump Loop
+    // Column 15 is free: column 8 (last step, straight) + a step clears a row's Jump Loop
 
 }
 
@@ -85,7 +87,6 @@ impl ArmAction {
             12 => Some(ArmAction::JumpLoop1x),
             13 => Some(ArmAction::JumpLoop2x),
             14 => Some(ArmAction::JumpLoop3x),
-            15 => Some(ArmAction::JumpLoopReset),
 
             _ => None,
         }
@@ -109,7 +110,6 @@ impl ArmAction {
             ArmAction::JumpLoop1x => 12,
             ArmAction::JumpLoop2x => 13,
             ArmAction::JumpLoop3x => 14,
-            ArmAction::JumpLoopReset => 15,
 
         }
     }
@@ -149,8 +149,6 @@ impl ArmAction {
             ArmAction::JumpLoop2x => "Jump Loop 2X",
             // Column 14
             ArmAction::JumpLoop3x => "Jump Loop 3X",
-            // Column 15
-            ArmAction::JumpLoopReset => "Jump Loop reset",
         };
         // `{:02}` pads the column number to two digits
         format!("grid one col {:02}: {}", self.to_column(), label)
@@ -171,7 +169,7 @@ impl ArmAction {
     }
 
     /// For the Jump Loop buttons 1X/2X/3X (columns 12-14): how many times the segment plays.
-    /// None for every other action, including Reset.
+    /// None for every other action.
     fn jump_repeats(&self) -> Option<u8> {
         // `match` on self; each arm returns a value
         match self {
@@ -186,10 +184,10 @@ impl ArmAction {
         }
     }
 
-    /// True for the four Jump Loop buttons (columns 12-15)
+    /// True for the three Jump Loop buttons (columns 12-14)
     fn is_jump_loop(&self) -> bool {
         // `matches!` is true if self is any of the listed variants
-        matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x | ArmAction::JumpLoopReset)
+        matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x)
     }
 
     /// For the last-step buttons (columns 8 and 9): the rate they give the row, in MIDI clocks per
@@ -273,6 +271,8 @@ pub struct SimonSaysSeeq {
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
     clock_status_led: Option<u8>,
     clock_status_last_update: Instant,
+    // Row reset buttons (grid one row 7 columns 10 and 11): last brightness sent to each, None = redraw
+    row_reset_lights: [Option<u8>; 2],
     // Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
     test_mode: bool,
 }
@@ -343,6 +343,8 @@ impl SimonSaysSeeq {
             jump_pending_start: None,
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
+            // Nothing drawn on the row reset buttons yet
+            row_reset_lights: [None; 2],
             test_mode,
         })
     }
@@ -600,6 +602,9 @@ impl SimonSaysSeeq {
 
                 #[cfg(feature = "hardware")]
                 self.update_clock_status_led();
+                // Flash the row reset buttons on their 64- and 128-step points
+                #[cfg(feature = "hardware")]
+                self.update_row_reset_lights();
                 // Blink temporarily muted steps and restore lights of expired ones
                 #[cfg(feature = "hardware")]
                 self.update_temporary_steps();
@@ -941,6 +946,8 @@ impl SimonSaysSeeq {
                                         self.sequencer.set_row_states(seq_y, updated_row_state);
                                     }
                                 }
+                                // Put the row where it would be had it played this length since the clock start, so it stays in time (not for Jump Loop rows or a waiting rate change)
+                                self.sequencer.line_up_row(seq_y, EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst) as u64);
                             } else {
                                 // Fallback if seq_a_row_state is not available
                                 // warn!("EuclidianLength: Could not get seq_a_row_state for row {}, using fallback defaults", seq_y);
@@ -999,24 +1006,15 @@ impl SimonSaysSeeq {
                                 }
                             }
                         },
-                        // Reset held: clear this row's Jump Loop
                         // Either row reset button; `|` matches either
                         ArmAction::RowReset64 | ArmAction::RowReset128 => {
                             // 64 or 128; these two always have one
                             let every_steps = arm_action.reset_every_steps().unwrap_or(64);
-                            // Set, move or remove the row's reset (undoable)
-                            let reset = self.sequencer.toggle_row_reset(seq_y, seq_x, every_steps);
-                            // Log at info (hidden in concert mode); `{:?}` prints the Option
-                            info!("ARM ROW_RESET: row {} step {} every {} -> {:?}", seq_y, seq_x, every_steps, reset);
-                            // Redraw the row: the bright reset step moves or goes
-                            self.refresh_all_row_leds(seq_y)?;
-                        },
-                        ArmAction::JumpLoopReset => {
-                            // Back to normal playing (undoable); false if there was nothing to clear
-                            let cleared = self.sequencer.clear_jump_loop(seq_y);
+                            // Set or move the row's reset (undoable); the same press again keeps it
+                            let set = self.sequencer.set_row_reset(seq_y, seq_x, every_steps);
                             // Log at info (hidden in concert mode)
-                            info!("ARM JUMP_LOOP_RESET: row {} cleared={}", seq_y, cleared);
-                            // Redraw the row without segments
+                            info!("ARM ROW_RESET: row {} step {} every {} set={}", seq_y, seq_x, every_steps, set);
+                            // Redraw the row: the bright reset step moves
                             self.refresh_all_row_leds(seq_y)?;
                         },
                         ArmAction::Ratchet => {
@@ -1039,24 +1037,25 @@ impl SimonSaysSeeq {
                         ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepEighthTriplet => {
                             // The rate this button gives the row; both always have one
                             let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
-                            // One undo step for the whole press: last step, rate and (column 8) the cleared Jump Loop
+                            // One undo step for the whole press: last step, rate, and the cleared Jump Loop and row reset
                             self.sequencer.save_undo_point(format!("Last step R{}: step {}, {}", seq_y, seq_x + 1,
                                 if clocks == STRAIGHT_CLOCKS_PER_STEP { "straight" } else { "8th-note triplets" }));
-                            // Column 8 (straight) also clears the row's Jump Loop (inside the undo step above); the row
-                            // then lines up with where it would be had it played normally all along
-                            if clocks == STRAIGHT_CLOCKS_PER_STEP && self.sequencer.clear_jump_loop_without_undo_point(seq_y) {
+                            // Both buttons clear the row's Jump Loop (inside the undo step above), so triplet Jump Loops are made after the triplet last step
+                            if self.sequencer.clear_jump_loop(seq_y) {
                                 // Log at info (hidden in concert mode)
                                 info!("ARM SET_MAX_STEP: row {} Jump Loop cleared", seq_y);
                             }
-                            // Resync to the master step only for a straight row that is already straight
-                            let allow_master_resync = clocks == STRAIGHT_CLOCKS_PER_STEP
-                                && self.sequencer.row_clocks_per_step(seq_y) == STRAIGHT_CLOCKS_PER_STEP;
+                            // Both buttons also remove the row's reset (inside the same undo step)
+                            if self.sequencer.clear_row_reset(seq_y) {
+                                // Log at info (hidden in concert mode)
+                                info!("ARM SET_MAX_STEP: row {} row reset removed", seq_y);
+                            }
                             // Set the rate; the change waits until the old and new rates line up
                             self.sequencer.set_row_rate(seq_y, clocks);
                             // `{:?}` formats the action's name (from #[derive(Debug)]) for the log
                             let action_name = format!("{:?}", arm_action);
                             // Set the last step; `?` passes any error up to the caller
-                            self.set_row_last_step(seq_x, seq_y, allow_master_resync, &action_name)?;
+                            self.set_row_last_step(seq_x, seq_y, &action_name)?;
                         },
                         ArmAction::PresetGrid => {
                             // Apply preset pattern to this row
@@ -1429,7 +1428,7 @@ impl SimonSaysSeeq {
                 self.refresh_sequence_rows()?;
             }
             // Any Jump Loop button: show the segments (steps outside them dimmed) while it is held
-            ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x | ArmAction::JumpLoopReset => {
+            ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x => {
                 // A fresh press starts with no half-entered segment
                 self.jump_pending_start = None;
                 // Turn on the segment view
@@ -1931,10 +1930,8 @@ impl SimonSaysSeeq {
 
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
-    /// Set a row's last step (max_step) to `seq_x`, as grid one row 7 column 8 does. If the
-    /// current step is beyond it, the row restarts from its first step; otherwise, setting the
-    /// full length (31) resyncs the row to the master step when `allow_master_resync`.
-    fn set_row_last_step(&mut self, seq_x: usize, seq_y: usize, allow_master_resync: bool, action_name: &str) -> Result<()> {
+    /// Set a row's last step (max_step) to `seq_x`, as grid one row 7 columns 8 and 9 do. The row then plays from where it would be had it played this loop since the clock start, so a shorter or longer row stays in time with the others.
+    fn set_row_last_step(&mut self, seq_x: usize, seq_y: usize, action_name: &str) -> Result<()> {
         // Keep the value in the valid step range 0-31
         let max_step = seq_x.clamp(0, 31);
         // get_row_states returns a copy (Option); `if let Some(..)` runs only when the row exists
@@ -1944,21 +1941,16 @@ impl SimonSaysSeeq {
             // Set the new last step on our copy
             seq_a_row_state.max_step = max_step;
 
-            // A row with a Jump Loop: its segments decide where the playhead goes, so leave it alone
-            if !seq_a_row_state.jump_loop.is_empty() {
-                // Only the stored last step changes (it applies again after Reset)
-            // If the playhead is now past the end, restart from the row's first step
-            } else if seq_a_row_state.current_row_step > max_step {
+            // A row without a Jump Loop whose playhead is now past the end restarts from its first step (line_up_row below moves it again if it can)
+            if seq_a_row_state.jump_loop.is_empty() && seq_a_row_state.current_row_step > max_step {
                 // Reset to beginning of the row's own cycle
                 seq_a_row_state.current_row_step = seq_a_row_state.first_step;
-            // Full 32 steps: line the row up with the master step again (straight rows only)
-            } else if max_step == 31 && allow_master_resync {
-                // Copy the master step position into the row
-                seq_a_row_state.current_row_step = self.sequencer.get_current_position();
             }
 
             // Write the changed copy back into the sequencer
             self.sequencer.set_row_states(seq_y, seq_a_row_state);
+            // Put the row where it would be had it played this loop since the clock start, so it stays in time (not for Jump Loop rows or a waiting rate change)
+            self.sequencer.line_up_row(seq_y, EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst) as u64);
 
             // Record the change in the formal state log; `&format!(..)` builds a String and lends it
             log_arm_action_executed(action_name, seq_y, seq_x,
@@ -2614,6 +2606,52 @@ impl SimonSaysSeeq {
             self.clock_status_led = Some(brightness);
             // Restart the 5-second re-send timer
             self.clock_status_last_update = Instant::now();
+        }
+    }
+
+    /// Grid one row 7 columns 10 (64) and 11 (128): each lights for one beat on its reset point, every 64 or 128 straight steps from the clock start, which is where rows with that reset go back to their reset step. A held button keeps its own press light. Checked on every main-loop pass; an LED message is sent only when the brightness changes.
+    #[cfg(all(feature = "midi", feature = "hardware"))]
+    fn update_row_reset_lights(&mut self) {
+        // The tick the sequencer handles next; the last one handled is one before it
+        let next_tick = EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst) as u64;
+        // A tick has been handled since the last start (the counter goes back to 0 on the first tick after a start)
+        let ticking = self.sequencer.is_running() && next_tick > 0 && !self.sequencer.get_reset_tick_counter_flag();
+        // Both buttons: (index into row_reset_lights, the button's action)
+        for (index, action) in [(0, ArmAction::RowReset64), (1, ArmAction::RowReset128)] {
+            // While this button is held, its press light wins
+            if self.active_arm_action == Some(action) {
+                // Draw again once it is released
+                self.row_reset_lights[index] = None;
+                // On to the other button
+                continue;
+            }
+            // 64 or 128 straight steps of 6 clocks; both buttons have a length
+            let reset_clocks = action.reset_every_steps().unwrap_or(64) as u64 * 6;
+            // Lit for the first beat (24 clocks) after the reset point, while the clock runs
+            let brightness = if ticking && (next_tick - 1) % reset_clocks < 24 { LED_ROW_RESET_POINT } else { LED_OFF };
+            // Already showing that: nothing to send
+            if self.row_reset_lights[index] == Some(brightness) {
+                // On to the other button
+                continue;
+            }
+            // Ask which grids are connected
+            let connected_grids = self.grid.get_connected_grids();
+            // We only need grid one; `_` ignores grid two
+            let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+            // `let ... else` binds grid_one_id if it is Some, otherwise runs the else block
+            let Some(grid_one_id) = grid_one else {
+                // No grid one: forget what was drawn so both are redrawn when it comes back
+                self.row_reset_lights = [None; 2];
+                // Nothing to draw on
+                return;
+            };
+            // Set the LED and push it to the grid; `&&` only refreshes if set_led worked
+            if self.grid.set_led(&grid_one_id, action.to_column(), 7, brightness, "row_reset_point").is_ok()
+                && self.grid.refresh().is_ok()
+            {
+                // Remember what is on the grid now
+                self.row_reset_lights[index] = Some(brightness);
+            }
         }
     }
 
