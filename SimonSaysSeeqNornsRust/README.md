@@ -155,6 +155,53 @@ cargo build --release --features="hardware,midi"
 - **Current Pattern Saved**: Current Pattern is saved on MIDI stop and loaded at seqeuncer boot.
 - **CO2 Environmental Data Sonification**: Four CV outputs driven by atmospheric CO2 data
 
+## Grid buttons
+
+SimonSaysSeeq uses two 16x8 grids side by side. On both grids, rows 1 to 7 are the seven sequence rows: steps 1-16 on grid one and steps 17-32 on grid two. Row 8, at the bottom, is the control row. Columns are counted from 1 on the left. "Hold" means hold the control button and press a step on a sequence row; step presses work on either grid.
+
+Positions are counted from MIDI Start. "In time" means a row plays from where it would be had it played its loop since MIDI Start, as after a stop and start.
+
+### Grid one, control row
+
+| Column | Button | What it does |
+|---|---|---|
+| 1 | Undo | Undo the last change |
+| 2 | Redo | Redo the last undone change |
+| 3 | Temporary step (hold) | An empty step plays, or a lit step is muted, for the next 2 passes of its row. Press again to cancel. Not saved, not undoable, cleared on stop |
+| 4 | Preset pattern (hold) | Apply a preset from the row's own bank. Step 1 clears the row, step 2 is the standard pattern, later steps are denser. A row at 8th-note triplets gets 12-step triplet presets |
+| 5 | Euclidean events (hold) | Set the number of events in the row's Euclidean pattern |
+| 6 | Euclidean length (hold) | Set the length of the row's Euclidean pattern. The row stays in time |
+| 7 | Euclidean rotation (hold) | Rotate the row's Euclidean pattern |
+| 8 | Ratchet (hold) | Cycle a step: normal, 2 hits, 3 hits, 4 hits, normal |
+| 9 | Last step, straight (hold) | Set the row's last step and make it straight. Clears the row's Jump Loop and row resets. The row stays in time. One undo takes back the whole press |
+| 10 | Free | |
+| 11 | Row reset every 64 (hold) | Every 64 steps the row goes to the pressed step. With a Jump Loop, the loop carries on in the segment that has that step, or from the first segment. Replaces the row's 64 reset (normal or forced). The button flashes for one beat at each 64-step point |
+| 12 | Row reset every 128 (hold) | Every 128 steps the row goes to the pressed step. A row can have a 64 reset and a 128 reset; where they fall together, the 128 one wins. The button flashes for one beat at each 128-step point |
+| 13 | Jump Loop 1X (hold) | Press a start step, then an end step, on one row: add a segment played once. End before start plays backwards. Up to 5 segments per row; a 6th drops the oldest |
+| 14 | Jump Loop 2X (hold) | Same, segment played twice |
+| 15 | Jump Loop 3X (hold) | Same, segment played three times |
+| 16 | Row reset every 64, forced (hold) | Like column 11, and replaces the row's 64 reset. On a Jump Loop row with the step outside every segment, the row plays forward from that step until it reaches a step inside a segment, then the loop carries on from there. Flashes at each 64-step point |
+
+Row resets stay until undone or until column 9 (grid one) or column 16 (grid two) is pressed on the row. Pressing the same reset step again keeps it. While a row reset button is held, each row's reset step of that length is the only bright step.
+
+### Grid two, control row
+
+| Column | Button | What it does |
+|---|---|---|
+| 1 + 2 held | MIDI clock re-detect and Crow search | Release the MIDI clock binding (the next port to send clock is bound) and search once for Crow. Both lights go full brightness if Crow is found, dark if not. Column 1 is also the MIDI clock light: it flashes on each beat while clock is coming in |
+| 3 | Jump Loop sync | Each press: off, every 64 steps (dim), every 128 steps (bright), off. At each sync point, rows with a Jump Loop start again at their first segment. Saved and undoable |
+| 4 | Jump Loop from step 1 (hold) | Press step N on a row: add a segment from step 1 to step N, played once (step 32 gives a 32-step segment). Undoable |
+| 5 | Jump Loop remove newest (hold) | Press any step on a row: remove its newest segment. When the last one goes, the row plays normally again, in time. Undoable |
+| 6, 7 | Free | |
+| 8-11 | Crow mute 1-4 | On/off: mute Crow output 1, 2, 3 or 4. Lit while muted |
+| 12 | Free | |
+| 13 | Stop | Stop the sequencer |
+| 14 | Start | Start the sequencer from step 1 |
+| 15 | Tempo | No effect: the sequencer follows external MIDI clock |
+| 16 | Last step, 8th-note triplets (hold) | Set the row's last step and make it 8th-note triplets (12 steps per bar). Clears the row's Jump Loop and row resets, so for triplet Jump Loops set this first, then add the segments. One undo takes back the whole press. On grid two, out of the way of mistaken presses |
+
+While any Jump Loop button is held, steps outside the Jump Loop segments are dimmed. While a last-step button is held, rows at that button's rate look normal and the others are dimmed.
+
 ## CO2 CV Outputs
 
 SimonSaysSeeq includes a unique environmental data sonification system that converts atmospheric CO2 measurements into musical control voltages. This system uses real NOAA CO2 data from 1958 to present, creating a powerful tool for climate-aware electronic music.
@@ -200,7 +247,7 @@ The CO2 CV system provides multiple time scales for musical expression:
 - **Update Timing**: Synchronized to external MIDI clock (24 PPQ)
 - **Error Safe**: Graceful handling of missing data or date boundaries  
 - **Voltage Scaling**: Automatically scaled to maximize musical resolution
-- **MUTE_CROW Button**: Hold Grid Two column 10 to mute all CV outputs
+- **Crow mute buttons**: Grid two control row, columns 8-11, mute Crow outputs 1-4 (on/off); see [Grid buttons](#grid-buttons)
 
 ### Data Source & Accuracy
 

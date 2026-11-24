@@ -31,7 +31,7 @@ pub struct Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrowConfig {
     /// Search for Crow at startup (about 5 s with retries when none is connected).
-    /// When false, Crow is only searched for when grid two row 7 columns 4, 5 and 6 are held together.
+    /// When false, Crow is only searched for when grid two row 7 columns 0 and 1 are held together.
     #[serde(default)]
     pub search_at_startup: bool,
 }

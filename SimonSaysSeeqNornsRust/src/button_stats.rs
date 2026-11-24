@@ -75,21 +75,25 @@ pub fn grid_two_button_name(column: usize) -> String {
     // What each column does today
     let label = match column {
         // Clock light, and first half of the re-detect pair
-        0 => "MIDI re-detect (with 1) / clock light",
+        0 => "MIDI re-detect and Crow search (with 1) / clock light",
         // Second half of the re-detect pair
-        1 => "MIDI re-detect (with 0)",
+        1 => "MIDI re-detect and Crow search (with 0)",
         // Jump Loop sync setting
         2 => "Jump Loop sync (off / 64 / 128)",
-        // The three Crow search buttons
-        4 | 5 | 6 => "Crow search (4+5+6)",
+        // Jump Loop hold buttons (counted by their action names in main.rs)
+        3 => "Jump Loop from step 1",
+        // Same
+        4 => "Jump Loop remove newest",
         // Crow output mutes 1-4
         7..=10 => "Crow mute",
         // Transport
         12 => "Stop",
         // Transport
         13 => "Start",
-        // Tempo buttons do nothing with an external clock
-        14 | 15 => "Tempo (no effect)",
+        // Tempo button does nothing with an external clock
+        14 => "Tempo (no effect)",
+        // The last-step triplet hold button (counted by its action name in main.rs)
+        15 => "last step, 8th-note triplets",
         // Columns with nothing on them
         _ => "unused",
     };

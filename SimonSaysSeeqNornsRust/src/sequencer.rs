@@ -110,16 +110,14 @@ impl JumpSegment {
     }
 }
 
-/// A row's own reset (grid one row 7 column 10 or 11 + a step): every `every_steps` straight
-/// steps, counted from MIDI Start, the row goes back to `step`. It wins over the row's Jump Loop,
-/// the bar lock of a triplet row and the Jump Loop sync.
+/// One of a row's resets (grid one row 7 column 10, 11 or 15 + a step): every 64 or 128 straight steps, counted from MIDI Start, the row goes to `step`. A row has at most one 64 reset (normal or forced) and one 128 reset; where both fall on the same step, the 128 reset wins. A reset wins over the row's Jump Loop, the bar lock of a triplet row and the Jump Loop sync.
 // `Copy` lets it be duplicated like a number; `Serialize, Deserialize` save it with the row
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RowReset {
-    /// 64 or 128 straight steps (4 or 8 bars)
-    pub every_steps: u16,
-    /// The step (0-31) the row goes back to
+    /// The step (0-31) the row goes to
     pub step: usize,
+    /// Forced (column 15, 64 only): on a Jump Loop row, the row plays forward from `step`, ignoring its segments, until it reaches a step inside one, and the loop carries on from there. Not forced: the row carries on in the segment that has `step`, or the first segment.
+    pub forced: bool,
 }
 
 /// How many passes of its row a temporary step lasts (grid one, row 7, column 2 + step)
@@ -247,17 +245,92 @@ pub struct SequencerARowStates {
     /// had it played normally all along. Not saved.
     #[serde(skip)]
     pub resync_pending: bool,
-    /// The row's own reset, if any. Saved with the pattern; older pattern files load with none.
+    /// The row's 64-step reset (normal or forced), if any. Saved with the pattern.
     #[serde(default)]
-    pub row_reset: Option<RowReset>,
+    pub reset_64: Option<RowReset>,
+    /// The row's 128-step reset, if any (never forced). Saved with the pattern.
+    #[serde(default)]
+    pub reset_128: Option<RowReset>,
+    /// After a forced reset: steps the row may still play forward before it must join its Jump Loop (0 = not walking). Not saved.
+    #[serde(skip)]
+    pub forced_walk_left: usize,
 }
 
 impl SequencerARowStates {
+    /// The reset that fires on straight step number `step_number` (counted from MIDI Start), if any: the 128 reset on multiples of 128, otherwise the 64 reset on multiples of 64.
+    fn reset_at(&self, step_number: u64) -> Option<RowReset> {
+        // A 128 point with a 128 reset: that one wins
+        if step_number % 128 == 0 && self.reset_128.is_some() {
+            // The 128 reset
+            return self.reset_128;
+        }
+        // A 64 point (every 128 point is one too): the 64 reset, if there is one
+        if step_number % 64 == 0 {
+            // `self.reset_64` is already an Option
+            return self.reset_64;
+        }
+        // Not a reset point
+        None
+    }
+
+    /// The last reset point at or before straight step number `step_number` that has a reset for this row, and that reset: (the point's step number, the reset).
+    fn last_reset(&self, step_number: u64) -> Option<(u64, RowReset)> {
+        // The last 64 point; every 128 point is one too
+        let last_64 = step_number - step_number % 64;
+        // The last 128 point
+        let last_128 = step_number - step_number % 128;
+        // The latest point that has a reset for this row; `or_else` tries the 128 point only if the 64 point has none
+        self.reset_at(last_64).map(|reset| (last_64, reset)).or_else(|| self.reset_at(last_128).map(|reset| (last_128, reset)))
+    }
+
+    /// Put the row on `reset.step` now, as a reset point does. A Jump Loop row carries on in the first segment that has that step; if none has it, a forced reset walks forward until it reaches one, and a normal reset goes on to the first segment.
+    fn apply_reset(&mut self, reset: RowReset) {
+        // Play the reset step now
+        self.current_row_step = reset.step;
+        // No repeats done yet
+        self.jump_repeat = 0;
+        // A waiting line-up after a Jump Loop clear would move the row away again, so drop it
+        self.resync_pending = false;
+        // The first segment that has this step; `position` gives its index
+        let segment = self.jump_loop.iter().position(|segment| segment.contains(reset.step));
+        // Carry on in that segment, or the first
+        self.jump_segment = segment.unwrap_or(0);
+        // Walk forward only for a forced reset on a step outside every segment; at most one lap of the row, counting the reset step
+        self.forced_walk_left = if reset.forced && segment.is_none() && !self.jump_loop.is_empty() {
+            // The rest of the lap: the row's number of steps less the reset step itself
+            self.max_step.saturating_sub(self.first_step)
+        } else {
+            // Not walking
+            0
+        };
+    }
+
     /// Work out the next step of a row that has a Jump Loop (call only when `jump_loop` is not
     /// empty), updating which segment and repeat it is on.
     fn next_jump_step(&mut self) -> usize {
         // Number of segments
         let count = self.jump_loop.len();
+        // Walking forward after a forced reset: the next step as a normal row would play it
+        // (once the lap is used up, the code below takes the row from outside the loop to its segment's start)
+        if self.forced_walk_left > 0 {
+            // One on, back to the first step after the last step (or from beyond it)
+            let next = if self.current_row_step >= self.max_step { self.first_step } else { self.current_row_step + 1 };
+            // Reached a step inside a segment: join the loop there; `position` gives the segment's index
+            if let Some(segment) = self.jump_loop.iter().position(|segment| segment.contains(next)) {
+                // Walk over
+                self.forced_walk_left = 0;
+                // Play on in that segment
+                self.jump_segment = segment;
+                // With no repeats done
+                self.jump_repeat = 0;
+                // Play this step
+                return next;
+            }
+            // Still outside the loop: one step of the lap used
+            self.forced_walk_left -= 1;
+            // Play this step
+            return next;
+        }
         // After an undo the list may be shorter: start again from the first segment
         if self.jump_segment >= count {
             // First segment
@@ -344,8 +417,12 @@ impl Default for SequencerARowStates {
             jump_repeat: 0,
             // Nothing to line up
             resync_pending: false,
-            // No reset of its own
-            row_reset: None,
+            // No 64-step reset
+            reset_64: None,
+            // No 128-step reset
+            reset_128: None,
+            // Not walking to a Jump Loop
+            forced_walk_left: 0,
         }
     }
 }
@@ -1224,8 +1301,9 @@ impl Sequencer {
             .map(|rs| rs.clocks_per_step)
             .collect();
         // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
-        let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending))
+        let current_jump_progress: Vec<(usize, u8, bool, usize)> = current_state.sequencer_a_row_states.iter()
+            // The fourth value is the forced walk left after a forced reset
+            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending, rs.forced_walk_left))
             .collect();
         drop(current_state);
 
@@ -1253,13 +1331,15 @@ impl Sequencer {
                     seq_a_row_state.pending_clocks_per_step = if wanted == supported_rate(clocks) { None } else { Some(wanted) };
                 }
                 // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
-                if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
+                if let Some(&(segment, repeat, resync, walk)) = current_jump_progress.get(i) {
                     // Segment being played
                     seq_a_row_state.jump_segment = segment;
                     // Repeats done
                     seq_a_row_state.jump_repeat = repeat;
                     // Waiting line-up after a clear
                     seq_a_row_state.resync_pending = resync;
+                    // Forced walk still going
+                    seq_a_row_state.forced_walk_left = walk;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -1310,8 +1390,9 @@ impl Sequencer {
             .map(|rs| rs.clocks_per_step)
             .collect();
         // Where each row is in its Jump Loop is playback progress too, so keep it (the segments themselves are undone)
-        let current_jump_progress: Vec<(usize, u8, bool)> = current_state.sequencer_a_row_states.iter()
-            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending))
+        let current_jump_progress: Vec<(usize, u8, bool, usize)> = current_state.sequencer_a_row_states.iter()
+            // The fourth value is the forced walk left after a forced reset
+            .map(|rs| (rs.jump_segment, rs.jump_repeat, rs.resync_pending, rs.forced_walk_left))
             .collect();
         drop(current_state);
 
@@ -1339,13 +1420,15 @@ impl Sequencer {
                     seq_a_row_state.pending_clocks_per_step = if wanted == supported_rate(clocks) { None } else { Some(wanted) };
                 }
                 // Keep the Jump Loop progress (next_jump_step copes if the restored list is shorter)
-                if let Some(&(segment, repeat, resync)) = current_jump_progress.get(i) {
+                if let Some(&(segment, repeat, resync, walk)) = current_jump_progress.get(i) {
                     // Segment being played
                     seq_a_row_state.jump_segment = segment;
                     // Repeats done
                     seq_a_row_state.jump_repeat = repeat;
                     // Waiting line-up after a clear
                     seq_a_row_state.resync_pending = resync;
+                    // Forced walk still going
+                    seq_a_row_state.forced_walk_left = walk;
                 }
             }
             state.sequencer_a_row_states = snapshot.row_states;
@@ -2106,26 +2189,22 @@ impl Sequencer {
                     row.jump_segment = 0;
                     // With no repeats done
                     row.jump_repeat = 0;
+                    // A forced walk ends here
+                    row.forced_walk_left = 0;
                 }
             }
         }
 
-        // Row resets last, so they win over the bar lock and the Jump Loop sync on the same tick
-        for row in state.sequencer_a_row_states.iter_mut().take(7) {
-            // Only rows with a reset; `if let` copies the RowReset out (it is `Copy`)
-            if let Some(reset) = row.row_reset {
-                // The reset length in clocks: 64 or 128 straight steps of 6 clocks
-                let reset_clocks = reset.every_steps as u64 * STRAIGHT_CLOCKS_PER_STEP as u64;
-                // On every multiple of it (including the clock start); `max(1)` guards against 0
-                if current_tick % reset_clocks.max(1) == 0 {
-                    // Play the chosen step now
-                    row.current_row_step = reset.step;
-                    // Jump Loop: carry on in the first segment that has this step (`position` gives its index), else the first
-                    row.jump_segment = row.jump_loop.iter().position(|segment| segment.contains(reset.step)).unwrap_or(0);
-                    // No repeats done in it yet
-                    row.jump_repeat = 0;
-                    // A waiting line-up after a Jump Loop clear would move the row away again, so drop it
-                    row.resync_pending = false;
+        // Row resets last, so they win over the bar lock and the Jump Loop sync on the same tick; only on a straight-step boundary
+        if current_tick % STRAIGHT_CLOCKS_PER_STEP as u64 == 0 {
+            // Straight steps since MIDI Start
+            let step_number = current_tick / STRAIGHT_CLOCKS_PER_STEP as u64;
+            // The sequence rows 0-6, mutably
+            for row in state.sequencer_a_row_states.iter_mut().take(7) {
+                // The reset that fires here for this row, if any (the 128 one wins on a 128 point)
+                if let Some(reset) = row.reset_at(step_number) {
+                    // Go to its step
+                    row.apply_reset(reset);
                 }
             }
         }
@@ -2247,13 +2326,44 @@ impl Sequencer {
         }
         // Append the segment; it plays after the ones already there
         row_state.jump_loop.push(JumpSegment { start, end, repeats });
-        // A Jump Loop replaces the row's reset (inside the same undo point)
-        row_state.row_reset = None;
         // Added
         true
     }
 
-    /// Grid one row 7 column 8 or 9 (last step, straight or triplets) + a step: clear a row's Jump Loop, back to normal playing, lined up with where the row would be had it played normally. The caller saves the undo point, so one undo takes back the whole press. Returns false if the row had no Jump Loop.
+    /// Grid two row 7 column 4 + a step on a row: remove the row's newest Jump Loop segment. When the last one goes, the row plays normally again, lined up with where it would be had it played normally. Undoable. Returns false if the row had no Jump Loop.
+    pub fn remove_newest_jump_segment(&self, row: usize) -> bool {
+        // Only sequence rows, and only if there is something to remove; a short lock released before push_undo_snapshot locks again
+        if row > 6 || self.state.lock().unwrap().sequencer_a_row_states[row].jump_loop.is_empty() {
+            // Nothing to do
+            return false;
+        }
+        // Save the current state so undo can bring the segment back
+        self.push_undo_snapshot(format!("Jump loop R{}: remove newest segment", row));
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Borrow the row mutably
+        let row_state = &mut state.sequencer_a_row_states[row];
+        // `pop` takes off the last segment added
+        row_state.jump_loop.pop();
+        // The segment playing was the one removed: start the next pass from the first segment
+        if row_state.jump_segment >= row_state.jump_loop.len() {
+            // First segment
+            row_state.jump_segment = 0;
+            // No repeats done
+            row_state.jump_repeat = 0;
+        }
+        // None left: normal playing, lined up on the next step (see advance_rows), as a clear does
+        if row_state.jump_loop.is_empty() {
+            // Nothing to walk to
+            row_state.forced_walk_left = 0;
+            // Line up on the next step
+            row_state.resync_pending = true;
+        }
+        // Removed
+        true
+    }
+
+    /// Grid one row 7 column 8 or grid two row 7 column 15 (last step, straight or triplets) + a step: clear a row's Jump Loop, back to normal playing, lined up with where the row would be had it played normally. The caller saves the undo point, so one undo takes back the whole press. Returns false if the row had no Jump Loop.
     pub fn clear_jump_loop(&self, row: usize) -> bool {
         // Lock for the change
         let mut state = self.state.lock().unwrap();
@@ -2266,6 +2376,8 @@ impl Sequencer {
         let row_state = &mut state.sequencer_a_row_states[row];
         // No segments: normal playing
         row_state.jump_loop.clear();
+        // Nothing to walk to
+        row_state.forced_walk_left = 0;
         // Back to the first segment for next time
         row_state.jump_segment = 0;
         // No repeats done
@@ -2277,47 +2389,78 @@ impl Sequencer {
     }
 
     /// Save an undo point before a change made outside the sequencer, such as the last-step
-    /// buttons (columns 8 and 9), so one undo takes back the whole press
+    /// buttons (grid one column 8 and grid two column 15), so one undo takes back the whole press
     pub fn save_undo_point(&self, description: String) {
         // The same snapshot every undoable change saves
         self.push_undo_snapshot(description);
     }
 
-    /// Grid one row 7 column 10 (64) or 11 (128) + a step: the row goes back to that step every 64 or 128 straight steps. Any other step or length replaces the row's reset; the same again changes nothing. Undo, a Jump Loop segment or a last-step press removes it. Undoable and saved. Returns true if the row has that reset afterwards.
-    pub fn set_row_reset(&self, row: usize, step: usize, every_steps: u16) -> bool {
-        // Only sequence rows 0-6, steps 0-31 and a length above 0
-        if row > 6 || step > 31 || every_steps == 0 {
+    /// Grid one row 7 column 10 (64), 11 (128) or 15 (forced 64) + a step: the row goes to that step every 64 or 128 straight steps. A 64 reset (normal or forced) replaces the row's 64 reset; a 128 reset replaces its 128 reset; the same again changes nothing. Undo or a last-step press removes them. Undoable and saved. Returns true if the row has that reset afterwards.
+    pub fn set_row_reset(&self, row: usize, step: usize, every_steps: u16, forced: bool) -> bool {
+        // Only sequence rows 0-6, steps 0-31, 64 or 128, and forced only for 64
+        if row > 6 || step > 31 || !matches!(every_steps, 64 | 128) || (forced && every_steps != 64) {
             // Nothing changed
             return false;
         }
         // The reset this press asks for
-        let wanted = RowReset { every_steps, step };
+        let wanted = RowReset { step, forced };
+        // The row's reset of that length now; a short lock that is released before push_undo_snapshot locks again
+        let current = self.row_reset(row, every_steps);
         // The row has it already: nothing to change, and no undo point that would undo nothing
-        if self.state.lock().unwrap().sequencer_a_row_states[row].row_reset == Some(wanted) {
+        if current == Some(wanted) {
             // It is there
             return true;
         }
-        // Save the current state so undo can take this back, e.g. "Row reset R2: step 5 every 64"
-        self.push_undo_snapshot(format!("Row reset R{}: step {} every {}", row, step + 1, every_steps));
-        // Lock for the change and store it
-        self.state.lock().unwrap().sequencer_a_row_states[row].row_reset = Some(wanted);
+        // Save the current state so undo can take this back, e.g. "Row reset R2: step 5 every 64, forced"
+        self.push_undo_snapshot(format!("Row reset R{}: step {} every {}{}", row, step + 1, every_steps, if forced { ", forced" } else { "" }));
+        // Lock for the change
+        let mut state = self.state.lock().unwrap();
+        // Borrow the row mutably
+        let row_state = &mut state.sequencer_a_row_states[row];
+        // Store it in the slot for its length
+        if every_steps == 64 {
+            // The 64 slot (normal or forced)
+            row_state.reset_64 = Some(wanted);
+        } else {
+            // The 128 slot
+            row_state.reset_128 = Some(wanted);
+        }
         // Set
         true
     }
 
-    /// Remove a row's reset as part of a change that has already saved its own undo point (a last-step press). Returns false if the row had none.
+    /// Remove both of a row's resets as part of a change that has already saved its own undo point (a last-step press). Returns false if the row had none.
     pub fn clear_row_reset(&self, row: usize) -> bool {
         // Lock for the change
         let mut state = self.state.lock().unwrap();
-        // `get_mut` gives None for a bad row; `and_then` then reads the reset if the row exists; `take` removes it and returns what was there
-        state.sequencer_a_row_states.get_mut(row).and_then(|row_state| row_state.row_reset.take()).is_some()
+        // `let ... else` binds the row if it exists, otherwise returns
+        let Some(row_state) = state.sequencer_a_row_states.get_mut(row) else {
+            // No such row
+            return false;
+        };
+        // `take` removes each reset and returns what was there
+        let had_any = row_state.reset_64.take().is_some() | row_state.reset_128.take().is_some();
+        // No walk left to finish
+        row_state.forced_walk_left = 0;
+        // Whether anything was removed
+        had_any
     }
 
-    /// For drawing: the row's reset, if it has one (None for a bad row too)
-    pub fn row_reset(&self, row: usize) -> Option<RowReset> {
-        // Lock, look up the row, and copy its reset out; `and_then` flattens the two Options
-        self.state.lock().unwrap().sequencer_a_row_states.get(row).and_then(|row_state| row_state.row_reset)
+    /// For drawing: the row's 64 (normal or forced) or 128 reset, if it has one (None for a bad row or length too)
+    pub fn row_reset(&self, row: usize, every_steps: u16) -> Option<RowReset> {
+        // Lock the shared state just long enough to read it
+        let state = self.state.lock().unwrap();
+        // `get` returns None for a bad row; `and_then` then picks the slot for the length
+        state.sequencer_a_row_states.get(row).and_then(|row_state| match every_steps {
+            // The 64 slot
+            64 => row_state.reset_64,
+            // The 128 slot
+            128 => row_state.reset_128,
+            // No other lengths
+            _ => None,
+        })
     }
+
 
     /// For drawing: None if the row has no Jump Loop, otherwise whether `step` is in one of its segments
     pub fn jump_loop_contains(&self, row: usize, step: usize) -> Option<bool> {
@@ -2372,20 +2515,20 @@ impl Sequencer {
         let due_tick = next_tick.div_ceil(clocks) * clocks;
         // Where the row last started again and how many steps it has played since: a tuple of (start step, steps since)
         let (start_step, steps_since) = if clocks == STRAIGHT_CLOCKS_PER_STEP as u64 {
+            // Straight steps since MIDI Start
+            let step_number = due_tick / clocks;
             // Straight rows run on from the clock start, or from their last row reset
-            match row_state.row_reset {
-                // With a reset: it went to the reset step at the last multiple of the reset length
-                Some(reset) => (reset.step, (due_tick / clocks) % reset.every_steps.max(1) as u64),
+            match row_state.last_reset(step_number) {
+                // With a reset: it went to the reset step at that point
+                Some((point, reset)) => (reset.step, step_number - point),
                 // Without: from the first step at the clock start
-                None => (row_state.first_step, due_tick / clocks),
+                None => (row_state.first_step, step_number),
             }
         } else {
             // Triplet rows start again at every bar line (bar lock); `%` gives the clocks since it
             let bar_start = due_tick - due_tick % BAR_CLOCKS;
-            // The reset length in clocks (64 or 128 straight steps), if the row has a reset
-            let reset_clocks = row_state.row_reset.map(|reset| reset.every_steps as u64 * STRAIGHT_CLOCKS_PER_STEP as u64);
-            // A bar that begins on a reset point starts at the reset step; `filter` keeps the reset only then
-            let start_step = match row_state.row_reset.filter(|_| reset_clocks.is_some_and(|rc| rc > 0 && bar_start % rc == 0)) {
+            // A bar that begins on a reset point starts at that reset's step (bar lines are always on a straight step)
+            let start_step = match row_state.reset_at(bar_start / STRAIGHT_CLOCKS_PER_STEP as u64) {
                 // That bar starts at the reset step
                 Some(reset) => reset.step,
                 // Any other bar starts at the first step
@@ -3040,7 +3183,7 @@ mod timing_tests {
     fn asking_for_the_same_rate_again_does_not_toggle() {
         // In-memory sequencer with the test pattern
         let sequencer = test_sequencer();
-        // Ask for triplet twice, as pressing column 9 twice would
+        // Ask for triplet twice, as pressing the triplet last-step button twice would
         sequencer.set_row_rate(2, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
         sequencer.set_row_rate(2, EIGHTH_TRIPLET_CLOCKS_PER_STEP);
         // Still heading for triplet
@@ -3522,7 +3665,7 @@ mod timing_tests {
         // In-memory sequencer; row 0 has all 32 steps
         let mut sequencer = test_sequencer();
         // Row 0 goes back to step 5 every 64 steps
-        assert!(sequencer.set_row_reset(0, 5, 64));
+        assert!(sequencer.set_row_reset(0, 5, 64, false));
         // Just past the second reset point (2 x 64 straight steps = 768 clocks)
         let trace = run_main_loop(&mut sequencer, 128 * 6 + 12, |_, _| {});
         // The step played at each tick
@@ -3542,7 +3685,7 @@ mod timing_tests {
         // In-memory sequencer; row 0 has all 32 steps
         let mut sequencer = test_sequencer();
         // Row 0 goes back to step 3 every 128 steps
-        sequencer.set_row_reset(0, 3, 128);
+        sequencer.set_row_reset(0, 3, 128, false);
         // Just past the 128-step point
         let trace = run_main_loop(&mut sequencer, 128 * 6 + 6, |_, _| {});
         // The step played at each tick
@@ -3563,7 +3706,7 @@ mod timing_tests {
         // The Jump Loop sync would send the row to step 4 at 64 steps...
         assert_eq!(sequencer.cycle_jump_loop_sync(), 64);
         // ...but the row's own reset says step 13
-        sequencer.set_row_reset(0, 13, 64);
+        sequencer.set_row_reset(0, 13, 64, false);
         // Past the reset point
         let trace = run_main_loop(&mut sequencer, 64 * 6 + 36, |_, _| {});
         // The steps played from the reset point on
@@ -3573,52 +3716,124 @@ mod timing_tests {
     }
 
     #[test]
-    fn the_same_row_reset_again_keeps_it_and_undo_removes_it() {
+    fn a_row_has_a_64_and_a_128_reset_and_the_same_again_keeps_them() {
         // In-memory sequencer
         let sequencer = test_sequencer();
-        // Set
-        assert!(sequencer.set_row_reset(2, 7, 64));
-        // A different length replaces it
-        assert!(sequencer.set_row_reset(2, 7, 128));
+        // A 64 reset at step 8
+        assert!(sequencer.set_row_reset(2, 7, 64, false));
+        // A 128 reset at step 4 sits beside it
+        assert!(sequencer.set_row_reset(2, 3, 128, false));
         // The same again keeps it
-        assert!(sequencer.set_row_reset(2, 7, 128));
-        // Still there
-        assert_eq!(sequencer.row_reset(2), Some(RowReset { every_steps: 128, step: 7 }));
-        // One undo takes back the 128 (the repeat press saved no undo point), leaving the 64
+        assert!(sequencer.set_row_reset(2, 3, 128, false));
+        // Both there
+        assert_eq!((sequencer.row_reset(2, 64), sequencer.row_reset(2, 128)), (Some(RowReset { step: 7, forced: false }), Some(RowReset { step: 3, forced: false })));
+        // A forced 64 reset replaces the normal one
+        assert!(sequencer.set_row_reset(2, 5, 64, true));
+        // Forced now, the 128 one untouched
+        assert_eq!((sequencer.row_reset(2, 64), sequencer.row_reset(2, 128)), (Some(RowReset { step: 5, forced: true }), Some(RowReset { step: 3, forced: false })));
+        // One undo takes back the forced press (the repeat press saved no undo point)
         sequencer.undo().unwrap();
-        // The 64 reset again
-        assert_eq!(sequencer.row_reset(2), Some(RowReset { every_steps: 64, step: 7 }));
-        // Another undo removes it
+        // The normal 64 again
+        assert_eq!(sequencer.row_reset(2, 64), Some(RowReset { step: 7, forced: false }));
+        // Two more undos remove the 128 and then the 64
         sequencer.undo().unwrap();
-        // None
-        assert_eq!(sequencer.row_reset(2), None);
+        sequencer.undo().unwrap();
+        // None left
+        assert_eq!((sequencer.row_reset(2, 64), sequencer.row_reset(2, 128)), (None, None));
         // Bad rows and steps change nothing
-        assert!(!sequencer.set_row_reset(7, 0, 64));
+        assert!(!sequencer.set_row_reset(7, 0, 64, false));
         // Step 32 does not exist
-        assert!(!sequencer.set_row_reset(0, 32, 64));
+        assert!(!sequencer.set_row_reset(0, 32, 64, false));
+        // Only 64 resets can be forced
+        assert!(!sequencer.set_row_reset(0, 1, 128, true));
     }
 
     #[test]
-    fn a_jump_loop_segment_or_a_last_step_press_removes_the_row_reset() {
+    fn a_jump_loop_segment_keeps_the_row_resets_and_a_last_step_press_removes_both() {
         // In-memory sequencer
         let sequencer = test_sequencer();
-        // Resets on rows 0 and 1
-        sequencer.set_row_reset(0, 3, 64);
-        sequencer.set_row_reset(1, 2, 128);
-        // A Jump Loop segment on row 0 removes its reset
+        // Both resets on row 0
+        sequencer.set_row_reset(0, 3, 64, false);
+        sequencer.set_row_reset(0, 9, 128, false);
+        // A Jump Loop segment leaves them alone
         sequencer.add_jump_segment(0, 4, 7, 1);
-        // Gone
-        assert_eq!(sequencer.row_reset(0), None);
-        // One undo brings back the reset and takes away the segment
-        sequencer.undo().unwrap();
-        // Both back as they were
-        assert_eq!((sequencer.row_reset(0), sequencer.jump_loop_contains(0, 4)), (Some(RowReset { every_steps: 64, step: 3 }), None));
-        // A last-step press removes row 1's reset (the caller saved the undo point first)
-        sequencer.save_undo_point("Last step R1".to_string());
+        // Still there
+        assert!(sequencer.row_reset(0, 64).is_some() && sequencer.row_reset(0, 128).is_some());
+        // A last-step press removes both (the caller saved the undo point first)
+        sequencer.save_undo_point("Last step R0".to_string());
         // Removed
-        assert!(sequencer.clear_row_reset(1));
+        assert!(sequencer.clear_row_reset(0));
         // Nothing left to remove
-        assert!(!sequencer.clear_row_reset(1));
+        assert!(!sequencer.clear_row_reset(0));
+        // Undo brings both back
+        sequencer.undo().unwrap();
+        // Back
+        assert!(sequencer.row_reset(0, 64).is_some() && sequencer.row_reset(0, 128).is_some());
+    }
+
+    #[test]
+    fn with_both_resets_the_128_one_wins_on_its_points_and_the_64_one_plays_between() {
+        // Row 0 has all 32 steps
+        let mut sequencer = test_sequencer();
+        // Step 6 every 64, step 21 every 128
+        sequencer.set_row_reset(0, 5, 64, false);
+        sequencer.set_row_reset(0, 20, 128, false);
+        // Just past 256 steps
+        let trace = run_main_loop(&mut sequencer, 256 * 6 + 6, |_, _| {});
+        // The step played at each tick
+        let at = |tick: u64| row_step_ticks(&trace, 0).into_iter().find(|&(t, _)| t == tick).map(|(_, s)| s);
+        // The clock start is a 128 point: step 21; 64: step 6; 128: step 21; 192: step 6; 256: step 21
+        assert_eq!([at(0), at(384), at(768), at(1152), at(1536)], [Some(20), Some(5), Some(20), Some(5), Some(20)]);
+    }
+
+    #[test]
+    fn a_forced_reset_walks_forward_to_the_jump_loop_and_a_normal_one_goes_to_the_first_segment() {
+        // Row 0: one segment, steps 9-12, so steps 3 to 8 lie outside it
+        let mut forced = test_sequencer();
+        // The segment
+        forced.add_jump_segment(0, 8, 11, 1);
+        // Forced: step 4 every 64
+        forced.set_row_reset(0, 3, 64, true);
+        // Past the 64 point
+        let trace = run_main_loop(&mut forced, 64 * 6 + 6 * 10, |_, _| {});
+        // The steps from the 64 point on
+        let after: Vec<usize> = row_step_ticks(&trace, 0).into_iter().filter(|&(t, _)| t >= 384).map(|(_, s)| s).collect();
+        // 4 to 8 one by one, into the segment at 9, and round the segment
+        assert_eq!(after, vec![3, 4, 5, 6, 7, 8, 9, 10, 11, 8]);
+        // The same with a normal reset
+        let mut normal = test_sequencer();
+        // The segment
+        normal.add_jump_segment(0, 8, 11, 1);
+        // Normal: step 4 every 64
+        normal.set_row_reset(0, 3, 64, false);
+        // Past the 64 point
+        let trace = run_main_loop(&mut normal, 64 * 6 + 6 * 4, |_, _| {});
+        // The steps from the 64 point on
+        let after: Vec<usize> = row_step_ticks(&trace, 0).into_iter().filter(|&(t, _)| t >= 384).map(|(_, s)| s).collect();
+        // Step 4 once, then the start of the segment
+        assert_eq!(after, vec![3, 8, 9, 10]);
+    }
+
+    #[test]
+    fn a_forced_walk_wraps_at_the_last_step_and_joins_the_first_segment_after_a_lap() {
+        // Row 3 has 7 steps (0-6)
+        let mut sequencer = test_sequencer();
+        // A segment at steps 2-3, inside the row
+        sequencer.add_jump_segment(3, 1, 2, 1);
+        // Forced: step 5 every 64
+        sequencer.set_row_reset(3, 4, 64, true);
+        // A row whose only segment is beyond its last step: row 4 has 4 steps (0-3), segment 11-12
+        sequencer.add_jump_segment(4, 10, 11, 1);
+        // Forced: step 2 every 64
+        sequencer.set_row_reset(4, 1, 64, true);
+        // Past the 64 point
+        let trace = run_main_loop(&mut sequencer, 64 * 6 + 6 * 7, |_, _| {});
+        // The steps from the 64 point on, for one row
+        let after = |row: usize| -> Vec<usize> { row_step_ticks(&trace, row).into_iter().filter(|&(t, _)| t >= 384).map(|(_, s)| s).collect() };
+        // Row 4 (index 3): 5, 6, round to 0, into the segment at step 2
+        assert_eq!(after(3), vec![4, 5, 6, 0, 1, 2, 1]);
+        // Row 5 (index 4): 2, 3, 0, 1 (a lap of 4), then the segment
+        assert_eq!(after(4), vec![1, 2, 3, 0, 10, 11, 10]);
     }
 
     #[test]
@@ -3650,7 +3865,7 @@ mod timing_tests {
     fn undo_and_redo_take_back_a_whole_last_step_press_including_the_rate() {
         // In-memory sequencer
         let mut sequencer = test_sequencer();
-        // The last-step press on column 9, as main.rs does it: one undo point, then rate and last step
+        // The triplet last-step press (grid two column 15), as main.rs does it: one undo point, then rate and last step
         let last_step_press = |seq: &Sequencer| {
             // One undo point for the whole press
             seq.save_undo_point("Last step R2: step 12, 8th-note triplets".to_string());
@@ -3696,7 +3911,7 @@ mod timing_tests {
         // Write it back
         sequencer.set_row_states(0, row_state);
         // Something else on another row
-        sequencer.set_row_reset(1, 2, 64);
+        sequencer.set_row_reset(1, 2, 64, false);
         // Undo the row reset: row 0 keeps its 8 steps
         sequencer.undo().unwrap();
         // Still 8 steps
@@ -3773,7 +3988,7 @@ mod timing_tests {
         // Row 0 has 32 steps
         let mut sequencer = test_sequencer();
         // Back to step 5 every 64 steps (the clock start is a reset point too)
-        sequencer.set_row_reset(0, 5, 64);
+        sequencer.set_row_reset(0, 5, 64, false);
         // Running
         running(&sequencer);
         // Down to 16 steps at tick 61
@@ -3833,5 +4048,37 @@ mod timing_tests {
         assert!(!sequencer.line_up_row(1, 61));
         // A row without one is lined up
         assert!(sequencer.line_up_row(0, 61));
+    }
+
+    #[test]
+    fn removing_the_newest_segment_again_and_again_gets_back_to_normal_playing_in_time() {
+        // Row 0 has all 32 steps
+        let mut sequencer = test_sequencer();
+        // Two segments: steps 1-32 (as grid two column 3 + step 32 adds), then 5-8
+        assert!(sequencer.add_jump_segment(0, 0, 31, 1));
+        assert!(sequencer.add_jump_segment(0, 4, 7, 1));
+        // Remove both, at ticks 61 and 121 (between steps)
+        let trace = run_main_loop(&mut sequencer, 6 * 30, |seq, tick| {
+            // The newest (5-8) first, then 1-32
+            if tick == 61 || tick == 121 {
+                // There was one to remove
+                assert!(seq.remove_newest_jump_segment(0));
+            }
+        });
+        // After the first removal, only the 1-32 segment is left
+        // From tick 126 on, row 0 plays exactly what a row that never had a Jump Loop plays
+        let expected = straight_model(6 * 30);
+        // Step events from tick 126
+        let after = |trace: &[String]| -> Vec<(u64, usize)> {
+            row_step_ticks(trace, 0).into_iter().filter(|&(t, _)| t >= 126).collect()
+        };
+        // Same ticks, same steps
+        assert_eq!(after(&trace), after(&expected));
+        // Nothing left to remove
+        assert!(!sequencer.remove_newest_jump_segment(0));
+        // Undo brings back the 1-32 segment
+        sequencer.undo().unwrap();
+        // Back
+        assert_eq!(sequencer.get_row_states(0).unwrap().jump_loop.len(), 1);
     }
 }

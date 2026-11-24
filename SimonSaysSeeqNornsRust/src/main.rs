@@ -58,13 +58,15 @@ enum ArmAction {
     EuclidianRotation, // Column 6
     Ratchet,           // Column 7
     SetMaxStepForRow,  // Column 8: set last step and make the row straight
-    SetMaxStepEighthTriplet, // Column 9: set last step and make the row 8th-note triplets
-    RowReset64,        // Column 10: hold + step = the row goes back to that step every 64 steps (same again: off)
-    RowReset128,       // Column 11: same, every 128 steps
+    SetMaxStepEighthTriplet, // Grid two, column 15 (moved from grid one column 9, out of the way of mistaken presses): set last step and make the row 8th-note triplets
+    RowReset64,        // Column 10: hold + step = the row goes to that step every 64 steps
+    RowReset128,       // Column 11: same, every 128 steps (wins where both fall together)
     JumpLoop1x,        // Column 12: hold + start step + end step = add a Jump Loop segment played once
     JumpLoop2x,        // Column 13: same, segment played twice
     JumpLoop3x,        // Column 14: same, segment played three times
-    // Column 15 is free: column 8 (last step, straight) + a step clears a row's Jump Loop
+    JumpLoopFromStart, // Grid two, column 3: hold + step N on a row = add a Jump Loop segment from step 1 to step N, played once
+    JumpLoopRemoveLast, // Grid two, column 4: hold + any step on a row = remove that row's newest Jump Loop segment
+    RowResetForced64,  // Column 15: like column 10, but a Jump Loop row plays forward from the step until it reaches its loop
 
 }
 
@@ -81,18 +83,39 @@ impl ArmAction {
             6 => Some(ArmAction::EuclidianRotation),
             7 => Some(ArmAction::Ratchet),
             8 => Some(ArmAction::SetMaxStepForRow),
-            9 => Some(ArmAction::SetMaxStepEighthTriplet),
             10 => Some(ArmAction::RowReset64),
             11 => Some(ArmAction::RowReset128),
             12 => Some(ArmAction::JumpLoop1x),
             13 => Some(ArmAction::JumpLoop2x),
             14 => Some(ArmAction::JumpLoop3x),
+            15 => Some(ArmAction::RowResetForced64),
 
             _ => None,
         }
     }
 
-    /// Convert ARM action to grid column
+    /// The hold buttons on grid two's control row; every other column there has its own job
+    fn from_grid_two_column(column: usize) -> Option<Self> {
+        // `match` on the column; each arm returns an Option
+        match column {
+            // Next to the Jump Loop sync (column 2): add a segment from step 1
+            3 => Some(ArmAction::JumpLoopFromStart),
+            // Then: remove the newest segment
+            4 => Some(ArmAction::JumpLoopRemoveLast),
+            // The last button on the right of grid two
+            15 => Some(ArmAction::SetMaxStepEighthTriplet),
+            // Nothing else on grid two is a hold button
+            _ => None,
+        }
+    }
+
+    /// True for the hold buttons that live on grid two (the others are on grid one)
+    fn on_grid_two(&self) -> bool {
+        // `matches!` is true if self is any of the listed variants
+        matches!(self, ArmAction::SetMaxStepEighthTriplet | ArmAction::JumpLoopFromStart | ArmAction::JumpLoopRemoveLast)
+    }
+
+    /// Convert ARM action to grid column (on grid one, or on grid two for `on_grid_two` actions)
     fn to_column(&self) -> usize {
         match self {
             ArmAction::Undo => 0,
@@ -104,12 +127,17 @@ impl ArmAction {
             ArmAction::EuclidianRotation => 6,
             ArmAction::Ratchet => 7,
             ArmAction::SetMaxStepForRow => 8,
-            ArmAction::SetMaxStepEighthTriplet => 9,
+            ArmAction::SetMaxStepEighthTriplet => 15,
             ArmAction::RowReset64 => 10,
             ArmAction::RowReset128 => 11,
             ArmAction::JumpLoop1x => 12,
             ArmAction::JumpLoop2x => 13,
             ArmAction::JumpLoop3x => 14,
+            ArmAction::RowResetForced64 => 15,
+            // Grid two
+            ArmAction::JumpLoopFromStart => 3,
+            // Grid two
+            ArmAction::JumpLoopRemoveLast => 4,
 
         }
     }
@@ -137,7 +165,7 @@ impl ArmAction {
             ArmAction::Ratchet => "ratchet",
             // Column 8
             ArmAction::SetMaxStepForRow => "last step, straight",
-            // Column 9
+            // Grid two column 15
             ArmAction::SetMaxStepEighthTriplet => "last step, 8th-note triplets",
             // Column 10
             ArmAction::RowReset64 => "row reset every 64",
@@ -149,18 +177,27 @@ impl ArmAction {
             ArmAction::JumpLoop2x => "Jump Loop 2X",
             // Column 14
             ArmAction::JumpLoop3x => "Jump Loop 3X",
+            // Column 15
+            ArmAction::RowResetForced64 => "row reset every 64, forced",
+            // Grid two column 3
+            ArmAction::JumpLoopFromStart => "Jump Loop from step 1",
+            // Grid two column 4
+            ArmAction::JumpLoopRemoveLast => "Jump Loop remove newest",
         };
         // `{:02}` pads the column number to two digits
-        format!("grid one col {:02}: {}", self.to_column(), label)
+        // Which grid the button is on
+        let grid = if self.on_grid_two() { "two" } else { "one" };
+        // `{:02}` pads the column number to two digits
+        format!("grid {} col {:02}: {}", grid, self.to_column(), label)
     }
 
-    /// For the row reset buttons (columns 10 and 11): how many straight steps between resets.
+    /// For the row reset buttons (columns 10, 11 and 15): how many straight steps between resets.
     /// None for every other action.
     fn reset_every_steps(&self) -> Option<u16> {
         // `match` on self; each arm returns a value
         match self {
-            // Column 10
-            ArmAction::RowReset64 => Some(64),
+            // Column 10, and column 15 (forced); `|` matches either
+            ArmAction::RowReset64 | ArmAction::RowResetForced64 => Some(64),
             // Column 11
             ArmAction::RowReset128 => Some(128),
             // Everything else
@@ -184,20 +221,21 @@ impl ArmAction {
         }
     }
 
-    /// True for the three Jump Loop buttons (columns 12-14)
+    /// True for the Jump Loop buttons (grid one columns 12-14, grid two columns 3 and 4): while held, the segments show
     fn is_jump_loop(&self) -> bool {
         // `matches!` is true if self is any of the listed variants
-        matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x)
+        matches!(self, ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x
+            | ArmAction::JumpLoopFromStart | ArmAction::JumpLoopRemoveLast)
     }
 
-    /// For the last-step buttons (columns 8 and 9): the rate they give the row, in MIDI clocks per
+    /// For the last-step buttons (grid one column 8 and grid two column 15): the rate they give the row, in MIDI clocks per
     /// step. None for every other action.
     fn rate(&self) -> Option<u8> {
         // `match` on self; each arm returns a value
         match self {
             // Column 8: straight 16ths
             ArmAction::SetMaxStepForRow => Some(STRAIGHT_CLOCKS_PER_STEP),
-            // Column 9: 8th-note triplets
+            // Grid two column 15: 8th-note triplets
             ArmAction::SetMaxStepEighthTriplet => Some(EIGHTH_TRIPLET_CLOCKS_PER_STEP),
             // Everything else has no rate
             _ => None,
@@ -212,7 +250,7 @@ use sequencer::{Sequencer, SequencerEvent};
 // Row rates in MIDI clocks per step, used by the last-step buttons
 use sequencer::{STRAIGHT_CLOCKS_PER_STEP, EIGHTH_TRIPLET_CLOCKS_PER_STEP};
 // Temporary steps (grid one row 7 column 2)
-use sequencer::{TemporaryStep, RowReset};
+use sequencer::TemporaryStep;
 #[cfg(feature = "midi")]
 use midi::MidiManager;
 use simon_says_seeq_rust::grid_osc::GridManager;
@@ -247,7 +285,7 @@ pub struct SimonSaysSeeq {
     // GRID_TWO button state tracking for MIDI detection
     grid_two_button_0_pressed: bool,
     grid_two_button_1_pressed: bool,
-    // While a last-step button (grid one row 7, columns 8 and 9) is held: Some(its rate in clocks per step);
+    // While a last-step button (grid one row 7 column 8, grid two row 7 column 15) is held: Some(its rate in clocks per step);
     // rows with that rate look normal, the others are dimmed. None when no such button is held.
     rate_highlight: Option<u8>,
     // Temporarily muted steps blink: true = currently in the visible half of the blink
@@ -266,13 +304,11 @@ pub struct SimonSaysSeeq {
     reset_highlight: Option<u16>,
     // While 1X/2X/3X is held: the start step (step, row) waiting for its end step
     jump_pending_start: Option<(usize, usize)>,
-    // GRID_TWO row 7 columns 4, 5, 6: held together = search for Crow
-    grid_two_crow_search_held: [bool; 3],
     // MIDI clock status light (GRID_TWO row 7 column 0): last brightness sent, None = redraw
     clock_status_led: Option<u8>,
     clock_status_last_update: Instant,
-    // Row reset buttons (grid one row 7 columns 10 and 11): last brightness sent to each, None = redraw
-    row_reset_lights: [Option<u8>; 2],
+    // Row reset buttons (grid one row 7 columns 10, 11 and 15): last brightness sent to each, None = redraw
+    row_reset_lights: [Option<u8>; 3],
     // Test mode flag (disables auto-save, auto-loads test_pattern_1.json)
     test_mode: bool,
 }
@@ -322,8 +358,7 @@ impl SimonSaysSeeq {
             crow_cv4_muted: false, // Default CV4 not muted
             grid_two_button_0_pressed: false,
             grid_two_button_1_pressed: false,
-            grid_two_crow_search_held: [false; 3],
-            // No rate highlight until a last-step button (columns 8 and 9) is held
+            // No rate highlight until a last-step button (grid one column 8 and grid two column 15) is held
             rate_highlight: None,
             // Blink starts in the visible half
             temporary_blink_on: true,
@@ -344,7 +379,7 @@ impl SimonSaysSeeq {
             clock_status_led: None,
             clock_status_last_update: Instant::now(),
             // Nothing drawn on the row reset buttons yet
-            row_reset_lights: [None; 2],
+            row_reset_lights: [None; 3],
             test_mode,
         })
     }
@@ -415,9 +450,9 @@ impl SimonSaysSeeq {
         }
 
         // Initialize Crow USB serial communication. Off by default: with no Crow connected the
-        // retries cost about 5 s of startup. Grid two row 7 columns 4+5+6 search for it at any time.
+        // retries cost about 5 s of startup. Grid two row 7 columns 0+1 search for it at any time.
         if !self.config.crow.search_at_startup {
-            info!("Crow: not searched for at startup (hold grid two row 7 columns 4, 5 and 6 to search)");
+            info!("Crow: not searched for at startup (hold grid two row 7 columns 0 and 1 to search)");
         } else if let Err(e) = self.crow.initialize() {
             // warn!("Failed to initialize Crow: {}. CV output will be disabled.", e);
         } else if self.crow.is_enabled() {
@@ -832,8 +867,11 @@ impl SimonSaysSeeq {
                     // One more press
                     self.button_stats.record_press(&name);
                 } else if grid_two_for_stats.as_deref() == Some(grid_id) {
-                    // Grid two: named by column
-                    self.button_stats.record_press(&button_stats::grid_two_button_name(x));
+                    // Grid two: the hold button is named after its action, the rest by column
+                    let name = ArmAction::from_grid_two_column(x).map(|action| action.stats_name())
+                        .unwrap_or_else(|| button_stats::grid_two_button_name(x));
+                    // One more press
+                    self.button_stats.record_press(&name);
                 }
             }
             // Accept virtual grid IDs from SysEx button commands (when no physical grids connected)
@@ -1006,14 +1044,36 @@ impl SimonSaysSeeq {
                                 }
                             }
                         },
-                        // Either row reset button; `|` matches either
-                        ArmAction::RowReset64 | ArmAction::RowReset128 => {
-                            // 64 or 128; these two always have one
-                            let every_steps = arm_action.reset_every_steps().unwrap_or(64);
-                            // Set or move the row's reset (undoable); the same press again keeps it
-                            let set = self.sequencer.set_row_reset(seq_y, seq_x, every_steps);
+                        // Grid two column 3 held: one press adds a segment from the row's first step to the pressed step, played once
+                        ArmAction::JumpLoopFromStart => {
+                            // The row's first step (step 1); `map_or` gives 0 if the row can't be read
+                            let first_step = self.sequencer.get_row_states(seq_y).map_or(0, |row_state| row_state.first_step);
+                            // Add it (undoable), e.g. steps 1-32 for a press on step 32
+                            let added = self.sequencer.add_jump_segment(seq_y, first_step, seq_x, 1);
                             // Log at info (hidden in concert mode)
-                            info!("ARM ROW_RESET: row {} step {} every {} set={}", seq_y, seq_x, every_steps, set);
+                            info!("ARM JUMP_LOOP_FROM_START: row {} steps {}-{} added={}", seq_y, first_step + 1, seq_x + 1, added);
+                            // Redraw the row with the new segment
+                            self.refresh_all_row_leds(seq_y)?;
+                        },
+                        // Grid two column 4 held: a press on a row removes its newest segment; the last one gone = normal playing again
+                        ArmAction::JumpLoopRemoveLast => {
+                            // Remove it (undoable); false if the row had no Jump Loop
+                            let removed = self.sequencer.remove_newest_jump_segment(seq_y);
+                            // Log at info (hidden in concert mode)
+                            info!("ARM JUMP_LOOP_REMOVE_NEWEST: row {} removed={}", seq_y, removed);
+                            // Redraw the row without it
+                            self.refresh_all_row_leds(seq_y)?;
+                        },
+                        // Either row reset button; `|` matches either
+                        ArmAction::RowReset64 | ArmAction::RowReset128 | ArmAction::RowResetForced64 => {
+                            // 64 or 128; these three always have one
+                            let every_steps = arm_action.reset_every_steps().unwrap_or(64);
+                            // Column 15 makes a forced 64 reset
+                            let forced = arm_action == ArmAction::RowResetForced64;
+                            // Set or move the row's reset of that length (undoable); the same press again keeps it
+                            let set = self.sequencer.set_row_reset(seq_y, seq_x, every_steps, forced);
+                            // Log at info (hidden in concert mode)
+                            info!("ARM ROW_RESET: row {} step {} every {} forced={} set={}", seq_y, seq_x, every_steps, forced, set);
                             // Redraw the row: the bright reset step moves
                             self.refresh_all_row_leds(seq_y)?;
                         },
@@ -1033,7 +1093,7 @@ impl SimonSaysSeeq {
                             // Redraw just this light
                             self.update_single_button_led(seq_x, seq_y)?;
                         },
-                        // Either last-step button (columns 8 and 9); `|` matches either of them
+                        // Either last-step button (grid one column 8 and grid two column 15); `|` matches either of them
                         ArmAction::SetMaxStepForRow | ArmAction::SetMaxStepEighthTriplet => {
                             // The rate this button gives the row; both always have one
                             let clocks = arm_action.rate().unwrap_or(STRAIGHT_CLOCKS_PER_STEP);
@@ -1081,8 +1141,9 @@ impl SimonSaysSeeq {
                 // Check if this is GRID_TWO controls
                 if connected_grids.len() >= 2 {
                     let (_grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
-                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) {
-                        // GRID_TWO MIDI auto-detection controls (columns 0, 1) - require both pressed
+                    // Grid two's own controls; its hold button (column 15) goes on to the ARM handling below
+                    if Some(grid_id) == grid_two.as_ref().map(|x| x.as_str()) && ArmAction::from_grid_two_column(x).is_none() {
+                        // GRID_TWO MIDI clock re-detect and Crow search (columns 0, 1) - require both pressed
                         if x == 0 || x == 1 {
                             if pressed {
                                 // Track button press state
@@ -1111,6 +1172,19 @@ impl SimonSaysSeeq {
                                             warn!("handle_grid_press says: MIDI clock re-detection failed: {}", e);
                                         }
                                     }
+                                    // Also one quick search for Crow (no retries, does not stop the sequencer)
+                                    let found = self.crow.search_once();
+                                    // Log at warn so it shows in the journal, even in concert mode
+                                    warn!("Crow: {}", if found { "found and connected" } else { "not found" });
+                                    // Feedback while the buttons are still held: full brightness = Crow found, dark = not found
+                                    #[cfg(feature = "hardware")]
+                                    for column in 0..=1 {
+                                        // Both re-detect lights
+                                        self.grid.set_led(grid_id, column, seq_y, if found { LED_MAX } else { LED_OFF }, "crow_search_result")?;
+                                    }
+                                    // Push the lights to the grid
+                                    #[cfg(feature = "hardware")]
+                                    self.grid.refresh()?;
                                 }
                             } else {
                                 // Button release - update state and turn off LED
@@ -1150,35 +1224,8 @@ impl SimonSaysSeeq {
                             return Ok(());
                         }
 
-                        // GRID_TWO Crow search (columns 4, 5, 6) - require all three held
-                        else if (4..=6).contains(&x) {
-                            self.grid_two_crow_search_held[x - 4] = pressed;
-                            #[cfg(feature = "hardware")]
-                            {
-                                self.grid.set_led(grid_id, x, seq_y, if pressed { LED_DIM } else { LED_OFF }, "crow_search_button")?;
-                            }
-                            if pressed && self.grid_two_crow_search_held.iter().all(|&held| held) {
-                                let found = self.crow.search_once();
-                                if found {
-                                    warn!("Crow: found and connected");
-                                } else {
-                                    warn!("Crow: not found");
-                                }
-                                // Feedback while the buttons are still held: full brightness = found, dark = not found
-                                #[cfg(feature = "hardware")]
-                                for column in 4..=6 {
-                                    self.grid.set_led(grid_id, column, seq_y, if found { LED_MAX } else { LED_OFF }, "crow_search_result")?;
-                                }
-                            }
-                            #[cfg(feature = "hardware")]
-                            {
-                                self.grid.refresh()?;
-                            }
-                            return Ok(());
-                        }
-
-                        // GRID_TWO mute and tempo controls (columns 7-15)
-                        else if x >= 7 && x <= 15 {
+                        // GRID_TWO mute and tempo controls (columns 7-14; column 15 is a hold button)
+                        else if x >= 7 && x <= 14 {
                         // GRID_TWO transport and tempo controls - handle both press and release
                         if pressed {
                             // Button press - light LED and perform action
@@ -1212,7 +1259,7 @@ impl SimonSaysSeeq {
                                     self.sequencer.start();
                                     info!("handle_grid_press says: Sequencer started via GRID_TWO column 13");
                                 }
-                                14 | 15 => {
+                                14 => {
                                     // Tempo controls - only work when external clock is not active
                                     if !self.midi.is_external_clock_running() {
                                         // Tempo control removed - sequencer uses external clock only
@@ -1245,7 +1292,7 @@ impl SimonSaysSeeq {
                                         if self.crow_cv4_muted { LED_BRIGHT } else { LED_OFF }
                                     }
                                     12 | 13 => 0, // Transport buttons always turn off
-                                    14 | 15 => {
+                                    14 => {
                                         // Tempo LEDs stay off if external clock active (beat LEDs will handle them)
                                         if self.midi.is_external_clock_running() {
                                             return Ok(()); // Don't interfere with beat LED flashing
@@ -1303,16 +1350,20 @@ impl SimonSaysSeeq {
                     }
                 }
 
-                // Regular ARM control handling for GRID_ONE buttons
-                let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
+                // Regular ARM control handling: grid one's buttons, and grid two's hold button
+                let (grid_one, grid_two) = self.get_sorted_grid_ids(&connected_grids);
                 // Accept virtual grid IDs from SysEx button commands (when no physical grids connected)
                 // or match against actual physical grid device IDs
                 let is_virtual_grid = grid_id == "grid_one" || grid_id == "grid_two";
-                if is_virtual_grid || Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
+                // The press came from grid two (real or SysEx); `as_deref` turns Option<String> into Option<&str>
+                let from_grid_two = grid_id == "grid_two" || grid_two.as_deref() == Some(grid_id);
+                // The hold button pressed, if any: grid two has its own map
+                let arm_lookup = if from_grid_two { ArmAction::from_grid_two_column(x) } else { ArmAction::from_column(x) };
+                if is_virtual_grid || from_grid_two || Some(grid_id) == grid_one.as_ref().map(|x| x.as_str()) {
                     info!("ARM CONTROL: Row 7 button {} {} - Current Sequence B: {:?}", x, if pressed { "PRESSED" } else { "RELEASED" }, self.active_arm_action);
 
                     // Check if this column corresponds to a valid ARM action (use original x, not seq_x)
-                    if let Some(arm_action) = ArmAction::from_column(x) {
+                    if let Some(arm_action) = arm_lookup {
                         info!("DEBUG Sequence B: Found ARM action {:?} for column {}", arm_action, x);
 
                         // ALL ARM buttons are now momentary (press-and-hold)
@@ -1322,7 +1373,14 @@ impl SimonSaysSeeq {
                                 // Turn off any other active ARM action first
                                 if let Some(prev_action) = self.active_arm_action {
                                     let prev_column = prev_action.to_column();
-                                    self.grid.set_led(grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
+                                    // The grid the other button is on: this one if it is on the same grid, otherwise the other grid
+                                    let prev_grid = if prev_action.on_grid_two() == from_grid_two { Some(grid_id.to_string()) }
+                                        else if prev_action.on_grid_two() { grid_two.clone() } else { grid_one.clone() };
+                                    // Only if that grid is connected; `if let` skips a missing one
+                                    if let Some(prev_grid_id) = prev_grid {
+                                        // Its light off
+                                        self.grid.set_led(&prev_grid_id, prev_column, seq_y, 0, "arm_action_deactivate")?;
+                                    }
                                 }
                             }
                             self.active_arm_action = Some(arm_action);
@@ -1360,7 +1418,7 @@ impl SimonSaysSeeq {
                                     // Redraw every row normally
                                     self.refresh_sequence_rows()?;
                                 }
-                                // A last-step button (columns 8 and 9) released: back to normal brightness on every row
+                                // A last-step button (grid one column 8 and grid two column 15) released: back to normal brightness on every row
                                 if arm_action.rate().is_some() {
                                     // None = no rows highlighted; this also redraws the rows
                                     self.set_rate_highlight(None)?;
@@ -1420,15 +1478,16 @@ impl SimonSaysSeeq {
             ArmAction::TemporaryStep => {
                 // Nothing on press: the button is a modifier, the step press does the work
             }
-            // Either row reset button: while held, each row's reset of that length is the only bright step
-            ArmAction::RowReset64 | ArmAction::RowReset128 => {
+            // Any row reset button: while held, each row's reset of that length is the only bright step
+            ArmAction::RowReset64 | ArmAction::RowReset128 | ArmAction::RowResetForced64 => {
                 // Turn on the reset view for this length
                 self.reset_highlight = action.reset_every_steps();
                 // Redraw every row with it
                 self.refresh_sequence_rows()?;
             }
             // Any Jump Loop button: show the segments (steps outside them dimmed) while it is held
-            ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x => {
+            ArmAction::JumpLoop1x | ArmAction::JumpLoop2x | ArmAction::JumpLoop3x
+            | ArmAction::JumpLoopFromStart | ArmAction::JumpLoopRemoveLast => {
                 // A fresh press starts with no half-entered segment
                 self.jump_pending_start = None;
                 // Turn on the segment view
@@ -1461,7 +1520,7 @@ impl SimonSaysSeeq {
                 // info!("ARM SET_MAX_STEP: GRID_ONE columns 0-15 = max_step 0-15 (1-16 steps), GRID_TWO columns 0-15 = max_step 16-31 (17-32 steps)");
                 // info!("ARM SET_MAX_STEP: Column 31 sets max_step to 31 (32 steps: 0-31)");
             }
-            // The 8th-note triplet button (column 9)
+            // The 8th-note triplet button (grid two column 15)
             ArmAction::SetMaxStepEighthTriplet => {
                 // Waiting for a sequence row press; meanwhile dim the rows with a different rate
                 self.set_rate_highlight(action.rate())?;
@@ -1930,7 +1989,7 @@ impl SimonSaysSeeq {
 
     /// Refresh LEDs for a specific row (used after operations that change one row)
     #[cfg(feature = "hardware")]
-    /// Set a row's last step (max_step) to `seq_x`, as grid one row 7 columns 8 and 9 do. The row then plays from where it would be had it played this loop since the clock start, so a shorter or longer row stays in time with the others.
+    /// Set a row's last step (max_step) to `seq_x`, as grid one row 7 column 8 and grid two row 7 column 15 do. The row then plays from where it would be had it played this loop since the clock start, so a shorter or longer row stays in time with the others.
     fn set_row_last_step(&mut self, seq_x: usize, seq_y: usize, action_name: &str) -> Result<()> {
         // Keep the value in the valid step range 0-31
         let max_step = seq_x.clamp(0, 31);
@@ -1963,7 +2022,7 @@ impl SimonSaysSeeq {
         Ok(())
     }
 
-    /// True if a row should be drawn dimmed right now: while a last-step button (columns 8 and 9)
+    /// True if a row should be drawn dimmed right now: while a last-step button (grid one column 8 and grid two column 15)
     /// is held, rows with that button's rate look normal and rows with any other rate are dimmed.
     fn row_dimmed(&self, row: usize) -> bool {
         // `match` on the Option: Some(clocks) while a button is held, None otherwise
@@ -2019,7 +2078,8 @@ impl SimonSaysSeeq {
         // While a row reset button is held: the row's reset step of that length at full brightness
         if let Some(every_steps) = self.reset_highlight {
             // This step is the row's reset step for the held length
-            if self.sequencer.row_reset(row) == Some(RowReset { every_steps, step }) {
+            // (columns 10 and 15 both show the row's 64 reset, normal or forced); `map` takes the step out of the reset
+            if self.sequencer.row_reset(row, every_steps).map(|reset| reset.step) == Some(step) {
                 // Brightest level
                 return LED_TURBO;
             }
@@ -2609,29 +2669,29 @@ impl SimonSaysSeeq {
         }
     }
 
-    /// Grid one row 7 columns 10 (64) and 11 (128): each lights for one beat on its reset point, every 64 or 128 straight steps from the clock start, which is where rows with that reset go back to their reset step. A held button keeps its own press light. Checked on every main-loop pass; an LED message is sent only when the brightness changes.
+    /// Grid one row 7 columns 10 (64), 11 (128) and 15 (forced 64): each lights for one beat on its reset point, every 64 or 128 straight steps from the clock start, which is where rows with that reset go back to their reset step. A held button keeps its own press light. Checked on every main-loop pass; an LED message is sent only when the brightness changes.
     #[cfg(all(feature = "midi", feature = "hardware"))]
     fn update_row_reset_lights(&mut self) {
         // The tick the sequencer handles next; the last one handled is one before it
         let next_tick = EXTERNAL_CLOCK_TICK_COUNTER.load(Ordering::SeqCst) as u64;
         // A tick has been handled since the last start (the counter goes back to 0 on the first tick after a start)
         let ticking = self.sequencer.is_running() && next_tick > 0 && !self.sequencer.get_reset_tick_counter_flag();
-        // Both buttons: (index into row_reset_lights, the button's action)
-        for (index, action) in [(0, ArmAction::RowReset64), (1, ArmAction::RowReset128)] {
+        // All three buttons: (index into row_reset_lights, the button's action)
+        for (index, action) in [(0, ArmAction::RowReset64), (1, ArmAction::RowReset128), (2, ArmAction::RowResetForced64)] {
             // While this button is held, its press light wins
             if self.active_arm_action == Some(action) {
                 // Draw again once it is released
                 self.row_reset_lights[index] = None;
-                // On to the other button
+                // On to the next button
                 continue;
             }
-            // 64 or 128 straight steps of 6 clocks; both buttons have a length
+            // 64 or 128 straight steps of 6 clocks; all three buttons have a length
             let reset_clocks = action.reset_every_steps().unwrap_or(64) as u64 * 6;
             // Lit for the first beat (24 clocks) after the reset point, while the clock runs
             let brightness = if ticking && (next_tick - 1) % reset_clocks < 24 { LED_ROW_RESET_POINT } else { LED_OFF };
             // Already showing that: nothing to send
             if self.row_reset_lights[index] == Some(brightness) {
-                // On to the other button
+                // On to the next button
                 continue;
             }
             // Ask which grids are connected
@@ -2640,8 +2700,8 @@ impl SimonSaysSeeq {
             let (grid_one, _) = self.get_sorted_grid_ids(&connected_grids);
             // `let ... else` binds grid_one_id if it is Some, otherwise runs the else block
             let Some(grid_one_id) = grid_one else {
-                // No grid one: forget what was drawn so both are redrawn when it comes back
-                self.row_reset_lights = [None; 2];
+                // No grid one: forget what was drawn so all are redrawn when it comes back
+                self.row_reset_lights = [None; 3];
                 // Nothing to draw on
                 return;
             };
